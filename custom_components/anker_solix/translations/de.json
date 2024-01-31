@@ -1,0 +1,20 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "description": "Gib die Anmeldeinformationen für deinen Anker Cloud Zugang ein.",
+                "data": {
+                    "username": "Benutzername/eMail",
+                    "password": "Passwort",
+                    "countryid": "Länderkennung",
+                    "testfolder": "Ordner mit json Dateien zum testen der Integration"
+                }
+            }
+        },
+        "error": {
+            "auth": "Benutzername/Passwort ist ungültig.",
+            "connection": "Verbindung zum Server fehlgeschlagen.",
+            "unknown": "Unbekannter Fehler aufgetreten."
+        }
+    }
+}

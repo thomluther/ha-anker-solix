@@ -2,10 +2,12 @@
     "config": {
         "step": {
             "user": {
-                "description": "If you need help with the configuration have a look here: https://github.com/ludeeus/integration_blueprint",
+                "description": "Enter credentials for your Anker cloud account",
                 "data": {
-                    "username": "Username",
-                    "password": "Password"
+                    "username": "Username/email",
+                    "password": "Password",
+                    "countryid": "Country-ID",
+                    "testfolder": "Folder with json files for testing of integration"
                 }
             }
         },
