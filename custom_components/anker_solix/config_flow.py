@@ -1,4 +1,4 @@
-"""Adds config flow for Blueprint."""
+"""Adds config flow for Anker Solix."""
 from __future__ import annotations
 
 import voluptuous as vol
@@ -8,16 +8,16 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .api import (
-    IntegrationBlueprintApiClient,
-    IntegrationBlueprintApiClientAuthenticationError,
-    IntegrationBlueprintApiClientCommunicationError,
-    IntegrationBlueprintApiClientError,
+    AnkerSolixApiClient,
+    AnkerSolixApiClientAuthenticationError,
+    AnkerSolixApiClientCommunicationError,
+    AnkerSolixApiClientError,
 )
 from .const import DOMAIN, LOGGER
 
 
-class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """Config flow for Blueprint."""
+class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+    """Config flow for Anker Solix."""
 
     VERSION = 1
 
@@ -32,14 +32,16 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 await self._test_credentials(
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],
+                    countryid=user_input["countryid"],
+                    testfolder=user_input["testfolder"],
                 )
-            except IntegrationBlueprintApiClientAuthenticationError as exception:
+            except AnkerSolixApiClientAuthenticationError as exception:
                 LOGGER.warning(exception)
                 _errors["base"] = "auth"
-            except IntegrationBlueprintApiClientCommunicationError as exception:
+            except AnkerSolixApiClientCommunicationError as exception:
                 LOGGER.error(exception)
                 _errors["base"] = "connection"
-            except IntegrationBlueprintApiClientError as exception:
+            except AnkerSolixApiClientError as exception:
                 LOGGER.exception(exception)
                 _errors["base"] = "unknown"
             else:
@@ -65,16 +67,33 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             type=selector.TextSelectorType.PASSWORD
                         ),
                     ),
+                    vol.Required(
+                        countryid,
+                        default=(user_input or {}).get("countryid"),
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.TEXT
+                        ),
+                    ),
+                    vol.Required(
+                        testfolder,
+                        default=(user_input or {}).get("testfolder"),
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.TEXT
+                        ),
+                    ),
                 }
             ),
             errors=_errors,
         )
 
-    async def _test_credentials(self, username: str, password: str) -> None:
+    async def _test_credentials(self, username: str, password: str, countryid: str) -> None:
         """Validate credentials."""
-        client = IntegrationBlueprintApiClient(
+        client = AnkerSolixApiClient(
             username=username,
             password=password,
+            countryid=countryid,
             session=async_create_clientsession(self.hass),
         )
         await client.async_get_data()

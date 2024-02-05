@@ -1,19 +1,19 @@
-"""BlueprintEntity class."""
+"""AnkerSolixEntity class."""
 from __future__ import annotations
 
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTRIBUTION, DOMAIN, NAME, VERSION
-from .coordinator import BlueprintDataUpdateCoordinator
+from .coordinator import AnkerSolixDataUpdateCoordinator
 
 
-class IntegrationBlueprintEntity(CoordinatorEntity):
-    """BlueprintEntity class."""
+class AnkerSolixEntity(CoordinatorEntity):
+    """AnkerSolixEntity class."""
 
     _attr_attribution = ATTRIBUTION
 
-    def __init__(self, coordinator: BlueprintDataUpdateCoordinator) -> None:
+    def __init__(self, coordinator: AnkerSolixDataUpdateCoordinator) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self._attr_unique_id = coordinator.config_entry.entry_id
