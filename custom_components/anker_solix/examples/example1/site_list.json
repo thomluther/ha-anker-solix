@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
+        "site_name": "BKW",
+        "site_img": "",
+        "device_type_list": [
+          3
+        ],
+        "ms_type": 1,
+        "power_site_type": 2,
+        "is_allow_delete": true
+      }
+    ]
+  },
+  "trace_id": "cda3bbcc760a9239d38076efacfefaea"
+}

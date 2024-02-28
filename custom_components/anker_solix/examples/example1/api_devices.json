@@ -1,0 +1,96 @@
+{
+  "J19P1918S0BKY4EP": {
+    "device_sn": "J19P1918S0BKY4EP",
+    "type": "solarbank",
+    "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "name": "Solarbank E1600",
+    "battery_soc": "75",
+    "battery_capacity": "1600",
+    "battery_energy": "1200",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "2",
+    "charging_status_desc": "discharging",
+    "status": "0",
+    "status_desc": "off",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "0",
+    "bt_ble_mac": "F68FC0404AD7",
+    "alias": "Solarbank E1600",
+    "wifi_online": false,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.4.4",
+    "auto_upgrade": false,
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100",
+    "power_cutoff": 10,
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A5140",
+      "solar_sn": "",
+      "solar_model_name": "MI60 Microinverter"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "08:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 300,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "08:00",
+          "end_time": "17:00",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 100,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "17:00",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 300,
+              "number": 1
+            }
+          ],
+          "charge_priority": 0
+        }
+      ],
+      "min_load": 100,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 0,
+      "default_charge_priority": 0,
+      "is_zero_output_tips": 1
+    },
+    "set_system_output_power": "300",
+    "set_output_power": "300",
+    "fittings": {}
+  }
+}

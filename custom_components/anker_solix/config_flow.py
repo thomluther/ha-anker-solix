@@ -1,19 +1,47 @@
 """Adds config flow for Anker Solix."""
 from __future__ import annotations
 
+import os
+from typing import Any
+
 import voluptuous as vol
+
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import (
+    CONF_COUNTRY_CODE,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
+)
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .api import (
-    AnkerSolixApiClient,
-    AnkerSolixApiClientAuthenticationError,
-    AnkerSolixApiClientCommunicationError,
-    AnkerSolixApiClientError,
+from . import api_client
+from .const import (
+    ACCEPT_TERMS,
+    ALLOW_TESTMODE,
+    DOMAIN,
+    ERROR_DETAIL,
+    EXAMPLESFOLDER,
+    INTERVALMULT,
+    LOGGER,
+    TC_LINK,
+    TERMS_LINK,
+    TESTFOLDER,
+    TESTMODE,
 )
-from .const import DOMAIN, LOGGER
+
+SCAN_INTERVAL_DEF = 60
+INTERVALMULT_DEF = 10  # multiplier for scan interval
+
+_SCAN_INTERVAL_MIN = 10 if ALLOW_TESTMODE else 30
+_SCAN_INTERVAL_MAX = 600
+_SCAN_INTERVAL_STEP = 10
+_INTERVALMULT_MIN = 1
+_INTERVALMULT_MAX = 20
+_INTERVALMULT_STEP = 1
+_ALLOW_TESTMODE = bool(ALLOW_TESTMODE)
 
 
 class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -21,79 +49,223 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self) -> None:
+        """Init the FlowHandler."""
+        super().__init__()
+        self._data: dict[str, Any] = {}
+        self.client: api_client.AnkerSolixApiClient = None
+        self.testmode: bool = False
+        self.testfolder: str = None
+        self.examplesfolder: str = os.path.join(
+            os.path.dirname(__file__), EXAMPLESFOLDER
+        )
+        # ensure folder for example json folders exists
+        os.makedirs(self.examplesfolder, exist_ok=True)
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> AnkerSolixOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return AnkerSolixOptionsFlowHandler(config_entry)
+
     async def async_step_user(
-        self,
-        user_input: dict | None = None,
+        self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
         """Handle a flow initialized by the user."""
-        _errors = {}
-        if user_input is not None:
-            try:
-                await self._test_credentials(
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                    countryid=user_input["countryid"],
-                    testfolder=user_input["testfolder"],
+        errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {}
+
+        cfg_schema = {
+            vol.Required(
+                CONF_USERNAME,
+                default=(user_input or {}).get(CONF_USERNAME),
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(
+                    type=selector.TextSelectorType.EMAIL, autocomplete="username"
                 )
-            except AnkerSolixApiClientAuthenticationError as exception:
-                LOGGER.warning(exception)
-                _errors["base"] = "auth"
-            except AnkerSolixApiClientCommunicationError as exception:
-                LOGGER.error(exception)
-                _errors["base"] = "connection"
-            except AnkerSolixApiClientError as exception:
-                LOGGER.exception(exception)
-                _errors["base"] = "unknown"
+            ),
+            vol.Required(
+                CONF_PASSWORD,
+                default=(user_input or {}).get(CONF_PASSWORD),
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(
+                    type=selector.TextSelectorType.PASSWORD,
+                    autocomplete="current-password",
+                ),
+            ),
+            vol.Required(
+                CONF_COUNTRY_CODE,
+                default=(user_input or {}).get(CONF_COUNTRY_CODE)
+                or self.hass.config.country,
+            ): selector.CountrySelector(
+                selector.CountrySelectorConfig(),
+            ),
+            vol.Required(
+                ACCEPT_TERMS,
+                default=(user_input or {}).get(ACCEPT_TERMS, False),
+            ): selector.BooleanSelector(),
+        }
+        placeholders[TERMS_LINK] = TC_LINK
+
+        if user_input:
+            if not user_input.get(ACCEPT_TERMS, ""):
+                # Terms not accepted
+                errors[ACCEPT_TERMS] = ACCEPT_TERMS
             else:
+                account_user = user_input.get(CONF_USERNAME, "")
+                try:
+                    if await self.async_set_unique_id(account_user.lower()):
+                        # abort if username already setup
+                        self._abort_if_unique_id_configured()
+                    else:
+                        self.client = await self._authenticate_client(
+                            username=account_user,
+                            password=user_input.get(CONF_PASSWORD),
+                            countryid=user_input.get(CONF_COUNTRY_CODE),
+                        )
+                except api_client.AnkerSolixApiClientAuthenticationError as exception:
+                    LOGGER.warning(exception)
+                    errors["base"] = "auth"
+                    placeholders[ERROR_DETAIL] = str(exception)
+                except api_client.AnkerSolixApiClientCommunicationError as exception:
+                    LOGGER.error(exception)
+                    errors["base"] = "connection"
+                    placeholders[ERROR_DETAIL] = str(exception)
+                except api_client.AnkerSolixApiClientRetryExceededError as exception:
+                    LOGGER.exception(exception)
+                    errors["base"] = "exceeded"
+                    placeholders[ERROR_DETAIL] = str(exception)
+                except api_client.AnkerSolixApiClientError as exception:
+                    LOGGER.exception(exception)
+                    errors["base"] = "unknown"
+                    placeholders[ERROR_DETAIL] = str(exception)
+
+                self._data = user_input
+                # add some fixed configuration data
+                self._data[EXAMPLESFOLDER] = self.examplesfolder
+
+                # set initial options for entry
+                options = {
+                    CONF_SCAN_INTERVAL: SCAN_INTERVAL_DEF,
+                    INTERVALMULT: INTERVALMULT_DEF,
+                }
+
                 return self.async_create_entry(
-                    title=user_input[CONF_USERNAME],
-                    data=user_input,
+                    title=self.client.api.nickname
+                    if self.client and self.client.api
+                    else self._data.get(CONF_USERNAME),
+                    data=self._data,
+                    options=options,
                 )
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_USERNAME,
-                        default=(user_input or {}).get(CONF_USERNAME),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.TEXT
-                        ),
-                    ),
-                    vol.Required(CONF_PASSWORD): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.PASSWORD
-                        ),
-                    ),
-                    vol.Required(
-                        countryid,
-                        default=(user_input or {}).get("countryid"),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.TEXT
-                        ),
-                    ),
-                    vol.Required(
-                        testfolder,
-                        default=(user_input or {}).get("testfolder"),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.TEXT
-                        ),
-                    ),
-                }
-            ),
-            errors=_errors,
+            data_schema=vol.Schema(cfg_schema),
+            errors=errors,
+            description_placeholders=placeholders,
         )
 
-    async def _test_credentials(self, username: str, password: str, countryid: str) -> None:
-        """Validate credentials."""
-        client = AnkerSolixApiClient(
+    async def _authenticate_client(
+        self, username: str, password: str, countryid: str
+    ) -> api_client.AnkerSolixApiClient:
+        """Validate credentials and return the api client."""
+        client = api_client.AnkerSolixApiClient(
             username=username,
             password=password,
             countryid=countryid,
             session=async_create_clientsession(self.hass),
         )
-        await client.async_get_data()
+        await client.authenticate()
+        return client
+
+
+class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle an options flow."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Handle options flow."""
+        errors: dict[str, str] = {}
+        if not (jsonfolders := api_client.json_example_folders()):
+            # Add empty element to ensure proper list validation
+            jsonfolders = [""]
+
+        if user_input:
+            if user_input.get(TESTFOLDER) or not user_input.get(TESTMODE):
+                return self.async_create_entry(title="", data=user_input)
+            # Test mode enabled but no existing folder selected
+            errors[TESTFOLDER] = "folder_invalid"
+
+        opt_schema = {
+            vol.Optional(
+                CONF_SCAN_INTERVAL,
+                default=(user_input or self.config_entry.options).get(
+                    CONF_SCAN_INTERVAL,
+                    SCAN_INTERVAL_DEF,
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_SCAN_INTERVAL_MIN,
+                    max=_SCAN_INTERVAL_MAX,
+                    step=_SCAN_INTERVAL_STEP,
+                    unit_of_measurement="sec",
+                    mode=selector.NumberSelectorMode.BOX,
+                ),
+            ),
+            vol.Optional(
+                INTERVALMULT,
+                default=(user_input or self.config_entry.options).get(
+                    INTERVALMULT, INTERVALMULT_DEF
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_INTERVALMULT_MIN,
+                    max=_INTERVALMULT_MAX,
+                    step=_INTERVALMULT_STEP,
+                    unit_of_measurement="updates",
+                    mode=selector.NumberSelectorMode.SLIDER,
+                ),
+            ),
+        }
+        if _ALLOW_TESTMODE:
+            opt_schema.update(
+                {
+                    vol.Optional(
+                        TESTMODE,
+                        default=(user_input or self.config_entry.options).get(
+                            TESTMODE, False
+                        ),
+                    ): selector.BooleanSelector(),
+                    vol.Optional(
+                        TESTFOLDER,
+                        # default=(user_input or self.config_entry.options).get(
+                        #     TESTFOLDER, jsonfolders[0] if len(jsonfolders) > 0 else ""
+                        # ),
+                        description={
+                            "suggested_value": (
+                                user_input or self.config_entry.options
+                            ).get(
+                                TESTFOLDER,
+                                jsonfolders[0] if len(jsonfolders) > 0 else "",
+                            )
+                        },
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=jsonfolders, mode="dropdown", sort=True
+                        )
+                    ),
+                }
+            )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(opt_schema),
+            errors=errors,
+        )

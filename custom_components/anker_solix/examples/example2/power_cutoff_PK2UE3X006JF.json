@@ -1,0 +1,23 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ]
+  },
+  "trace_id": "e3db7c9ca2468be386c9e7b0a9dbaefb"
+}

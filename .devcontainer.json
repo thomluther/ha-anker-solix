@@ -1,5 +1,5 @@
 {
-    "name": "ludeeus/integration_blueprint",
+    "name": "anker_solix",
     "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [

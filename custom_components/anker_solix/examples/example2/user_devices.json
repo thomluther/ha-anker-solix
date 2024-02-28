@@ -1,0 +1,60 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "solar_list": [
+      {
+        "device_sn": "PK2UE3X006JF",
+        "device_name": "MI80 Microinverter(BLE)",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
+        "bind_site_status": "1",
+        "generate_power": "",
+        "power_unit": "",
+        "status": "0",
+        "wireless_type": "2",
+        "device_pn": "A5143",
+        "main_version": ""
+      }
+    ],
+    "pps_list": [],
+    "solarbank_list": [
+      {
+        "device_pn": "A17C0",
+        "device_sn": "WO42TA2RIXLX2WLZ",
+        "device_name": "SB1",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "1",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "1",
+        "wireless_type": "1",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 0,
+        "set_load_power": ""
+      },
+      {
+        "device_pn": "A17C0",
+        "device_sn": "6TXY2KVEWX2UB78L",
+        "device_name": "SB2",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "1",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "1",
+        "wireless_type": "1",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 0,
+        "set_load_power": ""
+      }
+    ]
+  },
+  "trace_id": "ec59d13ed6356dfca2c0d03cbaad9a6f"
+}

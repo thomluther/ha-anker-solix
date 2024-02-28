@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "brand_id": "227fb692-1e9e-439f-aadb-40c9144f6996",
+    "solar_brand": "Deye",
+    "solar_model": "SUN600G3-EU-230",
+    "solar_sn": "",
+    "solar_model_name": "SUN600G3-EU-230"
+  },
+  "trace_id": "e8c19e9df57ed9b2c95de3d38acd9bc0"
+}

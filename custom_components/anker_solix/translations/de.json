@@ -2,19 +2,256 @@
     "config": {
         "step": {
             "user": {
-                "description": "Gib die Anmeldeinformationen für deinen Anker Cloud Zugang ein.",
+                "title": "Füge deine Anker Solix Geräte hinzu",
+                "description": "Gib die Anmeldeinformationen für deinen Anker Cloud Zugang ein",
                 "data": {
-                    "username": "Benutzername/eMail",
+                    "username": "Benutzername/e-Mail",
                     "password": "Passwort",
-                    "countryid": "Länderkennung",
-                    "testfolder": "Ordner mit json Dateien zum testen der Integration"
+                    "country_code": "Land",
+                    "accept_terms": "Nutzungsbedingungen der Integration zustimmen"
+                },
+                "data_description": {
+                    "username": "Empfehlung: Lege ein zweites Konto in der Anker App an und teile dein System mit dem Zweitkonto. Eine gleichzeitige Kontonutzung in der Integration und der Anker App ist nicht möglich.",
+                    "accept_terms": "Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch unsachgemässe Nutzung der Integration auftreten können.\nWeitere Informationen: {terms_link}\nEine Zustimmung inkludiert automatisch zukünftige Updates, welche den Funktionsumfang erweitern können."
                 }
             }
         },
         "error": {
-            "auth": "Benutzername/Passwort ist ungültig.",
-            "connection": "Verbindung zum Server fehlgeschlagen.",
-            "unknown": "Unbekannter Fehler aufgetreten."
+            "auth": "Benutzername/Passwort ist ungültig: {error_detail}",
+            "connection": "Verbindung zum Server fehlgeschlagen: {error_detail}",
+            "exceeded": "Anzahl Loginversuche überschritten: {error_detail}",
+            "duplicate_devices": "{username} teilt Geräte mit dem konfigurierten Konto {shared}, es können nicht beide gleichzeitig konfiguriert werden!",
+            "accept_terms": "Nutzungsbedingungen müssen akzeptiert werden",
+            "unknown": "Unbekannter Fehler aufgetreten: {error_detail}"
+        },
+        "abort": {
+            "already_configured": "Dieses Konto ist bereits konfiguriert!"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Anker Solix Optionen",
+                "description": "Ändere die Nutzung der Schnittstelle",
+                "data": {
+                    "scan_interval": "Update Intervall (30-600 Sekunden)",
+                    "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
+                    "testmode": "Benutze den Testmode für die Integration",
+                    "testfolder": "Ordner mit json Dateien für den Integrationstest"
+                },
+                "data_description": {
+                    "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
+                }
+            }
+        },
+        "error": {
+            "folder_invalid": "Gültiger Ordner erforderlich für den Testmode"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "status_desc": {
+                "name": "Zustand",
+                "state": {
+                    "off": "Aus",
+                    "on": "An",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status"
+                    },
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    }
+                }
+            },
+            "charging_status_desc": {
+                "name": "Betriebszustand",
+                "state": {
+                    "charging": "Aufladung",
+                    "discharging": "Entladung",
+                    "bypass": "Bypass",
+                    "bypass_charging": "Überschussladung",
+                    "charge_priority":  "Ladepriorität",
+                    "full_bypass": "Voller Bypass",
+                    "wakeup": "Wachzustand",
+                    "standby": "Ruhezustand",
+                    "unknown": "Unbekannt"
+                }
+            },
+            "charging_power": {
+                "name": "Akkuleistung"
+            },
+            "input_power": {
+                "name": "Solarleistung"
+            },
+            "output_power": {
+                "name": "Einspeiseleistung"
+            },
+            "ac_generate_power": {
+                "name": "AC Leistung"
+            },
+            "set_output_power": {
+                "name": "Einspeisevorgabe",
+                "state_attributes": {
+                    "schedule": {
+                        "name": "Zeitplan"
+                    }
+                }
+            },
+            "state_of_charge": {
+                "name": "Ladestand"
+            },
+            "battery_energy": {
+                "name": "Akkuenergie",
+                "state_attributes": {
+                    "capacity": {
+                        "name": "Kapazität"
+                    }
+                }
+            },
+            "bws_surplus": {
+                "name": "BWS Überhang"
+            },
+            "inverter_info": {
+                "name": "MWR Info",
+                "state_attributes": {
+                    "solar_brand": {
+                        "name": "Marke"
+                    },
+                    "solar_model": {
+                        "name": "Modell"
+                    },
+                    "solar_sn": {
+                        "name": "Seriennummer"
+                    }
+                }
+            },
+            "sw_version": {
+                "name": "Firmware"
+            },
+            "fittings": {
+                "name": "Zubehör",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "device_name": {
+                        "name": "Name"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
+                    },
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    }
+                }
+            },
+            "temperature": {
+                "name": "Temperatur"
+            },
+            "solar_list": {
+                "name": "Wechselrichter"
+            },
+            "solarbank_list": {
+                "name": "Solarbänke"
+            },
+            "powerpanel_list": {
+                "name": "Powerpanels"
+            },
+            "pps_list": {
+                "name": "Power Stationen"
+            },
+            "solarbank_charging_power": {
+                "name": "SB Akkuleistung"
+            },
+            "solarbank_input_power": {
+                "name": "SB Solarleistung"
+            },
+            "solarbank_output_power": {
+                "name": "SB Abgabeleistung"
+            },
+            "solarbank_state_of_charge": {
+                "name": "SB Ladestand"
+            },
+            "pps_charging_power": {
+                "name": "PPS Akkuleistung"
+            },
+            "pps_output_power": {
+                "name": "PPS Ausgangsleistung"
+            },
+            "pps_state_of_charge": {
+                "name": "PPS Ladestand"
+            },
+            "total_co2_saving": {
+                "name": "CO₂ Einsparung"
+            },
+            "total_saved_money": {
+                "name": "Kostenersparnis"
+            },
+            "total_output_energy": {
+                "name": "Erzeugte Energie"
+            },
+            "daily_output_energy": {
+                "name": "Energie heute"
+            },
+            "site_charging_power": {
+                "name": "System Ladeleistung"
+            },
+            "set_system_output_power": {
+                "name": "System Einspeisevorgabe"
+            }
+        },
+        "binary_sensor": {
+            "wifi_connection": {
+                "name": "Wifi Verbindung",
+                "state": {
+                    "on": "Verbunden",
+                    "off": "Getrennt"
+                },
+                "state_attributes": {
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    },
+                    "wifi_ssid": {
+                        "name": "Wifi SSID"
+                    },
+                    "wifi_signal": {
+                        "name": "Wifi Signal"
+                    },
+                    "wireless_type": {
+                        "name": "Wifi Typ"
+                    }
+                }
+            },
+            "site_admin": {
+                "name": "Systemadministration",
+                "state": {
+                    "on": "Ja",
+                    "off": "Nein"
+                }
+            }
+        },
+        "switch": {
+            "auto_upgrade": {
+                "name": "Auto-Update"
+            }
+        }
+    },
+    "entity_component": {
+        "problem": {
+            "state": {
+                "off": "OK",
+                "on": "Problem"
+            }
+        },
+        "_": {
+            "state": {
+                "off": "Aus",
+                "on": "An",
+                "unknown": "Unbekannt"
+            }
         }
     }
 }
