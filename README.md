@@ -1,12 +1,20 @@
-<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="100" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="90" />
 
 # Anker Solix Integration for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]][commits]
+[![GitHub Activity][commits-shield]](https://img.shields.io/github/commits/thomluther/hacs-anker-solix.svg?style=for-the-badge)
+![Contributors](https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge)
+![Downloads](https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge)
 [![Community Forum][forum-shield]][forum]
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+
 [![License][license-shield]](LICENSE)
 ![python badge][python-shield]
+
+
+
+
 
 This Home Assistant custom component utilizes the [anker-solix](anker-solix) Python library, allowing seamless integration with Anker Solix devices via the cloud. It was specifically developped to monitor the Anker Solarbank E1600. Further Anker devices like solar micro-inverters or power stations may be added in future once Api data structures for those devices is known.
 
@@ -42,13 +50,22 @@ account in the Anker mobile App to maintain control capabilities of your devices
 Platform | Description
 -- | --
 `sensor` | Show info from Anker Solix Api.
+`binary_sensor` | Show info from Anker Solix Api.
+`switch` | Modify device settings via Anker Solix Api.
 
 Device type | Description
 -- | --
-`solarbank` | Anker Solix E1600 Solarbank
+`system` | Anker Solix 'Power System' as defined in the Anker App
+`solarbank` | Anker Solix Solarbanks configured in the system
+`inverter` | Anker Solix inverters configured in the system
 
 
 ## Installation via HACS (recommended)
+Use this button:
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=https%3A%2F%2Fgithub.com%2Fthomluther%2Fhacs-anker-solix&category=Integration)
+
+Or following procedure:
 1. Open the [HACS](https://hacs.xyz) panel in your Home Assistant frontend.
 1. Navigate to the "Integrations" tab.
 1. Click the three dots in the top-right corner and select "Custom Repositories."
@@ -80,9 +97,9 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 
 ## Attribution
 
+- [anker-solix-api library](https://github.com/thomluther/anker-solix-api)
 - [Solaredge HA core integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/solaredge)
 - [ha-hoymiles-wifi custom integration](https://github.com/suaveolent/ha-hoymiles-wifi)
-- [anker-solix-api library][anker-solix]
 - [solix2mqtt project](https://github.com/tomquist/solix2mqtt)
 
 ## Showing Your Appreciation
