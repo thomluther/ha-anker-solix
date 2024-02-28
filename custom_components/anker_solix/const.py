@@ -5,7 +5,7 @@ LOGGER: Logger = getLogger(__package__)
 
 NAME: str = "Anker Solix"
 DOMAIN: str = "anker_solix"
-VERSION: str = "0.0.1"
+VERSION: str = "1.0.0"
 MANUFACTURER: str = "Anker"
 ATTRIBUTION: str = "Data provided by Anker Solix Api"
 ACCEPT_TERMS: str = "accept_terms"

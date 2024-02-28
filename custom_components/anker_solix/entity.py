@@ -11,7 +11,7 @@ from homeassistant.helpers.entity import DeviceInfo
 class AnkerSolixPicturePath:
     """Definition of picture path for device types."""
 
-    IMAGEPATH: str = os.path.join(os.sep, "local", DOMAIN, IMAGEFOLDER)
+    IMAGEPATH: str = os.path.join(os.sep, "local", "community", DOMAIN, IMAGEFOLDER)
 
     SOLARBANK: str = os.path.join(IMAGEPATH, "Solarbank_E1600_pub.png")
     INVERTER: str = os.path.join(IMAGEPATH, "MI80_A5143_pub.png")

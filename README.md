@@ -13,33 +13,60 @@
 ![python badge][python-shield]
 
 
+This Home Assistant custom component integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker cloud. It was specifically developped to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80) have been add to the Api library and are available through the integration. The Anker Power cloud also supports portable power stations (PPS) or home Power Panels which may be added in future once Api data structures for those devices is known.
 
-This Home Assistant custom component utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the cloud. It was specifically developped to monitor the Anker Solarbank E1600. Further Anker devices like solar micro-inverters or power stations may be added in future once Api data structures for those devices is known.
 
-### Disclaimer:
-**This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools for interacting with the Solarbank E1600,  initially for monitoring only. Any trademarks or product names mentioned are the property of their respective owners.**
+## Disclaimer:
+
+**This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially the Api library as well as the integration have been developped for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and future enhancements may allow also modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.**
+
+
+## Usage terms and conditions:
+
+This integration utilizes an unofficial Python library to communicate with the Anker Power cloud server Api that is also used by the official Anker mobile app. The Api access or communication may change or break any time without notice and therefore also change or break the integration functionality. Furthermore the usage for the unofficial Api library may impose risks, such as device damage by improper settings or loss of manufacturer's warranty, whether is caused by improper usage, library failures, Api changes or other reasons.
+
+**The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these confitions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.**
+
 
 ## Anker Account Information
 
-Because of the way the Anker Solix Api works, one account with email/password cannot be used for the Anker mobile App and the cloud Api in parallel.
-The Anker cloud allows only one user request token per account at any time. Each new authentication request by a client will create a new token and drop a previous token.
-Therefore usage of this integration will kick out your account login in the mobile App.
-However, starting with Anker mobile App release 2.0, you can share your defined system(s) with 'family members'.
-Therefore it is recommended to create a second Anker account with a different email address and share your defined system(s) with the second account.
+Because of the way the Anker cloud Api works, one account with e-mail/password cannot be used for the Anker mobile app and the cloud Api in parallel. The Anker cloud allows only one user request token per account at any time for security reasons. Each new authentication request by a client will create a new token and drop a previous token on the server. Therefore usage of this integration with your mobile app account will kick out your login in the mobile App. However, starting with Anker mobile app release 2.0, you can share your defined power system(s) with 'family members'. Therefore it is recommended to create a second Anker account with a different e-mail address and share your defined power system(s) with the second account.
 
-Attention: A shared account is only a member of the shared system, and as such currently has no permissions to access or query device details of the shared system,
-neither in the mobile App nor in the cloud Api. Therefore some device setting sensors may not show up if the configured user has no permissions to query shared device details.
-Anyway, since the integration allows only monitoring capabilities in its initial release, it is advised to use a shared account for the integration and the system owner
-account in the Anker mobile App to maintain control capabilities of your devices.
+**Attention:**
+
+System members cannot manage (yet) any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
+
+Since the current version of this integration does not support many setting capabilities, it is advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner
+account should be used in the Anker mobile app to maintain full control capabilities of your devices.
+
+
+## How to create a second Anker Power account
+
+If you have the app installed on 2 different devices, the account creation and system sharing will be a little bit easier. Following is a high level guideline how to create a second account and share the system on a single device:
+1. Go to your profile in the Anker app, click on your name at the top and then Log out
+1. Then create a new Anker power account via the app. You will need a second e-mail address. (This could also be an alias address that you set up with your e-mail provider)
+1. Complete the registration process. This may have to be confirmed via a temporary code that is sent to the used e-mail address.
+1. Once you are logged in with the secondary account, log out again in the app as in step 1.
+1. Log in again with your main account and go to your profile
+1. The first item there is Manage System. Go into Manage System and then click on the arrow to the right of the system you want to share
+1. Then you will see Invite Members at the bottom, where you have to enter the e-mail of your second account
+1. Then log out again as in step 1.
+1. Log in with the second account and go to your systems via the profile.
+1. There you should now see the invitation from your main account. You have to confirm the invitation to activate shared system access.
+1. Just now you access the system as a member. The owner will also get a confirmation that you accepted the invitation.
+
 
 ## Limitations
 
-- The used Api library is by no means an official Api and is very limited as there is no documentation at all.
-- The Api or the login can break at any time, or Api request can be removed/added/changed and break some of the endpoint methods used in this Api library.
-- The Api is currently only validated against the EU Anker cloud. Assignment of countries is unknown and depending on the selected Country (code), Api usage may fail.
-- The information that can be queried and the sensors being provided depend on whether an Anker system owner account or a member account is used with the integration.
-- The Anker account that is used in the integration cannot longer be used in the Anker mobile App since the cloud Api only allows 1 active client user token at a time.
-- Existing user tokens will be removed from the server upon new client authentication request. That means the integration kicks out the App user and vice versa.
+- The used Api library is by no means an official Api and is very limited as there is no documentation at all
+- The Api or the login can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in the underlying Api library
+- The Api library is currently only validated against the EU Anker cloud server. Assignment of countries to the other common cloud server is unknown and depending on the selected country for your account, the Api login may fail or show no valid devices or sensors in the integration
+- The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
+- The Anker account used in the integration cannot longer be used in the Anker mobile app since the cloud Api only allows 1 active client user token at a time. Existing user tokens will be removed from the server upon new client authentication requests. That means the integration kicks out the App user and vice versa.
+- The initial integration release supports only Solarbank and Anker inverter devices. Further devices managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developpers (open issue on git with example data)
+- The initial integration release supports only following settings when using a system owner account:
+   - Auto-Update setting of Solarbank device
+
 
 ## Supported sensors and devices
 

@@ -12,7 +12,7 @@
                 },
                 "data_description": {
                     "username": "Recommendation: Create a second account in the Anker App and share your system with the second account. A parallel usage of the same account in this integration and the Anker App is not possible.",
-                    "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by improper use of the integration.\nFurther information: {terms_link}\nA consent automatically includes future updates, which can extend the integration functionality."
+                    "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration. A consent automatically includes future updates, which can extend the integration functionality.\nFurther information: {terms_link}"
                 }
             }
         },
@@ -34,7 +34,7 @@
                 "title": "Anker Solix options",
                 "description": "Change usage of the Api",
                 "data": {
-                    "scan_interval": "Update interval (30-600 seconds)",
+                    "scan_interval": "Update interval ({updt_interval_min}-{updt_interval_max} seconds)",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "testmode": "Use integration test mode",
                     "testfolder": "Folder with json files for integration testing"

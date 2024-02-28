@@ -12,7 +12,7 @@
                 },
                 "data_description": {
                     "username": "Empfehlung: Lege ein zweites Konto in der Anker App an und teile dein System mit dem Zweitkonto. Eine gleichzeitige Kontonutzung in der Integration und der Anker App ist nicht möglich.",
-                    "accept_terms": "Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch unsachgemässe Nutzung der Integration auftreten können.\nWeitere Informationen: {terms_link}\nEine Zustimmung inkludiert automatisch zukünftige Updates, welche den Funktionsumfang erweitern können."
+                    "accept_terms": "Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch Nutzung der Integration auftreten können. Eine Zustimmung inkludiert automatisch zukünftige Updates, welche den Funktionsumfang erweitern können.\nWeitere Informationen: {terms_link}"
                 }
             }
         },
@@ -34,7 +34,7 @@
                 "title": "Anker Solix Optionen",
                 "description": "Ändere die Nutzung der Schnittstelle",
                 "data": {
-                    "scan_interval": "Update Intervall (30-600 Sekunden)",
+                    "scan_interval": "Update Intervall ({updt_interval_min}-{updt_interval_max} Sekunden)",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "testmode": "Benutze den Testmode für die Integration",
                     "testfolder": "Ordner mit json Dateien für den Integrationstest"
