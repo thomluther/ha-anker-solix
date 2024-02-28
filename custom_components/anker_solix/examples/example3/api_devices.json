@@ -1,0 +1,92 @@
+{
+  "SE0QPSV3WXDDXN8G": {
+    "device_sn": "SE0QPSV3WXDDXN8G",
+    "type": "solarbank",
+    "site_id": "5c345692-b73f-8ce8-a9fd-b7928c5fa51d",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "name": "Solarbank E1600",
+    "battery_soc": "56",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "3",
+    "charging_status_desc": "bypass",
+    "status": "1",
+    "status_desc": "on",
+    "wireless_type": "1",
+    "input_power": "267",
+    "output_power": "0",
+    "set_output_power": "",
+    "bt_ble_mac": "EA7AAD9B60BD",
+    "alias": "Solarbank E1600",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.5.6",
+    "auto_upgrade": false,
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "36",
+    "power_cutoff": 10,
+    "solar_info": {
+      "solar_brand": "Deye",
+      "solar_model": "SUN600G3-EU-230",
+      "solar_sn": "",
+      "solar_model_name": "SUN600G3-EU-230"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "07:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 100,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "07:00",
+          "end_time": "20:00",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "20:00",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 100,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        }
+      ],
+      "min_load": 150,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 0,
+      "default_charge_priority": 0,
+      "is_zero_output_tips": 0
+    }
+  }
+}

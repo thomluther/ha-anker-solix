@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "100"
+      }
+    ]
+  },
+  "trace_id": "81d6b63ab0b93d9d6b99cecacbbd0ebc"
+}

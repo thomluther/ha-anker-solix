@@ -1,0 +1,106 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [
+      {
+        "device_sn": "PK2UE3X006JF",
+        "device_name": "MI80 Microinverter(BLE)",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
+        "bind_site_status": "",
+        "generate_power": "0.00",
+        "power_unit": "W",
+        "status": "1",
+        "wireless_type": "2",
+        "device_pn": "A5143",
+        "main_version": ""
+      }
+    ],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "14.41",
+        "unit": "kwh"
+      },
+      {
+        "type": "2",
+        "total": "14.36",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "4.61",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C0",
+          "device_sn": "6TXY2KVEWX2UB78L",
+          "device_name": "SB2",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+          "battery_power": "46",
+          "bind_site_status": "",
+          "charging_power": "0",
+          "power_unit": "W",
+          "charging_status": "3",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "72",
+          "output_power": "0",
+          "create_time": 1707039514,
+          "set_load_power": "0"
+        },
+        {
+          "device_pn": "A17C0",
+          "device_sn": "WO42TA2RIXLX2WLZ",
+          "device_name": "SB1",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+          "battery_power": "52",
+          "bind_site_status": "",
+          "charging_power": "0",
+          "power_unit": "W",
+          "charging_status": "3",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "72",
+          "output_power": "0",
+          "create_time": 1707130510,
+          "set_load_power": "0"
+        }
+      ],
+      "total_charging_power": "144",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.49",
+      "updated_time": "2024-02-22 13:17:30",
+      "total_photovoltaic_power": "144",
+      "total_output_power": "0.00",
+      "display_set_power": true
+    },
+    "retain_load": "0W",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 2,
+    "site_id": "beddfef9-acaa-89de-f6c9-31fc9a499c65",
+    "powerpanel_list": []
+  },
+  "trace_id": "ffae31c7dbcfa27ecaaecf30a6badb92"
+}

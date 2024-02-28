@@ -2,19 +2,256 @@
     "config": {
         "step": {
             "user": {
+                "title": "Add your Anker Solix devices",
                 "description": "Enter credentials for your Anker cloud account",
                 "data": {
-                    "username": "Username/email",
+                    "username": "Username/e-mail",
                     "password": "Password",
-                    "countryid": "Country-ID",
-                    "testfolder": "Folder with json files for testing of integration"
+                    "country_code": "Country",
+                    "accept_terms": "Accept Integration usage terms and conditions"
+                },
+                "data_description": {
+                    "username": "Recommendation: Create a second account in the Anker App and share your system with the second account. A parallel usage of the same account in this integration and the Anker App is not possible.",
+                    "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by improper use of the integration.\nFurther information: {terms_link}\nA consent automatically includes future updates, which can extend the integration functionality."
                 }
             }
         },
         "error": {
-            "auth": "Username/Password is wrong.",
-            "connection": "Unable to connect to the server.",
-            "unknown": "Unknown error occurred."
+            "auth": "Username/Password is wrong: {error_detail}",
+            "connection": "Unable to connect to the server: {error_detail}",
+            "exceeded": "Login attempts exceeded: {error_detail}",
+            "duplicate_devices": "{username} has shared devices with existing account {shared}, you cannot configure both at the same time!",
+            "accept_terms": "Usage terms and conditions must be accepted",
+            "unknown": "Unknown error occurred:: {error_detail}"
+        },
+        "abort": {
+            "already_configured": "This account is already configured"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Anker Solix options",
+                "description": "Change usage of the Api",
+                "data": {
+                    "scan_interval": "Update interval (30-600 seconds)",
+                    "dev_interval_mult": "Interval multiplier for device details",
+                    "testmode": "Use integration test mode",
+                    "testfolder": "Folder with json files for integration testing"
+                },
+                "data_description": {
+                    "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
+                }
+            }
+        },
+        "error": {
+            "folder_invalid": "Valid folder required for testmode"
+        }
+    },
+    "entity": {
+        "sensor": {
+            "status_desc": {
+                "name": "State",
+                "state": {
+                    "off": "Off",
+                    "on": "On",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status"
+                    },
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    }
+                }
+            },
+            "charging_status_desc": {
+                "name": "Mode",
+                "state": {
+                    "charging": "Charging",
+                    "discharging": "Discharging",
+                    "bypass": "Bypass",
+                    "bypass_charging": "Surplus charging",
+                    "charge_priority":  "Charge priority",
+                    "full_bypass": "Full bypass",
+                    "wakeup": "Wakeup",
+                    "standby": "Standby",
+                    "unknown": "Unknown"
+                }
+            },
+            "charging_power": {
+                "name": "Charge power"
+            },
+            "input_power": {
+                "name": "Solar power"
+            },
+            "output_power": {
+                "name": "Home power"
+            },
+            "ac_generate_power": {
+                "name": "AC power"
+            },
+            "set_output_power": {
+                "name": "Home preset",
+                "state_attributes": {
+                    "schedule": {
+                        "name": "Schedule"
+                    }
+                }
+            },
+            "state_of_charge": {
+                "name": "State of charge"
+            },
+            "battery_energy": {
+                "name": "Battery energy",
+                "state_attributes": {
+                    "capacity": {
+                        "name": "Capacity"
+                    }
+                }
+            },
+            "bws_surplus": {
+                "name": "BWS surplus"
+            },
+            "inverter_info": {
+                "name": "Inverter info",
+                "state_attributes": {
+                    "solar_brand": {
+                        "name": "Brand"
+                    },
+                    "solar_model": {
+                        "name": "Model"
+                    },
+                    "solar_sn": {
+                        "name": "Serialnumber"
+                    }
+                }
+            },
+            "sw_version": {
+                "name": "Firmware"
+            },
+            "fittings": {
+                "name": "Accessories",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    },
+                    "device_name": {
+                        "name": "Name"
+                    },
+                    "device_pn": {
+                        "name": "Model"
+                    },
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    }
+                }
+            },
+            "temperature": {
+                "name": "Temperature"
+            },
+            "solar_list": {
+                "name": "Inverter"
+            },
+            "solarbank_list": {
+                "name": "Solarbanks"
+            },
+            "powerpanel_list": {
+                "name": "Power panels"
+            },
+            "pps_list": {
+                "name": "Power stations"
+            },
+            "solarbank_charging_power": {
+                "name": "SB charge power"
+            },
+            "solarbank_input_power": {
+                "name": "SB solar power"
+            },
+            "solarbank_output_power": {
+                "name": "SB home power"
+            },
+            "solarbank_state_of_charge": {
+                "name": "SB state of charge"
+            },
+            "pps_charging_power": {
+                "name": "PPS charge power"
+            },
+            "pps_output_power": {
+                "name": "PPS output power"
+            },
+            "pps_state_of_charge": {
+                "name": "PPS state of charge"
+            },
+            "total_co2_saving": {
+                "name": "CO₂ savings"
+            },
+            "total_saved_money": {
+                "name": "Cost savings"
+            },
+            "total_output_energy": {
+                "name": "Total output energy"
+            },
+            "daily_output_energy": {
+                "name": "Output energy today"
+            },
+            "site_charging_power": {
+                "name": "System charging power"
+            },
+            "set_system_output_power": {
+                "name": "System home preset"
+            }
+        },
+        "binary_sensor": {
+            "wifi_connection": {
+                "name": "Wifi connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                },
+                "state_attributes": {
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    },
+                    "wifi_ssid": {
+                        "name": "Wifi SSID"
+                    },
+                    "wifi_signal": {
+                        "name": "Wifi signal"
+                    },
+                    "wireless_type": {
+                        "name": "Wifi type"
+                    }
+                }
+            },
+            "site_admin": {
+                "name": "System administration",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            }
+        },
+        "switch": {
+            "auto_upgrade": {
+                "name": "Auto-Update"
+            }
+        }
+    },
+    "entity_component": {
+        "problem": {
+            "state": {
+                "off": "OK",
+                "on": "Problem"
+            }
+        },
+        "_": {
+            "state": {
+                "off": "Off",
+                "on": "On",
+                "unknown": "Unknown"
+            }
         }
     }
 }

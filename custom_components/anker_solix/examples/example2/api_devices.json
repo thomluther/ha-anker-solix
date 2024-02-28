@@ -1,0 +1,233 @@
+{
+  "6TXY2KVEWX2UB78L": {
+    "device_sn": "RBJX4XL3BQ8PWS1X",
+    "type": "solarbank",
+    "site_id": "7fe6ade4-f3eb-ba1f-d82f-1f3a7e4fee8a",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "name": "Solarbank E1600",
+    "battery_soc": "46",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "3",
+    "charging_status_desc": "bypass",
+    "status": "1",
+    "status_desc": "on",
+    "wireless_type": "1",
+    "input_power": "72",
+    "output_power": "0",
+    "set_output_power": "0",
+    "bt_ble_mac": "0668D49E66AE",
+    "alias": "SB2",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.5.6",
+    "auto_upgrade": true,
+    "wifi_name": "wifi-network-3",
+    "wifi_signal": "98",
+    "power_cutoff": 10,
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A5143",
+      "solar_sn": "OTGYG8DGM1D3",
+      "solar_model_name": "MI80 Microinverter(BLE)"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "07:30",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "07:30",
+          "end_time": "09:30",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "09:30",
+          "end_time": "17:30",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 100
+        },
+        {
+          "id": 0,
+          "start_time": "17:30",
+          "end_time": "24:00",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        }
+      ],
+      "min_load": 100,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 1,
+      "default_charge_priority": 80,
+      "is_zero_output_tips": 0
+    }
+  },
+  "WO42TA2RIXLX2WLZ": {
+    "device_sn": "Y0VUVD54J4GI7PRS",
+    "type": "solarbank",
+    "site_id": "7fe6ade4-f3eb-ba1f-d82f-1f3a7e4fee8a",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "name": "Solarbank E1600",
+    "battery_soc": "52",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "3",
+    "charging_status_desc": "bypass",
+    "status": "1",
+    "status_desc": "on",
+    "wireless_type": "1",
+    "input_power": "72",
+    "output_power": "0",
+    "set_output_power": "0",
+    "bt_ble_mac": "AC2D06D70E6B",
+    "alias": "SB1",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.5.6",
+    "auto_upgrade": true,
+    "wifi_name": "wifi-network-3",
+    "wifi_signal": "98",
+    "power_cutoff": 10,
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A5143",
+      "solar_sn": "OTGYG8DGM1D3",
+      "solar_model_name": "MI80 Microinverter(BLE)"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "07:30",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "07:30",
+          "end_time": "09:30",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "09:30",
+          "end_time": "17:30",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 100
+        },
+        {
+          "id": 0,
+          "start_time": "17:30",
+          "end_time": "24:00",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        }
+      ],
+      "min_load": 100,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 1,
+      "default_charge_priority": 80,
+      "is_zero_output_tips": 0
+    }
+  },
+  "PK2UE3X006JF": {
+    "device_sn": "OTGYG8DGM1D3",
+    "type": "inverter",
+    "site_id": "7fe6ade4-f3eb-ba1f-d82f-1f3a7e4fee8a",
+    "is_admin": true,
+    "name": "MI80 Microinverter(BLE)",
+    "generate_power": "0.00",
+    "power_unit": "W",
+    "status": "1",
+    "status_desc": "on",
+    "wireless_type": "2",
+    "device_pn": "A5143",
+    "bt_ble_mac": "9EBD418DD71B",
+    "alias": "MI80 Microinverter(BLE)",
+    "wifi_online": false,
+    "wifi_name": "wifi-network-3",
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.1",
+    "wifi_signal": "94"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "5c345692-b73f-8ce8-a9fd-b7928c5fa51d",
+        "site_name": "Anker Solix E1600",
+        "site_img": "",
+        "device_type_list": [
+          3
+        ],
+        "ms_type": 1,
+        "power_site_type": 2,
+        "is_allow_delete": true
+      }
+    ]
+  },
+  "trace_id": "10cdf7797cbb2e7c17b3bdd5306dfb2f"
+}

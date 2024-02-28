@@ -1,0 +1,21 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "beddfef9-acaa-89de-f6c9-31fc9a499c65",
+        "site_name": "AnkerPrime",
+        "site_img": "",
+        "device_type_list": [
+          3,
+          1
+        ],
+        "ms_type": 1,
+        "power_site_type": 2,
+        "is_allow_delete": true
+      }
+    ]
+  },
+  "trace_id": "68740a3b7bf3df0fc3d2fa6b5fe2ae8b"
+}

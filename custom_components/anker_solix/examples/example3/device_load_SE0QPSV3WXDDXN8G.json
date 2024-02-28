@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "5c345692-b73f-8ce8-a9fd-b7928c5fa51d",
+    "home_load_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"07:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":100,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"07:00\",\"end_time\":\"20:00\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":150,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"20:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":100,\"number\":1}],\"charge_priority\":80}],\"min_load\":150,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":0}",
+    "current_home_load": "0W",
+    "parallel_home_load": "",
+    "parallel_display": false
+  },
+  "trace_id": "e2bc02ad278c764fbe1eb1c0b15f06df"
+}
