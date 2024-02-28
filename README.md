@@ -3,9 +3,9 @@
 # Anker Solix Integration for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]](https://img.shields.io/github/commits/thomluther/hacs-anker-solix.svg?style=for-the-badge)
-![Contributors](https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge)
-![Downloads](https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge)
+[![GitHub Activity][commits-shield]][commits]
+![Contributors][contributors]
+![Downloads][downloads]
 [![Community Forum][forum-shield]][forum]
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
@@ -14,9 +14,7 @@
 
 
 
-
-
-This Home Assistant custom component utilizes the [anker-solix](anker-solix) Python library, allowing seamless integration with Anker Solix devices via the cloud. It was specifically developped to monitor the Anker Solarbank E1600. Further Anker devices like solar micro-inverters or power stations may be added in future once Api data structures for those devices is known.
+This Home Assistant custom component utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the cloud. It was specifically developped to monitor the Anker Solarbank E1600. Further Anker devices like solar micro-inverters or power stations may be added in future once Api data structures for those devices is known.
 
 ### Disclaimer:
 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools for interacting with the Solarbank E1600,  initially for monitoring only. Any trademarks or product names mentioned are the property of their respective owners.**
@@ -63,7 +61,7 @@ Device type | Description
 ## Installation via HACS (recommended)
 Use this button:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=https%3A%2F%2Fgithub.com%2Fthomluther%2Fhacs-anker-solix&category=Integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.][hacs-repo-badge]][hacs-install]
 
 Or following procedure:
 1. Open the [HACS](https://hacs.xyz) panel in your Home Assistant frontend.
@@ -97,23 +95,29 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 
 ## Attribution
 
-- [anker-solix-api library](https://github.com/thomluther/anker-solix-api)
+- [anker-solix-api library][anker-solix-api]
 - [Solaredge HA core integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/solaredge)
 - [ha-hoymiles-wifi custom integration](https://github.com/suaveolent/ha-hoymiles-wifi)
 - [solix2mqtt project](https://github.com/tomquist/solix2mqtt)
 
 ## Showing Your Appreciation
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/thomasluthe)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)][buy-me-coffee]
 
 If you like this project, please give it a star on [GitHub][anker-solix]
 ***
 
 [anker-solix]: https://github.com/thomluther/hacs-anker-solix
-[commits]: https://github.com/thomluther/hacs-anker-solix/commits
+[anker-solix-api]: https://github.com/thomluther/anker-solix-api
+[commits]: https://img.shields.io/github/commits/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commits/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [releases]: https://github.com/thomluther/hacs-anker-solix/releases
 [releases-shield]: https://img.shields.io/github/release/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[contributors]: https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
+[downloads]: https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[hacs-repo-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
+[hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=https%3A%2F%2Fgithub.com%2Fthomluther%2Fhacs-anker-solix&category=Integration
 [exampleimg]: example.png
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
