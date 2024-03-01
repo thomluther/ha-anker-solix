@@ -2,10 +2,10 @@
   "domain": "anker_solix",
   "name": "Anker Solix",
   "after_dependencies": [],
-  "config_flow": true,
   "codeowners": [
     "@thomluther"
   ],
+  "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/thomluther/hacs-anker-solix",
   "integration_type": "hub",
