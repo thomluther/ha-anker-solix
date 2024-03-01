@@ -20,18 +20,30 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
 
 from . import api_client
-from .config_flow import INTERVALMULT_DEF, SCAN_INTERVAL_DEF
-from .const import DOMAIN, EXAMPLESFOLDER, INTERVALMULT, LOGGER, TESTFOLDER, TESTMODE
+from .config_flow import (
+    INTERVALMULT_DEF,
+    SCAN_INTERVAL_DEF,
+    async_check_and_remove_devices,
+)
+from .const import (
+    DOMAIN,
+    EXAMPLESFOLDER,
+    INTERVALMULT,
+    LOGGER,
+    SHARED_ACCOUNT,
+    TESTFOLDER,
+    TESTMODE,
+)
 from .coordinator import AnkerSolixDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
-    Platform.SENSOR,
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.SENSOR,
     Platform.SWITCH,
 ]
 
@@ -69,62 +81,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
     await coordinator.async_config_entry_first_refresh()
 
-    # first check for orphaned devices no longer contained in actual api data upon reloads or config option changes
-    # get device registry and device ids that are orphaned
-    dev_registry = dr.async_get(hass)
-    active_serials = coordinator.data.keys()
-    # for serial in active_serials:
-    #     if device_entry := dev_registry.async_get_device((DOMAIN,serial)):
-    #         # serial already registred, check if by same user account
-    #         for config_id in device_entry.config_entries:
-    #             if hasattr(hass.data[DOMAIN], config_id):
-    #                 if entry.data.get(CONF_USERNAME) != hass.data[DOMAIN][config_id].unique_id:
-    #                     pass
+    # Registers update listener to update config entry when options are updated.
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
 
-    # dev_list = [dev_entry.id for dev_entry in dev_registry.devices.data.values() if any(identifier for identifier in dev_entry.identifiers if identifier[0] == DOMAIN and identifier[1] not in active_serials)]
-    # async_entries_for_config_entry(dev_registry, config_entry.entry_id)
-
-    # cycle through all registered devices to check if already registered by different account (shared systems) or if obsolete for this config and can be removed
-    dev_ids = [
-        dev_entry.id
-        for dev_entry in dev_registry.devices.data.values()
-        if any(
-            identifier
-            for identifier in dev_entry.identifiers
-            if identifier[0] == DOMAIN
-        )
-    ]
-    obsolete_user_devs: dict = {}
-    for dev_id in dev_ids:
-        device_entry: DeviceEntry = dev_registry.async_get(dev_id)
-        for config_id in device_entry.config_entries:
-            if config_entry := hass.config_entries.async_get_entry(config_id):
-                if username != config_entry.unique_id:
-                    if device_entry.serial_number in active_serials:
-                        # device is already registered for another account, abort configuration
-                        entry.async_cancel_retry_setup()
-                        raise ConfigEntryError(
-                            api_client.AnkerSolixApiClientError("Duplicate Devices found"),
-                            translation_key="duplicate_devices",
-                            translation_domain="config",
-                            translation_placeholders={
-                                "username": username,
-                                "shared": config_entry.unique_id,
-                            },
-                        )
-
-                # device is registered for same account, check if still used in coorinator data and add to obsolete list for removal
-                elif device_entry.serial_number not in active_serials:
-                    obsolete_user_devs[device_entry.id] = device_entry.serial_number
-
-    # Remove the obsolete device entries
-    for dev_id, serial in obsolete_user_devs.items():
-        dev_registry.async_remove_device(dev_id)
-        # NOTE: removal of any underlying entities is handled by core
-        LOGGER.info(
-            "Removed device entry %s from registry for unused configuration entry device %s",
-            dev_id,
-            serial,
+    # first check if config shares devices with another config and also remove orphaned devices no longer contained in actual api data
+    # This is run upon reloads or config option changes
+    if shared_cfg := await async_check_and_remove_devices(hass, entry.data, coordinator.data):
+        # device is already registered for another account, abort configuration
+        entry.async_cancel_retry_setup()
+        raise ConfigEntryError(
+            api_client.AnkerSolixApiClientError(
+                f"Found shared Devices with {shared_cfg.title}"
+            ),
+            translation_key="duplicate_devices",
+            translation_domain="config",
+            translation_placeholders={
+                CONF_USERNAME: username,
+                SHARED_ACCOUNT: shared_cfg.unique_id,
+            },
         )
 
     # Create an entry in the hass object with the coordinator
@@ -133,8 +107,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # forward to platform to create entities
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Registers update listener to update config entry when options are updated.
-    entry.async_on_unload(entry.add_update_listener(async_update_options))
     return True
 
 
@@ -191,3 +163,5 @@ async def async_remove_config_entry_device(
         for device_serial in coordinator.data
         if device_serial == identifier[1]
     )
+
+

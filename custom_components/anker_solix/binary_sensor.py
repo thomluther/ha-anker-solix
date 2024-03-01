@@ -186,6 +186,8 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             if self.coordinator.client.testmode() and self._attr_is_on is not None:
                 # value fluctuation
                 self._attr_is_on = bool(randrange(2))
+        else:
+            self._attr_is_on = None
 
         # Mark sensor availability based on a sensore value
         self._attr_available = self._attr_is_on is not None

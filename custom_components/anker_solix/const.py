@@ -20,6 +20,7 @@ EXAMPLESFOLDER: str = "examples"
 ERROR_DETAIL: str = "error_detail"
 LAST_PERIOD: str = "last_period"
 LAST_RESET: str = "last_reset"
+SHARED_ACCOUNT: str = "shared_account"
 IMAGEFOLDER: str = "images"
 ALLOW_TESTMODE: bool = (
     True  # True will enable configuration options for testmode and testfolder

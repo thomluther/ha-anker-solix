@@ -20,7 +20,7 @@
             "auth": "Benutzername/Passwort ist ungültig: {error_detail}",
             "connection": "Verbindung zum Server fehlgeschlagen: {error_detail}",
             "exceeded": "Anzahl Loginversuche überschritten: {error_detail}",
-            "duplicate_devices": "{username} teilt Geräte mit dem konfigurierten Konto {shared}, es können nicht beide gleichzeitig konfiguriert werden!",
+            "duplicate_devices": "{username} teilt Geräte mit dem konfigurierten Konto {shared_account}, es können nicht beide gleichzeitig konfiguriert werden!",
             "accept_terms": "Nutzungsbedingungen müssen akzeptiert werden",
             "unknown": "Unbekannter Fehler aufgetreten: {error_detail}"
         },
@@ -34,7 +34,7 @@
                 "title": "Anker Solix Optionen",
                 "description": "Ändere die Nutzung der Schnittstelle",
                 "data": {
-                    "scan_interval": "Update Intervall ({updt_interval_min}-{updt_interval_max} Sekunden)",
+                    "scan_interval": "Update Intervall (30-600 Sekunden)",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "testmode": "Benutze den Testmode für die Integration",
                     "testfolder": "Ordner mit json Dateien für den Integrationstest"
@@ -49,6 +49,41 @@
         }
     },
     "entity": {
+        "button": {
+            "refresh_device": {
+                "name": "Details aktualisieren"
+            }
+        },
+        "binary_sensor": {
+            "wifi_connection": {
+                "name": "Wifi Verbindung",
+                "state": {
+                    "on": "Verbunden",
+                    "off": "Getrennt"
+                },
+                "state_attributes": {
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    },
+                    "wifi_ssid": {
+                        "name": "Wifi SSID"
+                    },
+                    "wifi_signal": {
+                        "name": "Wifi Signal"
+                    },
+                    "wireless_type": {
+                        "name": "Wifi Typ"
+                    }
+                }
+            },
+            "site_admin": {
+                "name": "Systemadministration",
+                "state": {
+                    "on": "Ja",
+                    "off": "Nein"
+                }
+            }
+        },
         "sensor": {
             "status_desc": {
                 "name": "Zustand",
@@ -170,7 +205,7 @@
                 "name": "SB Solarleistung"
             },
             "solarbank_output_power": {
-                "name": "SB Abgabeleistung"
+                "name": "SB Einspeiseleistung"
             },
             "solarbank_state_of_charge": {
                 "name": "SB Ladestand"
@@ -191,10 +226,10 @@
                 "name": "Kostenersparnis"
             },
             "total_output_energy": {
-                "name": "Erzeugte Energie"
+                "name": "Ertrag gesamt"
             },
             "daily_output_energy": {
-                "name": "Energie heute"
+                "name": "Ertrag heute"
             },
             "site_charging_power": {
                 "name": "System Ladeleistung"
@@ -203,39 +238,12 @@
                 "name": "System Einspeisevorgabe"
             }
         },
-        "binary_sensor": {
-            "wifi_connection": {
-                "name": "Wifi Verbindung",
-                "state": {
-                    "on": "Verbunden",
-                    "off": "Getrennt"
-                },
-                "state_attributes": {
-                    "bt_mac": {
-                        "name": "Bluetooth MAC"
-                    },
-                    "wifi_ssid": {
-                        "name": "Wifi SSID"
-                    },
-                    "wifi_signal": {
-                        "name": "Wifi Signal"
-                    },
-                    "wireless_type": {
-                        "name": "Wifi Typ"
-                    }
-                }
-            },
-            "site_admin": {
-                "name": "Systemadministration",
-                "state": {
-                    "on": "Ja",
-                    "off": "Nein"
-                }
-            }
-        },
         "switch": {
             "auto_upgrade": {
-                "name": "Auto-Update"
+                "name": "Auto-Upgrade"
+            },
+            "allow_refresh": {
+                "name": "Api Nutzung"
             }
         }
     },

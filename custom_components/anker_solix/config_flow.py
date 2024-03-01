@@ -13,8 +13,8 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import selector
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr, selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from . import api_client
@@ -26,6 +26,7 @@ from .const import (
     EXAMPLESFOLDER,
     INTERVALMULT,
     LOGGER,
+    SHARED_ACCOUNT,
     TC_LINK,
     TERMS_LINK,
     TESTFOLDER,
@@ -142,23 +143,30 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "unknown"
                     placeholders[ERROR_DETAIL] = str(exception)
 
-                self._data = user_input
-                # add some fixed configuration data
-                self._data[EXAMPLESFOLDER] = self.examplesfolder
+                # get first site data for account and verify nothing is shared with existing configuration
+                await self.client.api.update_sites()
+                if cfg_entry := await async_check_and_remove_devices(self.hass, user_input, self.client.api.sites | self.client.api.devices):
+                    errors[CONF_USERNAME] = "duplicate_devices"
+                    placeholders[CONF_USERNAME] = str(account_user)
+                    placeholders[SHARED_ACCOUNT] = str(cfg_entry.title)
+                else:
+                    self._data = user_input
+                    # add some fixed configuration data
+                    self._data[EXAMPLESFOLDER] = self.examplesfolder
 
-                # set initial options for entry
-                options = {
-                    CONF_SCAN_INTERVAL: SCAN_INTERVAL_DEF,
-                    INTERVALMULT: INTERVALMULT_DEF,
-                }
+                    # set initial options for entry
+                    options = {
+                        CONF_SCAN_INTERVAL: SCAN_INTERVAL_DEF,
+                        INTERVALMULT: INTERVALMULT_DEF,
+                    }
 
-                return self.async_create_entry(
-                    title=self.client.api.nickname
-                    if self.client and self.client.api
-                    else self._data.get(CONF_USERNAME),
-                    data=self._data,
-                    options=options,
-                )
+                    return self.async_create_entry(
+                        title=self.client.api.nickname
+                        if self.client and self.client.api
+                        else self._data.get(CONF_USERNAME),
+                        data=self._data,
+                        options=options,
+                    )
 
         return self.async_show_form(
             step_id="user",
@@ -193,6 +201,8 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Handle options flow."""
         errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {}   # NOTE: Passed option placeholder do not work with translation files, HASS Bug?
+
         if not (jsonfolders := api_client.json_example_folders()):
             # Add empty element to ensure proper list validation
             jsonfolders = [""]
@@ -268,4 +278,45 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(opt_schema),
             errors=errors,
+            description_placeholders=placeholders,
         )
+
+
+async def async_check_and_remove_devices(
+    hass: HomeAssistant, user_input: dict, apidata: dict
+) -> config_entries.ConfigEntry | None:
+    """Check if given user input with its initial apidata has shared devices with existing configuration.
+
+    If there are none, remove devices of this config that are no longer available for the configuration.
+    """
+
+    obsolete_user_devs = {}
+    # get all device entries for a domain
+    cfg_entries = hass.config_entries.async_entries(domain=DOMAIN)
+    for cfg_entry in cfg_entries:
+        device_entries = dr.async_entries_for_config_entry(dr.async_get(hass), cfg_entry.entry_id)
+        for dev_entry in device_entries:
+            if (
+                username := str(user_input.get(CONF_USERNAME) or "").lower()
+            ) and username != cfg_entry.unique_id:
+                # config entry of another account
+                if dev_entry.serial_number in apidata:
+                    return cfg_entry
+            # device is registered for same account, check if still used in coorinator data and add to obsolete list for removal
+            elif dev_entry.serial_number not in apidata:
+                obsolete_user_devs[dev_entry.id] = dev_entry.serial_number
+
+    # Remove the obsolete device entries
+    dev_registry = None
+    for dev_id, serial in obsolete_user_devs.items():
+        # ensure to obtain dev registry again if no longer available
+        if dev_registry is None:
+            dev_registry = dr.async_get(hass)
+        dev_registry.async_remove_device(dev_id)
+        # NOTE: removal of any underlying entities is handled by core
+        LOGGER.info(
+            "Removed device entry %s from registry for unused configuration entry device %s",
+            dev_id,
+            serial,
+        )
+    return None

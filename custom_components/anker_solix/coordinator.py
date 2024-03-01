@@ -24,10 +24,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
     config_entry: ConfigEntry
 
     def __init__(
-        self,
-        hass: HomeAssistant,
-        client: AnkerSolixApiClient,
-        update_interval: int
+        self, hass: HomeAssistant, client: AnkerSolixApiClient, update_interval: int
     ) -> None:
         """Initialize."""
         self.client = client
@@ -44,13 +41,25 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             return await self.client.async_get_data()
         except AnkerSolixApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
-        except (AnkerSolixApiClientError,AnkerSolixApiClientCommunicationError) as exception:
+        except (
+            AnkerSolixApiClientError,
+            AnkerSolixApiClientCommunicationError,
+        ) as exception:
             raise UpdateFailed(exception) from exception
 
-    async def async_refresh_data(self):
+    async def async_refresh_data_from_apidict(self):
         """Update data from client api dictionaries."""
-        self.data = await self.client.async_get_data(from_cache = True)
+        self.data = await self.client.async_get_data(from_cache=True)
         # inform listeners about changed data
         self.async_update_listeners()
 
+    async def async_refresh_device_details(self):
+        """Update data including device details and reset update interval."""
+        self.async_set_updated_data(await self.client.async_get_data(device_details=True))
+
+    async def async_execute_command(self, command: str):
+        """Execute the given command."""
+        match(command):
+            case "refresh_device":
+                await self.async_refresh_device_details()
 

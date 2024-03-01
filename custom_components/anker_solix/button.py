@@ -4,10 +4,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
+from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -23,10 +23,10 @@ from .solixapi.api import SolixDeviceType
 
 
 @dataclass(frozen=True)
-class AnkerSolixSwitchDescription(
-    SwitchEntityDescription, AnkerSolixEntityRequiredKeyMixin
+class AnkerSolixButtonDescription(
+    ButtonEntityDescription, AnkerSolixEntityRequiredKeyMixin
 ):
-    """Switch entity description with optional keys."""
+    """Button entity description with optional keys."""
 
     force_creation: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
@@ -34,24 +34,17 @@ class AnkerSolixSwitchDescription(
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
 
 
-DEVICE_SWITCHES = [
-    AnkerSolixSwitchDescription(
-        key="auto_upgrade",
-        translation_key="auto_upgrade",
-        json_key="auto_upgrade",
+DEVICE_BUTTONS = [
+    AnkerSolixButtonDescription(
+        key="refresh_device",
+        translation_key="refresh_device",
+        json_key="",
+        force_creation=True,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
 ]
 
-SITE_SWITCHES = [
-    AnkerSolixSwitchDescription(
-        key="allow_refresh",
-        translation_key="allow_refresh",
-        json_key="allow_refresh",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        force_creation=True,
-        value_fn=lambda d, _: len(d) > 0,
-    ),
-]
+SITE_BUTTONS = []
 
 
 async def async_setup_entry(
@@ -71,11 +64,11 @@ async def async_setup_entry(
             if data.get("type") == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
-                entity_list = SITE_SWITCHES
+                entity_list = SITE_BUTTONS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
-                entity_list = DEVICE_SWITCHES
+                entity_list = DEVICE_BUTTONS
 
             for description in (
                 desc
@@ -84,7 +77,7 @@ async def async_setup_entry(
                 or desc.force_creation
                 or desc.value_fn(data, desc.json_key) is not None
             ):
-                sensor = AnkerSolixSwitch(
+                sensor = AnkerSolixButton(
                     coordinator, description, context, entity_type
                 )
                 entities.append(sensor)
@@ -93,25 +86,21 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
-    """anker_solix switch class."""
+class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
+    """anker_solix button class."""
 
     _attr_has_entity_name = True
     _attr_attribution = ATTRIBUTION
-    _unrecorded_attributes = frozenset(
-        {
-            "auto_upgrade",
-        }
-    )
+    _unrecorded_attributes = frozenset({})
 
     def __init__(
         self,
         coordinator: AnkerSolixDataUpdateCoordinator,
-        description: AnkerSolixSwitchDescription,
+        description: AnkerSolixButtonDescription,
         context: str,
         entity_type: str,
     ) -> None:
-        """Initialize the switch class."""
+        """Initialize the button class."""
         super().__init__(coordinator, context)
 
         self._attribute_name = description.key
@@ -129,51 +118,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             data = (coordinator.data.get(context, {})).get("site_info", {})
             self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
-        self._attr_is_on = None
-        self.update_state_value()
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self.update_state_value()
-        super()._handle_coordinator_update()
+    async def async_press(self) -> None:
+        """Handle the button press."""
+        await self.coordinator.async_execute_command(self.entity_description.key)
 
-    def update_state_value(self):
-        """Update the state value of the switch based on the coordinator data."""
-        if self.coordinator and not (hasattr(self.coordinator, "data")):
-            self._attr_is_on = None
-        elif self.coordinator_context in self.coordinator.data:
-            data = self.coordinator.data.get(self.coordinator_context)
-            key = self.entity_description.json_key
-            self._attr_is_on = self.entity_description.value_fn(data, key)
-        else:
-            self._attr_is_on = self.entity_description.value_fn(self.coordinator.data, self.entity_description.json_key)
-
-        # Mark availability based on value
-        self._attr_available = self._attr_is_on is not None
-
-    async def async_turn_on(self, **_: any) -> None:
-        """Turn on the switch."""
-        if self._attribute_name == "auto_upgrade":
-            # When running in Test mode do not switch
-            if not self.coordinator.client.testmode():
-                await self.coordinator.client.api.set_auto_upgrade(
-                    {self.coordinator_context: True}
-                )
-                await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "allow_refresh":
-            self.coordinator.client.allow_refresh(allow=True)
-            await self.coordinator.async_refresh_device_details()
-
-    async def async_turn_off(self, **_: any) -> None:
-        """Turn off the switch."""
-        if self._attribute_name == "auto_upgrade":
-            # When running in Test mode do not switch
-            if not self.coordinator.client.testmode():
-                await self.coordinator.client.api.set_auto_upgrade(
-                    {self.coordinator_context: False}
-                )
-                await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "allow_refresh":
-            self.coordinator.client.allow_refresh(allow=False)
-            await self.coordinator.async_refresh_data_from_apidict()

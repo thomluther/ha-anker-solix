@@ -36,8 +36,9 @@ Because of the way the Anker cloud Api works, one account with e-mail/password c
 
 System members cannot manage (yet) any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
 
-Since the current version of this integration does not support many setting capabilities, it is advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner
-account should be used in the Anker mobile app to maintain full control capabilities of your devices.
+Since the current version of this integration does not support many setting capabilities, it is advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner account should be used in the Anker mobile app to maintain full control capabilities of your devices.
+
+A work around to overcome this account limitation has been implemented via the Api switch in the system device. When disabled, the integration stops any Api communication for the disabled account. During that time, you can use the account again for login through the Anker app and modify device settings as needed. Afterwards you can re-activate Api communication in the Integration again, which will automatically re-login and continue reporting data. While the Api switch is off, all sensores will be unavailable to avoid reporting of stale data.
 
 
 ## How to create a second Anker Power account
@@ -76,7 +77,8 @@ Platform | Description
 -- | --
 `sensor` | Show info from Anker Solix Api.
 `binary_sensor` | Show info from Anker Solix Api.
-`switch` | Modify device settings via Anker Solix Api.
+`switch` | Modify device settings via Anker Solix Api, temporary disable Api communication to allow parallel account usage in App
+`button` | Trigger Device details refresh on demand
 
 Device type | Description
 -- | --
@@ -110,15 +112,18 @@ Or following procedure:
 1. Restart Home Assistant
 1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Anker Solix"
 
+
 ## Integration configuration is done in the UI
 
 Note: When you make changes to the integration folder content, you need to restart Home Assistant to pick up those changes
 for the container or virtual environment where Home Assistant is being started.
 <!---->
 
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
+
 
 ## Attribution
 
@@ -126,6 +131,7 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 - [Solaredge HA core integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/solaredge)
 - [ha-hoymiles-wifi custom integration](https://github.com/suaveolent/ha-hoymiles-wifi)
 - [solix2mqtt project](https://github.com/tomquist/solix2mqtt)
+
 
 ## Showing Your Appreciation
 

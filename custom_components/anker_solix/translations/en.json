@@ -20,7 +20,7 @@
             "auth": "Username/Password is wrong: {error_detail}",
             "connection": "Unable to connect to the server: {error_detail}",
             "exceeded": "Login attempts exceeded: {error_detail}",
-            "duplicate_devices": "{username} has shared devices with existing account {shared}, you cannot configure both at the same time!",
+            "duplicate_devices": "{username} has shared devices with existing account {shared_account}, you cannot configure both at the same time!",
             "accept_terms": "Usage terms and conditions must be accepted",
             "unknown": "Unknown error occurred:: {error_detail}"
         },
@@ -34,7 +34,7 @@
                 "title": "Anker Solix options",
                 "description": "Change usage of the Api",
                 "data": {
-                    "scan_interval": "Update interval ({updt_interval_min}-{updt_interval_max} seconds)",
+                    "scan_interval": "Update interval (30-600 seconds)",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "testmode": "Use integration test mode",
                     "testfolder": "Folder with json files for integration testing"
@@ -49,6 +49,41 @@
         }
     },
     "entity": {
+        "button": {
+            "refresh_device": {
+                "name": "Refresh details"
+            }
+        },
+        "binary_sensor": {
+            "wifi_connection": {
+                "name": "Wifi connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                },
+                "state_attributes": {
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    },
+                    "wifi_ssid": {
+                        "name": "Wifi SSID"
+                    },
+                    "wifi_signal": {
+                        "name": "Wifi signal"
+                    },
+                    "wireless_type": {
+                        "name": "Wifi type"
+                    }
+                }
+            },
+            "site_admin": {
+                "name": "System administration",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            }
+        },
         "sensor": {
             "status_desc": {
                 "name": "State",
@@ -81,7 +116,7 @@
                 }
             },
             "charging_power": {
-                "name": "Charge power"
+                "name": "Battery power"
             },
             "input_power": {
                 "name": "Solar power"
@@ -132,7 +167,7 @@
                 "name": "Firmware"
             },
             "fittings": {
-                "name": "Accessories",
+                "name": "Accessory",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Serialnumber"
@@ -164,7 +199,7 @@
                 "name": "Power stations"
             },
             "solarbank_charging_power": {
-                "name": "SB charge power"
+                "name": "SB battery power"
             },
             "solarbank_input_power": {
                 "name": "SB solar power"
@@ -176,7 +211,7 @@
                 "name": "SB state of charge"
             },
             "pps_charging_power": {
-                "name": "PPS charge power"
+                "name": "PPS battery power"
             },
             "pps_output_power": {
                 "name": "PPS output power"
@@ -191,10 +226,10 @@
                 "name": "Cost savings"
             },
             "total_output_energy": {
-                "name": "Total output energy"
+                "name": "Yield total"
             },
             "daily_output_energy": {
-                "name": "Output energy today"
+                "name": "Yield today"
             },
             "site_charging_power": {
                 "name": "System charging power"
@@ -203,39 +238,12 @@
                 "name": "System home preset"
             }
         },
-        "binary_sensor": {
-            "wifi_connection": {
-                "name": "Wifi connection",
-                "state": {
-                    "on": "Connected",
-                    "off": "Disconnected"
-                },
-                "state_attributes": {
-                    "bt_mac": {
-                        "name": "Bluetooth MAC"
-                    },
-                    "wifi_ssid": {
-                        "name": "Wifi SSID"
-                    },
-                    "wifi_signal": {
-                        "name": "Wifi signal"
-                    },
-                    "wireless_type": {
-                        "name": "Wifi type"
-                    }
-                }
-            },
-            "site_admin": {
-                "name": "System administration",
-                "state": {
-                    "on": "Yes",
-                    "off": "No"
-                }
-            }
-        },
         "switch": {
             "auto_upgrade": {
-                "name": "Auto-Update"
+                "name": "Auto-Upgrade"
+            },
+            "allow_refresh": {
+                "name": "Api Usage"
             }
         }
     },

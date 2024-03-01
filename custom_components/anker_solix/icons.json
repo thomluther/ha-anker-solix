@@ -1,5 +1,26 @@
 {
     "entity": {
+        "button": {
+            "refresh_device": {
+                "default": "mdi:cog-refresh"
+            }
+        },
+        "binary_sensor": {
+            "wifi_connection": {
+                "default": "mdi:wifi-alert",
+                "state": {
+                    "on": "mdi:wifi",
+                    "off": "mdi:wifi-off"
+                }
+            },
+            "site_admin": {
+                "default": "mdi:account-alert",
+                "state": {
+                    "on": "mdi:account-check",
+                    "off": "mdi:account-cancel"
+                }
+            }
+        },
         "sensor": {
             "status_desc": {
                 "default": "mdi:alert-circle-outline",
@@ -63,28 +84,19 @@
                 "default": "mdi:hand-coin"
             }
         },
-        "binary_sensor": {
-            "wifi_connection": {
-                "default": "mdi:wifi-alert",
-                "state": {
-                    "on": "mdi:wifi",
-                    "off": "mdi:wifi-off"
-                }
-            },
-            "site_admin": {
-                "default": "mdi:account-alert",
-                "state": {
-                    "on": "mdi:account-check",
-                    "off": "mdi:account-cancel"
-                }
-            }
-        },
         "switch": {
             "auto_upgrade": {
                 "default": "mdi:sync-alert",
                 "state": {
                     "on": "mdi:autorenew",
                     "off": "mdi:autorenew-off"
+                }
+            },
+            "allow_refresh": {
+                "default": "mdi:sync-alert",
+                "state": {
+                    "on": "mdi:sync",
+                    "off": "mdi:sync-off"
                 }
             }
         }

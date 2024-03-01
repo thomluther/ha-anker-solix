@@ -51,6 +51,7 @@ from .entity import (
     get_AnkerSolixSystemInfo,
 )
 
+
 @dataclass(frozen=True)
 class AnkerSolixSensorDescription(
     SensorEntityDescription, AnkerSolixEntityRequiredKeyMixin
@@ -390,7 +391,7 @@ SITE_SENSORS = [
             or [None]
         )[0],
         device_class=SensorDeviceClass.MONETARY,
-        state_class=SensorStateClass.MEASUREMENT,
+        state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
         force_creation_fn=lambda d: True,
         value_fn=lambda d, jk, _: float(
@@ -423,7 +424,8 @@ SITE_SENSORS = [
                 ]
                 or [None]
             )[0]
-        ).replace("w", "W") or None,
+        ).replace("w", "W")
+        or None,
         device_class=SensorDeviceClass.ENERGY,
         force_creation_fn=lambda d: True,
         value_fn=lambda d, jk, _: float(
@@ -456,7 +458,8 @@ SITE_SENSORS = [
                 ]
                 or [None]
             )[0]
-        ).replace("w", "W") or None,
+        ).replace("w", "W")
+        or None,
         device_class=SensorDeviceClass.ENERGY,
         reset_at_midnight=True,
         force_creation_fn=lambda d: True,
@@ -602,9 +605,7 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(self._context_base) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(
-                data, self._context_base
-            )
+            self._attr_device_info = get_AnkerSolixDeviceInfo(data, self._context_base)
             if self._attribute_name == "status_desc":
                 # set the correct device type picture for the device status entity
                 self._attr_entity_picture = getattr(
@@ -621,9 +622,7 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(self._context_base, {})).get("site_info", {})
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, self._context_base
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, self._context_base)
 
         # set sensor unit if described by function
         if unit := description.unit_fn(
@@ -734,6 +733,8 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
                                 float(self._native_value) * randrange(70, 130, 5) / 100,
                                 3,
                             )
+        else:
+            self._native_value = None
 
         # Mark sensor availability based on a sensore value
         self._attr_available = self._native_value is not None
