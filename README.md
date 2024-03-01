@@ -6,6 +6,7 @@
 [![GitHub Activity][commits-shield]][commits]
 ![Contributors][contributors]
 ![Downloads][downloads]
+[![Discussions][discussions-shield]][discussions]
 [![Community Forum][forum-shield]][forum]
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
@@ -142,11 +143,13 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 
 [anker-solix]: https://github.com/thomluther/hacs-anker-solix
 [anker-solix-api]: https://github.com/thomluther/anker-solix-api
-[commits]: https://img.shields.io/github/commits/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[commits]: https://github.com/thomluther/hacs-anker-solix/commits/main/
 [commits-shield]: https://img.shields.io/github/commits/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [releases]: https://github.com/thomluther/hacs-anker-solix/releases
 [releases-shield]: https://img.shields.io/github/release/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[contributors]: https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[discussions]: https://github.com/thomluther/hacs-anker-solix/discussions
+[discussions-shield]: https://img.shields.io/github/discussions/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
 [downloads]: https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [hacs-repo-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
