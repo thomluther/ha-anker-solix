@@ -1,19 +1,19 @@
 {
   "domain": "anker_solix",
   "name": "Anker Solix",
-  "version": "0.0.1",
-  "dependencies": [],
   "after_dependencies": [],
-  "integration_type": "hub",
-  "iot_class": "cloud_polling",
   "config_flow": true,
   "codeowners": [
     "@thomluther"
   ],
+  "dependencies": [],
   "documentation": "https://github.com/thomluther/hacs-anker-solix",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/thomluther/hacs-anker-solix/issues",
   "requirements": [
     "aiohttp>=3.9.0",
     "cryptography>=3.4.8"
-  ]
+  ],
+  "version": "0.9.0"
 }
