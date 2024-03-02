@@ -82,7 +82,7 @@ class AnkerSolixApiClient:
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
             raise AnkerSolixApiClientError(
-                f"Api Request Error: {exception}"
+                f"Api Request Error: {type(exception)}: {exception}"
             ) from exception
 
     async def async_get_data(
@@ -113,34 +113,34 @@ class AnkerSolixApiClient:
                             str(self.MIN_DEVICE_REFRESH),
                         )
                     else:
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Api Coordinator %s is enforcing site and device update %s",
                             self.api.nickname,
                             f"from folder {self.api.testDir()}"
                             if self._testmode
                             else "",
-                        )  # TODO(RELEASE): Disable after testing
+                        )
                         await self.api.update_sites(fromFile=self._testmode)
                         await self.api.update_device_details(fromFile=self._testmode)
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
                 else:
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "Api Coordinator %s is updating sites %s",
                         self.api.nickname,
                         f"from folder {self.api.testDir()}" if self._testmode else "",
-                    )  # TODO(RELEASE): Disable after testing
+                    )
                     await self.api.update_sites(fromFile=self._testmode)
                     # update device details only after given refresh interval count
                     self._intervalcount -= 1
                     if self._intervalcount <= 0:
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Api Coordinator %s is updating devices %s",
                             self.api.nickname,
                             f"from folder {self.api.testDir()}"
                             if self._testmode
                             else "",
-                        )  # TODO(RELEASE): Disable after testing
+                        )
                         await self.api.update_device_details(fromFile=self._testmode)
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
@@ -169,7 +169,7 @@ class AnkerSolixApiClient:
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
             raise AnkerSolixApiClientError(
-                f"Api Request Error: {exception}"
+                f"Api Request Error: {type(exception)}: {exception}"
             ) from exception
 
     def testmode(self, mode: bool = None) -> bool:

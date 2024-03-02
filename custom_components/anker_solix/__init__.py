@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Registers update listener to update config entry when options are updated.
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
-    # first check if config shares devices with another config and also remove orphaned devices no longer contained in actual api data
+    # check again if config shares devices with another config and also remove orphaned devices no longer contained in actual api data
     # This is run upon reloads or config option changes
     if shared_cfg := await async_check_and_remove_devices(hass, entry.data, coordinator.data):
         # device is already registered for another account, abort configuration
@@ -113,7 +113,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update, triggered by update listener only."""
     coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    # coordinator: AnkerSolixDataUpdateCoordinator = hass_entry.get("coordinator", {})
     do_reload = True
     if coordinator and coordinator.client:
         testmode = entry.options.get(TESTMODE)
@@ -151,7 +150,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_remove_config_entry_device(
     hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
 ) -> bool:
-    """Support removal of devices and remove a config entry from a device."""
+    """Support removal of devices but remove a config entry from a device only if the device is no longer active."""
     coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.entry_id
     ]

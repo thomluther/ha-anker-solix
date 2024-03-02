@@ -1,3 +1,4 @@
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="80" />
 <img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="90" />
 
 # Anker Solix Integration for Home Assistant
@@ -17,6 +18,9 @@
 This Home Assistant custom component integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker cloud. It was specifically developped to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80) have been add to the Api library and are available through the integration. The Anker Power cloud also supports portable power stations (PPS) or home Power Panels which may be added in future once Api data structures for those devices is known.
 
 
+# 🚨 Work in progress, this is not released yet 🚨
+
+
 ## Disclaimer:
 
 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially the Api library as well as the integration have been developped for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and future enhancements may allow also modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.**
@@ -26,7 +30,7 @@ This Home Assistant custom component integration utilizes the [anker-solix Pytho
 
 This integration utilizes an unofficial Python library to communicate with the Anker Power cloud server Api that is also used by the official Anker mobile app. The Api access or communication may change or break any time without notice and therefore also change or break the integration functionality. Furthermore the usage for the unofficial Api library may impose risks, such as device damage by improper settings or loss of manufacturer's warranty, whether is caused by improper usage, library failures, Api changes or other reasons.
 
-**The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these confitions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.**
+**The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.**
 
 
 ## Anker Account Information
@@ -39,23 +43,7 @@ System members cannot manage (yet) any devices of the shared system or view any 
 
 Since the current version of this integration does not support many setting capabilities, it is advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner account should be used in the Anker mobile app to maintain full control capabilities of your devices.
 
-A work around to overcome this account limitation has been implemented via the Api switch in the system device. When disabled, the integration stops any Api communication for the disabled account. During that time, you can use the account again for login through the Anker app and modify device settings as needed. Afterwards you can re-activate Api communication in the Integration again, which will automatically re-login and continue reporting data. While the Api switch is off, all sensores will be unavailable to avoid reporting of stale data.
-
-
-## How to create a second Anker Power account
-
-If you have the app installed on 2 different devices, the account creation and system sharing will be a little bit easier. Following is a high level guideline how to create a second account and share the system on a single device:
-1. Go to your profile in the Anker app, click on your name at the top and then Log out
-1. Then create a new Anker power account via the app. You will need a second e-mail address. (This could also be an alias address that you set up with your e-mail provider)
-1. Complete the registration process. This may have to be confirmed via a temporary code that is sent to the used e-mail address.
-1. Once you are logged in with the secondary account, log out again in the app as in step 1.
-1. Log in again with your main account and go to your profile
-1. The first item there is Manage System. Go into Manage System and then click on the arrow to the right of the system you want to share
-1. Then you will see Invite Members at the bottom, where you have to enter the e-mail of your second account
-1. Then log out again as in step 1.
-1. Log in with the second account and go to your systems via the profile.
-1. There you should now see the invitation from your main account. You have to confirm the invitation to activate shared system access.
-1. Just now you access the system as a member. The owner will also get a confirmation that you accepted the invitation.
+For detailed usage instructions, please refer to the [INFO](INFO.md)
 
 
 ## Limitations
@@ -102,6 +90,8 @@ Or following procedure:
    - **Category:** Integration
 1. Click "Save" and then click "Install" on the `Anker Solix` integration.
 
+Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible www folder, that is located in your installation configuration folder. For instructions to copy the image files manually, see below.
+
 
 ## Manual Installation
 
@@ -114,10 +104,14 @@ Or following procedure:
 1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Anker Solix"
 
 
+## Optional entity pictures
+If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to create or copy the www folder structure including the images manually in configuration folder of your Home Assistant installation. If you own a Home Assistant OS device, you can preferrably use file management Add Ons such as Studio Code Server or File Explorer to create/copy those folders and files. Once the images are available, they will be picked up when the integration is (re)-creating the entities, like on first creation or re-load of the configuration entry.
+
+
 ## Integration configuration is done in the UI
 
 Note: When you make changes to the integration folder content, you need to restart Home Assistant to pick up those changes
-for the container or virtual environment where Home Assistant is being started.
+for the container or virtual environment where Home Assistant is being started. This is applicable as well when the integration is updated manually or via HACS.
 <!---->
 
 

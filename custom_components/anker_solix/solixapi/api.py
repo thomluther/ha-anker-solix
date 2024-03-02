@@ -257,10 +257,11 @@ class SolixDeviceStatus(Enum):
 class SolarbankStatus(Enum):
     """Enumuration for Anker Solix Solarbank status."""
 
-    charging = "1"
-    discharging = "2"
-    bypass = "3"
-    bypass_charging = "35"  # pseudo state, the solarbank does not distinguish this
+    detection = "0"
+    bypass = "1"
+    discharge = "2"
+    charge = "3"
+    charge_bypass = "35"  # pseudo state, the solarbank does not distinguish this
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this but reports 3 as seen so far
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night as well
     # TODO(3): Add descriptions once status code usage is observed/known
@@ -466,8 +467,8 @@ class AnkerSolixApi:
             elif isAdmin is False and device.get("is_admin") is None:
                 device.update({"is_admin": False})
             calc_capacity = False  # Flag whether capacity may need recalculation
-            try:
-                for key, value in devData.items():
+            for key, value in devData.items():
+                try:
                     if key in ["product_code", "device_pn"] and value:
                         device.update({"device_pn": str(value)})
                     elif key in ["device_name"] and value:
@@ -510,7 +511,9 @@ class AnkerSolixApi:
                         )
                         # Value for device home load may be empty for single solarbank, use this setting also for device preset in this case
                         if not device.get("set_output_power"):
-                            device.update({"set_output_power": str(value).replace("W", "")})
+                            device.update(
+                                {"set_output_power": str(value).replace("W", "")}
+                            )
                     elif key in ["power_unit"]:
                         device.update({"power_unit": str(value)})
                     elif key in ["status"]:
@@ -530,21 +533,26 @@ class AnkerSolixApi:
                             if str(value) == status.value:
                                 description = status.name
                                 break
-                        # check if battery charging during bypass and if output during bypass
+                        # check if battery has bypass during charge (if output during charge)
                         # NOTE: charging power may be updated after initial device details update
-                        # NOTE: If status is 3=Bypass but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
+                        # NOTE: If status is 3=charging and larger than preset but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
+                        # This key can be passed separately, make sure the other values are looked up in passed data first, then in device details
+                        preset = devData.get("set_load_power") or device("set_output_power")
+                        out = devData.get("output_power") or device.get("output_power")
+                        solar = devData.get("photovoltaic_power") or device.get("input_power")
                         if (
-                            description == SolarbankStatus.bypass.name
-                            and (charge := devData.get("charging_power"))
-                            and (out := devData.get("output_power"))
+                            description == SolarbankStatus.charge.name
+                            and preset is not None
+                            and out is not None
+                            and solar is not None
                         ):
                             with contextlib.suppress(ValueError):
-                                if int(out) == 0:
+                                if int(out) == 0 and int(solar) > int(preset):
                                     # Bypass but 0 W output must be active charge priority
                                     description = SolarbankStatus.charge_priority.name
-                                elif int(charge) > 0:
-                                    # Bypass with output and charge must be bypass charging
-                                    description = SolarbankStatus.bypass_charging.name
+                                elif int(out) > 0:
+                                    # Charge with output must be bypass charging
+                                    description = SolarbankStatus.charge_bypass.name
                         device.update({"charging_status_desc": description})
                     elif key in ["bws_surplus"]:
                         device.update({"bws_surplus": str(value)})
@@ -585,9 +593,13 @@ class AnkerSolixApi:
                     if key in ["battery_power"] or calc_capacity:
                         # generate battery values when soc updated or device name changed or PN is known
                         if not (cap := device.get("battery_capacity")):
-                            if hasattr(SolixDeviceCapacity, device.get("device_pn", "")):
+                            if hasattr(
+                                SolixDeviceCapacity, device.get("device_pn", "")
+                            ):
                                 # get battery capacity from known PNs
-                                cap = SolixDeviceCapacity[device.get("device_pn", "")].value
+                                cap = SolixDeviceCapacity[
+                                    device.get("device_pn", "")
+                                ].value
                             elif device.get("type") == SolixDeviceType.SOLARBANK.value:
                                 # Derive battery capacity in Wh from latest solarbank name or alias if available
                                 cap = (
@@ -603,11 +615,19 @@ class AnkerSolixApi:
                             device.update(
                                 {
                                     "battery_capacity": str(cap),
-                                    "battery_energy": str(int(int(cap) * int(soc) / 100)),
+                                    "battery_energy": str(
+                                        int(int(cap) * int(soc) / 100)
+                                    ),
                                 }
                             )
-            except Exception as err: #pylint: disable=broad-exception-caught
-                self._logger.error("%s occured when updating device details for key %s with value %s: %s", type(err), key, value, err)
+                except Exception as err:  # pylint: disable=broad-exception-caught
+                    self._logger.error(
+                        "%s occured when updating device details for key %s with value %s: %s",
+                        type(err),
+                        key,
+                        value,
+                        err,
+                    )
 
             self.devices.update({str(sn): device})
         return sn
@@ -943,7 +963,9 @@ class AnkerSolixApi:
                         power_out = int(solarbank.get("output_power", ""))
                         # power_charge = int(solarbank.get("charging_power", "")) # This value seems to reflect the output power, which is corect for status 2, but may be wrong for other states
                         charge_calc = power_in - power_out
-                        solarbank["charging_power"] = str(charge_calc)  # allow negative values
+                        solarbank["charging_power"] = str(
+                            charge_calc
+                        )  # allow negative values
                         sb_total_charge_calc += charge_calc
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                     self.sites.update({myid: mysite})
@@ -962,8 +984,12 @@ class AnkerSolixApi:
                     if sb_total_charge_calc < 0:
                         with contextlib.suppress(ValueError):
                             # discharging, adjust sb total charge value in scene info and allow negativ value to indicate discharge
-                            sb_total_charge = float(sb_total_solar) - float(sb_total_output)
-                            mysite["solarbank_info"]["total_charging_power"] = str(sb_total_charge)
+                            sb_total_charge = float(sb_total_solar) - float(
+                                sb_total_output
+                            )
+                            mysite["solarbank_info"]["total_charging_power"] = str(
+                                sb_total_charge
+                            )
                     for sn, charge in sb_charges.items():
                         self.devices[sn]["charging_power"] = str(
                             0
@@ -972,7 +998,7 @@ class AnkerSolixApi:
                         )
                         # Update also the charge status description which may change after charging power correction
                         charge_status = self.devices[sn].get("charging_status")
-                        if charge_status == SolarbankStatus.bypass:
+                        if charge_status == SolarbankStatus.charge:
                             self._update_dev(
                                 {
                                     "device_sn": sn,

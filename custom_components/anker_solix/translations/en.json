@@ -40,6 +40,7 @@
                     "testfolder": "Folder with json files for integration testing"
                 },
                 "data_description": {
+                    "scan_interval": "Note: Data on the cloud server is updated only once per minute. An update interval less than 60 seconds therefore does not give you any benefits.",
                     "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
                 }
             }
@@ -104,10 +105,11 @@
             "charging_status_desc": {
                 "name": "Mode",
                 "state": {
-                    "charging": "Charging",
-                    "discharging": "Discharging",
+                    "detection": "Detection",
                     "bypass": "Bypass",
-                    "bypass_charging": "Surplus charging",
+                    "discharge": "Discharge",
+                    "charge": "Charge",
+                    "charge_bypass": "Charge bypass",
                     "charge_priority":  "Charge priority",
                     "full_bypass": "Full bypass",
                     "wakeup": "Wakeup",

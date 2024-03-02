@@ -33,11 +33,12 @@
             "charging_status_desc": {
                 "default": "mdi:battery-alert-variant",
                 "state": {
-                    "charging": "mdi:battery-plus",
-                    "discharging": "mdi:battery-minus",
-                    "bypass": "mdi:home-battery",
-                    "bypass_charging": "mdi:home-battery",
-                    "charge_priority":  "mdi:battery-arrow-up",
+                    "detection": "mdi:battery-clock",
+                    "bypass": "mdi:battery-remove",
+                    "discharge": "mdi:battery-minus",
+                    "charge": "mdi:battery-plus",
+                    "charge_bypass": "mdi:home-battery",
+                    "charge_priority":  "mdi:home-battery-outline",
                     "wakeup": "mdi:battery-sync",
                     "full_bypass": "mdi:battery-remove-outline",
                     "standby": "mdi:battery-off",

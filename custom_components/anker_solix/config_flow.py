@@ -40,7 +40,7 @@ _SCAN_INTERVAL_MIN = 10 if ALLOW_TESTMODE else 30
 _SCAN_INTERVAL_MAX = 600
 _SCAN_INTERVAL_STEP = 10
 _INTERVALMULT_MIN = 1
-_INTERVALMULT_MAX = 20
+_INTERVALMULT_MAX = 30
 _INTERVALMULT_STEP = 1
 _ALLOW_TESTMODE = bool(ALLOW_TESTMODE)
 
@@ -255,9 +255,6 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
                     ): selector.BooleanSelector(),
                     vol.Optional(
                         TESTFOLDER,
-                        # default=(user_input or self.config_entry.options).get(
-                        #     TESTFOLDER, jsonfolders[0] if len(jsonfolders) > 0 else ""
-                        # ),
                         description={
                             "suggested_value": (
                                 user_input or self.config_entry.options

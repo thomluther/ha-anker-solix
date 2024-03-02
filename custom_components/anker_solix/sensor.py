@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections.abc import Callable
 from contextlib import suppress
+import os
 from random import randrange, choice
 from typing import Any
 
@@ -441,41 +442,42 @@ SITE_SENSORS = [
             )[0]
         ),
     ),
-    AnkerSolixSensorDescription(
-        # Systemenergy daily calculated by integration
-        key="daily_output_energy",
-        translation_key="daily_output_energy",
-        json_key="total",
-        state_class=SensorStateClass.TOTAL,
-        unit_fn=lambda d, _: (
-            (
-                [
-                    stat.get("unit")
-                    for stat in filter(
-                        lambda item: item.get("type") == "1",
-                        d.get("statistics") or [{}],
-                    )
-                ]
-                or [None]
-            )[0]
-        ).replace("w", "W")
-        or None,
-        device_class=SensorDeviceClass.ENERGY,
-        reset_at_midnight=True,
-        force_creation_fn=lambda d: True,
-        value_fn=lambda d, jk, _: float(
-            (
-                [
-                    stat.get(jk)
-                    for stat in filter(
-                        lambda item: item.get("type") == "1",
-                        d.get("statistics") or [{}],
-                    )
-                ]
-                or [None]
-            )[0]
-        ),
-    ),
+    # Reset mechanism not working yet, remove if daily values gathered from energy statistic queries
+    # AnkerSolixSensorDescription(
+    #     # Systemenergy daily calculated by integration
+    #     key="daily_output_energy",
+    #     translation_key="daily_output_energy",
+    #     json_key="total",
+    #     state_class=SensorStateClass.TOTAL,
+    #     unit_fn=lambda d, _: (
+    #         (
+    #             [
+    #                 stat.get("unit")
+    #                 for stat in filter(
+    #                     lambda item: item.get("type") == "1",
+    #                     d.get("statistics") or [{}],
+    #                 )
+    #             ]
+    #             or [None]
+    #         )[0]
+    #     ).replace("w", "W")
+    #     or None,
+    #     device_class=SensorDeviceClass.ENERGY,
+    #     reset_at_midnight=True,
+    #     force_creation_fn=lambda d: True,
+    #     value_fn=lambda d, jk, _: float(
+    #         (
+    #             [
+    #                 stat.get(jk)
+    #                 for stat in filter(
+    #                     lambda item: item.get("type") == "1",
+    #                     d.get("statistics") or [{}],
+    #                 )
+    #             ]
+    #             or [None]
+    #         )[0]
+    #     ),
+    # ),
     AnkerSolixSensorDescription(
         # System charging power
         key="site_charging_power",
@@ -595,7 +597,8 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
         self.entity_type = entity_type
         self._attribute_name = description.key
         self._attr_unique_id = (f"{context}_{description.key}").lower()
-        self._attr_entity_picture = description.picture_path
+        if description.picture_path and os.path.isfile(description.picture_path):
+            self._attr_entity_picture = description.picture_path
         self._attr_extra_state_attributes = None
         # Split context for nested device serials
         self._context_base = context.split("_")[0]
@@ -703,7 +706,7 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
                     ):
                         self._native_value = None
 
-                # perform potential value conversions
+                # perform potential value conversions in testmode
                 if (
                     self.coordinator.client.testmode()
                     and TEST_NUMBERVARIANCE
