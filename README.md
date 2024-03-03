@@ -90,7 +90,7 @@ Or following procedure:
    - **Category:** Integration
 1. Click "Save" and then click "Install" on the `Anker Solix` integration.
 
-Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible www folder, that is located in your installation configuration folder. For instructions to copy the image files manually, see below.
+Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see instructions below to copy the image files manually.
 
 
 ## Manual Installation
@@ -105,13 +105,14 @@ Unfortunately, HACS does not automatically install the optional entity images th
 
 
 ## Optional entity pictures
-If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation. If you operate a Home Assistant OS device, you can preferrably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
-1. Navigate to the `CONFIG` folder of your HA installation
-1. Navigate to `customer_componets/anker_solix/` folder and copy the `images` subfolder containing the integration pictures
-1. Back in `CONFIG` folder, navigate to the `www\community\anker_solix` folder or create the folder structure if not existing
+If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation configuration folder. If you operate a Home Assistant OS device, you can preferrably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
+1. Navigate to the `CONFIG` folder of your HA installation (where your configuration.yaml is located)
+1. Navigate to `custom_components/anker_solix/` folder and copy the `images` subfolder containing the entity pictures
+1. Go back to your `CONFIG` folder and navigate to or create the `www\community\anker_solix` folder structure if not existing
 1. Paste the `images` folder into the created `anker_solix` community subfolder
 
  Once the images are available, they will be picked up when the integration is (re)-creating the entities, like on first creation or re-load of the configuration entry.
+ Make sure to reload your HA UI browser window without cache to get the images shown properly.
 
 
 ## Integration configuration is done in the UI

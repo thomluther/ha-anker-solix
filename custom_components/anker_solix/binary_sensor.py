@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN
+from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, TEST_NUMBERVARIANCE
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -183,7 +183,11 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             self._attr_is_on = self.entity_description.value_fn(data, key)
 
             # When running in Test mode, simulate some variance for entities with set device class
-            if self.coordinator.client.testmode() and self._attr_is_on is not None:
+            if (
+                self.coordinator.client.testmode()
+                and TEST_NUMBERVARIANCE
+                and self._attr_is_on is not None
+            ):
                 # value fluctuation
                 self._attr_is_on = bool(randrange(2))
         else:
