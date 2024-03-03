@@ -621,6 +621,9 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
                 ).get("product_code")
                 if pn == "A17Y0":
                     self._attr_entity_picture = AnkerSolixPicturePath.ZEROWSWITCH
+            # disable picture again if path does not exist to allow display of icons alternatively
+            if self._attr_entity_picture and not os.path.isfile(self._attr_entity_picture):
+                self._attr_entity_picture = None
 
         else:
             # get the site info data from site context entry of coordinator data

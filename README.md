@@ -105,7 +105,13 @@ Unfortunately, HACS does not automatically install the optional entity images th
 
 
 ## Optional entity pictures
-If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to create or copy the www folder structure including the images manually in configuration folder of your Home Assistant installation. If you own a Home Assistant OS device, you can preferrably use file management Add Ons such as Studio Code Server or File Explorer to create/copy those folders and files. Once the images are available, they will be picked up when the integration is (re)-creating the entities, like on first creation or re-load of the configuration entry.
+If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation. If you operate a Home Assistant OS device, you can preferrably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
+1. Navigate to the `CONFIG` folder of your HA installation
+1. Navigate to `customer_componets/anker_solix/` folder and copy the `images` subfolder containing the integration pictures
+1. Back in `CONFIG` folder, navigate to the `www\community\anker_solix` folder or create the folder structure if not existing
+1. Paste the `images` folder into the created `anker_solix` community subfolder
+
+ Once the images are available, they will be picked up when the integration is (re)-creating the entities, like on first creation or re-load of the configuration entry.
 
 
 ## Integration configuration is done in the UI
