@@ -1,10 +1,10 @@
-<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="80" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="90" />
 <img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="90" />
 
 # How to use the Anker Solix Integration for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
-![Downloads][downloads]
+[![Downloads][downloads-shield]][downloads]
 [![Discussions][discussions-shield]][discussions]
 
 [![License][license-shield]](LICENSE)
@@ -93,7 +93,11 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [releases]: https://github.com/thomluther/hacs-anker-solix/releases
 [releases-shield]: https://img.shields.io/github/release/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [discussions]: https://github.com/thomluther/hacs-anker-solix/discussions
-[discussions-shield]: https://img.shields.io/github/discussions/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[discussions-shield]: https://img.shields.io/github/discussion/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[contributors]: https://github.com/thomluther/hacs-anker-solix/contributors
+[contributors-shield]: https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[downloads]: https://github.com/thomluther/hacs-anker-solix/downloads
+[downloads-shield]: https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
 [downloads]: https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [exampleimg]: example.png

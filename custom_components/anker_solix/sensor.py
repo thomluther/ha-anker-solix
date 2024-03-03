@@ -597,7 +597,8 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
         self.entity_type = entity_type
         self._attribute_name = description.key
         self._attr_unique_id = (f"{context}_{description.key}").lower()
-        if description.picture_path and os.path.isfile(description.picture_path):
+        wwwroot = os.path.join(self.coordinator.hass.config.config_dir,"www")
+        if description.picture_path and os.path.isfile(description.picture_path.replace(AnkerSolixPicturePath.LOCALPATH,wwwroot)):
             self._attr_entity_picture = description.picture_path
         self._attr_extra_state_attributes = None
         # Split context for nested device serials
@@ -622,7 +623,7 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
                 if pn == "A17Y0":
                     self._attr_entity_picture = AnkerSolixPicturePath.ZEROWSWITCH
             # disable picture again if path does not exist to allow display of icons alternatively
-            if self._attr_entity_picture and not os.path.isfile(self._attr_entity_picture):
+            if self._attr_entity_picture and not os.path.isfile(self._attr_entity_picture.replace(AnkerSolixPicturePath.LOCALPATH,wwwroot)):
                 self._attr_entity_picture = None
 
         else:
