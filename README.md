@@ -4,9 +4,8 @@
 # Anker Solix Integration for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]][commits]
 [![Contributors][contributors-shield]][contributors]
-[![Downloads][downloads-shield]][downloads]
+[![Issues][issues-shield]][issues]
 [![Discussions][discussions-shield]][discussions]
 [![Community Forum][forum-shield]][forum]
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
@@ -53,6 +52,7 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 - The Api library is currently only validated against the EU Anker cloud server. Assignment of countries to the other common cloud server is unknown and depending on the selected country for your account, the Api login may fail or show no valid devices or sensors in the integration
 - The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
 - The Anker account used in the integration cannot longer be used in the Anker mobile app since the cloud Api only allows 1 active client user token at a time. Existing user tokens will be removed from the server upon new client authentication requests. That means the integration kicks out the App user and vice versa.
+- It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. A Wifi connection status is available, but only when using the owner account in the integration. While Wifi is disconnected, the reported data may be stale without indication that device is disconnected when using shared accounts.
 - The initial integration release supports only Solarbank and Anker inverter devices. Further devices managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developpers (open issue on git with example data)
 - The initial integration release supports only following settings when using a system owner account:
    - Auto-Update setting of Solarbank device
@@ -143,20 +143,17 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 
 [anker-solix]: https://github.com/thomluther/hacs-anker-solix
 [anker-solix-api]: https://github.com/thomluther/anker-solix-api
-[commits]: https://github.com/thomluther/hacs-anker-solix/commits
-[commits-shield]: https://img.shields.io/github/commits/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [releases]: https://github.com/thomluther/hacs-anker-solix/releases
 [releases-shield]: https://img.shields.io/github/release/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[issues]: https://github.com/thomluther/hacs-anker-solix/issues
+[issues-shield]: https://img.shields.io/github/issues/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [discussions]: https://github.com/thomluther/hacs-anker-solix/discussions
-[discussions-shield]: https://img.shields.io/github/discussion/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[discussions-shield]: https://img.shields.io/github/discussions/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [contributors]: https://github.com/thomluther/hacs-anker-solix/contributors
 [contributors-shield]: https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[downloads]: https://github.com/thomluther/hacs-anker-solix/downloads
-[downloads-shield]: https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
 [hacs-repo-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
 [hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=https%3A%2F%2Fgithub.com%2Fthomluther%2Fhacs-anker-solix&category=Integration
-[exampleimg]: example.png
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/badge/Licence-MIT-orange

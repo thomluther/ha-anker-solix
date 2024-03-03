@@ -4,7 +4,6 @@
 # How to use the Anker Solix Integration for Home Assistant
 
 [![GitHub Release][releases-shield]][releases]
-[![Downloads][downloads-shield]][downloads]
 [![Discussions][discussions-shield]][discussions]
 
 [![License][license-shield]](LICENSE)
@@ -93,17 +92,12 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [releases]: https://github.com/thomluther/hacs-anker-solix/releases
 [releases-shield]: https://img.shields.io/github/release/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [discussions]: https://github.com/thomluther/hacs-anker-solix/discussions
-[discussions-shield]: https://img.shields.io/github/discussion/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[contributors]: https://github.com/thomluther/hacs-anker-solix/contributors
-[contributors-shield]: https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[downloads]: https://github.com/thomluther/hacs-anker-solix/downloads
-[downloads-shield]: https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
-[downloads]: https://img.shields.io/github/downloads/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[exampleimg]: example.png
+[discussions-shield]: https://img.shields.io/github/discussions/thomluther/hacs-anker-solix.svg?style=for-the-badge
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/badge/Licence-MIT-orange
 [license]: https://github.com/thomluther/hacs-anker-solix/blob/main/LICENSE
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
+[buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
+[exampleimg]: example.png
 
