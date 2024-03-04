@@ -29,17 +29,28 @@ This Home Assistant custom component integration allows seamless integration wit
 It follows the Anker cloud Api structures, which allows registered users to define one or more Power Systems, called site in the Api with a unique site_id.
 The configured user must have defined at least one owning system, or have access to a shared system, in order to see devices for a configured integration account.
 For each accessible system by the configured account, the integration will create one System Device with the appropriate system sensors. These sensors typically reflect the values that are presented in the Anker mobile app main view of a system.
+Following example shows how configured integration accounts may look:
+
+![Configured Integration][integration-img]
+
 For each end device the system owner has configured into a system, the integration will create an End Device entry, which is controlled by the System Device.
 So far, available accessory devices such as the 0W Output switch are not manageable on its own. Therefore they are currently presented as entity of the End Device entry that is managing the accessory.
 
 Following are anonymized examples how the Anker power devices will be presented:
 1. System Device
 
-1. Solarbank Device
+![System Device][system-img]
 
-1. Inverter Device
+2. Solarbank Device
 
-The integration will setup the entities with unique ids based on device serials or a combination of serials. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. So the entity history is not lost, but this implies that you cannot configure different accounts at the same time when they share a system. Otherwise it would cause HA setup errors because of non unique entities. Therefore new integration configuration are validated and not allowed when they share systems or devices with an active configuration.
+![Solarbank Device][solarbank-img]
+
+3. Inverter Device
+
+![Inverter Device][inverter-img]
+
+
+The integration will setup the entities with unique ids based on device serials or a combination of serials. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. So the entity history is not lost, but this implies that you cannot configure different accounts at the same time when they share a system. Otherwise it would cause HA setup errors because of non unique entities. Therefore new integration configurations are validated and not allowed when they share systems or devices with an active configuration.
 If you want to switch from you main account to the shared account, delete first the active configuration and then create a new configuration with the other account. When the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured recoder interval is over.
 
 
@@ -48,13 +59,19 @@ If you want to switch from you main account to the shared account, delete first 
 The data on the cloud that can be retrieved via the Api is refreshed only once per minute. Therefore it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further when no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.
 During each refresh interval, the power sensor values will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut off, auto-upgrade, schedule etc. However, those details reqiure much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 30 seconds ago to avoid unnecessary Api traffic.
 
-The refresh options can be configured after creation of an integration entry. Following are the default options.
+The refresh options can be configured after creation of an integration entry. Following are the default options:
+
+![Options][options-img]
 
 
 ## Anker account limitation and usage recommendations
 
 Usage of the same Anker account in the integration and the Anker mobile app at the same time is not possible due to security reasons enforced by Anker. For more details refer to the Anker Account information in the [README](README.md).
 Therfore it is recommended to use a second account in the integration that has the power system shared as a member. For instruction to create a second account and share the system, see below.
+Following is the integration configuration dialog:
+
+![configuration][config-img]
+
 
 **Attention:**
 
@@ -81,6 +98,13 @@ If you have the Anker app installed on 2 different devices, the account creation
 1. Just now you access the system as a member. The owner will also get a confirmation that you accepted the invitation.
 
 
+## Automation to send and clear sticky, actionable notifications based on Api switch setting
+
+```
+still to come....
+```
+
+
 ## Showing Your Appreciation
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)][buy-me-coffee]
@@ -99,5 +123,11 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [license]: https://github.com/thomluther/hacs-anker-solix/blob/main/LICENSE
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
-[exampleimg]: example.png
+[integration-img]: doc/integration.png
+[config-img]: doc/configuration.png
+[options-img]: doc/options.png
+[system-img]: doc/system.png
+[inverter-img]: doc/inverter.png
+[solarbank-img]: doc/solarbank.png
+[connected-img]: doc/connected_devices.png
 
