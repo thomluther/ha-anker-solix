@@ -14,31 +14,28 @@
 ![python badge][python-shield]
 
 
-This Home Assistant custom component integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker cloud. It was specifically developped to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80) have been add to the Api library and are available through the integration. The Anker Power cloud also supports portable power stations (PPS) or home Power Panels which may be added in future once Api data structures for those devices is known.
-
-
-# 🚨 Work in progress, this is not released yet 🚨
+This Home Assistant custom component integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker cloud. It was specifically developed to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80) have been add to the Api library and are available through the integration. The Anker Power cloud also supports portable power stations (PPS) or home Power Panels which may be added in future once Api data structures for those devices is known.
 
 
 ## Disclaimer:
 
-**This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially the Api library as well as the integration have been developped for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and future enhancements may allow also modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.**
+🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially the Api library as well as the integration have been developed for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and future enhancements may allow also modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
 
 
 ## Usage terms and conditions:
 
-This integration utilizes an unofficial Python library to communicate with the Anker Power cloud server Api that is also used by the official Anker mobile app. The Api access or communication may change or break any time without notice and therefore also change or break the integration functionality. Furthermore the usage for the unofficial Api library may impose risks, such as device damage by improper settings or loss of manufacturer's warranty, whether is caused by improper usage, library failures, Api changes or other reasons.
+This integration utilizes an unofficial Python library to communicate with the Anker Power cloud server Api that is also used by the official Anker mobile app. The Api access or communication may change or break any time without notice and therefore also change or break the integration functionality. Furthermore, the usage for the unofficial Api library may impose risks, such as device damage by improper settings or loss of manufacturer's warranty, whether is caused by improper usage, library failures, Api changes or other reasons.
 
-**The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.**
+🚨 **The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.** 🚨
 
 
 ## Anker Account Information
 
-Because of the way the Anker cloud Api works, one account with e-mail/password cannot be used for the Anker mobile app and the cloud Api in parallel. The Anker cloud allows only one user request token per account at any time for security reasons. Each new authentication request by a client will create a new token and drop a previous token on the server. Therefore usage of this integration with your mobile app account will kick out your login in the mobile App. However, starting with Anker mobile app release 2.0, you can share your defined power system(s) with 'family members'. Therefore it is recommended to create a second Anker account with a different e-mail address and share your defined power system(s) with the second account.
+Because of the way the Anker cloud Api works, one account with e-mail/password cannot be used for the Anker mobile app and the cloud Api in parallel. The Anker cloud allows only one user request token per account at any time for security reasons. Each new authentication request by a client will create a new token and drop a previous token on the server. Therefore, usage of this integration with your mobile app account will kick out your login in the mobile App. However, starting with Anker mobile app release 2.0, you can share your defined power system(s) with 'family members'. It is recommended to create a second Anker account with a different e-mail address and share your defined power system(s) with the second account.
 
 **Attention:**
 
-System members cannot manage (yet) any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
+System members cannot manage (yet) any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behaviour when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
 
 Since the current version of this integration does not support many setting capabilities, it is advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner account should be used in the Anker mobile app to maintain full control capabilities of your devices.
 
@@ -53,7 +50,7 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 - The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
 - The Anker account used in the integration cannot longer be used in the Anker mobile app since the cloud Api only allows 1 active client user token at a time. Existing user tokens will be removed from the server upon new client authentication requests. That means the integration kicks out the App user and vice versa.
 - It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. A Wifi connection status is available, but only when using the owner account in the integration. While Wifi is disconnected, the reported data may be stale without indication that device is disconnected when using shared accounts.
-- The initial integration release supports only Solarbank and Anker inverter devices. Further devices managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developpers (open issue on git with example data)
+- The initial integration release supports only Solarbank and Anker inverter devices. Further devices managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developers (open issue on git with example data)
 - The initial integration release supports only following settings when using a system owner account:
    - Auto-Update setting of Solarbank device
 
@@ -93,8 +90,8 @@ Or following procedure:
 Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see instructions below to copy the image files manually.
 
 **Installation Notes:**
-- It was observed that when adding the repository to HACS, an error may occur although it was actually added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
-- After adding the custom repository and installing the integration under HACS, you have to restart Home Assistant to pick up the changes in your custom integration folder
+- It was observed that when adding the repository to HACS, an error may occur although it was added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
+- After adding the custom repository and installing the integration under HACS, you must restart Home Assistant to pick up the changes in your custom integration folder
    - HA 2024.02 will report the required restart automatically under problems
 - After HA restart, you can install and configure the integration like a normal core integration via the HA UI:
    - Go to "Configuration" -> "Integrations" click "+" and search for "Anker Solix". It should now be listed as community integration
@@ -113,7 +110,7 @@ Unfortunately, HACS does not automatically install the optional entity images th
 
 ## Optional entity pictures
 
-If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation configuration folder. If you operate a Home Assistant OS device, you can preferrably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
+If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation configuration folder. If you operate a Home Assistant OS device, you can preferably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
 1. Navigate to the `CONFIG` folder of your HA installation (where your configuration.yaml is located)
 1. Navigate to `custom_components/anker_solix/` folder and copy the `images` subfolder containing the entity pictures
 1. Go back to your `CONFIG` folder and navigate to or create the `www/community/anker_solix` folder structure if not existing
@@ -132,9 +129,9 @@ for the container or virtual environment where Home Assistant is being started. 
 <!---->
 
 
-## Issues, Q & A and other discussions
+## Issues, Q&A and other discussions
 
-If you have a problem, [review existing issues or open a new issue](https://github.com/thomluther/hacs-anker-solix/issues) with detailed instructions describing the problem. You may need to enable Debug Output for your Integration configuration. Review your debug output before you post it. While sensitive login information is mased, your unique device information as returned from the Api is not masked (serial numbers, IDs etc). You may have to change that before providing a debug output.
+If you have a problem, [review existing issues or open a new issue](https://github.com/thomluther/hacs-anker-solix/issues) with detailed instructions describing the problem. You may need to enable Debug Output for your Integration configuration. Review your debug output before you post it. While sensitive login information is masked, your unique device information as returned from the Api is not masked (serial numbers, IDs etc). You may want to change that globally before providing a debug output.
 
 If you have questions, observations, advises or want to share your experience, feel free to open a new [discussion topic](https://github.com/thomluther/hacs-anker-solix/discussions).
 
