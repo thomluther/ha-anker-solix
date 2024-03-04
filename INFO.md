@@ -40,6 +40,7 @@ Following are anonymized examples how the Anker power devices will be presented:
 1. System Device
 
 ![System Device][system-img]
+![Connected Devices][connected-img]
 
 2. Solarbank Device
 

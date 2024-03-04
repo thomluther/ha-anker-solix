@@ -92,6 +92,12 @@ Or following procedure:
 
 Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see instructions below to copy the image files manually.
 
+Installation Notes:
+- It was observed that when adding the repository to HACS, an error may occur although it was actually added. You may check if you can find Anker listed as possible integration to be installed. If not, try to add the repository again.
+- After adding the repository, and installing it under HACS, you have to restart Home Assistant to pick up changes in Integrations (HA 2024.02 will report the required restart automatically under problems)
+- After restart, you can install and configure the integration like a normal core integration via the HA UI:
+   - Go to "Configuration" -> "Integrations" click "+" and search for "Anker Solix"
+
 
 ## Manual Installation
 
@@ -108,7 +114,7 @@ Unfortunately, HACS does not automatically install the optional entity images th
 If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation configuration folder. If you operate a Home Assistant OS device, you can preferrably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
 1. Navigate to the `CONFIG` folder of your HA installation (where your configuration.yaml is located)
 1. Navigate to `custom_components/anker_solix/` folder and copy the `images` subfolder containing the entity pictures
-1. Go back to your `CONFIG` folder and navigate to or create the `www\community\anker_solix` folder structure if not existing
+1. Go back to your `CONFIG` folder and navigate to or create the `www/community/anker_solix` folder structure if not existing
 1. Paste the `images` folder into the created `anker_solix` community subfolder
 
  Once the images are available, they will be picked up when the integration is (re)-creating the entities, like on first creation or re-load of the configuration entry.
@@ -117,22 +123,32 @@ If you want to use the optional entity pictures that are shown in the example sc
 
 ## Integration configuration is done in the UI
 
+For detailed instructions on how to configure and use the integration, please refer to [INFO](INFO.md).
+
 Note: When you make changes to the integration folder content, you need to restart Home Assistant to pick up those changes
 for the container or virtual environment where Home Assistant is being started. This is applicable as well when the integration is updated manually or via HACS.
 <!---->
 
 
+## Issues, Q & A and other discussions
+
+If you have a problem, [review existing issues or open a new issue](https://github.com/thomluther/hacs-anker-solix/issues) with detailed instructions describing the problem. You may need to enable Debug Output for your Integration configuration. Review your debug output before you post it. While sensitive login information is mased, your unique device information as returned from the Api is not masked (serial numbers, IDs etc). You may have to change that before providing a debug output.
+
+If you have questions, observations, advises or want to share your experience, feel free to open a new [discussion topic](https://github.com/thomluther/hacs-anker-solix/discussions).
+
+
 ## Contributions are welcome!
 
-If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
+If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md).
+As a starter, you may want to add more [translations](https://github.com/thomluther/hacs-anker-solix/discussions/12) for your native language.
 
 
 ## Attribution
 
 - [anker-solix-api library][anker-solix-api]
+- [solix2mqtt project](https://github.com/tomquist/solix2mqtt)
 - [Solaredge HA core integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/solaredge)
 - [ha-hoymiles-wifi custom integration](https://github.com/suaveolent/ha-hoymiles-wifi)
-- [solix2mqtt project](https://github.com/tomquist/solix2mqtt)
 
 
 ## Showing Your Appreciation
