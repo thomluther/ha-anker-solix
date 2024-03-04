@@ -36,6 +36,7 @@ For each end device the system owner has configured into a system, the integrati
 So far, available accessory devices such as the 0W Output switch are not manageable on its own. Therefore they are currently presented as entity of the End Device entry that is managing the accessory.
 
 Following are anonymized examples how the Anker power devices will be presented:
+
 **1. System Device**
 
 ![System Device][system-img]
