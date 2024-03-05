@@ -116,7 +116,7 @@ If you want to use the optional entity pictures that are shown in the example sc
 1. Go back to your `CONFIG` folder and navigate to or create the `www/community/anker_solix` folder structure if not existing
 1. Paste the `images` folder into the created `anker_solix` community subfolder
 
- Once the images are available in `custom_components/anker_solix/images/`, they will be picked up when the integration is (re-)creating the entities, like on first creation or re-load of the configuration entry.
+ Once the images are available in `www/community/anker_solix/images/`, they will be picked up when the integration is (re-)creating the entities, like on first creation or re-load of the configuration entry.
  Make sure to reload your HA UI browser window without cache to get the entity pictures displayed correctly.
 
 

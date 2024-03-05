@@ -11,13 +11,7 @@ import os
 from aiohttp import ClientTimeout
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONF_COUNTRY_CODE,
-    CONF_PASSWORD,
-    CONF_SCAN_INTERVAL,
-    CONF_USERNAME,
-    Platform,
-)
+from homeassistant.const import CONF_SCAN_INTERVAL, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
@@ -56,9 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = AnkerSolixDataUpdateCoordinator(
         hass=hass,
         client=api_client.AnkerSolixApiClient(
-            username=username,
-            password=entry.data.get(CONF_PASSWORD),
-            countryid=entry.data.get(CONF_COUNTRY_CODE),
+            entry,
             session=async_create_clientsession(hass, timeout=ClientTimeout(total=10)),
         ),
         config_entry=entry,
@@ -86,7 +78,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # check again if config shares devices with another config and also remove orphaned devices no longer contained in actual api data
     # This is run upon reloads or config option changes
-    if shared_cfg := await async_check_and_remove_devices(hass, entry.data, coordinator.data):
+    if shared_cfg := await async_check_and_remove_devices(
+        hass, entry.data, coordinator.data
+    ):
         # device is already registered for another account, abort configuration
         entry.async_cancel_retry_setup()
         raise ConfigEntryError(
@@ -119,7 +113,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         testfolder = entry.options.get(TESTFOLDER)
         # Check if option change does not require reload when only timeout or interval was changed
         if testmode == coordinator.client.testmode() and (
-            testfolder == coordinator.client.api.testDir() or not testmode
+            os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder) == coordinator.client.api.testDir() or not testmode
         ):
             do_reload = False
             # modify changed intervals without reload
@@ -127,7 +121,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
             if seconds != int(coordinator.update_interval.seconds):
                 coordinator.update_interval = timedelta(seconds=seconds)
                 LOGGER.info(
-                    "Api Coordinator update interval was changed to %s seconds", seconds
+                    "Api Coordinator %s update interval was changed to %s seconds", coordinator.config_entry.title ,seconds
                 )
             # set device detail refresh multiplier
             coordinator.client.deviceintervals(
@@ -162,5 +156,3 @@ async def async_remove_config_entry_device(
         for device_serial in coordinator.data
         if device_serial == identifier[1]
     )
-
-

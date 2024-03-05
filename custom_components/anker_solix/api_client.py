@@ -7,7 +7,10 @@ import socket
 
 import aiohttp
 
-from .const import EXAMPLESFOLDER, LOGGER
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_COUNTRY_CODE, CONF_PASSWORD, CONF_USERNAME
+
+from .const import EXAMPLESFOLDER, INTERVALMULT, LOGGER, TESTMODE
 from .solixapi import api, errors
 
 _LOGGER = LOGGER
@@ -43,22 +46,41 @@ class AnkerSolixApiClient:
     deviceinterval: Optionally specify on how many refresh intervals a device update is fetched, that needs additional API requires per device
     """
 
-    MIN_DEVICE_REFRESH = 30
+    MIN_DEVICE_REFRESH: int = 30
+    DEFAULT_DEVICE_INTERVAL: int = 10
+    last_device_refresh: datetime | None
+    _intervalcount: int
+    _allow_refresh: bool
+
 
     def __init__(
         self,
-        username: str,
-        password: str,
-        countryid: str,
+        entry: ConfigEntry | dict,
         session: aiohttp.ClientSession,
     ) -> None:
         """Init API Client."""
-        self.api = api.AnkerSolixApi(username, password, countryid, session, _LOGGER)
-        self._deviceintervals = 10
+        data = {}
+        # Merge data and options into flat dictionary
+        if isinstance(entry,ConfigEntry):
+            if hasattr(entry,"data"):
+                data.update(entry.data)
+            if hasattr(entry,"options"):
+                data.update(entry.options)
+        else:
+            data = entry
+
+        self.api = api.AnkerSolixApi(
+            data.get(CONF_USERNAME),
+            data.get(CONF_PASSWORD),
+            data.get(CONF_COUNTRY_CODE),
+            session,
+            _LOGGER,
+        )
+        self._deviceintervals = int(data.get(INTERVALMULT) or self.DEFAULT_DEVICE_INTERVAL)
+        self._testmode = bool(data.get(TESTMODE) or False)
         self._intervalcount = 0
-        self._testmode = False
-        self.last_device_refresh: datetime | None = None
-        self._allow_refresh: bool = True
+        self._allow_refresh = True
+        self.last_device_refresh = None
 
     async def authenticate(self, restart: bool = False) -> bool:
         """Get (chached) login response from api, if restart is True, the login will be refreshed from server to test credentials."""

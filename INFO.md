@@ -105,7 +105,7 @@ Following automation can be used to send a sticky actionable notification to you
 
 ![notification][notification-img]
 
-Make sure to replace the entities used in the example below with your own entities. The name variable is automatically generated based on the device name of the entity that triggered the state change.
+Make sure to replace the entities used in the example below with your own entities. The system variable is automatically generated based on the device name of the entity that triggered the state change.
 
 **Note:**
 If you want to modify the notification to work with your iPhone, please refer to the [HA companion App documentation](https://companion.home-assistant.io/docs/notifications/notifications-basic/) for IOS capabilities.
@@ -145,7 +145,7 @@ action:
           - service: notify.thomas_handy
             alias: Nachricht an Handy
             data:
-              title: Anker Api deaktiviert
+              title: Anker Api deactivated
               message: >
                 {{'The Anker Solix Api for '~system~' was disabled. Launch the
                 Anker App for Login and modifications, or reactivate the Api

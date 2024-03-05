@@ -121,11 +121,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         # abort if username already setup
                         self._abort_if_unique_id_configured()
                     else:
-                        self.client = await self._authenticate_client(
-                            username=account_user,
-                            password=user_input.get(CONF_PASSWORD),
-                            countryid=user_input.get(CONF_COUNTRY_CODE),
-                        )
+                        self.client = await self._authenticate_client(user_input)
                 except api_client.AnkerSolixApiClientAuthenticationError as exception:
                     LOGGER.warning(exception)
                     errors["base"] = "auth"
@@ -145,7 +141,11 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
                 # get first site data for account and verify nothing is shared with existing configuration
                 await self.client.api.update_sites()
-                if cfg_entry := await async_check_and_remove_devices(self.hass, user_input, self.client.api.sites | self.client.api.devices):
+                if cfg_entry := await async_check_and_remove_devices(
+                    self.hass,
+                    user_input,
+                    self.client.api.sites | self.client.api.devices,
+                ):
                     errors[CONF_USERNAME] = "duplicate_devices"
                     placeholders[CONF_USERNAME] = str(account_user)
                     placeholders[SHARED_ACCOUNT] = str(cfg_entry.title)
@@ -176,13 +176,11 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _authenticate_client(
-        self, username: str, password: str, countryid: str
+        self, user_input: dict
     ) -> api_client.AnkerSolixApiClient:
         """Validate credentials and return the api client."""
         client = api_client.AnkerSolixApiClient(
-            username=username,
-            password=password,
-            countryid=countryid,
+            user_input,
             session=async_create_clientsession(self.hass),
         )
         await client.authenticate()
@@ -201,7 +199,9 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Handle options flow."""
         errors: dict[str, str] = {}
-        placeholders: dict[str, str] = {}   # NOTE: Passed option placeholder do not work with translation files, HASS Bug?
+        placeholders: dict[
+            str, str
+        ] = {}  # NOTE: Passed option placeholder do not work with translation files, HASS Bug?
 
         if not (jsonfolders := api_client.json_example_folders()):
             # Add empty element to ensure proper list validation
@@ -291,7 +291,9 @@ async def async_check_and_remove_devices(
     # get all device entries for a domain
     cfg_entries = hass.config_entries.async_entries(domain=DOMAIN)
     for cfg_entry in cfg_entries:
-        device_entries = dr.async_entries_for_config_entry(dr.async_get(hass), cfg_entry.entry_id)
+        device_entries = dr.async_entries_for_config_entry(
+            dr.async_get(hass), cfg_entry.entry_id
+        )
         for dev_entry in device_entries:
             if (
                 username := str(user_input.get(CONF_USERNAME) or "").lower()
