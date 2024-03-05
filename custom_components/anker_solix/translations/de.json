@@ -87,18 +87,15 @@
         },
         "sensor": {
             "status_desc": {
-                "name": "Zustand",
+                "name": "Cloud Zustand",
                 "state": {
-                    "off": "Aus",
-                    "on": "An",
+                    "offline": "Getrennt",
+                    "online": "Verbunden",
                     "unknown": "Unbekannt"
                 },
                 "state_attributes": {
                     "status": {
-                        "name": "Status"
-                    },
-                    "device_sn": {
-                        "name": "Seriennummer"
+                        "name": "Status Code"
                     }
                 }
             },
@@ -115,6 +112,11 @@
                     "wakeup": "Wachzustand",
                     "standby": "Ruhezustand",
                     "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "charging_status": {
+                        "name": "Status Code"
+                    }
                 }
             },
             "charging_power": {

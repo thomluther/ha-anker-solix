@@ -249,8 +249,8 @@ class SolixDeviceStatus(Enum):
     """Enumuration for Anker Solix Device status."""
 
     # TODO(3): Add descriptions once status code usage is observed/known
-    off = "0"
-    on = "1"
+    offline = "0"
+    online = "1"
     unknown = "unknown"
 
 

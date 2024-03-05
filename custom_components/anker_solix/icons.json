@@ -23,11 +23,11 @@
         },
         "sensor": {
             "status_desc": {
-                "default": "mdi:alert-circle-outline",
+                "default": "mdi:cloud-alert",
                 "state": {
-                    "off": "mdi:power-standby",
-                    "on": "mdi:power",
-                    "unknown": "mdi:help-circle-outline"
+                    "offline": "mdi:cloud-off",
+                    "online": "mdi:cloud-check-variant",
+                    "unknown": "mdi:cloud-question"
                 }
             },
             "charging_status_desc": {
