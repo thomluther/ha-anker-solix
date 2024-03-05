@@ -299,7 +299,7 @@ async def async_check_and_remove_devices(
                 # config entry of another account
                 if dev_entry.serial_number in apidata:
                     return cfg_entry
-            # device is registered for same account, check if still used in coorinator data and add to obsolete list for removal
+            # device is registered for same account, check if still used in coordinator data and add to obsolete list for removal
             elif dev_entry.serial_number not in apidata:
                 obsolete_user_devs[dev_entry.id] = dev_entry.serial_number
 

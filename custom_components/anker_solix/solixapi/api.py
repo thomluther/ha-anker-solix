@@ -560,7 +560,7 @@ class AnkerSolixApi:
                         device.update({"charge": bool(value)})
                     elif key in ["auto_upgrade"]:
                         device.update({"auto_upgrade": bool(value)})
-                    elif key in ["power_cutoff"]:
+                    elif key in ["power_cutoff", "output_cutoff_data"] and str(value).isdigit():
                         device.update({"power_cutoff": int(value)})
                     elif key in ["power_cutoff_data"] and value:
                         device.update({"power_cutoff_data": list(value)})

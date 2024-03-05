@@ -129,6 +129,9 @@
             "ac_generate_power": {
                 "name": "AC Leistung"
             },
+            "power_cutoff": {
+                "name": "Ladestandreserve"
+            },
             "set_output_power": {
                 "name": "Einspeisevorgabe",
                 "state_attributes": {

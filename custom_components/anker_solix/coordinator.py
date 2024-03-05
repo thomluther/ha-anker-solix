@@ -22,16 +22,19 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to coordinate fetching of all data from the API."""
 
     config_entry: ConfigEntry
+    client: AnkerSolixApiClient
 
     def __init__(
-        self, hass: HomeAssistant, client: AnkerSolixApiClient, update_interval: int
+        self, hass: HomeAssistant, client: AnkerSolixApiClient, config_entry: ConfigEntry, update_interval: int
     ) -> None:
         """Initialize."""
+        self.config_entry = config_entry
         self.client = client
+
         super().__init__(
             hass=hass,
             logger=LOGGER,
-            name=f"{DOMAIN}_{client.api._email}",
+            name=f"{DOMAIN}_{config_entry.title}",
             update_interval=timedelta(seconds=update_interval),
         )
 

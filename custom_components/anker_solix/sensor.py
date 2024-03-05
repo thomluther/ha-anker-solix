@@ -116,6 +116,14 @@ DEVICE_SENSORS = [
         suggested_display_precision=0,
     ),
     AnkerSolixSensorDescription(
+        key="power_cutoff",
+        translation_key="power_cutoff",
+        json_key="power_cutoff",
+        native_unit_of_measurement=PERCENTAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+    ),
+    AnkerSolixSensorDescription(
         key="ac_generate_power",
         translation_key="ac_generate_power",
         json_key="generate_power",
@@ -478,17 +486,18 @@ SITE_SENSORS = [
     #         )[0]
     #     ),
     # ),
-    AnkerSolixSensorDescription(
-        # System charging power
-        key="site_charging_power",
-        translation_key="site_charging_power",
-        json_key="charging_power",
-        entity_registry_enabled_default=False,
-        native_unit_of_measurement=UnitOfPower.WATT,
-        device_class=SensorDeviceClass.POWER,
-        value_fn=lambda d, jk, _: (d.get("home_info") or {}).get(jk),
-        suggested_display_precision=0,
-    ),
+    # Following sensor delivers meaningless values if any, home_info charging_power reports same value as inverter generated_power?!?
+    # AnkerSolixSensorDescription(
+    #     # System charging power
+    #     key="site_charging_power",
+    #     translation_key="site_charging_power",
+    #     json_key="charging_power",
+    #     entity_registry_enabled_default=False,
+    #     native_unit_of_measurement=UnitOfPower.WATT,
+    #     device_class=SensorDeviceClass.POWER,
+    #     value_fn=lambda d, jk, _: (d.get("home_info") or {}).get(jk),
+    #     suggested_display_precision=0,
+    # ),
     AnkerSolixSensorDescription(
         # System total output setting, determined by schedule
         key="set_system_output_power",

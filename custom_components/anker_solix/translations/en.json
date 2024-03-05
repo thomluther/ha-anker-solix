@@ -129,6 +129,9 @@
             "ac_generate_power": {
                 "name": "AC power"
             },
+            "power_cutoff": {
+                "name": "SOC reserve"
+            },
             "set_output_power": {
                 "name": "Home preset",
                 "state_attributes": {
