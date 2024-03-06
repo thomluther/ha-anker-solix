@@ -142,8 +142,8 @@ action:
             id:
               - ApiDisabled
         sequence:
-          - service: notify.thomas_handy
-            alias: Nachricht an Handy
+          - service: notify.my_smartphone
+            alias: Send notification to smartphone
             data:
               title: Anker Api deactivated
               message: >
