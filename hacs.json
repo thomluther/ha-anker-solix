@@ -1,6 +1,6 @@
 {
     "name": "Anker Solix",
-    "homeassistant": "2023.12.0",
+    "homeassistant": "2023.12.3",
     "persistent_directory": "solixapi/authcache",
     "render_readme": true
 }
