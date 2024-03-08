@@ -265,8 +265,8 @@ class SolarbankStatus(Enum):
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this but reports 3 as seen so far
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night as well
     # TODO(3): Add descriptions once status code usage is observed/known
-    # There is also a deep standby / full bypass mode at cold temperatures when the battery cannot be loaded.
-    # full_bypass = "unknown"
+    # code 5 was not observed yet
+    full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W
     standby = "7"
     unknown = "unknown"
 
@@ -537,9 +537,13 @@ class AnkerSolixApi:
                         # NOTE: charging power may be updated after initial device details update
                         # NOTE: If status is 3=charging and larger than preset but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
                         # This key can be passed separately, make sure the other values are looked up in passed data first, then in device details
-                        preset = devData.get("set_load_power") or device("set_output_power")
+                        preset = devData.get("set_load_power") or device(
+                            "set_output_power"
+                        )
                         out = devData.get("output_power") or device.get("output_power")
-                        solar = devData.get("photovoltaic_power") or device.get("input_power")
+                        solar = devData.get("photovoltaic_power") or device.get(
+                            "input_power"
+                        )
                         if (
                             description == SolarbankStatus.charge.name
                             and preset is not None
@@ -560,7 +564,10 @@ class AnkerSolixApi:
                         device.update({"charge": bool(value)})
                     elif key in ["auto_upgrade"]:
                         device.update({"auto_upgrade": bool(value)})
-                    elif key in ["power_cutoff", "output_cutoff_data"] and str(value).isdigit():
+                    elif (
+                        key in ["power_cutoff", "output_cutoff_data"]
+                        and str(value).isdigit()
+                    ):
                         device.update({"power_cutoff": int(value)})
                     elif key in ["power_cutoff_data"] and value:
                         device.update({"power_cutoff_data": list(value)})
