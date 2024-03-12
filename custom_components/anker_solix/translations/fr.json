@@ -1,0 +1,272 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Ajoutez vos appareils Anker Solix",
+                "description": "Entrez les identifiants de votre compte cloud Anker",
+                "data": {
+                    "username": "Nom d'utilisateur/e-mail",
+                    "password": "Mot de passe",
+                    "country_code": "Pays",
+                    "accept_terms": "Accepter les conditions générales d'utilisation de l'intégration"
+                },
+                "data_description": {
+                    "username": "Recommandation : créez un deuxième compte dans l'application Anker et partagez votre système avec le deuxième compte. Une utilisation parallèle du même compte dans cette intégration et dans l'application Anker n'est pas possible.",
+                    "accept_terms": "L'utilisateur supporte seul le risque d'une éventuelle perte de la garantie du fabricant ou de tout dommage causé par l'utilisation de l'intégration. Un consentement inclut automatiquement les mises à jour futures, qui peuvent étendre la fonctionnalité d'intégration.\nPlus d'informations : {terms_link}"
+                }
+            }
+        },
+        "error": {
+            "auth": "Le nom d'utilisateur/mot de passe est incorrect : {error_detail}",
+            "connection": "Impossible de se connecter au serveur : {error_detail}",
+            "exceeded": "Tentatives de connexion dépassées : {error_detail}",
+            "duplicate_devices": "{username} a partagé des appareils avec le compte existant {shared_account}, vous ne pouvez pas configurer les deux en même temps !",
+            "accept_terms": "Les conditions générales d'utilisation doivent être acceptées",
+            "unknown": "Une erreur inconnue s'est produite:: {error_detail}"
+        },
+        "abort": {
+            "already_configured": "Ce compte est déjà configuré"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Options Anker Solix",
+                "description": "Modifier l'utilisation de l'API",
+                "data": {
+                    "scan_interval": "Intervalle de mise à jour (30-600 secondes)",
+                    "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
+                    "testmode": "Utiliser le mode test d'intégration",
+                    "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
+                },
+                "data_description": {
+                    "scan_interval": "Remarque : Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
+                }
+            }
+        },
+        "error": {
+            "folder_invalid": "Dossier valide requis pour le mode test"
+        }
+    },
+    "entity": {
+        "button": {
+            "refresh_device": {
+                "name": "Actualiser les détails"
+            }
+        },
+        "binary_sensor": {
+            "wifi_connection": {
+                "name": "Connexion Wifi",
+                "state": {
+                    "on": "Connecté",
+                    "off": "Déconnecté"
+                },
+                "state_attributes": {
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    },
+                    "wifi_ssid": {
+                        "name": "SSID Wifi"
+                    },
+                    "wifi_signal": {
+                        "name": "Signal Wifi"
+                    },
+                    "wireless_type": {
+                        "name": "Type de connexion"
+                    }
+                }
+            },
+            "site_admin": {
+                "name": "Administration système",
+                "state": {
+                    "on": "Oui",
+                    "off": "Non"
+                }
+            }
+        },
+        "sensor": {
+            "status_desc": {
+                "name": "Etat du Cloud",
+                "state": {
+                    "off": "Hors ligne",
+                    "on": "En ligne",
+                    "unknown": "Pas disponible"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code statut"
+                    }
+                }
+            },
+            "charging_status_desc": {
+                "name": "Mode",
+                "state": {
+                    "detection": "Détection",
+                    "bypass": "Bypass",
+                    "discharge": "Décharge",
+                    "charge": "Charge",
+                    "charge_bypass": "Charge et Bypass",
+                    "charge_priority":  "Charge prioritaire",
+                    "full_bypass": "Bypass 100%",
+                    "wakeup": "Réveil",
+                    "standby": "Veille",
+                    "unknown": "Pas disponible"
+                },
+                "state_attributes": {
+                    "charging_status": {
+                        "name": "Code statut"
+                    }
+                }
+            },
+            "charging_power": {
+                "name": "Puissance de charge"
+            },
+            "input_power": {
+                "name": "Puissance solaire"
+            },
+            "output_power": {
+                "name": "Puissance de sortie"
+            },
+            "ac_generate_power": {
+                "name": "Alimentation AC"
+            },
+            "power_cutoff": {
+                "name": "Réserve SOC"
+            },
+            "set_output_power": {
+                "name": "Réglage puissance de sortie",
+                "state_attributes": {
+                    "schedule": {
+                        "name": "Horaire"
+                    }
+                }
+            },
+            "state_of_charge": {
+                "name": "Etat de charge"
+            },
+            "battery_energy": {
+                "name": "Energie de la batterie",
+                "state_attributes": {
+                    "capacity": {
+                        "name": "Capacité"
+                    }
+                }
+            },
+            "bws_surplus": {
+                "name": "Excédent BWS"
+            },
+            "inverter_info": {
+                "name": "Informations sur l'onduleur",
+                "state_attributes": {
+                    "solar_brand": {
+                        "name": "Marque"
+                    },
+                    "solar_model": {
+                        "name": "Modèle"
+                    },
+                    "solar_sn": {
+                        "name": "Numéro de série"
+                    }
+                }
+            },
+            "sw_version": {
+                "name": "Firmware"
+            },
+            "fittings": {
+                "name": "Accessoire",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Numéro de série"
+                    },
+                    "device_name": {
+                        "name": "Nom"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
+                    },
+                    "bt_mac": {
+                        "name": "Bluetooth MAC"
+                    }
+                }
+            },
+            "temperature": {
+                "name": "Température"
+            },
+            "solar_list": {
+                "name": "Onduleur"
+            },
+            "solarbank_list": {
+                "name": "Banques solaires"
+            },
+            "powerpanel_list": {
+                "name": "Panneaux électriques"
+            },
+            "pps_list": {
+                "name": "Centrales électriques"
+            },
+            "solarbank_charging_power": {
+                "name": "Alimentation de la batterie SB"
+            },
+            "solarbank_input_power": {
+                "name": "Energie solaire SB"
+            },
+            "solarbank_output_power": {
+                "name": "Alimentation domestique SB"
+            },
+            "solarbank_state_of_charge": {
+                "name": "Etat de charge du SB"
+            },
+            "pps_charging_power": {
+                "name": "Puissance de la batterie PPS"
+            },
+            "pps_output_power": {
+                "name": "Puissance de sortie PPS"
+            },
+            "pps_state_of_charge": {
+                "name": "Etat de charge du PPS"
+            },
+            "total_co2_saving": {
+                "name": "Economies de CO₂"
+            },
+            "total_saved_money": {
+                "name": "Economies €"
+            },
+            "total_output_energy": {
+                "name": "Rendement total"
+            },
+            "daily_output_energy": {
+                "name": "Rendement aujourd'hui"
+            },
+            "site_charging_power": {
+                "name": "Puissance de charge du système"
+            },
+            "set_system_output_power": {
+                "name": "Réglage puissance de sortie du système"
+            }
+        },
+        "switch": {
+            "auto_upgrade": {
+                "name": "Mise à jour automatique"
+            },
+            "allow_refresh": {
+                "name": "Utilisation de l'API"
+            }
+        }
+    },
+    "entity_component": {
+        "problem": {
+            "state": {
+                "off": "OK",
+                "on": "Problème"
+            }
+        },
+        "_": {
+            "state": {
+                "off": "Off",
+                "on": "On",
+                "unknown": "Pas disponible"
+            }
+        }
+    }
+}
