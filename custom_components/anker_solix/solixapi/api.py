@@ -124,6 +124,7 @@ _API_ENDPOINTS = {
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as preseneted on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
     "site_detail": "power_service/v1/site/get_site_detail",  # Information for given site_id, can also be used by shared accounts
+    "site_rules": "power_service/v1/site/get_site_rules",  # Information for supported power site types and their min and max qty per device model types
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
@@ -131,24 +132,26 @@ _API_ENDPOINTS = {
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules), NOT IMPLEMENTED YET
     "wifi_list": "power_service/v1/site/get_wifi_info_list",  # List of available networks for provided site id
     "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owner account
-    "update_site_price": "power_service/v1/site/update_site_price",  # Update power price for given site, REQUIRED PARAMETERS UNKNOWN
-    "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, onyl works for site owner accout
-    "set_auto_upgrade": "power_service/v1/app/set_auto_upgrade",  # Set/Enable Auto-Upgrade configuration, not implemented yet, REQUIRED PARAMETERS UNKNOWN
+    "update_site_price": "power_service/v1/site/update_site_price",  # Update power price and CO2 for given site, works only for site owner account
+    "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, only works for site owner accout
+    "set_auto_upgrade": "power_service/v1/app/set_auto_upgrade",  # Set/Enable Auto-Upgrade configuration, works only for site owner account
     "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version, works only for owner account
     "get_device_load": "power_service/v1/app/device/get_device_home_load",  # Get defined device schedule (same data as provided with device param query)
-    "set_device_load": "power_service/v1/app/device/set_device_home_load",  # Set defined device schedule (Not implemented yet, REQUIRED PARAMETERS UNKNOWN)
+    "set_device_load": "power_service/v1/app/device/set_device_home_load",  # Set defined device schedule, Accepts the new schedule, but does NOT change it? Maybe future use for schedules per device
     "get_ota_info": "power_service/v1/app/compatible/get_ota_info",  # Get OTA status for solarbank and/or inverter serials
     "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Not clear what this does, shows some OTA settings
     "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar inverter definition for solarbanks, works only with owner account
     "get_cutoff": "power_service/v1/app/compatible/get_power_cutoff",  # Get Power Cutoff settings (Min SOC) for provided site id and device sn, works only with owner account
     "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, only works for onwer accounts
     "compatible_process": "power_service/v1/app/compatible/get_compatible_process",  # contains solar_info plus OTA processing codes, works only with owner account
-    "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Solarbank/inverter responses do not contain info
+    "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Shows Accessories like Solarbank 0W Switch info
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for given site_id and optional device SN (empty if solarbank not connected)
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
+    "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
     "get_message": "power_service/v1/get_message",  # get list of max Messages from certain time, last_time format unknown
     "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
+    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # get mqtt server and certificates, not explored or used
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -162,7 +165,8 @@ _API_ENDPOINTS = {
     'power_service/v1/site/delete_charging_device',
     'power_service/v1/site/add_site_devices',
     'power_service/v1/site/delete_site_devices',
-    'power_service/v1/site/update_site_device',
+    'power_service/v1/site/update_site_devices',
+    'power_service/v1/site/get_addable_site_list,   # show to which defined site a given model type can be added
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -179,12 +183,21 @@ _API_ENDPOINTS = {
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report',
     'power_service/v1/app/get_phonecode_list',
-    'power_service/v1/message_not_disturb',
-    'power_service/v1/get_message_not_disturb',
+    'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
+    'power_service/v1/message_not_disturb',  # change do not disurb messages settings
     'power_service/v1/read_message',
     'power_service/v1/del_message',
-    'power_service/v1/product_categories',
-    'power_service/v1/product_accessories',
+    'power_service/v1/product_categories',  # GET method to list all supported products with details and web picture links
+    'power_service/v1/product_accessories',  # GET method to list all supported products accessories with details and web picture links
+    'app/devicemanage/update_relate_device_info',
+    'app/cloudstor/get_app_up_token_general',
+    'app/logging/get_device_logging',
+    'app/devicerelation/up_alias_name',  # Update Alias name of device? Fails with (10003) Failed to request
+    'app/devicerelation/un_relate_and_unbind_device',
+    'app/devicerelation/relate_device',
+
+
+
 
 
 Structure of the JSON response for an API Login Request:
@@ -242,7 +255,31 @@ class SolixParmType(Enum):
 class SolixDeviceCapacity(Enum):
     """Enumuration for Anker Solix device capacities in Wh by Part Number."""
 
-    A17C0 = 1600
+    A17C0 = 1600  # SOLIX E1600 Solarbank
+    A1720 = 256  # Anker PowerHouse 521 Portable Power Station
+    A1751 = 512  # Anker PowerHouse 535 Portable Power Station
+    A1760 = 1024  # Anker PowerHouse 555 Portable Power Station
+    A1770 = 1229  # Anker PowerHouse 757 Portable Power Station
+    A1771 = 1229  # SOLIX F1200 Portable Power Station
+    A1780 = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
+    A1780_1 = 2048  # Expansion Battery for F2000
+    A1790 = 3840  # SOLIX F3800 Portable Power Station
+    A1790_1 = 3840  # SOLIX BP3800 Expansion Battery for F3800
+    A1753 = 768  # SOLIX C800 Portable Power Station
+    A1761 = 1056  # SOLIX C1000 Portable Power Station
+    A17C1 = 1056  # SOLIX C1000 Expansion Battery
+
+
+class SolixDefaults(Enum):
+    """Enumuration for Anker Solix defaults to be used."""
+
+    PRESET_MIN = 50
+    PRESET_MAX = 800
+    PRESET_DEF = 100
+    ALLOW_DISCHARGE = True
+    CHARGE_PRIORITY_MIN = 0
+    CHARGE_PRIORITY_MAX = 100
+    CHARGE_PRIORITY_DEF = 80
 
 
 class SolixDeviceStatus(Enum):
@@ -443,6 +480,24 @@ class AnkerSolixApi:
             self._logger.error(err)
             return False
 
+    def _update_site(  # noqa: C901
+        self,
+        siteId: str,
+        details: dict,
+    ) -> None:
+        """Update the internal sites dictionary with data provided for the nested site details dictionary.
+
+        This method is used to consolidate site details from various less frequent requests that are not covered with the update_sites method.
+        """
+        # lookup old site details if any
+        if siteId in self.sites:
+            site_details = (self.sites[siteId]).get("site_details") or {}
+            site_details.update(details)
+        else:
+            site_details = details
+            self.sites[siteId] = {}
+        self.sites[siteId]["site_details"] = site_details
+
     def _update_dev(  # noqa: C901
         self,
         devData: dict,
@@ -585,12 +640,50 @@ class AnkerSolixApi:
                             for x in ("brand_id", "model_img", "version", "ota_status")
                             if x in keylist
                         ]:
-                            value.pop(key)
+                            value.pop(key,None)
                         device.update({"solar_info": dict(value)})
                     # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
                     # When individual device schedules are support in future, this info is needed per device anyway
                     elif key in ["schedule"] and isinstance(value, dict) and value:
                         device.update({"schedule": dict(value)})
+                        # default active presets to None
+                        device.pop("preset_system_output_power",None)
+                        device.pop("preset_allow_discharge",None)
+                        device.pop("preset_charge_priority",None)
+                        # get actual presets from current slot
+                        now = datetime.now().time().replace(microsecond=0)
+                        # set now to new daytime if close to end of day
+                        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+                            now = datetime.strptime("00:00", "%H:%M").time()
+                        for slot in value.get("ranges") or []:
+                            with contextlib.suppress(ValueError):
+                                start_time = datetime.strptime(
+                                    slot.get("start_time") or "00:00", "%H:%M"
+                                ).time()
+                                end_time = slot.get("end_time") or "00:00"
+                                # "24:00" format not supported in strptime
+                                if end_time == "24:00":
+                                    end_time = datetime.strptime(
+                                        "23:59:59", "%H:%M:%S"
+                                    ).time()
+                                else:
+                                    end_time = datetime.strptime(
+                                        end_time, "%H:%M"
+                                    ).time()
+                                if start_time <= now < end_time:
+                                    device.update(
+                                        {
+                                            "preset_system_output_power": (
+                                                slot.get("appliance_loads") or [{}]
+                                            )[0].get("power"),
+                                            "preset_allow_discharge": slot.get(
+                                                "turn_on"
+                                            ),
+                                            "preset_charge_priority": slot.get(
+                                                "charge_priority"
+                                            ),
+                                        }
+                                    )
 
                     # inverter specific keys
                     elif key in ["generate_power"]:
@@ -903,7 +996,7 @@ class AnkerSolixApi:
             'powerpanel_list': []}}
         """
         self._logger.debug("Updating Sites data")
-        self.sites = {}
+        new_sites = {}
         self._logger.debug("Getting site list")
         sites = await self.get_site_list(fromFile=fromFile)
         act_devices = []
@@ -925,7 +1018,7 @@ class AnkerSolixApi:
                 self._logger.debug("Getting scene info for site")
                 scene = await self.get_scene_info(myid, fromFile=fromFile)
                 mysite.update(scene)
-                self.sites.update({myid: mysite})
+                new_sites.update({myid: mysite})
                 # Update device details from scene info
                 sb_total_charge = (mysite.get("solarbank_info", {})).get(
                     "total_charging_power", ""
@@ -975,7 +1068,7 @@ class AnkerSolixApi:
                         )  # allow negative values
                         sb_total_charge_calc += charge_calc
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
-                    self.sites.update({myid: mysite})
+                    new_sites.update({myid: mysite})
                     sn = self._update_dev(
                         solarbank,
                         devType=SolixDeviceType.SOLARBANK.value,
@@ -1013,7 +1106,7 @@ class AnkerSolixApi:
                                 }
                             )
                 # make sure to write back any changes to the solarbank info in sites dict
-                self.sites.update({myid: mysite})
+                new_sites.update({myid: mysite})
 
                 for pps in (mysite.get("pps_info", {})).get("pps_list", []):
                     # work around for device_name which is actually the device_alias in scene info
@@ -1057,18 +1150,45 @@ class AnkerSolixApi:
                     )
                     if sn:
                         act_devices.append(sn)
+        # Write back the updated sites
+        self.sites = new_sites
         # recycle device list and remove devices no longer used in sites
         rem_devices = [dev for dev in self.devices if dev not in act_devices]
         for dev in rem_devices:
-            self.devices.pop(dev)
+            self.devices.pop(dev,None)
         return self.sites
 
-    async def update_device_details(self, fromFile: bool = False) -> dict:
+    async def update_site_details(self, fromFile: bool = False) -> dict:
+        """Get the latest updates for additional site related details updated less frequently.
+
+        Most of theses requests return data only when user has admin rights for sites owning the devices.
+        To limit API requests, this update site details method should be called less frequently than update site method,
+        and it updates just the nested site_details dictionary in the sites dictionary.
+        """
+        self._logger.debug("Updating Sites Details")
+        # Fetch unread account messages once and put in site details for all sites
+        self._logger.debug("Getting unread messages indicator")
+        await self.get_message_unread(fromFile=fromFile)
+        for site_id, site in self.sites.items():
+            # Fetch details that only work for site admins
+            if site.get("site_admin", False):
+                # Fetch site price and CO2 settings
+                self._logger.debug("Getting price and CO2 settings for site")
+                await self.get_site_price(siteId=site_id, fromFile=fromFile)
+        return self.sites
+
+    async def update_device_details(
+        self, fromFile: bool = False, devtypes: set = None
+    ) -> dict:
         """Get the latest updates for additional device info updated less frequently.
 
         Most of theses requests return data only when user has admin rights for sites owning the devices.
-        To limit API requests, this update device details method should be called less frequently than update site method, which will also update most device details as found in the site data response.
+        To limit API requests, this update device details method should be called less frequently than update site method,
+        which will also update most device details as found in the site data response.
         """
+        # define allowed device types to query, default to all
+        if not devtypes:
+            devtypes = {d.value for d in SolixDeviceType}
         self._logger.debug("Updating Device Details")
         # Fetch firmware version of device
         self._logger.debug("Getting bind devices")
@@ -1102,8 +1222,9 @@ class AnkerSolixApi:
                     if 0 < wifi_index <= len(wifi_list):
                         device.update(wifi_list[wifi_index - 1])
 
-                # Fetch device type specific details
-                if dev_Type in [SolixDeviceType.SOLARBANK.value]:
+                # Fetch device type specific details, if device type should be queried
+
+                if dev_Type in ({SolixDeviceType.SOLARBANK.value} & devtypes):
                     # Fetch active Power Cutoff setting for solarbanks
                     self._logger.debug("Getting Power Cutoff settings for device")
                     await self.get_power_cutoff(
@@ -1130,8 +1251,74 @@ class AnkerSolixApi:
                 self.devices.update({sn: device})
 
             # TODO(#0): Fetch other details of specific device types as known and relevant
-
         return self.devices
+
+    async def update_device_energy(self, devtypes: set = None) -> dict:
+        """Get the energy statistics for given device types from today and yesterday.
+
+        Yesterday energy will be queried only once if not available yet, but not updated in subsequent refreshes.
+        Energy data can also be fetched by shared accounts.
+        """
+        # define allowed device types to query, default to no energy data
+        if not devtypes:
+            devtypes = set()
+        for sn, device in self.devices.items():
+            site_id = device.get("site_id", "")
+            dev_Type = device.get("type", "")
+            if dev_Type in ({SolixDeviceType.SOLARBANK.value} & devtypes):
+                self._logger.debug("Getting Energy details for device")
+                energy = device.get("energy_details") or {}
+                today = datetime.today().strftime("%Y-%m-%d")
+                yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+                # Fetch energy from today
+                data = await self.energy_daily(
+                    siteId=site_id,
+                    deviceSn=sn,
+                    startDay=datetime.fromisoformat(today),
+                    numDays=1,
+                    dayTotals=True,
+                )
+                energy["today"] = data.get(today) or {}
+                if yesterday != (energy.get("last_period") or {}).get("date"):
+                    # Fetch energy from previous day once
+                    data = await self.energy_daily(
+                        siteId=site_id,
+                        deviceSn=sn,
+                        startDay=datetime.fromisoformat(yesterday),
+                        numDays=1,
+                        dayTotals=True,
+                    )
+                    energy["last_period"] = data.get(yesterday) or {}
+                device["energy_details"] = energy
+                self.devices[sn] = device
+
+    async def get_site_rules(self, fromFile: bool = False) -> dict:
+        """Get the site rules supported by the api.
+
+        Example data:
+        {'rule_list': [
+            {'power_site_type': 1, 'main_device_models': ['A5143'], 'device_models': ['A5143', 'A1771'], 'can_empty_site': False,
+                'quantity_min_limit_map': {'A1771': 1, 'A5143': 1},'quantity_max_limit_map': {'A1771': 2, 'A5143': 1}},
+            {'power_site_type': 2, 'main_device_models': ['A17C0'], 'device_models': ['A17C0', 'A5143', 'A1771'], 'can_empty_site': False,
+                'quantity_min_limit_map': {'A17C0': 1}, 'quantity_max_limit_map': {'A1771': 2, 'A17C0': 2, 'A5143': 1}},
+            {'power_site_type': 4, 'main_device_models': ['A17B1'], 'device_models': ['A17B1'], 'can_empty_site': True,
+                'quantity_min_limit_map': None, 'quantity_max_limit_map': {'A17B1': 1}},
+            {'power_site_type': 5, 'main_device_models': ['A17C1'], 'device_models': ['A17C1', 'A17X7'], 'can_empty_site': True,
+                'quantity_min_limit_map': None, 'quantity_max_limit_map': {'A17C1': 1}},
+            {'power_site_type': 6, 'main_device_models': ['A5341'], 'device_models': ['A5341', 'A5101', 'A5220'], 'can_empty_site': False,
+                'quantity_min_limit_map': {'A5341': 1}, 'quantity_max_limit_map': {'A5341': 1}},
+            {'power_site_type': 7, 'main_device_models': ['A5101'], 'device_models': ['A5101', 'A5220'], 'can_empty_site': False,
+                'quantity_min_limit_map': {'A5101': 1}, 'quantity_max_limit_map': {'A5101': 6}},
+            {'power_site_type': 8, 'main_device_models': ['A5102'], 'device_models': ['A5102', 'A5220'], 'can_empty_site': False,
+                'quantity_min_limit_map': {'A5102': 1}, 'quantity_max_limit_map': {'A5102': 6}},
+            {'power_site_type': 9, 'main_device_models': ['A5103'], 'device_models': ['A5103', 'A5220'], 'can_empty_site': False,
+                'quantity_min_limit_map': {'A5103': 1}, 'quantity_max_limit_map': {'A5103': 6}}]}
+        """
+        if fromFile:
+            resp = self._loadFromFile(os.path.join(self._testdir, "site_rules.json"))
+        else:
+            resp = await self.request("post", _API_ENDPOINTS["site_rules"])
+        return resp.get("data", {})
 
     async def get_site_list(self, fromFile: bool = False) -> dict:
         """Get the site list.
@@ -1424,6 +1611,74 @@ class AnkerSolixApi:
         await self.get_power_cutoff(deviceSn=deviceSn)
         return True
 
+    async def get_site_price(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the power price set for the site.
+
+        Example data:
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"site_co2": 0,"site_price_unit": "\u20ac"}
+        """
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = self._loadFromFile(
+                os.path.join(self._testdir, f"price_{siteId}.json")
+            )
+        else:
+            resp = await self.request(
+                "post", _API_ENDPOINTS["get_site_price"], json=data
+            )
+        data = resp.get("data", {})
+        # update site details in sites dict
+        details = data.copy()
+        if "site_id" in details:
+            details.pop("site_id")
+        self._update_site(siteId, details)
+        return data
+
+    async def set_site_price(
+        self, siteId: str, price: float = None, unit: str = None, co2: float = None
+    ) -> bool:
+        """Set the power price, the unit and/or CO2 for a site.
+
+        Example input:
+        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0}
+        The id must be one of the ids listed with the get_power_cutoff endpoint
+        """
+        # First get the old settings if only single setting should be updated
+        details = {}
+        if siteId in self.sites:
+            details = (self.sites.get(siteId) or {}).get("site_details") or {}
+        new_price = details.get("price") if price is None else price
+        new_unit = details.get("site_price_unit") if unit is None else unit
+        new_co2 = details.get("site_co2") if co2 is None else co2
+        data = {}
+        # Need to query old setting to avoid changing them if parameter not provided
+        if new_price is None or new_unit is None or new_co2 is None:
+            data = await self.get_site_price(siteId=siteId)
+            if new_price is not None:
+                data["price"] = new_price
+            if new_unit is not None:
+                data["site_price_unit"] = new_unit
+            if new_co2 is not None:
+                data["site_co2"] = new_co2
+        else:
+            data.update(
+                {
+                    "site_id": siteId,
+                    "price": new_price,
+                    "site_price_unit": new_unit,
+                    "site_co2": new_co2,
+                }
+            )
+        # Make the Api call and check for return code
+        code = (
+            await self.request("post", _API_ENDPOINTS["update_site_price"], json=data)
+        ).get("code")
+        if not isinstance(code, int) or int(code) != 0:
+            return False
+        # update the data in api dict
+        await self.get_site_price(siteId=siteId)
+        return True
+
     async def get_device_load(
         self, siteId: str, deviceSn: str, fromFile: bool = False
     ) -> dict:
@@ -1447,15 +1702,26 @@ class AnkerSolixApi:
             resp = await self.request(
                 "post", _API_ENDPOINTS["get_device_load"], json=data
             )
-        # API Bug? home_load_data provided as string instead of object...Convert into object for proper handling
+        # The home_load_data is provided as string instead of object...Convert into object for proper handling
+        # It must be converted back to a string when passing this as input to set home load
         string_data = (resp.get("data") or {}).get("home_load_data") or {}
         if isinstance(string_data, str):
             resp["data"].update({"home_load_data": json.loads(string_data)})
         data = resp.get("data") or {}
-        if schedule := data.get("home_load_data") or {}:
+        # update schedule also for all device serials found in schedule
+        schedule = data.get("home_load_data") or {}
+        dev_serials = []
+        for slot in schedule.get("ranges") or []:
+            for dev in slot.get("device_power_loads") or []:
+                if (sn := dev.get("device_sn")) and sn not in dev_serials:
+                    dev_serials.append(sn)
+        # add the given serial to list if not existing yet
+        if deviceSn and deviceSn not in dev_serials:
+            dev_serials.append(deviceSn)
+        for sn in dev_serials:
             self._update_dev(
                 {
-                    "device_sn": deviceSn,
+                    "device_sn": sn,
                     "schedule": schedule,
                     "current_home_load": data.get("current_home_load") or "",
                     "parallel_home_load": data.get("parallel_home_load") or "",
@@ -1463,10 +1729,47 @@ class AnkerSolixApi:
             )
         return data
 
+    async def set_device_load(
+        self,
+        siteId: str,
+        deviceSn: str,
+        loadData: dict,
+    ) -> dict:
+        """Set device home load (e.g. solarbank schedule).
+
+        Example input for system with single solarbank:
+        {'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'device_sn': '9JVB42LJK8J0P5RY',
+        'home_load_data': '{"ranges":['
+            '{"id":0,"start_time":"00:00","end_time":"06:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],'
+            '"charge_priority":0,"power_setting_mode":1,"device_power_loads":[{"device_sn":"9JVB42LJK8J0P5RY","power":150}]},'
+            '{"id":0,"start_time":"07:30","end_time":"18:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],'
+            '"charge_priority":80,"power_setting_mode":1,"device_power_loads":[{"device_sn":"9JVB42LJK8J0P5RY","power":50}]},'
+            '{"id":0,"start_time":"18:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],'
+            '"charge_priority":0,"power_setting_mode":1,"device_power_loads":[{"device_sn":"9JVB42LJK8J0P5RY","power":150}]}],'
+            '"min_load":100,"max_load":800,"step":0,"is_charge_priority":0,"default_charge_priority":0,"is_zero_output_tips":1,"display_advanced_mode":0,"advanced_mode_min_load":0}'
+        }
+        Attention: This method and endpoint actually accepts the inputs, but does not change anything. The set_device_parm endpoint may have to be used
+        """
+        data = {
+            "site_id": siteId,
+            "device_sn": deviceSn,
+            "home_load_data": json.dumps(loadData),
+        }
+        # Make the Api call and check for return code
+        code = (
+            await self.request("post", _API_ENDPOINTS["set_device_load"], json=data)
+        ).get("code")
+        if not isinstance(code, int) or int(code) != 0:
+            return False
+        # update the data in api dict
+        await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
+        return True
+
     async def get_device_parm(
         self,
         siteId: str,
         paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
+        deviceSn: str = None,
         fromFile: bool = False,
     ) -> dict:
         r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId listed in the homepage info site_list. The paramType is always 4, but can be modified if necessary.
@@ -1487,11 +1790,34 @@ class AnkerSolixApi:
             resp = await self.request(
                 "post", _API_ENDPOINTS["get_device_parm"], json=data
             )
-        # API Bug? param_data provided as string instead of object...Convert into object for proper handling
+        # The home_load_data is provided as string instead of object...Convert into object for proper handling
+        # It must be converted back to a string when passing this as input to set home load
         string_data = (resp.get("data", {})).get("param_data", {})
         if isinstance(string_data, str):
             resp["data"].update({"param_data": json.loads(string_data)})
-        return resp.get("data", {})
+
+        # update api device dict with latest data if optional device SN was provided, e.g. when called by set_device_parm for device details update
+        data = resp.get("data") or {}
+        # update schedule also for all device serials found in schedule
+        schedule = data.get("param_data") or {}
+        dev_serials = []
+        for slot in schedule.get("ranges") or []:
+            for dev in slot.get("device_power_loads") or []:
+                if (sn := dev.get("device_sn")) and sn not in dev_serials:
+                    dev_serials.append(sn)
+        # add the given serial to list if not existing yet
+        if deviceSn and deviceSn not in dev_serials:
+            dev_serials.append(deviceSn)
+        for sn in dev_serials:
+            self._update_dev(
+                {
+                    "device_sn": sn,
+                    "schedule": schedule,
+                    "current_home_load": data.get("current_home_load") or "",
+                    "parallel_home_load": data.get("parallel_home_load") or "",
+                }
+            )
+        return data
 
     async def set_device_parm(
         self,
@@ -1499,34 +1825,165 @@ class AnkerSolixApi:
         paramData: dict,
         paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
         command: int = 17,
-        toFile: bool = False,
+        deviceSn: str = None,
     ) -> dict:
         """Set device parameters (e.g. solarbank schedule).
 
         command: Must be 17 for solarbank schedule.
         paramType: was always string "4"
         Example paramData:
-        {"param_data":{"ranges":[
-            {"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},
-            {"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},
-            {"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],
-        "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}
+        {"param_data": '{"ranges":['
+            '{"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},'
+            '{"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},'
+            '{"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],'
+        '"min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}'
         """
         data = {
             "site_id": siteId,
             "param_type": paramType,
             "cmd": command,
-            "param_data": json.dumps(paramData),
+            "param_data": json.dumps(paramData),  # Must be string type
         }
-        if toFile:
-            resp = self._saveToFile(
-                os.path.join(self._testdir, f"set_device_parm_{siteId}.json"), data=data
-            )
+        code = (
+            await self.request("post", _API_ENDPOINTS["set_device_parm"], json=data)
+        ).get("code")
+        if not isinstance(code, int) or int(code) != 0:
+            return False
+        # update the data in api dict
+        await self.get_device_parm(siteId=siteId, deviceSn=deviceSn)
+        return True
+
+    async def set_home_load(
+        self,
+        siteId: str,
+        deviceSn: str,
+        all_day: bool = False,
+        preset: int = None,
+        discharge: bool = None,
+        charge_prio: int = None,
+    ) -> bool:
+        """Set the home load parameters for a given site id and device for actual or all slots in the existing schedule.
+
+        Example schedule:
+        {{"ranges":[
+            {"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},
+            {"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},
+            {"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],
+        "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}
+        """
+        # obtain actual device schedule from internal dict or fetch via api
+
+        if not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
+            schedule = (
+                await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
+            ).get("home_load_data") or {}
+        # fast quit if nothing to change
+        if not str(charge_prio).isdigit():
+            charge_prio = None
+        if not str(preset).isdigit():
+            preset = None
+        if preset is None and discharge is None and charge_prio is None:
+            return True
+        now = datetime.now().time().replace(microsecond=0)
+        # set now to new daytime if close to end of day
+        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+            now = datetime.strptime("00:00", "%H:%M").time()
+        new_ranges = []
+        dev_serials = []
+        if (min_load := str(schedule.get("min_load"))).isdigit():
+            min_load = int(min_load)
         else:
-            resp = await self.request(
-                "post", _API_ENDPOINTS["set_device_parm"], json=data
-            )
-        return resp.get("data", {})
+            min_load = SolixDefaults.PRESET_MIN.value
+        if (max_load := str(schedule.get("max_load"))).isdigit():
+            max_load = int(max_load)
+        else:
+            max_load = SolixDefaults.PRESET_MAX.value
+        for slot in schedule.get("ranges") or []:
+            with contextlib.suppress(ValueError):
+                start_time = datetime.strptime(
+                    slot.get("start_time") or "00:00", "%H:%M"
+                ).time()
+                end_time = slot.get("end_time") or "00:00"
+                # "24:00" format not supported in strptime
+                if end_time == "24:00":
+                    end_time = datetime.strptime("23:59", "%H:%M").time()
+                else:
+                    end_time = datetime.strptime(end_time, "%H:%M").time()
+                if all_day or start_time <= now < end_time:
+                    if preset is not None:
+                        (slot.get("appliance_loads") or [{}])[0].update(
+                            {
+                                "power": min(
+                                    max(int(preset), min_load),
+                                    max_load,
+                                )
+                            }
+                        )
+                    if discharge is not None:
+                        slot.update({"turn_on": discharge})
+                    if charge_prio is not None:
+                        slot.update(
+                            {
+                                "charge_priority": min(
+                                    max(
+                                        int(charge_prio),
+                                        SolixDefaults.CHARGE_PRIORITY_MIN.value,
+                                    ),
+                                    SolixDefaults.CHARGE_PRIORITY_MAX.value,
+                                )
+                            }
+                        )
+            # loookup additional device SNs in schedule for device schedule update later in device details dict
+            if len(new_ranges) == 0:
+                for dev in slot.get("device_power_loads") or []:
+                    if (
+                        (sn := dev.get("device_sn"))
+                        and sn != deviceSn
+                        and sn not in dev_serials
+                    ):
+                        dev_serials.append(sn)
+            new_ranges.append(slot)
+        # If no slot defined, set defaults for new all day slot
+        if len(new_ranges) == 0:
+            if preset is None:
+                preset = SolixDefaults.PRESET_DEF.value
+            if discharge is None:
+                discharge = SolixDefaults.ALLOW_DISCHARGE.value
+            if charge_prio is None:
+                charge_prio = SolixDefaults.CHARGE_PRIORITY_DEF.value
+            slot = {
+                "start_time": "00:00",
+                "end_time": "24:00",
+                "turn_on": discharge,
+                "appliance_loads": [
+                    {
+                        "power": min(
+                            max(int(preset), min_load),
+                            max_load,
+                        ),
+                    }
+                ],
+                "charge_priority": min(
+                    max(
+                        int(charge_prio),
+                        SolixDefaults.CHARGE_PRIORITY_MIN.value,
+                    ),
+                    SolixDefaults.CHARGE_PRIORITY_MAX.value,
+                ),
+            }
+            new_ranges.append(slot)
+        self._logger.debug(
+            "Ranges to apply: %s",
+            new_ranges,
+        )
+        # Make the Api call and check for return code, the set call will also update api dict
+        # NOTE: set_device_load does not seem to be usable yet for changing the home load
+        schedule.update({"ranges": new_ranges})
+        return await self.set_device_parm(
+            siteId=siteId,
+            paramData=schedule,
+            deviceSn=deviceSn,
+        )
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False
@@ -1562,7 +2019,7 @@ class AnkerSolixApi:
             for key in [
                 x for x in ("img_url", "bt_ble_id", "link_time") if x in keylist
             ]:
-                fitting.pop(key)
+                fitting.pop(key,None)
             fittings[fitting.get("device_sn")] = fitting
         self._update_dev({"device_sn": deviceSn, "fittings": fittings})
         return data
@@ -1687,27 +2144,7 @@ class AnkerSolixApi:
         elif (startDay + timedelta(days=numDays)) > today:
             numDays = (today - startDay).days + 1
         numDays = min(366, max(1, numDays))
-        # first get solar production
-        resp = await self.energy_analysis(
-            siteId=siteId,
-            deviceSn=deviceSn,
-            rangeType="week",
-            startDay=startDay,
-            endDay=startDay + timedelta(days=numDays - 1),
-            devType="solar_production",
-        )
-        for item in resp.get("power", []):
-            daystr = item.get("time", None)
-            if daystr:
-                table.update(
-                    {
-                        daystr: {
-                            "date": daystr,
-                            "solar_production": item.get("value", ""),
-                        }
-                    }
-                )
-        # Add solarbank discharge
+        # first get solarbank discharge
         resp = await self.energy_analysis(
             siteId=siteId,
             deviceSn=deviceSn,
@@ -1719,18 +2156,44 @@ class AnkerSolixApi:
         for item in resp.get("power", []):
             daystr = item.get("time", None)
             if daystr:
+                table.update(
+                    {
+                        daystr: {
+                            "date": daystr,
+                            "solarbank_discharge": item.get("value", ""),
+                        }
+                    }
+                )
+        # Add solar production which contains percentages
+        resp = await self.energy_analysis(
+            siteId=siteId,
+            deviceSn=deviceSn,
+            rangeType="week",
+            startDay=startDay,
+            endDay=startDay + timedelta(days=numDays - 1),
+            devType="solar_production",
+        )
+        for item in resp.get("power", []):
+            daystr = item.get("time", None)
+            if daystr:
                 entry = table.get(daystr, {})
                 entry.update(
-                    {"date": daystr, "solarbank_discharge": item.get("value", "")}
+                    {"date": daystr, "solar_production": item.get("value", "")}
                 )
                 table.update({daystr: entry})
-        # Solarbank charge is only received as total value for given interval. If requested, make daily queries for given interval with some delay
+        # Solarbank charge and percentages are only received as total value for given interval. If requested, make daily queries for given interval with some delay
         if dayTotals:
             if numDays == 1:
                 daystr = startDay.strftime("%Y-%m-%d")
                 entry = table.get(daystr, {})
                 entry.update(
-                    {"date": daystr, "solarbank_charge": resp.get("charge_total", "")}
+                    {
+                        "date": daystr,
+                        "solarbank_charge": resp.get("charge_total", ""),
+                        "battery_percentage": resp.get("charging_pre", ""),
+                        "solar_percentage": resp.get("electricity_pre", ""),
+                        "other_percentage": resp.get("others_pre", ""),
+                    }
                 )
                 table.update({daystr: entry})
             else:
@@ -1745,13 +2208,16 @@ class AnkerSolixApi:
                         rangeType="week",
                         startDay=day,
                         endDay=day,
-                        devType="solarbank",
+                        devType="solar_production",
                     )
                     entry = table.get(daystr, {})
                     entry.update(
                         {
                             "date": daystr,
                             "solarbank_charge": resp.get("charge_total", ""),
+                            "battery_percentage": resp.get("charging_pre", ""),
+                            "solar_percentage": resp.get("electricity_pre", ""),
+                            "other_percentage": resp.get("others_pre", ""),
                         }
                     )
                     table.update({daystr: entry})
@@ -1768,3 +2234,21 @@ class AnkerSolixApi:
             data.update({"device_sn": deviceSn})
         resp = await self.request("post", _API_ENDPOINTS["home_load_chart"], json=data)
         return resp.get("data", {})
+
+    async def get_message_unread(self, fromFile: bool = False) -> dict:
+        """Get the unread messages for account.
+
+        Example data:
+        {"has_unread_msg": false}
+        """
+        if fromFile:
+            resp = self._loadFromFile(
+                os.path.join(self._testdir, "message_unread.json")
+            )
+        else:
+            resp = await self.request("get", _API_ENDPOINTS["get_message_unread"])
+        # save unread msg flag in each known site
+        data = resp.get("data", {})
+        for siteId in self.sites:
+            self._update_site(siteId, data)
+        return data
