@@ -23,6 +23,27 @@
         "device_sw_version": "v1.5.6",
         "has_manual": false,
         "hes_data": null
+      },
+      {
+        "device_sn": "1OVQCE1LTA8QITV5",
+        "product_code": "A1761",
+        "bt_ble_id": "95:F7:0F:1F:CE:E2",
+        "bt_ble_mac": "95F70F1FCEE2",
+        "device_name": "SOLIX C1000(X)",
+        "alias_name": "SOLIX C1000(X)",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/01/17/iot-admin/b4VVnVyVA7KkQTQR/picl_A1761_normal.png",
+        "link_time": 1709980538,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.3.2",
+        "has_manual": true,
+        "hes_data": null
       }
     ]
   },

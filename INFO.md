@@ -197,8 +197,34 @@ action:
             priority: high
 mode: queued
 max: 3
+```
+
+## Markdown card to show the defined Solarbank schedule
+
+Following markdown card code can be used to display the solarbank schedule in the UI frontend. Just replace the entity with your sensor entity that represents the
+solarbank effective output preset. It is the sensor that has the schedule attribute.
+NOTES:
+- Shared accounts have no access to the schedule
+- The schedule values show the individual customizable settings per interval. The reported home load preset that is 'applied' and shown in the sensor state as well as in the Anker App is a combined result from the appliance for the current interval settings.
+- Starting with Anker App 2.2.1, you can modify the default 50 % preset share between a dual Solarbank setup. The SB1 and SB2 values of the schedule will show the applied preset per Solarbank in that case. For single Solarbank setups, the individual device presets of the schedule are ignored by the appliance and the appliance preset is used. 
 
 ```
+type: markdown
+content: |
+  ## Solarbank Schedule
+
+  {% set entity = 'sensor.sb_e1600_einspeisevorgabe' %}
+  {% set slots = (state_attr(entity,'schedule')).ranges|default([])|list %}
+  {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format('Start', 'End', 'Preset','Discharge','Prio', 'SB1', 'SB2', 'Name') }}
+  {{ ":---:|:---:|---:|:---:|:---:|---:|---:|:---" }}
+  {% for slot in slots -%}
+    {%- set sb2 = '-/-' if slot.device_power_loads|default([])|length < 2 else slot.device_power_loads[1].power~" W" -%}
+      {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format(slot.start_time, slot.end_time, slot.appliance_loads[0].power~" W", 'On' if slot.turn_on else 'Off', slot.charge_priority~' %', slot.device_power_loads[0].power~" W", sb2, slot.appliance_loads[0].name) }}
+  {% endfor %}
+  {{ "No schedule available" if slots|length == 0 else ""}}
+
+```
+
 
 
 ## Showing Your Appreciation
