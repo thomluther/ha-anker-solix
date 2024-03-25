@@ -83,6 +83,32 @@
                     "on": "Ja",
                     "off": "Nein"
                 }
+            },
+            "has_unread_msg": {
+                "name": "Nachrichten",
+                "state": {
+                    "on": "Ja",
+                    "off": "Nein"
+                }
+            }
+        },
+        "number": {
+            "preset_system_output_power": {
+                "name": "System Einspeisevorgabe"
+            },
+            "preset_charge_priority": {
+                "name": "Ladeprioritätslimit"
+            },
+            "system_price": {
+                "name": "kWh Preis"
+            }
+        },
+        "select": {
+            "power_cutoff": {
+                "name": "Ladestandreserve"
+            },
+            "system_price_unit": {
+                "name": "Preis Währung"
             }
         },
         "sensor": {
@@ -130,9 +156,6 @@
             },
             "ac_generate_power": {
                 "name": "AC Leistung"
-            },
-            "power_cutoff": {
-                "name": "Ladestandreserve"
             },
             "set_output_power": {
                 "name": "Einspeisevorgabe",
@@ -190,6 +213,61 @@
                     }
                 }
             },
+            "daily_discharge_energy": {
+                "name": "Entladung täglich",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_charge_energy": {
+                "name": "Ladung täglich",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_production": {
+                "name": "Solarertrag täglich",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_share": {
+                "name": "Solaranteil täglich",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_battery_share": {
+                "name": "Akkuanteil täglich",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
             "temperature": {
                 "name": "Temperatur"
             },
@@ -217,6 +295,9 @@
             "solarbank_state_of_charge": {
                 "name": "SB Ladestand"
             },
+            "solarbank_timestamp": {
+                "name": "SB Datenzeit"
+            },
             "pps_charging_power": {
                 "name": "PPS Akkuleistung"
             },
@@ -238,16 +319,19 @@
             "daily_output_energy": {
                 "name": "Ertrag heute"
             },
-            "site_charging_power": {
-                "name": "System Ladeleistung"
-            },
             "set_system_output_power": {
                 "name": "System Einspeisevorgabe"
+            },
+            "site_charging_power": {
+                "name": "System Ladeleistung"
             }
         },
         "switch": {
             "auto_upgrade": {
                 "name": "Auto-Upgrade"
+            },
+            "preset_allow_discharge": {
+                "name": "Erlaube Entladung"
             },
             "allow_refresh": {
                 "name": "Api Nutzung"
@@ -267,6 +351,104 @@
                 "on": "An",
                 "unknown": "Unbekannt"
             }
+        }
+    },
+    "services": {
+        "get_solarbank_schedule": {
+            "name": "Abfrage des aktuellen Solarbank Zeitplans",
+            "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diesen Service geschickt",
+            "fields": {
+                "entity_id": {
+                    "name": "Entität ID",
+                    "description": "Solarbank Einspeisevorgabe Sensor dessen Zeitplan abgefragt werden soll"
+                }
+            }
+        },
+        "set_solarbank_schedule": {
+            "name": "Erstelle einen neuen Solarbank Zeitplan",
+            "description": "Erstelle einen neuen Zeitplan für die Solarbank mit dem definierten Zeitintervall. Ein bestehender Zeitplan wird dabei komplett ersetzt!",
+            "fields": {
+                "entity_id": {
+                    "name": "Entität ID",
+                    "description": "Solarbank Einspeisevorgabe Sensor dessen Zeitplan erstellt werden soll"
+                },
+                "start_time": {
+                    "name": "Startzeit",
+                    "description": "Startzeit des Intervals (Sekunden werden ignoriert)"
+                },
+                "end_time": {
+                    "name": "Endzeit",
+                    "description": "Endzeit des Intervals (Sekunden werden ignoriert). Für Einstellung 24:00 muss 23:59 gewählt werden."
+                },
+                "appliance_load": {
+                    "name": "Einspeisevorgabe",
+                    "description": "Watt die in Haus eingespeist werden sollen"
+                },
+                "allow_discharge": {
+                    "name": "Entladung erlauben",
+                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus"
+                },
+                "charge_priority_limit": {
+                    "name": "Limit für die Ladepriorität",
+                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist oder kein MI80 Wechselrichter eingestellt ist."
+                }
+            }
+        },
+        "update_solarbank_schedule": {
+            "name": "Aktualisiere einen Solarbank Zeitplan",
+            "description": "Ein existierender Zeitplan wird mit dem definierten Zeitintervall aktualisiert. Angrenzende Zeitintervalle werden dabei zeitlich angepasst und überlagernde ersetzt.",
+            "fields": {
+                "entity_id": {
+                    "name": "Entität ID",
+                    "description": "Solarbank Einspeisevorgabe Sensor dessen Zeitplan aktualisiert werden soll"
+                },
+                "start_time": {
+                    "name": "Startzeit",
+                    "description": "Startzeit des Intervalls (Sekunden werden ignoriert)"
+                },
+                "end_time": {
+                    "name": "Endzeit",
+                    "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für Einstellung 24:00 muss 23:59 gewählt werden."
+                },
+                "appliance_load": {
+                    "name": "Einspeisevorgabe",
+                    "description": "Watt die in Haus eingespeist werden sollen"
+                },
+                "allow_discharge": {
+                    "name": "Entladung erlauben",
+                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus"
+                },
+                "charge_priority_limit": {
+                    "name": "Limit für die Ladepriorität",
+                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist oder kein MI80 Wechselrichter eingestellt ist."
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "increase_blocked": {
+          "message": "{entity_id} kann nicht auf {value} erhöht werden weil die letzte Änderung vor weniger als {delay} Sekunden gemacht wurde"
+        },
+        "out_of_range": {
+            "message": "{entity_id} kann nicht auf {value} geändert werden weil es ausserhalb des erlaubten Bereiches von {min}-{max} liegt"
+        },
+        "active_testmode": {
+            "message": "{entity_id} kann nicht geändert werden solange die Konfiguration im Testmodus ist"
+        },
+        "shared_devices": {
+            "message": "{username} kann nicht geladen werden weil sie Geräte mit der Konfiguration {shared_account} teilt"
+        },
+        "active_devices": {
+            "message": "{device} kann nicht entfernt werden weil es noch aktive Entitäten besitzt"
+        },
+        "device_refresh": {
+            "message": "Gerätedetails für {coordinator} können nicht innerhalb von {min_dev_refresh} Sekunden erneut aktualisiert werden"
+        },
+        "service_not_supported": {
+            "message": "Die Entität {entity} unterstützt den Service {service} nicht."
+        },
+        "slot_time_error": {
+            "message": "Der service {service} kann nicht ausgeführt werden: {error}."
         }
     }
 }

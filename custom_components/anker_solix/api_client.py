@@ -143,7 +143,10 @@ class AnkerSolixApiClient:
                             else "",
                         )
                         await self.api.update_sites(fromFile=self._testmode)
-                        await self.api.update_device_details(fromFile=self._testmode)
+                        await self.api.update_site_details(fromFile=self._testmode)
+                        await self.api.update_device_details(fromFile=self._testmode, devtypes={api.SolixDeviceType.SOLARBANK.value})
+                        if not self._testmode:  # TODO: Fetch energy only if enabled via options
+                            await self.api.update_device_energy({api.SolixDeviceType.SOLARBANK.value})
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
                 else:
@@ -163,7 +166,10 @@ class AnkerSolixApiClient:
                             if self._testmode
                             else "",
                         )
-                        await self.api.update_device_details(fromFile=self._testmode)
+                        await self.api.update_site_details(fromFile=self._testmode)
+                        await self.api.update_device_details(fromFile=self._testmode, devtypes={api.SolixDeviceType.SOLARBANK.value})
+                        if not self._testmode:  # TODO: Fetch energy only if enabled via options
+                            await self.api.update_device_energy({api.SolixDeviceType.SOLARBANK.value})
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
                 # combine site and device details dict

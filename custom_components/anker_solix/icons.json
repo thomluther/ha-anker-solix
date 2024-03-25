@@ -19,6 +19,32 @@
                     "on": "mdi:account-check",
                     "off": "mdi:account-cancel"
                 }
+            },
+            "has_unread_msg": {
+                "default": "mdi:message-question",
+                "state": {
+                    "on": "mdi:message-alert",
+                    "off": "mdi:message-check-outline"
+                }
+            }
+        },
+        "number": {
+            "preset_system_output_power": {
+                "default": "mdi:home-lightning-bolt-outline"
+            },
+            "preset_charge_priority": {
+                "default": "mdi:battery-arrow-up"
+            },
+            "system_price": {
+                "default": "mdi:cash-edit"
+            }
+        },
+        "select": {
+            "power_cutoff": {
+                "default": "mdi:battery-heart-outline"
+            },
+            "system_price_unit": {
+                "default": "mdi:cash-edit"
             }
         },
         "sensor": {
@@ -54,11 +80,23 @@
             "input_power": {
                 "default": "mdi:solar-power"
             },
-            "power_cutoff": {
-                "default": "mdi:battery-heart-outline"
-            },
             "fittings": {
                 "default": "mdi:tools"
+            },
+            "daily_discharge_energy": {
+                "default": "mdi:battery-minus-variant"
+            },
+            "daily_charge_energy": {
+                "default": "mdi:battery-plus-variant"
+            },
+            "daily_solar_production": {
+                "default": "mdi:solar-power-variant"
+            },
+            "daily_solar_share": {
+                "default": "mdi:percent-circle"
+            },
+            "daily_battery_share": {
+                "default": "mdi:percent-box"
             },
             "solarbank_list": {
                 "default": "mdi:counter"
@@ -75,6 +113,9 @@
             "set_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"
             },
+            "solarbank_timestamp": {
+                "default": "mdi:weather-cloudy-clock"
+            },
             "inverter_info": {
                 "default": "mdi:tune"
             },
@@ -86,6 +127,9 @@
             },
             "total_saved_money": {
                 "default": "mdi:hand-coin"
+            },
+            "set_system_output_power": {
+                "default": "mdi:home-lightning-bolt-outline"
             }
         },
         "switch": {
@@ -96,6 +140,13 @@
                     "off": "mdi:autorenew-off"
                 }
             },
+            "preset_allow_discharge": {
+                "default": "mdi:battery-unknown",
+                "state": {
+                    "on": "mdi:battery-negative",
+                    "off": "mdi:battery-positive"
+                }
+            },
             "allow_refresh": {
                 "default": "mdi:sync-alert",
                 "state": {
@@ -104,5 +155,9 @@
                 }
             }
         }
+    },
+    "services": {
+        "set_solarbank_schedule": "mdi:sun-clock",
+        "update_solarbank_schedule": "mdi:sun-clock"
     }
 }

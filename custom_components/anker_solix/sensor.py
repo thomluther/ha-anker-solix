@@ -8,6 +8,9 @@ from contextlib import suppress
 import os
 from random import randrange, choice
 from typing import Any
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_platform
+from .config_flow import _SCAN_INTERVAL_MIN
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -26,7 +29,7 @@ from homeassistant.const import (
     PERCENTAGE,
 )
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, SupportsResponse, callback
 
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -41,9 +44,25 @@ from .const import (
     TEST_NUMBERVARIANCE,
     LAST_PERIOD,
     LAST_RESET,
+    SERVICE_GET_SOLARBANK_SCHEDULE,
+    SERVICE_SET_SOLARBANK_SCHEDULE,
+    SERVICE_UPDATE_SOLARBANK_SCHEDULE,
+    SOLARBANK_ENTITY_SCHEMA,
+    SOLARBANK_TIMESLOT_SCHEMA,
+    START_TIME,
+    END_TIME,
+    ALLOW_DISCHARGE,
+    APPLIANCE_LOAD,
+    CHARGE_PRIORITY_LIMIT,
+    AnkerSolixEntityFeature,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
-from .solixapi.api import SolarbankStatus, SolixDeviceStatus, SolixDeviceType
+from .solixapi.api import (
+    SolarbankStatus,
+    SolixDeviceStatus,
+    SolixDeviceType,
+    SolarbankTimeslot,
+)
 from .entity import (
     AnkerSolixPicturePath,
     AnkerSolixEntityType,
@@ -67,6 +86,7 @@ class AnkerSolixSensorDescription(
     unit_fn: Callable[[dict, str], dict | None] = lambda d, _: None
     force_creation_fn: Callable[[dict], bool] = lambda d: False
     nested_sensor: bool = False
+    feature: AnkerSolixEntityFeature | None = None
 
 
 DEVICE_SENSORS = [
@@ -116,14 +136,6 @@ DEVICE_SENSORS = [
         suggested_display_precision=0,
     ),
     AnkerSolixSensorDescription(
-        key="power_cutoff",
-        translation_key="power_cutoff",
-        json_key="power_cutoff",
-        native_unit_of_measurement=PERCENTAGE,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        suggested_display_precision=0,
-    ),
-    AnkerSolixSensorDescription(
         key="ac_generate_power",
         translation_key="ac_generate_power",
         json_key="generate_power",
@@ -133,6 +145,10 @@ DEVICE_SENSORS = [
         suggested_display_precision=0,
     ),
     AnkerSolixSensorDescription(
+        # Output preset per device
+        # This may also present 0 W if the allow discharge switch is disabled, even if the W preset value remains and the minimum bypass per defined inverter will be used
+        # This is confusing in the App and the Api, since there may be the minimum bypass W applied even if 0 W is shown.
+        # 0 W is only applied truly if the 0 W Switch is installed for non Anker inverters, or if MI80 is used which supports the 0 W setting natively
         key="set_output_power",
         translation_key="set_output_power",
         json_key="set_output_power",
@@ -140,6 +156,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         attrib_fn=lambda d, _: {"schedule": d.get("schedule")},
+        feature=AnkerSolixEntityFeature.SOLARBANK_SCHEDULE,
         # This entry has the unit with the number and needs to be removed
         value_fn=lambda d, jk, _: str(d.get(jk) or "").replace("W", "") or None,
         # Force the creation for solarbanks, this could be empty if disconnected?
@@ -227,6 +244,102 @@ DEVICE_SENSORS = [
             ),
             "bt_mac": ((d.get("fittings") or {}).get(c.split("_")[1]) or {}).get(
                 "bt_ble_mac"
+            ),
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_discharge_energy",
+        translation_key="daily_discharge_energy",
+        json_key="solarbank_discharge",
+        state_class=SensorStateClass.TOTAL,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            (d.get("energy_details") or {}).get("today") or {}
+        ).get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("solarbank_discharge"),
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_charge_energy",
+        translation_key="daily_charge_energy",
+        json_key="solarbank_charge",
+        state_class=SensorStateClass.TOTAL,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            (d.get("energy_details") or {}).get("today") or {}
+        ).get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("solarbank_charge"),
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_solar_production",
+        translation_key="daily_solar_production",
+        json_key="solar_production",
+        state_class=SensorStateClass.TOTAL,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            (d.get("energy_details") or {}).get("today") or {}
+        ).get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("solar_production"),
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_solar_share",
+        translation_key="daily_solar_share",
+        json_key="solar_percentage",
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=0,
+        value_fn=lambda d, jk, _: None
+        if not d.get("energy_details")
+        else 100 * float(((d.get("energy_details") or {}).get("today") or {}).get(jk)),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": None
+            if not d.get("energy_details")
+            else 100
+            * float(
+                ((d.get("energy_details") or {}).get("last_period") or {}).get(
+                    "solar_percentage"
+                )
+            ),
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_battery_share",
+        translation_key="daily_battery_share",
+        json_key="battery_percentage",
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=0,
+        value_fn=lambda d, jk, _: None
+        if not d.get("energy_details")
+        else 100 * float(((d.get("energy_details") or {}).get("today") or {}).get(jk)),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": None
+            if not d.get("energy_details")
+            else 100
+            * float(
+                ((d.get("energy_details") or {}).get("last_period") or {}).get(
+                    "battery_percentage"
+                )
             ),
         },
     ),
@@ -318,6 +431,14 @@ SITE_SENSORS = [
         suggested_display_precision=0,
     ),
     AnkerSolixSensorDescription(
+        # timestamp of solabank data
+        key="solarbank_timestamp",
+        translation_key="solarbank_timestamp",
+        json_key="updated_time",
+        # value_fn=lambda d, jk, _: datetime.strptime((d.get("solarbank_info") or {}).get(jk), "%Y-%m-%d %H:%M:%S").astimezone().isoformat(),
+        value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
+    ),
+    AnkerSolixSensorDescription(
         # Summary of all pps charging power on site
         key="pps_charging_power",
         translation_key="pps_charging_power",
@@ -354,7 +475,6 @@ SITE_SENSORS = [
         suggested_display_precision=0,
     ),
     AnkerSolixSensorDescription(
-        # Systemenergy
         key="total_co2_saving",
         translation_key="total_co2_saving",
         json_key="total",
@@ -385,7 +505,6 @@ SITE_SENSORS = [
         ),
     ),
     AnkerSolixSensorDescription(
-        # Systemenergy
         key="total_saved_money",
         translation_key="total_saved_money",
         json_key="total",
@@ -400,7 +519,6 @@ SITE_SENSORS = [
             or [None]
         )[0],
         device_class=SensorDeviceClass.MONETARY,
-        state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
         force_creation_fn=lambda d: True,
         value_fn=lambda d, jk, _: float(
@@ -450,42 +568,6 @@ SITE_SENSORS = [
             )[0]
         ),
     ),
-    # Reset mechanism not working yet, remove if daily values gathered from energy statistic queries
-    # AnkerSolixSensorDescription(
-    #     # Systemenergy daily calculated by integration
-    #     key="daily_output_energy",
-    #     translation_key="daily_output_energy",
-    #     json_key="total",
-    #     state_class=SensorStateClass.TOTAL,
-    #     unit_fn=lambda d, _: (
-    #         (
-    #             [
-    #                 stat.get("unit")
-    #                 for stat in filter(
-    #                     lambda item: item.get("type") == "1",
-    #                     d.get("statistics") or [{}],
-    #                 )
-    #             ]
-    #             or [None]
-    #         )[0]
-    #     ).replace("w", "W")
-    #     or None,
-    #     device_class=SensorDeviceClass.ENERGY,
-    #     reset_at_midnight=True,
-    #     force_creation_fn=lambda d: True,
-    #     value_fn=lambda d, jk, _: float(
-    #         (
-    #             [
-    #                 stat.get(jk)
-    #                 for stat in filter(
-    #                     lambda item: item.get("type") == "1",
-    #                     d.get("statistics") or [{}],
-    #                 )
-    #             ]
-    #             or [None]
-    #         )[0]
-    #     ),
-    # ),
     # Following sensor delivers meaningless values if any, home_info charging_power reports same value as inverter generated_power?!?
     # AnkerSolixSensorDescription(
     #     # System charging power
@@ -499,7 +581,10 @@ SITE_SENSORS = [
     #     suggested_display_precision=0,
     # ),
     AnkerSolixSensorDescription(
-        # System total output setting, determined by schedule
+        # System total output setting, determined by Api via schedule slot discharge switch and W preset
+        # This may also present 0 W if the switch is disabled, even if the W preset value remains and the minimum bypass per defined inverter will be used
+        # This is confusing in the App and the Api, since there may be the minimum bypass W even if 0 W is shown.
+        # 0 W is only applied truly if the 0 W Switch is installed for non Anker inverters, or if MI80 is used which supports the 0 W setting natively
         key="set_system_output_power",
         translation_key="set_system_output_power",
         json_key="retain_load",
@@ -518,7 +603,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensor platform."""
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
@@ -552,11 +637,11 @@ async def async_setup_entry(
                     is not None
                 ):
                     if description.device_class == SensorDeviceClass.ENERGY:
-                        entity = EnergySensorEntity(
+                        entity = AnkerSolixEnergySensor(
                             coordinator, description, sn, entity_type
                         )
                     else:
-                        entity = DataSensorEntity(
+                        entity = AnkerSolixSensor(
                             coordinator, description, sn, entity_type
                         )
                     entities.append(entity)
@@ -564,14 +649,40 @@ async def async_setup_entry(
     # create the entities from the list
     async_add_entities(entities)
 
+    # register the entity services
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        name=SERVICE_GET_SOLARBANK_SCHEDULE,
+        schema=SOLARBANK_ENTITY_SCHEMA,
+        func=SERVICE_SET_SOLARBANK_SCHEDULE,
+        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
+        supports_response=SupportsResponse.ONLY
+    )
+    platform.async_register_entity_service(
+        name=SERVICE_SET_SOLARBANK_SCHEDULE,
+        schema=SOLARBANK_TIMESLOT_SCHEMA,
+        func=SERVICE_SET_SOLARBANK_SCHEDULE,
+        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
+    )
+    platform.async_register_entity_service(
+        name=SERVICE_UPDATE_SOLARBANK_SCHEDULE,
+        schema=SOLARBANK_TIMESLOT_SCHEMA,
+        func=SERVICE_UPDATE_SOLARBANK_SCHEDULE,
+        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
+    )
 
-class DataSensorEntity(CoordinatorEntity, SensorEntity):
+
+class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
     """Represents a sensor entity for Anker device and site data."""
 
+    coordinator: AnkerSolixDataUpdateCoordinator
+    entity_description: AnkerSolixSensorDescription
+    entity_type: str
     _attr_has_entity_name = True
     _attr_attribution = ATTRIBUTION
     _context_base: str = None
     _context_nested: str = None
+    _last_schedule_service_value: str = None
     _unrecorded_attributes = frozenset(
         {
             "sw_version",
@@ -606,8 +717,10 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
         self.entity_type = entity_type
         self._attribute_name = description.key
         self._attr_unique_id = (f"{context}_{description.key}").lower()
-        wwwroot = os.path.join(self.coordinator.hass.config.config_dir,"www")
-        if description.picture_path and os.path.isfile(description.picture_path.replace(AnkerSolixPicturePath.LOCALPATH,wwwroot)):
+        wwwroot = os.path.join(self.coordinator.hass.config.config_dir, "www")
+        if description.picture_path and os.path.isfile(
+            description.picture_path.replace(AnkerSolixPicturePath.LOCALPATH, wwwroot)
+        ):
             self._attr_entity_picture = description.picture_path
         self._attr_extra_state_attributes = None
         # Split context for nested device serials
@@ -619,32 +732,31 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(self._context_base) or {}
             self._attr_device_info = get_AnkerSolixDeviceInfo(data, self._context_base)
-            if self._attribute_name == "status_desc":
-                # set the correct device type picture for the device status entity
-                self._attr_entity_picture = getattr(
-                    AnkerSolixPicturePath, str(data.get("type") or "").upper()
-                )
-            elif self._attribute_name == "fittings":
+            # add service attribute for managble devices
+            self._attr_supported_features: AnkerSolixEntityFeature = description.feature if data.get("is_admin",False) else None
+            if self._attribute_name == "fittings":
                 # set the correct fitting type picture for the entity
-                pn = (
-                    (data.get("fittings") or {}).get(context.split("_")[1]) or {}
-                ).get("product_code")
-                if pn == "A17Y0":
-                    self._attr_entity_picture = AnkerSolixPicturePath.ZEROWSWITCH
+                if (
+                    pn := (
+                        (data.get("fittings") or {}).get(context.split("_")[1]) or {}
+                    ).get("product_code")
+                ) and hasattr(AnkerSolixPicturePath, pn):
+                    self._attr_entity_picture = getattr(AnkerSolixPicturePath, pn)
             # disable picture again if path does not exist to allow display of icons alternatively
-            if self._attr_entity_picture and not os.path.isfile(self._attr_entity_picture.replace(AnkerSolixPicturePath.LOCALPATH,wwwroot)):
+            if self._attr_entity_picture and not os.path.isfile(
+                self._attr_entity_picture.replace(
+                    AnkerSolixPicturePath.LOCALPATH, wwwroot
+                )
+            ):
                 self._attr_entity_picture = None
 
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(self._context_base, {})).get("site_info", {})
             self._attr_device_info = get_AnkerSolixSystemInfo(data, self._context_base)
+            # add service attribute for managble sites
+            self._attr_supported_features: AnkerSolixEntityFeature = description.feature if data.get("site_admin",False) else None
 
-        # set sensor unit if described by function
-        if unit := description.unit_fn(
-            coordinator.data.get(self._context_base, {}), context
-        ):
-            self._attr_native_unit_of_measurement = unit
         self._native_value = None
         self._assumed_state = False
         self.update_state_value()
@@ -681,6 +793,11 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
                 )
         return self._attr_extra_state_attributes
 
+    @property
+    def supported_features(self) -> AnkerSolixEntityFeature:
+        """Flag supported features."""
+        return self._attr_supported_features
+
     def update_state_value(self):
         """Update the state value of the sensor based on the coordinator data."""
         if self.coordinator and not (hasattr(self.coordinator, "data")):
@@ -712,6 +829,11 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
                     self._native_value = self.entity_description.value_fn(
                         data, key, self.coordinator_context
                     )
+                    # update sensor unit if described by function
+                    if unit := self.entity_description.unit_fn(
+                        data, self.coordinator_context
+                    ):
+                        self._attr_native_unit_of_measurement = unit
                     # Ensure to set power sensors to None if empty strings returned
                     if (
                         self.device_class == SensorDeviceClass.POWER
@@ -755,11 +877,163 @@ class DataSensorEntity(CoordinatorEntity, SensorEntity):
         # Mark sensor availability based on a sensore value
         self._attr_available = self._native_value is not None
 
+    @callback
+    async def get_solarbank_schedule(self, **kwargs: Any) -> None:
+        """Get the active solarbank schedule from the api."""
+        return await self._solarbank_schedule_service(
+            service_name=SERVICE_GET_SOLARBANK_SCHEDULE, **kwargs
+        )
 
-class EnergySensorEntity(DataSensorEntity, RestoreSensor):
+    @callback
+    async def set_solarbank_schedule(self, **kwargs: Any) -> None:
+        """Set the defined solarbank schedule slot."""
+        return await self._solarbank_schedule_service(
+            service_name=SERVICE_SET_SOLARBANK_SCHEDULE, **kwargs
+        )
+
+    @callback
+    async def update_solarbank_schedule(self, **kwargs: Any) -> None:
+        """Update the defined solarbank schedule."""
+        return await self._solarbank_schedule_service(
+            service_name=SERVICE_UPDATE_SOLARBANK_SCHEDULE, **kwargs
+        )
+
+    async def _solarbank_schedule_service(
+        self, service_name: str, **kwargs: Any
+    ) -> None:
+        """Execute the defined solarbank schedule service."""
+        # Raise alerts to frontend
+        if not (self.supported_features & AnkerSolixEntityFeature.SOLARBANK_SCHEDULE):
+            raise ServiceValidationError(
+                f"The entity {self.entity_id} does not support the service {service_name}",
+                translation_domain=DOMAIN,
+                translation_key="service_not_supported",
+                translation_placeholders={
+                    "entity": self.entity_id,
+                    "service": service_name,
+                },
+            )
+        # When running in Test mode do not run service
+        if self.coordinator.client.testmode() and service_name not in [SERVICE_GET_SOLARBANK_SCHEDULE]:
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                translation_domain=DOMAIN,
+                translation_key="active_testmode",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                },
+            )
+        if (
+            self.coordinator
+            and hasattr(self.coordinator, "data")
+            and self._context_base in self.coordinator.data
+        ):
+            data = self.coordinator.data.get(self._context_base)
+            if service_name in [SERVICE_SET_SOLARBANK_SCHEDULE,SERVICE_UPDATE_SOLARBANK_SCHEDULE]:
+                if START_TIME in kwargs and END_TIME in kwargs:
+                    if (start_time := kwargs.get(START_TIME)) < (
+                        end_time := kwargs.get(END_TIME)
+                    ):
+                        # check if now is in given time range and ensure preset increase is limited by min interval
+                        load = kwargs.get(APPLIANCE_LOAD)
+                        now = datetime.now().astimezone()
+
+                        start_time.astimezone()
+                        if (
+                            self._last_schedule_service_value
+                            and load
+                            and load > int(self._last_schedule_service_value)
+                            and start_time.astimezone().time()
+                            <= now.time()
+                            < end_time.astimezone().time()
+                            and now
+                            < (
+                                self.hass.states.get(self.entity_id).last_changed
+                                + timedelta(seconds=_SCAN_INTERVAL_MIN)
+                            )
+                        ):
+                            LOGGER.debug(
+                                "%s cannot be increased to %s because minimum change delay of %s seconds is not passed",
+                                self.entity_id,
+                                load,
+                                _SCAN_INTERVAL_MIN,
+                            )
+                            # Raise alert to frontend
+                            raise ServiceValidationError(
+                                f"{self.entity_id} cannot be increased to {load} because minimum change delay of {_SCAN_INTERVAL_MIN} seconds is not passed",
+                                translation_domain=DOMAIN,
+                                translation_key="increase_blocked",
+                                translation_placeholders={
+                                    "entity_id": self.entity_id,
+                                    "value": load,
+                                    "delay": _SCAN_INTERVAL_MIN,
+                                },
+                            )
+
+                        LOGGER.debug("%s service will be applied", service_name)
+                        # Map service keys to api slot keys
+                        slot = SolarbankTimeslot(
+                            start_time=start_time,
+                            end_time=end_time,
+                            appliance_load=load,
+                            allow_discharge=kwargs.get(ALLOW_DISCHARGE),
+                            charge_priority_limit=kwargs.get(CHARGE_PRIORITY_LIMIT),
+                        )
+                        if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
+                            result = await self.coordinator.client.api.set_home_load(
+                                siteId=data.get("site_id") or "",
+                                deviceSn=self._context_base,
+                                set_slot=slot,
+                            )
+                        elif service_name == SERVICE_UPDATE_SOLARBANK_SCHEDULE:
+                            result = await self.coordinator.client.api.set_home_load(
+                                siteId=data.get("site_id") or "",
+                                deviceSn=self._context_base,
+                                insert_slot=slot,
+                            )
+                        else:
+                            result = False
+                        if result:
+                            self._last_schedule_service_value = load or None
+                        # trigger coordinator update with api dictionary data
+                        await self.coordinator.async_refresh_data_from_apidict()
+                    else:
+                        raise ServiceValidationError(
+                            f"The service {service_name} cannot be executed: {'start_time must be earlier than end_time'}.",
+                            translation_domain=DOMAIN,
+                            translation_key="slot_time_error",
+                            translation_placeholders={
+                                "service": service_name,
+                                "error": "start_time must be earlier than end_time",
+                            },
+                        )
+                else:
+                    raise ServiceValidationError(
+                        f"The service {service_name} cannot be executed: {'start_time or end_time missing'}.",
+                        translation_domain=DOMAIN,
+                        translation_key="slot_time_error",
+                        translation_placeholders={
+                            "service": service_name,
+                            "error": "start_time or end_time missing",
+                        },
+                    )
+
+            elif service_name in [SERVICE_GET_SOLARBANK_SCHEDULE]:
+                LOGGER.debug("%s service will be applied", service_name)
+                result = await self.coordinator.client.api.get_device_load(
+                    siteId=data.get("site_id") or "",
+                    deviceSn=self._context_base,
+                    fromFile=self.coordinator.client.testmode(),
+                )
+                return {"schedule": result.get("home_load_data")}
+
+
+class AnkerSolixEnergySensor(AnkerSolixSensor, RestoreSensor):
     """Represents an energy sensor entity for Anker Solix site and device data."""
 
     _last_period: str | None = None
+    coordinator: AnkerSolixDataUpdateCoordinator
+    entity_description: AnkerSolixSensorDescription
 
     def __init__(
         self,
@@ -823,6 +1097,16 @@ class EnergySensorEntity(DataSensorEntity, RestoreSensor):
                 LAST_PERIOD: self._last_period,
                 LAST_RESET: last_reset,
             }
+        if (
+            self.coordinator
+            and (hasattr(self.coordinator, "data"))
+            and self._context_base in self.coordinator.data
+        ):
+            data = self.coordinator.data.get(self._context_base)
+            with suppress(ValueError, TypeError):
+                self._attr_extra_state_attributes = self.entity_description.attrib_fn(
+                    data, self.coordinator_context
+                )
         return self._attr_extra_state_attributes
 
     async def async_added_to_hass(self) -> None:
