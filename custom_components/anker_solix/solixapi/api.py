@@ -325,7 +325,7 @@ class SolixDefaults:
     PRESET_MIN: int = 0
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
-    ALLOW_DISCHARGE: bool = True
+    ALLOW_EXPORT: bool = True
     CHARGE_PRIORITY_MIN: int = 0
     CHARGE_PRIORITY_MAX: int = 100
     CHARGE_PRIORITY_DEF: int = 80
@@ -364,7 +364,7 @@ class SolarbankTimeslot:
     start_time: datetime
     end_time: datetime
     appliance_load: int | None = None  # mapped to appliance_loads setting using a default 50% share for dual solarbank setups
-    allow_discharge: bool | None = None  # mapped to the turn_on boolean
+    allow_export: bool | None = None  # mapped to the turn_on boolean
     charge_priority_limit: int | None = None  # mapped to charge_priority setting
 
 
@@ -718,7 +718,7 @@ class AnkerSolixApi:
                         device.update({"schedule": dict(value)})
                         # default active presets to None
                         device.pop("preset_system_output_power", None)
-                        device.pop("preset_allow_discharge", None)
+                        device.pop("preset_allow_export", None)
                         device.pop("preset_charge_priority", None)
                         # get actual presets from current slot
                         now = datetime.now().time().replace(microsecond=0)
@@ -746,9 +746,7 @@ class AnkerSolixApi:
                                             "preset_system_output_power": (
                                                 slot.get("appliance_loads") or [{}]
                                             )[0].get("power"),
-                                            "preset_allow_discharge": slot.get(
-                                                "turn_on"
-                                            ),
+                                            "preset_allow_export": slot.get("turn_on"),
                                             "preset_charge_priority": slot.get(
                                                 "charge_priority"
                                             ),
@@ -1934,7 +1932,7 @@ class AnkerSolixApi:
         deviceSn: str,
         all_day: bool = False,
         preset: int = None,
-        discharge: bool = None,
+        export: bool = None,
         charge_prio: int = None,
         set_slot: SolarbankTimeslot = None,
         insert_slot: SolarbankTimeslot = None,
@@ -1959,7 +1957,7 @@ class AnkerSolixApi:
             preset = None
         if (
             preset is None
-            and discharge is None
+            and export is None
             and charge_prio is None
             and set_slot is None
             and insert_slot is None
@@ -2010,7 +2008,7 @@ class AnkerSolixApi:
                 now = datetime.strptime("00:00", "%H:%M").time()
             next_start = None
             split_slot = {}
-            for idx,slot in enumerate(ranges, start=1):
+            for idx, slot in enumerate(ranges, start=1):
                 with contextlib.suppress(ValueError):
                     start_time = datetime.strptime(
                         slot.get("start_time") or "00:00", "%H:%M"
@@ -2029,11 +2027,28 @@ class AnkerSolixApi:
 
                     # Check if parameter update required for current time but it falls into gap of no defined slot.
                     # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications required for allday usage
-                    if not insert_slot and pending_now_update and (last_time <= now < start_time or (idx == len(ranges) and now >= end_time)):
+                    if (
+                        not insert_slot
+                        and pending_now_update
+                        and (
+                            last_time <= now < start_time
+                            or (idx == len(ranges) and now >= end_time)
+                        )
+                    ):
                         # Use daily end time if now after last slot
                         insert = copy.deepcopy(slot)
-                        insert.update({"start_time": next_start.isoformat(timespec='minutes')})
-                        insert.update({"end_time": (start_time.isoformat(timespec='minutes')).replace("23:59","24:00") if now < start_time else "24:00"})
+                        insert.update(
+                            {"start_time": next_start.isoformat(timespec="minutes")}
+                        )
+                        insert.update(
+                            {
+                                "end_time": (
+                                    start_time.isoformat(timespec="minutes")
+                                ).replace("23:59", "24:00")
+                                if now < start_time
+                                else "24:00"
+                            }
+                        )
                         (insert.get("appliance_loads") or [{}])[0].update(
                             {
                                 "power": min(
@@ -2049,9 +2064,13 @@ class AnkerSolixApi:
                                 ),
                             }
                         )
-                        insert.update({"turn_on": SolixDefaults.ALLOW_DISCHARGE
-                            if discharge is None
-                            else discharge})
+                        insert.update(
+                            {
+                                "turn_on": SolixDefaults.ALLOW_EXPORT
+                                if export is None
+                                else export
+                            }
+                        )
                         insert.update(
                             {
                                 "charge_priority": min(
@@ -2074,44 +2093,77 @@ class AnkerSolixApi:
                             last_time = start_time
                             insert = {}
 
-                    if pending_insert and (insert_slot.start_time.time() <= start_time or idx == len(ranges)):
+                    if pending_insert and (
+                        insert_slot.start_time.time() <= start_time
+                        or idx == len(ranges)
+                    ):
                         # copy slot, update and insert the new slot
+                        # re-use old slot parms if insert slot has not defined optional parms
                         insert = copy.deepcopy(slot)
-                        insert.update({"start_time": datetime.strftime(insert_slot.start_time, "%H:%M")})
-                        insert.update({"end_time": datetime.strftime(insert_slot.end_time, "%H:%M").replace("23:59","24:00")})
-                        (insert.get("appliance_loads") or [{}])[0].update(
-                            {
-                                "power": min(
-                                    max(
-                                        int(
-                                            SolixDefaults.PRESET_DEF
-                                            if insert_slot.appliance_load is None
-                                            else insert_slot.appliance_load
-                                        ),
-                                        min_load,
-                                    ),
-                                    max_load,
-                                ),
-                            }
-                        )
-                        insert.update({"turn_on": SolixDefaults.ALLOW_DISCHARGE
-                            if insert_slot.allow_discharge is None
-                            else insert_slot.allow_discharge})
                         insert.update(
                             {
-                                "charge_priority": min(
-                                    max(
-                                        int(
-                                            SolixDefaults.CHARGE_PRIORITY_DEF
-                                            if insert_slot.charge_priority_limit is None
-                                            else insert_slot.charge_priority_limit
-                                        ),
-                                        SolixDefaults.CHARGE_PRIORITY_MIN,
-                                    ),
-                                    SolixDefaults.CHARGE_PRIORITY_MAX,
+                                "start_time": datetime.strftime(
+                                    insert_slot.start_time, "%H:%M"
                                 )
                             }
                         )
+                        insert.update(
+                            {
+                                "end_time": datetime.strftime(
+                                    insert_slot.end_time, "%H:%M"
+                                ).replace("23:59", "24:00")
+                            }
+                        )
+                        if insert_slot.appliance_load is not None or (
+                            insert_slot.start_time.time() < start_time
+                            and insert_slot.end_time.time() != end_time
+                        ):
+                            (insert.get("appliance_loads") or [{}])[0].update(
+                                {
+                                    "power": min(
+                                        max(
+                                            int(
+                                                SolixDefaults.PRESET_DEF
+                                                if insert_slot.appliance_load is None
+                                                else insert_slot.appliance_load
+                                            ),
+                                            min_load,
+                                        ),
+                                        max_load,
+                                    ),
+                                }
+                            )
+                        if insert_slot.allow_export is not None or (
+                            insert_slot.start_time.time() < start_time
+                            and insert_slot.end_time.time() != end_time
+                        ):
+                            insert.update(
+                                {
+                                    "turn_on": SolixDefaults.ALLOW_EXPORT
+                                    if insert_slot.allow_export is None
+                                    else insert_slot.allow_export
+                                }
+                            )
+                        if insert_slot.charge_priority_limit is not None or (
+                            insert_slot.start_time.time() < start_time
+                            and insert_slot.end_time.time() != end_time
+                        ):
+                            insert.update(
+                                {
+                                    "charge_priority": min(
+                                        max(
+                                            int(
+                                                SolixDefaults.CHARGE_PRIORITY_DEF
+                                                if insert_slot.charge_priority_limit
+                                                is None
+                                                else insert_slot.charge_priority_limit
+                                            ),
+                                            SolixDefaults.CHARGE_PRIORITY_MIN,
+                                        ),
+                                        SolixDefaults.CHARGE_PRIORITY_MAX,
+                                    )
+                                }
+                            )
                         # insert slot before current slot if not last
                         if insert_slot.start_time.time() <= start_time:
                             new_ranges.append(insert)
@@ -2119,7 +2171,10 @@ class AnkerSolixApi:
                             pending_insert = False
                             if insert_slot.end_time.time() >= end_time:
                                 # set start of next slot if not end of day
-                                if end_time < datetime.strptime("23:59", "%H:%M").time():
+                                if (
+                                    end_time
+                                    < datetime.strptime("23:59", "%H:%M").time()
+                                ):
                                     next_start = insert_slot.end_time.time()
                                 last_time = insert_slot.end_time.time()
                                 # skip current slot since overlapped by insert slot
@@ -2131,27 +2186,81 @@ class AnkerSolixApi:
                                 # delay start time of current slot not needed if previous slot was split
                             else:
                                 # delay start time of current slot
-                                slot.update({"start_time": datetime.strftime(insert_slot.end_time, "%H:%M").replace("23:59","24:00")})
+                                slot.update(
+                                    {
+                                        "start_time": datetime.strftime(
+                                            insert_slot.end_time, "%H:%M"
+                                        ).replace("23:59", "24:00")
+                                    }
+                                )
                         else:
                             # create copy of slot when insert slot will split last slot to add it later as well
                             if insert_slot.end_time.time() < end_time:
                                 split_slot = copy.deepcopy(slot)
-                                split_slot.update({"start_time": datetime.strftime(insert_slot.end_time, "%H:%M").replace("23:59","24:00")})
+                                split_slot.update(
+                                    {
+                                        "start_time": datetime.strftime(
+                                            insert_slot.end_time, "%H:%M"
+                                        ).replace("23:59", "24:00")
+                                    }
+                                )
                             if insert_slot.start_time.time() < end_time:
                                 # shorten end time of current slot when appended at the end
-                                slot.update({"end_time": datetime.strftime(insert_slot.start_time, "%H:%M").replace("23:59","24:00")})
+                                slot.update(
+                                    {
+                                        "end_time": datetime.strftime(
+                                            insert_slot.start_time, "%H:%M"
+                                        ).replace("23:59", "24:00")
+                                    }
+                                )
 
                     elif pending_insert and insert_slot.start_time.time() <= end_time:
                         # create copy of slot when insert slot will split current slot to add it later
                         if insert_slot.end_time.time() < end_time:
                             split_slot = copy.deepcopy(slot)
-                            split_slot.update({"start_time": datetime.strftime(insert_slot.end_time, "%H:%M").replace("23:59","24:00")})
+                            split_slot.update(
+                                {
+                                    "start_time": datetime.strftime(
+                                        insert_slot.end_time, "%H:%M"
+                                    ).replace("23:59", "24:00")
+                                }
+                            )
                         # shorten end of preceeding slot
-                        slot.update({"end_time": datetime.strftime(insert_slot.start_time, "%H:%M")})
+                        slot.update(
+                            {
+                                "end_time": datetime.strftime(
+                                    insert_slot.start_time, "%H:%M"
+                                )
+                            }
+                        )
+                        # re-use old slot parms for insert if end time of insert slot is same as original slot
+                        if insert_slot.end_time.time() == end_time:
+                            if insert_slot.appliance_load is None:
+                                insert_slot.appliance_load = int(
+                                    (slot.get("appliance_loads") or [{}])[0].get(
+                                        "power"
+                                    )
+                                    or SolixDefaults.PRESET_DEF
+                                )
+                            if insert_slot.allow_export is None:
+                                insert_slot.allow_export = bool(
+                                    slot.get("turn_on") or SolixDefaults.ALLOW_EXPORT
+                                )
+                            if insert_slot.charge_priority_limit is None:
+                                insert_slot.charge_priority_limit = int(
+                                    slot.get("charge_priority")
+                                    or SolixDefaults.CHARGE_PRIORITY_DEF
+                                )
 
                     elif next_start and next_start < end_time:
                         # delay start of slot following an insert
-                        slot.update({"start_time": (next_start.isoformat(timespec='minutes')).replace("23:59","24:00")})
+                        slot.update(
+                            {
+                                "start_time": (
+                                    next_start.isoformat(timespec="minutes")
+                                ).replace("23:59", "24:00")
+                            }
+                        )
                         next_start = None
 
                     elif not insert_slot and (all_day or start_time <= now < end_time):
@@ -2165,8 +2274,8 @@ class AnkerSolixApi:
                                     )
                                 }
                             )
-                        if discharge is not None:
-                            slot.update({"turn_on": discharge})
+                        if export is not None:
+                            slot.update({"turn_on": export})
                         if charge_prio is not None:
                             slot.update(
                                 {
@@ -2183,7 +2292,13 @@ class AnkerSolixApi:
                         if start_time <= now < end_time:
                             pending_now_update = False
 
-                if last_time <= datetime.strptime((slot.get("start_time") or "00:00").replace("24:00", "23:59"), "%H:%M").time():
+                if (
+                    last_time
+                    <= datetime.strptime(
+                        (slot.get("start_time") or "00:00").replace("24:00", "23:59"),
+                        "%H:%M",
+                    ).time()
+                ):
                     new_ranges.append(slot)
 
                 # fill gap after last slot for current time parameter changes or insert slots
@@ -2195,15 +2310,15 @@ class AnkerSolixApi:
                         new_ranges.append(split_slot)
                         split_slot = {}
 
-                 # Track end time of last appended slot in list
+                # Track end time of last appended slot in list
                 last_time = datetime.strptime(
-                        (
-                            str(new_ranges[-1].get("end_time") or "00:00").replace(
-                                "24:00", "23:59"
-                            )
-                        ),
-                        "%H:%M",
-                    ).time()
+                    (
+                        str(new_ranges[-1].get("end_time") or "00:00").replace(
+                            "24:00", "23:59"
+                        )
+                    ),
+                    "%H:%M",
+                ).time()
 
         # If no slot exists or new slot to be set, set defaults or given set_slot parameters
         if len(new_ranges) == 0:
@@ -2215,9 +2330,9 @@ class AnkerSolixApi:
                     appliance_load=SolixDefaults.PRESET_DEF
                     if preset is None
                     else preset,
-                    allow_discharge=SolixDefaults.ALLOW_DISCHARGE
-                    if discharge is None
-                    else discharge,
+                    allow_export=SolixDefaults.ALLOW_EXPORT
+                    if export is None
+                    else export,
                     charge_priority_limit=SolixDefaults.CHARGE_PRIORITY_DEF
                     if charge_prio is None
                     else charge_prio,
@@ -2225,10 +2340,12 @@ class AnkerSolixApi:
             # generate the new slot
             slot = {
                 "start_time": datetime.strftime(set_slot.start_time, "%H:%M"),
-                "end_time": datetime.strftime(set_slot.end_time, "%H:%M").replace("23:59","24:00"),
-                "turn_on": SolixDefaults.ALLOW_DISCHARGE
-                if set_slot.allow_discharge is None
-                else set_slot.allow_discharge,
+                "end_time": datetime.strftime(set_slot.end_time, "%H:%M").replace(
+                    "23:59", "24:00"
+                ),
+                "turn_on": SolixDefaults.ALLOW_EXPORT
+                if set_slot.allow_export is None
+                else set_slot.allow_export,
                 "appliance_loads": [
                     {
                         "power": min(
@@ -2258,18 +2375,14 @@ class AnkerSolixApi:
             }
             # use previous appliance name if a slot was defined originally
             if appliance_name:
-                (slot.get("appliance_loads") or [{}])[0].update({"name": appliance_name})
+                (slot.get("appliance_loads") or [{}])[0].update(
+                    {"name": appliance_name}
+                )
             new_ranges.append(slot)
         self._logger.debug(
             "Ranges to apply: %s",
             new_ranges,
         )
-        self._logger.info(
-            "Ranges to apply: %s",
-            json.dumps(new_ranges,indent=2),
-        )  # TODO: change to debug prior release
-        # return
-
         # Make the Api call with final schedule and check for return code, the set call will also update api dict
         # NOTE: set_device_load does not seem to be usable yet for changing the home load, or is only usable in dual bank setups for changing the appliance load share as well?
         schedule.update({"ranges": new_ranges})
@@ -2438,7 +2551,7 @@ class AnkerSolixApi:
         elif (startDay + timedelta(days=numDays)) > today:
             numDays = (today - startDay).days + 1
         numDays = min(366, max(1, numDays))
-        # first get solarbank discharge
+        # first get solarbank export
         resp = await self.energy_analysis(
             siteId=siteId,
             deviceSn=deviceSn,

@@ -85,7 +85,7 @@
                 }
             },
             "has_unread_msg": {
-                "name": "Nachrichten",
+                "name": "Nouvelles",
                 "state": {
                     "on": "Oui",
                     "off": "Non"
@@ -115,8 +115,8 @@
             "status_desc": {
                 "name": "Etat du Cloud",
                 "state": {
-                    "off": "Hors ligne",
-                    "on": "En ligne",
+                    "offline": "Hors ligne",
+                    "online": "En ligne",
                     "unknown": "Pas disponible"
                 },
                 "state_attributes": {
@@ -330,8 +330,8 @@
             "auto_upgrade": {
                 "name": "Mise à jour automatique"
             },
-            "preset_allow_discharge": {
-                "name": "Permettre la décharge"
+            "preset_allow_export": {
+                "name": "Autoriser l'exportation"
             },
             "allow_refresh": {
                 "name": "Utilisation de l'API"
@@ -384,8 +384,8 @@
                     "name": "Réglage puissance de sortie",
                     "description": "Watt à livrer à la maison"
                 },
-                "allow_discharge": {
-                    "name": "Autoriser la décharge",
+                "allow_export": {
+                    "name": "Autoriser l'exportation",
                     "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison"
                 },
                 "charge_priority_limit": {
@@ -414,8 +414,8 @@
                     "name": "Réglage puissance de sortie",
                     "description": "Watt à livrer à la maison"
                 },
-                "allow_discharge": {
-                    "name": "Autoriser la décharge",
+                "allow_export": {
+                    "name": "Autoriser l'exportation",
                     "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison"
                 },
                 "charge_priority_limit": {

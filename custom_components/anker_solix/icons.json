@@ -140,11 +140,11 @@
                     "off": "mdi:autorenew-off"
                 }
             },
-            "preset_allow_discharge": {
-                "default": "mdi:battery-unknown",
+            "preset_allow_export": {
+                "default": "mdi:alert-box-outline",
                 "state": {
-                    "on": "mdi:battery-negative",
-                    "off": "mdi:battery-positive"
+                    "on": "mdi:export",
+                    "off": "mdi:card-off-outline"
                 }
             },
             "allow_refresh": {

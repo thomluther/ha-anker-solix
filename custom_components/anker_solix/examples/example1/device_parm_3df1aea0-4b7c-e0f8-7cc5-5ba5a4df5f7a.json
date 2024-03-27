@@ -1,8 +1,0 @@
-{
-  "code": 0,
-  "msg": "success!",
-  "data": {
-    "param_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"08:00\",\"end_time\":\"17:00\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":100,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"17:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":0}],\"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":1}"
-  },
-  "trace_id": "bdf5c51cd0fd73b07a5a49c7f8efda5b"
-}

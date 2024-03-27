@@ -33,8 +33,12 @@ class AnkerSolixSelectDescription(
 
     force_creation: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
-    value_fn: Callable[[dict, str], str | None] = lambda d, jk: None if d.get(jk) is None else str(d.get(jk))
-    options_fn: Callable[[dict, str], list | None] = lambda d, jk: list(d.get(jk), []) or None
+    value_fn: Callable[[dict, str], str | None] = (
+        lambda d, jk: None if d.get(jk) is None else str(d.get(jk))
+    )
+    options_fn: Callable[[dict, str], list | None] = (
+        lambda d, jk: list(d.get(jk), []) or None
+    )
 
 
 DEVICE_SELECTS = [

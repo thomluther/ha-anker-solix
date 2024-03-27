@@ -4,7 +4,7 @@
   "data": {
     "site_list": [
       {
-        "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
+        "site_id": "bdd7d770-bcb7-d22b-cafc-d0b2eddc4e23",
         "site_name": "BKW",
         "site_img": "",
         "device_type_list": [
@@ -12,9 +12,14 @@
         ],
         "ms_type": 1,
         "power_site_type": 2,
-        "is_allow_delete": true
+        "is_allow_delete": true,
+        "support_device_models": [
+          "A17C0",
+          "A5143",
+          "A1771"
+        ]
       }
     ]
   },
-  "trace_id": "cda3bbcc760a9239d38076efacfefaea"
+  "trace_id": "b07e6dfde00e7ddfb8fa4b3a2b76ac4c"
 }

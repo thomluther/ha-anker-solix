@@ -128,31 +128,39 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
             self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
             if self._attribute_name == "refresh_device":
                 # set the correct device type picture for the device refresh entity, which is available for any device and account type
-                if (pn := str(data.get("device_pn") or "").upper()) and hasattr(AnkerSolixPicturePath,pn):
-                    self._attr_entity_picture = getattr(
-                        AnkerSolixPicturePath, pn
-                    )
-                elif (dev_type := str(data.get("type") or "").upper()) and hasattr(AnkerSolixPicturePath,dev_type):
-                    self._attr_entity_picture = getattr(
-                        AnkerSolixPicturePath, dev_type
-                    )
+                if (pn := str(data.get("device_pn") or "").upper()) and hasattr(
+                    AnkerSolixPicturePath, pn
+                ):
+                    self._attr_entity_picture = getattr(AnkerSolixPicturePath, pn)
+                elif (dev_type := str(data.get("type") or "").upper()) and hasattr(
+                    AnkerSolixPicturePath, dev_type
+                ):
+                    self._attr_entity_picture = getattr(AnkerSolixPicturePath, dev_type)
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})
             self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
-
     async def async_press(self) -> None:
         """Handle the button press."""
         if self._attribute_name == "refresh_device":
-            if self.coordinator.client.last_device_refresh and (datetime.now().astimezone() - self.coordinator.client.last_device_refresh).total_seconds() < self.coordinator.client.MIN_DEVICE_REFRESH:
+            if (
+                self.coordinator.client.last_device_refresh
+                and (
+                    datetime.now().astimezone()
+                    - self.coordinator.client.last_device_refresh
+                ).total_seconds()
+                < self.coordinator.client.MIN_DEVICE_REFRESH
+            ):
                 raise ServiceValidationError(
                     f"Devices for {self.coordinator.client.api.nickname} cannot be updated within less than {self.coordinator.client.MIN_DEVICE_REFRESH} seconds",
                     translation_domain=DOMAIN,
                     translation_key="device_refresh",
                     translation_placeholders={
                         "coordinator": self.coordinator.client.api.nickname,
-                        "min_dev_refresh": str(self.coordinator.client.MIN_DEVICE_REFRESH),
+                        "min_dev_refresh": str(
+                            self.coordinator.client.MIN_DEVICE_REFRESH
+                        ),
                     },
                 )
             LOGGER.debug(
@@ -160,4 +168,3 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 self.entity_id,
             )
             await self.coordinator.async_execute_command(self.entity_description.key)
-

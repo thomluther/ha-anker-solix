@@ -2,6 +2,7 @@
 from __future__ import annotations  # noqa: I001
 
 from dataclasses import dataclass
+from enum import IntFlag
 from .const import IMAGEFOLDER, DOMAIN, MANUFACTURER
 import os
 from homeassistant.helpers.entity import DeviceInfo
@@ -56,6 +57,11 @@ class AnkerSolixEntityRequiredKeyMixin:
     """Sensor entity description with required extra keys."""
 
     json_key: str
+
+class AnkerSolixEntityFeature(IntFlag):
+    """Supported features of the Anker Solix Entities."""
+
+    SOLARBANK_SCHEDULE = 1
 
 
 def get_AnkerSolixDeviceInfo(

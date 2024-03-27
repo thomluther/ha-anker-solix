@@ -1,45 +1,63 @@
 {
-  "J19P1918S0BKY4EP": {
-    "device_sn": "J19P1918S0BKY4EP",
+  "DILM86K2GJV2NRAI": {
+    "device_sn": "DILM86K2GJV2NRAI",
     "type": "solarbank",
-    "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
+    "site_id": "bdd7d770-bcb7-d22b-cafc-d0b2eddc4e23",
     "is_admin": true,
     "device_pn": "A17C0",
-    "name": "Solarbank E1600",
-    "battery_soc": "75",
+    "battery_soc": "6",
     "battery_capacity": "1600",
-    "battery_energy": "1200",
-    "charging_power": "0",
+    "battery_energy": "96",
+    "charging_power": "64",
     "power_unit": "W",
-    "charging_status": "2",
-    "charging_status_desc": "discharging",
-    "status": "0",
-    "status_desc": "off",
+    "charging_status": "3",
+    "charging_status_desc": "charge_bypass",
+    "status": "1",
+    "status_desc": "online",
     "wireless_type": "1",
-    "input_power": "0",
-    "output_power": "0",
-    "bt_ble_mac": "F68FC0404AD7",
-    "alias": "Solarbank E1600",
-    "wifi_online": false,
+    "input_power": "154",
+    "output_power": "90",
+    "set_output_power": "0",
+    "power_cutoff": 5,
+    "alias": "SB E1600",
+    "set_system_output_power": "0",
+    "bt_ble_mac": "3CEAAD9FDDF7",
+    "name": "Solarbank E1600",
+    "wifi_online": true,
     "charge": false,
     "bws_surplus": "0",
-    "sw_version": "v1.4.4",
+    "sw_version": "v1.5.6",
     "auto_upgrade": false,
     "wifi_name": "wifi-network-1",
-    "wifi_signal": "100",
-    "power_cutoff": 10,
+    "wifi_signal": "54",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 0,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 1,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
     "solar_info": {
       "solar_brand": "ANKER",
-      "solar_model": "A5140",
-      "solar_sn": "",
-      "solar_model_name": "MI60 Microinverter"
+      "solar_model": "A5143",
+      "solar_sn": "9XK0FGWY2TWW",
+      "solar_model_name": "MI80 Microinverter(BLE)"
     },
     "schedule": {
       "ranges": [
         {
           "id": 0,
           "start_time": "00:00",
-          "end_time": "08:00",
+          "end_time": "06:30",
           "turn_on": true,
           "appliance_loads": [
             {
@@ -49,12 +67,19 @@
               "number": 1
             }
           ],
-          "charge_priority": 80
+          "charge_priority": 10,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "DILM86K2GJV2NRAI",
+              "power": 150
+            }
+          ]
         },
         {
           "id": 0,
-          "start_time": "08:00",
-          "end_time": "17:00",
+          "start_time": "06:30",
+          "end_time": "18:30",
           "turn_on": false,
           "appliance_loads": [
             {
@@ -64,11 +89,18 @@
               "number": 1
             }
           ],
-          "charge_priority": 80
+          "charge_priority": 10,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "DILM86K2GJV2NRAI",
+              "power": 50
+            }
+          ]
         },
         {
           "id": 0,
-          "start_time": "17:00",
+          "start_time": "18:30",
           "end_time": "24:00",
           "turn_on": true,
           "appliance_loads": [
@@ -79,18 +111,28 @@
               "number": 1
             }
           ],
-          "charge_priority": 0
+          "charge_priority": 10,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "DILM86K2GJV2NRAI",
+              "power": 150
+            }
+          ]
         }
       ],
       "min_load": 100,
       "max_load": 800,
       "step": 0,
-      "is_charge_priority": 0,
-      "default_charge_priority": 0,
-      "is_zero_output_tips": 1
+      "is_charge_priority": 1,
+      "default_charge_priority": 80,
+      "is_zero_output_tips": 0,
+      "display_advanced_mode": 0,
+      "advanced_mode_min_load": 0
     },
-    "set_system_output_power": "300",
-    "set_output_power": "300",
+    "preset_system_output_power": 100,
+    "preset_allow_export": false,
+    "preset_charge_priority": 10,
     "fittings": {}
   }
 }

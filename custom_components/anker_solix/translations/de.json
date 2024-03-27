@@ -330,8 +330,8 @@
             "auto_upgrade": {
                 "name": "Auto-Upgrade"
             },
-            "preset_allow_discharge": {
-                "name": "Erlaube Entladung"
+            "preset_allow_export": {
+                "name": "Erlaube Leistungsabgabe"
             },
             "allow_refresh": {
                 "name": "Api Nutzung"
@@ -374,18 +374,18 @@
                 },
                 "start_time": {
                     "name": "Startzeit",
-                    "description": "Startzeit des Intervals (Sekunden werden ignoriert)"
+                    "description": "Startzeit des Intervalls (Sekunden werden ignoriert)"
                 },
                 "end_time": {
                     "name": "Endzeit",
-                    "description": "Endzeit des Intervals (Sekunden werden ignoriert). Für Einstellung 24:00 muss 23:59 gewählt werden."
+                    "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für 24:00 muss 23:59 eingegeben werden."
                 },
                 "appliance_load": {
                     "name": "Einspeisevorgabe",
                     "description": "Watt die in Haus eingespeist werden sollen"
                 },
-                "allow_discharge": {
-                    "name": "Entladung erlauben",
+                "allow_export": {
+                    "name": "Export erlauben",
                     "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus"
                 },
                 "charge_priority_limit": {
@@ -408,14 +408,14 @@
                 },
                 "end_time": {
                     "name": "Endzeit",
-                    "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für Einstellung 24:00 muss 23:59 gewählt werden."
+                    "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für 24:00 muss 23:59 eingegeben werden."
                 },
                 "appliance_load": {
                     "name": "Einspeisevorgabe",
                     "description": "Watt die in Haus eingespeist werden sollen"
                 },
-                "allow_discharge": {
-                    "name": "Entladung erlauben",
+                "allow_export": {
+                    "name": "Export erlauben",
                     "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus"
                 },
                 "charge_priority_limit": {

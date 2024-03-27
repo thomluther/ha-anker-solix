@@ -1,0 +1,78 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "135.13",
+        "unit": "kwh"
+      },
+      {
+        "type": "2",
+        "total": "134.72",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "44.59",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C0",
+          "device_sn": "DILM86K2GJV2NRAI",
+          "device_name": "SB E1600",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+          "battery_power": "6",
+          "bind_site_status": "",
+          "charging_power": "90",
+          "power_unit": "W",
+          "charging_status": "3",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "154",
+          "output_power": "90",
+          "create_time": 1695392386,
+          "set_load_power": "",
+          "output_cutoff_data": 5,
+          "is_display": true
+        }
+      ],
+      "total_charging_power": "64",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.06",
+      "updated_time": "2024-03-27 11:49:04",
+      "total_photovoltaic_power": "154",
+      "total_output_power": "90.00",
+      "display_set_power": false,
+      "is_display_data": true
+    },
+    "retain_load": "0W",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 2,
+    "site_id": "bdd7d770-bcb7-d22b-cafc-d0b2eddc4e23",
+    "powerpanel_list": []
+  },
+  "trace_id": "e6a2f3f712a7c2498a25ae7c0bafef3e"
+}

@@ -330,8 +330,8 @@
             "auto_upgrade": {
                 "name": "Auto-Upgrade"
             },
-            "preset_allow_discharge": {
-                "name": "Allow discharge"
+            "preset_allow_export": {
+                "name": "Allow power export"
             },
             "allow_refresh": {
                 "name": "Api Usage"
@@ -378,15 +378,15 @@
                 },
                 "end_time": {
                     "name": "End time",
-                    "description": "End time of the interval (seconds are ignored). For setting 24:00, 23:59 must be selected"
+                    "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
                 },
                 "appliance_load": {
                     "name": "Home load preset",
                     "description": "Watt to be delivered to the house"
                 },
-                "allow_discharge": {
-                    "name": "Allow discharge",
-                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without discharging to the house"
+                "allow_export": {
+                    "name": "Allow export",
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house"
                 },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",
@@ -408,15 +408,15 @@
                 },
                 "end_time": {
                     "name": "End time",
-                    "description": "End time of the interval (seconds are ignored). For setting 24:00, 23:59 must be selected"
+                    "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
                 },
                 "appliance_load": {
                     "name": "Home load preset",
                     "description": "Watt to be delivered to the house"
                 },
-                "allow_discharge": {
-                    "name": "Allow discharge",
-                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without discharging to the house"
+                "allow_export": {
+                    "name": "Allow export",
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house"
                 },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",

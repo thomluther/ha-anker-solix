@@ -1,6 +1,5 @@
 """Constants for Anker Solix."""
 from datetime import datetime
-from enum import IntFlag
 from logging import Logger, getLogger
 
 import voluptuous as vol
@@ -37,13 +36,6 @@ ALLOW_TESTMODE: bool = (
 TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
 CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
 
-
-class AnkerSolixEntityFeature(IntFlag):
-    """Supported features of the Anker Solix Entities."""
-
-    SOLARBANK_SCHEDULE = 1
-
-
 SERVICE_GET_SOLARBANK_SCHEDULE = "get_solarbank_schedule"
 SERVICE_SET_SOLARBANK_SCHEDULE = "set_solarbank_schedule"
 SERVICE_UPDATE_SOLARBANK_SCHEDULE = "update_solarbank_schedule"
@@ -52,7 +44,7 @@ START_TIME = "start_time"
 END_TIME = "end_time"
 APPLIANCE_LOAD = "appliance_load"
 CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
-ALLOW_DISCHARGE = "allow_discharge"
+ALLOW_EXPORT = "allow_export"
 
 
 VALID_DAYTIME = vol.All(
@@ -96,7 +88,7 @@ SOLARBANK_TIMESLOT_DICT: dict = {
         CHARGE_PRIORITY_LIMIT,
     ): VALID_CHARGE_PRIORITY,
     vol.Optional(
-        ALLOW_DISCHARGE,
+        ALLOW_EXPORT,
     ): VALID_ALLOW_DISCHARGE,
 }
 
@@ -104,12 +96,9 @@ SOLARBANK_TIMESLOT_SCHEMA: vol.Schema = vol.All(
     cv.make_entity_service_schema(
         {vol.Required(CONF_ENTITY_ID): VALID_ENTITY_ID, **SOLARBANK_TIMESLOT_DICT}
     ),
-    cv.has_at_least_one_key(APPLIANCE_LOAD, CHARGE_PRIORITY_LIMIT, ALLOW_DISCHARGE),
+    cv.has_at_least_one_key(APPLIANCE_LOAD, CHARGE_PRIORITY_LIMIT, ALLOW_EXPORT),
 )
 
 SOLARBANK_ENTITY_SCHEMA: vol.Schema = vol.All(
-    cv.make_entity_service_schema(
-        {vol.Required(CONF_ENTITY_ID): VALID_ENTITY_ID}
-    ),
+    cv.make_entity_service_schema({vol.Required(CONF_ENTITY_ID): VALID_ENTITY_ID}),
 )
-

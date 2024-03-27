@@ -37,7 +37,8 @@ Because of the way the Anker cloud Api works, one account with e-mail/password c
 
 System members cannot manage (yet) any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behaviour when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
 
-Since the current version of this integration does not support many setting capabilities, it is advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner account should be used in the Anker mobile app to maintain full control capabilities of your devices.
+Since the initial version of this integration did not support many setting capabilities, it is advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner account should be used in the Anker mobile app to maintain full control capabilities of your devices.
+Starting with version 1.1.0, the integration supports most of the relevant parameter changes for your system and your solarbanks, including modifications of the solarbank schedule. To utilize those capabillities, you must use an owner account in the integration.
 
 For detailed usage instructions, please refer to the [INFO](INFO.md)
 
@@ -50,9 +51,8 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 - The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
 - The Anker account used in the integration cannot longer be used in the Anker mobile app since the cloud Api only allows 1 active client user token at a time. Existing user tokens will be removed from the server upon new client authentication requests. That means the integration kicks out the App user and vice versa.
 - It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While Wifi is disconnected, the reported data may be stale. You can use the Cloud state sensor of the end device to verify the cloud connection state and potentially stale data.
-- The initial integration release supports only Solarbank and Anker inverter devices. Further devices managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developers (open issue on git with example data)
-- The initial integration release supports only following settings when using a system owner account:
-   - Auto-Update setting of Solarbank device
+- The integration supports only Solarbank and Anker inverter devices. While it may present also standalone devices that are not defined in a system, those systems probably do not provide real time data via the cloud Api.
+- Further devices managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developers (open issue on git with example data)
 
 
 ## Supported sensors and devices
@@ -64,7 +64,10 @@ Platform | Description
 `sensor` | Show info from Anker Solix Api.
 `binary_sensor` | Show info from Anker Solix Api.
 `switch` | Modify device settings via Anker Solix Api, temporary disable Api communication to allow parallel account usage in App
+`select` | Select setting from available options
 `button` | Trigger Device details refresh on demand
+`number` | Change values for certain entities
+`service` | Schedule services that can be applied to solarbank output preset entity
 
 Device type | Description
 -- | --

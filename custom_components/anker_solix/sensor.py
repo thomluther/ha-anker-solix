@@ -51,10 +51,9 @@ from .const import (
     SOLARBANK_TIMESLOT_SCHEMA,
     START_TIME,
     END_TIME,
-    ALLOW_DISCHARGE,
+    ALLOW_EXPORT,
     APPLIANCE_LOAD,
     CHARGE_PRIORITY_LIMIT,
-    AnkerSolixEntityFeature,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .solixapi.api import (
@@ -69,6 +68,7 @@ from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
+    AnkerSolixEntityFeature,
 )
 
 
@@ -654,9 +654,9 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         name=SERVICE_GET_SOLARBANK_SCHEDULE,
         schema=SOLARBANK_ENTITY_SCHEMA,
-        func=SERVICE_SET_SOLARBANK_SCHEDULE,
+        func=SERVICE_GET_SOLARBANK_SCHEDULE,
         required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
-        supports_response=SupportsResponse.ONLY
+        supports_response=SupportsResponse.ONLY,
     )
     platform.async_register_entity_service(
         name=SERVICE_SET_SOLARBANK_SCHEDULE,
@@ -733,7 +733,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             data = coordinator.data.get(self._context_base) or {}
             self._attr_device_info = get_AnkerSolixDeviceInfo(data, self._context_base)
             # add service attribute for managble devices
-            self._attr_supported_features: AnkerSolixEntityFeature = description.feature if data.get("is_admin",False) else None
+            self._attr_supported_features: AnkerSolixEntityFeature = (
+                description.feature if data.get("is_admin", False) else None
+            )
             if self._attribute_name == "fittings":
                 # set the correct fitting type picture for the entity
                 if (
@@ -755,7 +757,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             data = (coordinator.data.get(self._context_base, {})).get("site_info", {})
             self._attr_device_info = get_AnkerSolixSystemInfo(data, self._context_base)
             # add service attribute for managble sites
-            self._attr_supported_features: AnkerSolixEntityFeature = description.feature if data.get("site_admin",False) else None
+            self._attr_supported_features: AnkerSolixEntityFeature = (
+                description.feature if data.get("site_admin", False) else None
+            )
 
         self._native_value = None
         self._assumed_state = False
@@ -914,7 +918,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 },
             )
         # When running in Test mode do not run service
-        if self.coordinator.client.testmode() and service_name not in [SERVICE_GET_SOLARBANK_SCHEDULE]:
+        if self.coordinator.client.testmode() and service_name not in [
+            SERVICE_GET_SOLARBANK_SCHEDULE
+        ]:
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be changed while configuration is running in testmode",
                 translation_domain=DOMAIN,
@@ -929,7 +935,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             and self._context_base in self.coordinator.data
         ):
             data = self.coordinator.data.get(self._context_base)
-            if service_name in [SERVICE_SET_SOLARBANK_SCHEDULE,SERVICE_UPDATE_SOLARBANK_SCHEDULE]:
+            if service_name in [
+                SERVICE_SET_SOLARBANK_SCHEDULE,
+                SERVICE_UPDATE_SOLARBANK_SCHEDULE,
+            ]:
                 if START_TIME in kwargs and END_TIME in kwargs:
                     if (start_time := kwargs.get(START_TIME)) < (
                         end_time := kwargs.get(END_TIME)
@@ -976,7 +985,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             start_time=start_time,
                             end_time=end_time,
                             appliance_load=load,
-                            allow_discharge=kwargs.get(ALLOW_DISCHARGE),
+                            allow_export=kwargs.get(ALLOW_EXPORT),
                             charge_priority_limit=kwargs.get(CHARGE_PRIORITY_LIMIT),
                         )
                         if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
@@ -1025,6 +1034,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     deviceSn=self._context_base,
                     fromFile=self.coordinator.client.testmode(),
                 )
+                # trigger coordinator update with api dictionary data
+                await self.coordinator.async_refresh_data_from_apidict()
                 return {"schedule": result.get("home_load_data")}
 
 

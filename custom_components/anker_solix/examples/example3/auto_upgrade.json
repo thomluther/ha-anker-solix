@@ -2,16 +2,16 @@
   "code": 0,
   "msg": "success!",
   "data": {
-    "main_switch": false,
+    "main_switch": true,
     "device_list": [
       {
-        "device_sn": "SE0QPSV3WXDDXN8G",
+        "device_sn": "Y2T19B29T9HQT209",
         "device_name": "Solarbank E1600",
-        "auto_upgrade": false,
+        "auto_upgrade": true,
         "alias_name": "Solarbank E1600",
         "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png"
       }
     ]
   },
-  "trace_id": "50f4906ee2dedf2d982ec68fbde09173"
+  "trace_id": "f9cce9a0cb3a559e7ea693418592a402"
 }

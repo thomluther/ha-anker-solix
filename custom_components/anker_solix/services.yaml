@@ -32,8 +32,8 @@ set_solarbank_schedule:
         time:
     end_time:
       required: true
-      example: "23:59:59"
-      default: "23:59:59"
+      example: "23:59:00"
+      default: "23:59:00"
       selector:
         time:
     appliance_load:
@@ -46,7 +46,7 @@ set_solarbank_schedule:
           max: 800
           step: 10
           unit_of_measurement: "W"
-    allow_discharge:
+    allow_export:
       required: false
       example: "True"
       selector:
@@ -81,8 +81,8 @@ update_solarbank_schedule:
         time:
     end_time:
       required: true
-      example: "23:59:59"
-      default: "23:59:59"
+      example: "23:59:00"
+      default: "23:59:00"
       selector:
         time:
     appliance_load:
@@ -91,11 +91,11 @@ update_solarbank_schedule:
       default: 100
       selector:
         number:
-          min: 100
+          min: 0
           max: 800
           step: 10
           unit_of_measurement: "W"
-    allow_discharge:
+    allow_export:
       required: false
       example: "True"
       selector:

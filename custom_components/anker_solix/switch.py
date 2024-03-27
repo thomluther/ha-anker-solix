@@ -42,9 +42,9 @@ DEVICE_SWITCHES = [
         json_key="auto_upgrade",
     ),
     AnkerSolixSwitchDescription(
-        key="preset_allow_discharge",
-        translation_key="preset_allow_discharge",
-        json_key="preset_allow_discharge",
+        key="preset_allow_export",
+        translation_key="preset_allow_export",
+        json_key="preset_allow_export",
     ),
 ]
 
@@ -155,7 +155,9 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             key = self.entity_description.json_key
             self._attr_is_on = self.entity_description.value_fn(data, key)
         else:
-            self._attr_is_on = self.entity_description.value_fn(self.coordinator.data, self.entity_description.json_key)
+            self._attr_is_on = self.entity_description.value_fn(
+                self.coordinator.data, self.entity_description.json_key
+            )
 
         # Mark availability based on value
         self._attr_available = self._attr_is_on is not None
@@ -183,25 +185,27 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     {self.coordinator_context: True}
                 )
                 await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "preset_allow_discharge":
-            if self.coordinator and hasattr(self.coordinator, "data") and self.coordinator_context in self.coordinator.data:
+        elif self._attribute_name == "preset_allow_export":
+            if (
+                self.coordinator
+                and hasattr(self.coordinator, "data")
+                and self.coordinator_context in self.coordinator.data
+            ):
                 data = self.coordinator.data.get(self.coordinator_context)
                 LOGGER.debug(
-                    "%s System allow discharge will be set %s",
-                    self.entity_id,
-                    True
+                    "%s System allow export will be set %s", self.entity_id, True
                 )
                 await self.coordinator.client.api.set_home_load(
                     siteId=data.get("site_id") or "",
                     deviceSn=self.coordinator_context,
-                    discharge=True,
+                    export=True,
                 )
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
                 LOGGER.error(
-                    "%s System allow discharge cannot be set %s because entity data was not found",
+                    "%s System allow export cannot be set %s because entity data was not found",
                     self.entity_id,
-                    True
+                    True,
                 )
 
     async def async_turn_off(self, **_: any) -> None:
@@ -225,23 +229,25 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 {self.coordinator_context: False}
             )
             await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "preset_allow_discharge":
-            if self.coordinator and hasattr(self.coordinator, "data") and self.coordinator_context in self.coordinator.data:
+        elif self._attribute_name == "preset_allow_export":
+            if (
+                self.coordinator
+                and hasattr(self.coordinator, "data")
+                and self.coordinator_context in self.coordinator.data
+            ):
                 data = self.coordinator.data.get(self.coordinator_context)
                 LOGGER.debug(
-                    "%s System allow discharge will be set %s",
-                    self.entity_id,
-                    False
+                    "%s System allow export will be set %s", self.entity_id, False
                 )
                 await self.coordinator.client.api.set_home_load(
                     siteId=data.get("site_id") or "",
                     deviceSn=self.coordinator_context,
-                    discharge=False,
+                    export=False,
                 )
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
                 LOGGER.error(
-                    "%s System allow discharge cannot be set %s because entity data was not found",
+                    "%s System allow export cannot be set %s because entity data was not found",
                     self.entity_id,
-                    False
+                    False,
                 )
