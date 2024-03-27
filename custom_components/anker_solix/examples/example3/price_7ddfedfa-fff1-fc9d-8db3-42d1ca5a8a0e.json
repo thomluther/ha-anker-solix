@@ -2,10 +2,10 @@
   "code": 0,
   "msg": "success!",
   "data": {
-    "site_id": "5c345692-b73f-8ce8-a9fd-b7928c5fa51d",
+    "site_id": "7ddfedfa-fff1-fc9d-8db3-42d1ca5a8a0e",
     "price": 0.38,
     "site_co2": 0,
     "site_price_unit": "\u20ac"
   },
-  "trace_id": "aafbf25dfbccbb7cdd676fba2a623151"
+  "trace_id": "5bff3da1e4f30bafdab4fa1f2fcc8f3a"
 }

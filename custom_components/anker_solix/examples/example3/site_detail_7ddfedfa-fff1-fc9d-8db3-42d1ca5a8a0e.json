@@ -3,20 +3,27 @@
   "msg": "success!",
   "data": {
     "site_info": {
-      "site_id": "3df1aea0-4b7c-e0f8-7cc5-5ba5a4df5f7a",
-      "site_name": "BKW",
+      "site_id": "7ddfedfa-fff1-fc9d-8db3-42d1ca5a8a0e",
+      "site_name": "Anker Solix E1600",
       "site_img": "",
-      "device_type_list": null,
+      "device_type_list": [
+        3
+      ],
       "ms_type": 0,
-      "power_site_type": 0,
-      "is_allow_delete": false
+      "power_site_type": 2,
+      "is_allow_delete": false,
+      "support_device_models": [
+        "A17C0",
+        "A5143",
+        "A1771"
+      ]
     },
     "solar_list": [],
     "pps_list": [],
     "solarbank_list": [
       {
         "device_pn": "A17C0",
-        "device_sn": "4AD5NI2AC8WL4CFI",
+        "device_sn": "Y2T19B29T9HQT209",
         "device_name": "Solarbank E1600",
         "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
         "battery_power": "",
@@ -29,11 +36,12 @@
         "main_version": "",
         "photovoltaic_power": "",
         "output_power": "",
-        "create_time": 0,
-        "set_load_power": ""
+        "create_time": 1695394124,
+        "set_load_power": "",
+        "output_cutoff_data": 0
       }
     ],
     "powerpanel_list": []
   },
-  "trace_id": "cd5d205dbe3e4ace5accfcbbcbc7bf5e"
+  "trace_id": "a89a13fb3acddfd2dfed40eeaf60e3ec"
 }

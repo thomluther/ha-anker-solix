@@ -20,17 +20,17 @@
     "statistics": [
       {
         "type": "1",
-        "total": "89.75",
+        "total": "135.13",
         "unit": "kwh"
       },
       {
         "type": "2",
-        "total": "89.48",
+        "total": "134.72",
         "unit": "kg"
       },
       {
         "type": "3",
-        "total": "35.90",
+        "total": "44.59",
         "unit": "\u20ac"
       }
     ],
@@ -39,37 +39,40 @@
       "solarbank_list": [
         {
           "device_pn": "A17C0",
-          "device_sn": "4AD5NI2AC8WL4CFI",
-          "device_name": "Solarbank E1600",
+          "device_sn": "DILM86K2GJV2NRAI",
+          "device_name": "SB E1600",
           "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
-          "battery_power": "75",
+          "battery_power": "6",
           "bind_site_status": "",
-          "charging_power": "0",
+          "charging_power": "90",
           "power_unit": "W",
-          "charging_status": "2",
-          "status": "0",
+          "charging_status": "3",
+          "status": "1",
           "wireless_type": "1",
           "main_version": "",
-          "photovoltaic_power": "0",
-          "output_power": "0",
+          "photovoltaic_power": "154",
+          "output_power": "90",
           "create_time": 1695392386,
-          "set_load_power": ""
+          "set_load_power": "",
+          "output_cutoff_data": 5,
+          "is_display": true
         }
       ],
-      "total_charging_power": "0",
+      "total_charging_power": "64",
       "power_unit": "W",
       "charging_status": "0",
-      "total_battery_power": "0.00",
-      "updated_time": "2023-12-28 18:53:27",
-      "total_photovoltaic_power": "0",
-      "total_output_power": "0.00",
-      "display_set_power": false
+      "total_battery_power": "0.06",
+      "updated_time": "2024-03-27 11:49:04",
+      "total_photovoltaic_power": "154",
+      "total_output_power": "90.00",
+      "display_set_power": false,
+      "is_display_data": true
     },
-    "retain_load": "300W",
+    "retain_load": "0W",
     "updated_time": "01-01-0001 00:00:00",
     "power_site_type": 2,
-    "site_id": "3df1aea0-4b7c-e0f8-7cc5-5ba5a4df5f7a",
+    "site_id": "bdd7d770-bcb7-d22b-cafc-d0b2eddc4e23",
     "powerpanel_list": []
   },
-  "trace_id": "82aa6e7e4db47cbbe7b2ed355b751beb"
+  "trace_id": "e6a2f3f712a7c2498a25ae7c0bafef3e"
 }

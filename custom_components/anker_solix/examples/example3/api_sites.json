@@ -1,7 +1,8 @@
 {
-  "5c345692-b73f-8ce8-a9fd-b7928c5fa51d": {
+  "7ddfedfa-fff1-fc9d-8db3-42d1ca5a8a0e": {
+    "type": "system",
     "site_info": {
-      "site_id": "5c345692-b73f-8ce8-a9fd-b7928c5fa51d",
+      "site_id": "7ddfedfa-fff1-fc9d-8db3-42d1ca5a8a0e",
       "site_name": "Anker Solix E1600",
       "site_img": "",
       "device_type_list": [
@@ -9,7 +10,12 @@
       ],
       "ms_type": 1,
       "power_site_type": 2,
-      "is_allow_delete": true
+      "is_allow_delete": true,
+      "support_device_models": [
+        "A17C0",
+        "A5143",
+        "A1771"
+      ]
     },
     "site_admin": true,
     "home_info": {
@@ -30,17 +36,17 @@
     "statistics": [
       {
         "type": "1",
-        "total": "75.63",
+        "total": "80.36",
         "unit": "kwh"
       },
       {
         "type": "2",
-        "total": "75.41",
+        "total": "80.12",
         "unit": "kg"
       },
       {
         "type": "3",
-        "total": "28.74",
+        "total": "30.54",
         "unit": "\u20ac"
       }
     ],
@@ -49,10 +55,10 @@
       "solarbank_list": [
         {
           "device_pn": "A17C0",
-          "device_sn": "SE0QPSV3WXDDXN8G",
+          "device_sn": "Y2T19B29T9HQT209",
           "device_name": "Solarbank E1600",
           "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
-          "battery_power": "56",
+          "battery_power": "38",
           "bind_site_status": "",
           "charging_power": "0",
           "power_unit": "W",
@@ -60,25 +66,26 @@
           "status": "1",
           "wireless_type": "1",
           "main_version": "",
-          "photovoltaic_power": "267",
+          "photovoltaic_power": "82",
           "output_power": "0",
           "create_time": 1695394124,
-          "set_load_power": ""
+          "set_load_power": "",
+          "output_cutoff_data": 10
         }
       ],
-      "total_charging_power": "267",
+      "total_charging_power": "82",
       "power_unit": "W",
       "charging_status": "0",
-      "total_battery_power": "0.56",
-      "updated_time": "2024-02-22 14:42:12",
-      "total_photovoltaic_power": "267",
+      "total_battery_power": "0.38",
+      "updated_time": "2024-02-27 15:29:23",
+      "total_photovoltaic_power": "82",
       "total_output_power": "0.00",
       "display_set_power": false
     },
     "retain_load": "0W",
     "updated_time": "01-01-0001 00:00:00",
     "power_site_type": 2,
-    "site_id": "5c345692-b73f-8ce8-a9fd-b7928c5fa51d",
+    "site_id": "7ddfedfa-fff1-fc9d-8db3-42d1ca5a8a0e",
     "powerpanel_list": []
   }
 }

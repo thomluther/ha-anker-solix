@@ -83,14 +83,40 @@
                     "on": "Oui",
                     "off": "Non"
                 }
+            },
+            "has_unread_msg": {
+                "name": "Nouvelles",
+                "state": {
+                    "on": "Oui",
+                    "off": "Non"
+                }
+            }
+        },
+        "number": {
+            "preset_system_output_power": {
+                "name": "Réglage puissance de sortie du système"
+            },
+            "preset_charge_priority": {
+                "name": "Limite de priorité de charge"
+            },
+            "system_price": {
+                "name": "Prix du kWh"
+            }
+        },
+        "select": {
+            "power_cutoff": {
+                "name": "Réserve SOC"
+            },
+            "system_price_unit": {
+                "name": "Devise du prix"
             }
         },
         "sensor": {
             "status_desc": {
                 "name": "Etat du Cloud",
                 "state": {
-                    "off": "Hors ligne",
-                    "on": "En ligne",
+                    "offline": "Hors ligne",
+                    "online": "En ligne",
                     "unknown": "Pas disponible"
                 },
                 "state_attributes": {
@@ -130,9 +156,6 @@
             },
             "ac_generate_power": {
                 "name": "Alimentation AC"
-            },
-            "power_cutoff": {
-                "name": "Réserve SOC"
             },
             "set_output_power": {
                 "name": "Réglage puissance de sortie",
@@ -190,6 +213,61 @@
                     }
                 }
             },
+            "daily_discharge_energy": {
+                "name": "Décharge journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_charge_energy": {
+                "name": "Charge journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_production": {
+                "name": "Production solaire journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_share": {
+                "name": "Part solaire journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_battery_share": {
+                "name": "Part journalière de batterie",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
             "temperature": {
                 "name": "Température"
             },
@@ -217,6 +295,9 @@
             "solarbank_state_of_charge": {
                 "name": "Etat de charge du SB"
             },
+            "solarbank_timestamp": {
+                "name": "Temps de données SB"
+            },
             "pps_charging_power": {
                 "name": "Puissance de la batterie PPS"
             },
@@ -238,16 +319,19 @@
             "daily_output_energy": {
                 "name": "Rendement aujourd'hui"
             },
-            "site_charging_power": {
-                "name": "Puissance de charge du système"
-            },
             "set_system_output_power": {
                 "name": "Réglage puissance de sortie du système"
+            },
+            "site_charging_power": {
+                "name": "Puissance de charge du système"
             }
         },
         "switch": {
             "auto_upgrade": {
                 "name": "Mise à jour automatique"
+            },
+            "preset_allow_export": {
+                "name": "Autoriser l'exportation"
             },
             "allow_refresh": {
                 "name": "Utilisation de l'API"
@@ -267,6 +351,104 @@
                 "on": "On",
                 "unknown": "Pas disponible"
             }
+        }
+    },
+    "services": {
+        "get_solarbank_schedule": {
+            "name": "Demandez l'horaire actuel de Solarbank",
+            "description": "L'horaire effective de Solarbank sera fournie en réponse à la demande de service",
+            "fields": {
+                "entity_id": {
+                    "name": "ID de l'entité",
+                    "description": "Capteur de puissance de sortie du solarbank, dont l'horaire doit être demandé"
+                }
+            }
+        },
+        "set_solarbank_schedule": {
+            "name": "Créer un nouveau horaire de solarbank",
+            "description": "Crée un nouveau planning pour la solarbank avec l'intervalle de temps défini. Un horaire existant sera alors complètement remplacé !",
+            "fields": {
+                "entity_id": {
+                    "name": "ID de l'entité",
+                    "description": "Capteur de puissance de sortie du solarbank, dont l'horaire doit être défini"
+                },
+                "start_time": {
+                    "name": "Heure de début",
+                    "description": "Heure de début de l'intervalle (les secondes sont ignorées)"
+                },
+                "end_time": {
+                    "name": "Heure de fin",
+                    "description": "Heure de fin de l'intervalle (les secondes sont ignorées). Pour 24:00, il faut régler 23:59"
+                },
+                "appliance_load": {
+                    "name": "Réglage puissance de sortie",
+                    "description": "Watt à livrer à la maison"
+                },
+                "allow_export": {
+                    "name": "Autoriser l'exportation",
+                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison"
+                },
+                "charge_priority_limit": {
+                    "name": "Limite de la priorité de charge",
+                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé"
+                }
+            }
+        },
+        "update_solarbank_schedule": {
+            "name": "Mise à jour du tableau horaire de solarbank",
+            "description": "Un horaire de solarbank existant est mis à jour avec l'intervalle de temps défini. Les intervalles de temps adjacents sont ajustés dans le temps et ceux qui se chevauchent sont remplacés",
+            "fields": {
+                "entity_id": {
+                    "name": "ID de l'entité",
+                    "description": "Capteur de puissance de sortie du solarbank, dont l'horaire doit être mis à jour"
+                },
+                "start_time": {
+                    "name": "Heure de début",
+                    "description": "Heure de début de l'intervalle (les secondes sont ignorées)"
+                },
+                "end_time": {
+                    "name": "Heure de fin",
+                    "description": "Heure de fin de l'intervalle (les secondes sont ignorées). Pour 24:00, il faut régler 23:59"
+                },
+                "appliance_load": {
+                    "name": "Réglage puissance de sortie",
+                    "description": "Watt à livrer à la maison"
+                },
+                "allow_export": {
+                    "name": "Autoriser l'exportation",
+                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison"
+                },
+                "charge_priority_limit": {
+                    "name": "Limite de la priorité de charge",
+                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé"
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "increase_blocked": {
+          "message": "{entity_id} ne peut pas être augmentée à {value} parce que la dernière modification a été faite il y a moins de {delay} secondes"
+        },
+        "out_of_range": {
+            "message": "{entity_id} ne peut pas être changé en {value} car il est en dehors de la plage autorisée {min}-{max}"
+        },
+        "active_testmode": {
+            "message": "{entity_id} ne peut pas être modifié lorsque la configuration est exécutée en mode test"
+        },
+        "shared_devices": {
+            "message": "{username} ne peut pas être chargé car il partage des périphériques avec la configuration {shared_account}"
+        },
+        "active_devices": {
+            "message": "{device} ne peut pas être supprimé car il possède encore des entités actives"
+        },
+        "device_refresh": {
+            "message": "Les appareils de {coordinator} ne peuvent pas être réactualisés dans les {min_dev_refresh} secondes"
+        },
+        "service_not_supported": {
+            "message": "L'entité {entity} ne supporte pas le service {service}"
+        },
+        "slot_time_error": {
+            "message": "Le service {service} ne peut pas être exécuté : {error}."
         }
     }
 }

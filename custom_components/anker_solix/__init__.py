@@ -37,6 +37,8 @@ from .coordinator import AnkerSolixDataUpdateCoordinator
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.NUMBER,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
@@ -83,6 +85,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ):
         # device is already registered for another account, abort configuration
         entry.async_cancel_retry_setup()
+        # TODO(#0): Raise alert visible to frontend, ServiceValidationError does not work in Config Flow
         raise ConfigEntryError(
             api_client.AnkerSolixApiClientError(
                 f"Found shared Devices with {shared_cfg.title}"
@@ -106,14 +109,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update, triggered by update listener only."""
-    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     do_reload = True
     if coordinator and coordinator.client:
         testmode = entry.options.get(TESTMODE)
         testfolder = entry.options.get(TESTFOLDER)
         # Check if option change does not require reload when only timeout or interval was changed
         if testmode == coordinator.client.testmode() and (
-            os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder) == coordinator.client.api.testDir() or not testmode
+            os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
+            == coordinator.client.api.testDir()
+            or not testmode
         ):
             do_reload = False
             # modify changed intervals without reload
@@ -121,7 +126,9 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
             if seconds != int(coordinator.update_interval.seconds):
                 coordinator.update_interval = timedelta(seconds=seconds)
                 LOGGER.info(
-                    "Api Coordinator %s update interval was changed to %s seconds", coordinator.config_entry.title ,seconds
+                    "Api Coordinator %s update interval was changed to %s seconds",
+                    coordinator.config_entry.title,
+                    seconds,
                 )
             # set device detail refresh multiplier
             coordinator.client.deviceintervals(
@@ -145,14 +152,19 @@ async def async_remove_config_entry_device(
     hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
 ) -> bool:
     """Support removal of devices but remove a config entry from a device only if the device is no longer active."""
-    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN][
+    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(
         config_entry.entry_id
-    ]
-    # Allow only removal of orphaned devices not contained in actual api data
-    return not any(
-        identifier
-        for identifier in device_entry.identifiers
-        if identifier[0] == DOMAIN
-        for device_serial in coordinator.data
-        if device_serial == identifier[1]
     )
+    # Allow only removal of orphaned devices not contained in actual api data
+    if coordinator and (
+        active := any(
+            identifier
+            for identifier in device_entry.identifiers
+            if identifier[0] == DOMAIN
+            for device_serial in coordinator.data
+            if device_serial == identifier[1]
+        )
+    ):
+        pass
+        # TODO(#0): Raise alert to frontend, ServiceValidationError does not work for Frontend in Config Flow
+    return not active

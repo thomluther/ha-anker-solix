@@ -8,10 +8,11 @@ from homeassistant.components.switch import SwitchEntity, SwitchEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN
+from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -40,6 +41,11 @@ DEVICE_SWITCHES = [
         translation_key="auto_upgrade",
         json_key="auto_upgrade",
     ),
+    AnkerSolixSwitchDescription(
+        key="preset_allow_export",
+        translation_key="preset_allow_export",
+        json_key="preset_allow_export",
+    ),
 ]
 
 SITE_SWITCHES = [
@@ -61,7 +67,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensor platform."""
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
@@ -96,6 +102,8 @@ async def async_setup_entry(
 class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
     """anker_solix switch class."""
 
+    coordinator: AnkerSolixDataUpdateCoordinator
+    entity_description: AnkerSolixSwitchDescription
     _attr_has_entity_name = True
     _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset(
@@ -147,33 +155,99 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             key = self.entity_description.json_key
             self._attr_is_on = self.entity_description.value_fn(data, key)
         else:
-            self._attr_is_on = self.entity_description.value_fn(self.coordinator.data, self.entity_description.json_key)
+            self._attr_is_on = self.entity_description.value_fn(
+                self.coordinator.data, self.entity_description.json_key
+            )
 
         # Mark availability based on value
         self._attr_available = self._attr_is_on is not None
 
     async def async_turn_on(self, **_: any) -> None:
         """Turn on the switch."""
-        if self._attribute_name == "auto_upgrade":
+        if self._attribute_name == "allow_refresh":
+            self.coordinator.client.allow_refresh(allow=True)
+            await self.coordinator.async_refresh_device_details()
+        # When running in Test mode do not switch
+        elif self.coordinator.client.testmode():
+            # Raise alert to frontend
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                translation_domain=DOMAIN,
+                translation_key="active_testmode",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                },
+            )
+        elif self._attribute_name == "auto_upgrade":
             # When running in Test mode do not switch
             if not self.coordinator.client.testmode():
                 await self.coordinator.client.api.set_auto_upgrade(
                     {self.coordinator_context: True}
                 )
                 await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "allow_refresh":
-            self.coordinator.client.allow_refresh(allow=True)
-            await self.coordinator.async_refresh_device_details()
+        elif self._attribute_name == "preset_allow_export":
+            if (
+                self.coordinator
+                and hasattr(self.coordinator, "data")
+                and self.coordinator_context in self.coordinator.data
+            ):
+                data = self.coordinator.data.get(self.coordinator_context)
+                LOGGER.debug(
+                    "%s System allow export will be set %s", self.entity_id, True
+                )
+                await self.coordinator.client.api.set_home_load(
+                    siteId=data.get("site_id") or "",
+                    deviceSn=self.coordinator_context,
+                    export=True,
+                )
+                await self.coordinator.async_refresh_data_from_apidict()
+            else:
+                LOGGER.error(
+                    "%s System allow export cannot be set %s because entity data was not found",
+                    self.entity_id,
+                    True,
+                )
 
     async def async_turn_off(self, **_: any) -> None:
         """Turn off the switch."""
-        if self._attribute_name == "auto_upgrade":
-            # When running in Test mode do not switch
-            if not self.coordinator.client.testmode():
-                await self.coordinator.client.api.set_auto_upgrade(
-                    {self.coordinator_context: False}
-                )
-                await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "allow_refresh":
+        if self._attribute_name == "allow_refresh":
             self.coordinator.client.allow_refresh(allow=False)
             await self.coordinator.async_refresh_data_from_apidict()
+        # When running in Test mode do not switch
+        elif self.coordinator.client.testmode():
+            # Raise alert to frontend
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                translation_domain=DOMAIN,
+                translation_key="active_testmode",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                },
+            )
+        elif self._attribute_name == "auto_upgrade":
+            await self.coordinator.client.api.set_auto_upgrade(
+                {self.coordinator_context: False}
+            )
+            await self.coordinator.async_refresh_data_from_apidict()
+        elif self._attribute_name == "preset_allow_export":
+            if (
+                self.coordinator
+                and hasattr(self.coordinator, "data")
+                and self.coordinator_context in self.coordinator.data
+            ):
+                data = self.coordinator.data.get(self.coordinator_context)
+                LOGGER.debug(
+                    "%s System allow export will be set %s", self.entity_id, False
+                )
+                await self.coordinator.client.api.set_home_load(
+                    siteId=data.get("site_id") or "",
+                    deviceSn=self.coordinator_context,
+                    export=False,
+                )
+                await self.coordinator.async_refresh_data_from_apidict()
+            else:
+                LOGGER.error(
+                    "%s System allow export cannot be set %s because entity data was not found",
+                    self.entity_id,
+                    False,
+                )

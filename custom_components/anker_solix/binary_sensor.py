@@ -63,6 +63,13 @@ SITE_SENSORS = [
         json_key="site_admin",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    AnkerSolixBinarySensorDescription(
+        key="has_unread_msg",
+        translation_key="has_unread_msg",
+        json_key="has_unread_msg",
+        value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 ]
 
 
@@ -71,14 +78,14 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up sensor platform."""
+    """Set up binary sensor platform."""
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
-        # create sensor type based on type of entry in coordinator data, which consolidates the api.sites and api.devices dictionaries
-        # the coordinator.data dict key is either a site_id or device_sn and used as context for the sensor to lookup its data
+        # create binary sensor type based on type of entry in coordinator data, which consolidates the api.sites and api.devices dictionaries
+        # the coordinator.data dict key is either a site_id or device_sn and used as context for the binary sensor to lookup its data
         for context, data in coordinator.data.items():
             if data.get("type") == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
@@ -108,6 +115,8 @@ async def async_setup_entry(
 class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """anker_solix binary_sensor class."""
 
+    coordinator: AnkerSolixDataUpdateCoordinator
+    entity_description: AnkerSolixBinarySensorDescription
     _attr_has_entity_name = True
     _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset(

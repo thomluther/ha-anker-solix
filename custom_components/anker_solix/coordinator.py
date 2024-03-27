@@ -25,7 +25,11 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
     client: AnkerSolixApiClient
 
     def __init__(
-        self, hass: HomeAssistant, client: AnkerSolixApiClient, config_entry: ConfigEntry, update_interval: int
+        self,
+        hass: HomeAssistant,
+        client: AnkerSolixApiClient,
+        config_entry: ConfigEntry,
+        update_interval: int,
     ) -> None:
         """Initialize."""
         self.config_entry = config_entry
@@ -58,11 +62,12 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def async_refresh_device_details(self):
         """Update data including device details and reset update interval."""
-        self.async_set_updated_data(await self.client.async_get_data(device_details=True))
+        self.async_set_updated_data(
+            await self.client.async_get_data(device_details=True)
+        )
 
     async def async_execute_command(self, command: str):
         """Execute the given command."""
-        match(command):
+        match command:
             case "refresh_device":
                 await self.async_refresh_device_details()
-

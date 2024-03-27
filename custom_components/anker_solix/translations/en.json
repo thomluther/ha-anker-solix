@@ -83,6 +83,32 @@
                     "on": "Yes",
                     "off": "No"
                 }
+            },
+            "has_unread_msg": {
+                "name": "Messages",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            }
+        },
+        "number": {
+            "preset_system_output_power": {
+                "name": "System output preset"
+            },
+            "preset_charge_priority": {
+                "name": "Charge priority limit"
+            },
+            "system_price": {
+                "name": "kWh price"
+            }
+        },
+        "select": {
+            "power_cutoff": {
+                "name": "SOC reserve"
+            },
+            "system_price_unit": {
+                "name": "Price currency"
             }
         },
         "sensor": {
@@ -130,9 +156,6 @@
             },
             "ac_generate_power": {
                 "name": "AC power"
-            },
-            "power_cutoff": {
-                "name": "SOC reserve"
             },
             "set_output_power": {
                 "name": "Home preset",
@@ -190,6 +213,61 @@
                     }
                 }
             },
+            "daily_discharge_energy": {
+                "name": "Daily discharge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_charge_energy": {
+                "name": "Daily charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production": {
+                "name": "Daily solar yield",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_share": {
+                "name": "Daily solar share",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_battery_share": {
+                "name": "Daily battery share",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "temperature": {
                 "name": "Temperature"
             },
@@ -217,6 +295,9 @@
             "solarbank_state_of_charge": {
                 "name": "SB state of charge"
             },
+            "solarbank_timestamp": {
+                "name": "SB data time"
+            },
             "pps_charging_power": {
                 "name": "PPS battery power"
             },
@@ -238,16 +319,19 @@
             "daily_output_energy": {
                 "name": "Yield today"
             },
-            "site_charging_power": {
-                "name": "System charging power"
-            },
             "set_system_output_power": {
                 "name": "System home preset"
+            },
+            "site_charging_power": {
+                "name": "System charging power"
             }
         },
         "switch": {
             "auto_upgrade": {
                 "name": "Auto-Upgrade"
+            },
+            "preset_allow_export": {
+                "name": "Allow power export"
             },
             "allow_refresh": {
                 "name": "Api Usage"
@@ -267,6 +351,104 @@
                 "on": "On",
                 "unknown": "Unknown"
             }
+        }
+    },
+    "services": {
+        "get_solarbank_schedule": {
+            "name": "Request the actual Solarbank schedule",
+            "description": "The actual Solarbank schedule will be provided as response to the service request",
+            "fields": {
+                "entity_id": {
+                    "name": "Entity ID",
+                    "description": "Solarbank home preset sensor whose schedule is to be requested"
+                }
+            }
+        },
+        "set_solarbank_schedule": {
+            "name": "Set a new Solarbank Schedule",
+            "description": "Create a new time schedule for the Solarbank with the defined time interval. An existing time schedule is completely replaced by the new interval!",
+            "fields": {
+                "entity_id": {
+                    "name": "Entity ID",
+                    "description": "Solarbank home preset sensor whose schedule is to be created"
+                },
+                "start_time": {
+                    "name": "Start time",
+                    "description": "Start time of the interval (seconds are ignored)"
+                },
+                "end_time": {
+                    "name": "End time",
+                    "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "appliance_load": {
+                    "name": "Home load preset",
+                    "description": "Watt to be delivered to the house"
+                },
+                "allow_export": {
+                    "name": "Allow export",
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house"
+                },
+                "charge_priority_limit": {
+                    "name": "Limit for charge priority",
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set."
+                }
+            }
+        },
+        "update_solarbank_schedule": {
+            "name": "Update Solarbank Schedule",
+            "description": "An existing Solarbank schedule is updated with the defined time interval. Adjacent time intervals are adjusted in time and overlapping ones are replaced.",
+            "fields": {
+                "entity_id": {
+                    "name": "Entity ID",
+                    "description": "Solarbank home preset sensor whose schedule is to be updated"
+                },
+                "start_time": {
+                    "name": "Start time",
+                    "description": "Start time of the interval (seconds are ignored)"
+                },
+                "end_time": {
+                    "name": "End time",
+                    "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "appliance_load": {
+                    "name": "Home load preset",
+                    "description": "Watt to be delivered to the house"
+                },
+                "allow_export": {
+                    "name": "Allow export",
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house"
+                },
+                "charge_priority_limit": {
+                    "name": "Limit for charge priority",
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set."
+                }
+            }
+        }
+    },
+    "exceptions": {
+        "increase_blocked": {
+          "message": "{entity_id} cannot be increased to {value} because minimum change delay of {delay} seconds is not passed"
+        },
+        "out_of_range": {
+            "message": "{entity_id} cannot be set to {value} because it is outsite of allowed range {min}-{max}"
+        },
+        "active_testmode": {
+            "message": "{entity_id} cannot be changed while configuration is running in testmode"
+        },
+        "shared_devices": {
+            "message": "{username} cannot be loaded because it shares devices with active configuration {shared_account}"
+        },
+        "active_devices": {
+            "message": "{device} cannot be removed because it has registered active entities"
+        },
+        "device_refresh": {
+            "message": "Devices for {coordinator} cannot be updated within less than {min_dev_refresh} seconds"
+        },
+        "service_not_supported": {
+            "message": "The entity {entity} does not support the service {service}"
+        },
+        "slot_time_error": {
+            "message": "The service {service} cannot be executed: {error}."
         }
     }
 }
