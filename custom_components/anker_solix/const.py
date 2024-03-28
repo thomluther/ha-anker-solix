@@ -4,7 +4,6 @@ from logging import Logger, getLogger
 
 import voluptuous as vol
 
-from homeassistant.const import CONF_ENTITY_ID
 import homeassistant.helpers.config_validation as cv
 
 from .solixapi import api
@@ -52,6 +51,7 @@ VALID_DAYTIME = vol.All(
 )
 VALID_APPLIANCE_LOAD = vol.Any(
     None,
+    cv.ENTITY_MATCH_NONE,
     vol.All(
         vol.Coerce(int),
         vol.Range(
@@ -62,6 +62,7 @@ VALID_APPLIANCE_LOAD = vol.Any(
 )
 VALID_CHARGE_PRIORITY = vol.Any(
     None,
+    cv.ENTITY_MATCH_NONE,
     vol.All(
         vol.Coerce(int),
         vol.Range(
@@ -70,13 +71,7 @@ VALID_CHARGE_PRIORITY = vol.Any(
         ),
     ),
 )
-VALID_ALLOW_DISCHARGE = vol.Any(None, vol.Coerce(bool))
-VALID_ENTITY_ID = vol.All(
-    vol.Coerce(str),
-    vol.Length(min=1),
-    cv.entity_id,
-    cv.entity_domain(DOMAIN),
-)
+VALID_ALLOW_DISCHARGE = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
 
 SOLARBANK_TIMESLOT_DICT: dict = {
     vol.Required(START_TIME): VALID_DAYTIME,
@@ -94,11 +89,10 @@ SOLARBANK_TIMESLOT_DICT: dict = {
 
 SOLARBANK_TIMESLOT_SCHEMA: vol.Schema = vol.All(
     cv.make_entity_service_schema(
-        {vol.Required(CONF_ENTITY_ID): VALID_ENTITY_ID, **SOLARBANK_TIMESLOT_DICT}
+        {**cv.TARGET_SERVICE_FIELDS, **SOLARBANK_TIMESLOT_DICT}
     ),
-    cv.has_at_least_one_key(APPLIANCE_LOAD, CHARGE_PRIORITY_LIMIT, ALLOW_EXPORT),
 )
 
 SOLARBANK_ENTITY_SCHEMA: vol.Schema = vol.All(
-    cv.make_entity_service_schema({vol.Required(CONF_ENTITY_ID): VALID_ENTITY_ID}),
+    cv.make_entity_service_schema(cv.TARGET_SERVICE_FIELDS),
 )

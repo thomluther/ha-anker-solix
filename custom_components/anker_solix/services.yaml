@@ -1,29 +1,24 @@
 # Service description for Anker Solix custom integration
 
 get_solarbank_schedule:
-  fields:
-    entity_id:
-      example: "sensor.solarbank_e1600_home_preset"
-      required: true
-      selector:
-        entity:
-          filter:
-            integration: anker_solix
-            domain: sensor
-            supported_features:
-              - 1
+  target:
+    entity:
+      integration: anker_solix
+      domain: sensor
+      # anker_solix.AnkerSolixEntityFeature.SOLARBANK_SCHEDULE is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - calendar.CalendarEntityFeature.CREATE_EVENT
 set_solarbank_schedule:
+  target:
+    entity:
+      integration: anker_solix
+      domain: sensor
+      # anker_solix.AnkerSolixEntityFeature.SOLARBANK_SCHEDULE is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - calendar.CalendarEntityFeature.CREATE_EVENT
   fields:
-    entity_id:
-      example: "sensor.solarbank_e1600_home_preset"
-      required: true
-      selector:
-        entity:
-          filter:
-            integration: anker_solix
-            domain: sensor
-            supported_features:
-              - 1
     start_time:
       required: true
       example: "00:00:00"
@@ -62,17 +57,15 @@ set_solarbank_schedule:
           step: 5
           unit_of_measurement: "%"
 update_solarbank_schedule:
+  target:
+    entity:
+      integration: anker_solix
+      domain: sensor
+      # anker_solix.AnkerSolixEntityFeature.SOLARBANK_SCHEDULE is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - calendar.CalendarEntityFeature.CREATE_EVENT
   fields:
-    entity_id:
-      example: "sensor.solarbank_e1600_home_preset"
-      required: true
-      selector:
-        entity:
-          filter:
-            integration: anker_solix
-            domain: sensor
-            supported_features:
-              - 1
     start_time:
       required: true
       example: "00:00:00"

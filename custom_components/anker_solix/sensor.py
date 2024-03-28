@@ -10,6 +10,8 @@ from random import randrange, choice
 from typing import Any
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
+import homeassistant.helpers.config_validation as cv
+
 from .config_flow import _SCAN_INTERVAL_MIN
 
 from homeassistant.components.sensor import (
@@ -943,10 +945,17 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     if (start_time := kwargs.get(START_TIME)) < (
                         end_time := kwargs.get(END_TIME)
                     ):
-                        # check if now is in given time range and ensure preset increase is limited by min interval
                         load = kwargs.get(APPLIANCE_LOAD)
+                        if load == cv.ENTITY_MATCH_NONE:
+                            load = None
+                        export = kwargs.get(ALLOW_EXPORT)
+                        if export == cv.ENTITY_MATCH_NONE:
+                            export = None
+                        prio = kwargs.get(CHARGE_PRIORITY_LIMIT)
+                        if prio == cv.ENTITY_MATCH_NONE:
+                            prio = None
+                        # check if now is in given time range and ensure preset increase is limited by min interval
                         now = datetime.now().astimezone()
-
                         start_time.astimezone()
                         if (
                             self._last_schedule_service_value
@@ -985,8 +994,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             start_time=start_time,
                             end_time=end_time,
                             appliance_load=load,
-                            allow_export=kwargs.get(ALLOW_EXPORT),
-                            charge_priority_limit=kwargs.get(CHARGE_PRIORITY_LIMIT),
+                            allow_export=export,
+                            charge_priority_limit=prio,
                         )
                         if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
                             result = await self.coordinator.client.api.set_home_load(
