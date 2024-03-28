@@ -260,20 +260,22 @@ The user bears the sole risk for a possible loss of the manufacturer's warranty 
 
 Following 3 methods are implemented with version 1.1.0 of the integration:
 
-1. **Direct parameter changes via entity modifications for Appliance Home Load preset, allowance of export and charge priority limit**
+#### 1. **Direct parameter changes via entity modifications for Appliance Home Load preset, allowance of export and charge priority limit**
 
-  &nbsp;&nbsp;&nbsp;&nbsp;Any change in those 3 entities is immediately applied to the current time slot in the existing schedule. Please see the Solarbank dashboard screenshots above for examples of the entity representation.
+Any change in those 3 entities is immediately applied to the current time slot in the existing schedule. Please see the Solarbank dashboard screenshots above for examples of the entity representation.
 
-  &nbsp;&nbsp;&nbsp;&nbsp;**A word of caution:** When you represent the home load number entity as input field in your dashboard cards, do **NOT use the step up/down arrows** but enter the home load value directly in the field. Each step via the field arrows triggers a settings change immediately, and increases are restricted for min. 30 second intervals. Preferrably use a slider for manual number modifications, since the value is just applied to the entity  once you release the slider movement (do not release the slider until you moved it to the desired value).
+**A word of caution:**
 
-2. **Solarbank schedule modifications via services**
+When you represent the home load number entity as input field in your dashboard cards, do **NOT use the step up/down arrows** but enter the home load value directly in the field. Each step via the field arrows triggers a settings change immediately, and increases are restricted for min. 30 second intervals. Preferrably use a slider for manual number modifications, since the value is just applied to the entity  once you release the slider movement (do not release the slider until you moved it to the desired value).
 
-  &nbsp;&nbsp;&nbsp;&nbsp;They are useful to apply manual or automated changes for times that are beyond the current time interval. Following 3 services are available:
+#### 2. **Solarbank schedule modifications via services**
+
+They are useful to apply manual or automated changes for times that are beyond the current time interval. Following 3 services are available:
   - **Set new Solarbank schedule:** Allows wiping out the defined schedule and defines a new interval with the customizable schedule parameters above
   - **Update Solarbank schedule:** Allows inserting/updating/overwriting a time interval in the existing schedule with the customizable schedule parameters above. Adjacent intervals will be adjusted automatically
   - **Request Solarbank schedule:** Queries the actual schedule and returns the whole schedule JSON object, which is also provided in the schedule attribute of the Solarbank device output preset sensor.
 
-  &nbsp;&nbsp;&nbsp;&nbsp;You can specify the solarbank device id or the entity ID of the solarbank output preset sensor as target for those services. The service UI in HA developper tools will filter the devices and entities that support the solarbank schedule services. I recommend using the entity ID as target when using the service in automations since the device ID is an internal registry value which is difficult to map to a context. In general, most of the solarbank schedule changes should be done by the update service since the Api library has built in simplifications for time interval changes. The update service follows the insert methodology for the specified interval using following rules:
+You can specify the solarbank device id or the entity ID of the solarbank output preset sensor as target for those services. The service UI in HA developper tools will filter the devices and entities that support the solarbank schedule services. I recommend using the entity ID as target when using the service in automations since the device ID is an internal registry value which is difficult to map to a context. In general, most of the solarbank schedule changes should be done by the update service since the Api library has built in simplifications for time interval changes. The update service follows the insert methodology for the specified interval using following rules:
   - Adjacent slots are automatically adjusted with their start/end times
     - Completely overlayed slots are automatically removed
     - Smaller interval inserts result in 1-3 intervals for the previous time range, depending on the update interval and existing interval time boundaries
@@ -288,9 +290,10 @@ Following 3 methods are implemented with version 1.1.0 of the integration:
     - 80 % Charge Priority limit
   - The Set schedule service also requires to specify the time interval for the first slot. However, testing has shown that the provided times are ignored and a full day interval is always created when only a single interval is provided with a schedule update via the Api.
 
-3. **Interactive solarbank schedule modification via a parameterized script that executes a schedule service with provided parameters**
+#### 3. **Interactive solarbank schedule modification via a parameterized script that executes a schedule service with provided parameters**
 
-  &nbsp;&nbsp;&nbsp;&nbsp;Home Assistant 2024.3 provides a new capability to define fields for script parameters that can be filled via the more info dialog of the script entity prior execution. This allows easy integration of schedule modifications to your dashboard (see example script and dashboard below).
+Home Assistant 2024.3 provides a new capability to define fields for script parameters that can be filled via the more info dialog of the script entity prior execution. This allows easy integration of schedule modifications to your dashboard (see example script and dashboard below).
+
 
 Following are screenshots showing the schedule service UI panel (identical for Set schedule and Update schedule service), and the Get schedule service with an example:
 
@@ -303,7 +306,7 @@ Following are screenshots showing the schedule service UI panel (identical for S
 ![Get schedule service][request-schedule-img]
 
 
-While not all entity ranges supported by the integration may be applied, some may provide enhanced capabillities compared to the Anker App. Following are important notes and limitations for schedule modifications via the Cloud Api:
+While not the full entity ranges supported by the integration can be applied to the device, some may provide enhanced capabillities compared to the Anker App. Following are important notes and limitations for schedule modifications via the Cloud Api:
 - Time slots can be defined in minute granualrity and what I have seen, they are also applied (don't take my word for given)
 - The end time of 24:00 must be provided as 23:59 since the datetime range does not know hour 24. Any seconds that are specified are ignored
 - Homeassistant and the Solarbank should have simlar time, but especially same timezone to adopt the time slots correctly. Even more important it is for finding the current/active schedule time interval where individual parameter changes must be applied
