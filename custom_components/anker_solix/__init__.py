@@ -11,23 +11,28 @@ import os
 from aiohttp import ClientTimeout
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_SCAN_INTERVAL, CONF_USERNAME, Platform
+from homeassistant.const import (
+    CONF_DELAY_TIME,
+    CONF_EXCLUDE,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
+    Platform,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
 
 from . import api_client
-from .config_flow import (
-    INTERVALMULT_DEF,
-    SCAN_INTERVAL_DEF,
-    async_check_and_remove_devices,
-)
+from .config_flow import SCAN_INTERVAL_DEF, async_check_and_remove_devices
 from .const import (
     DOMAIN,
     EXAMPLESFOLDER,
     INTERVALMULT,
     LOGGER,
+    SERVICE_GET_SOLARBANK_SCHEDULE,
+    SERVICE_SET_SOLARBANK_SCHEDULE,
+    SERVICE_UPDATE_SOLARBANK_SCHEDULE,
     SHARED_ACCOUNT,
     TESTFOLDER,
     TESTMODE,
@@ -69,9 +74,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
             )
         # set device detail refresh multiplier
-        coordinator.client.deviceintervals(
-            entry.options.get(INTERVALMULT, INTERVALMULT_DEF)
-        )
+        coordinator.client.deviceintervals(entry.options.get(INTERVALMULT))
+        # set Api request delay time
+        coordinator.client.delay_time(entry.options.get(CONF_DELAY_TIME))
 
     # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
     await coordinator.async_config_entry_first_refresh()
@@ -114,14 +119,19 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     if coordinator and coordinator.client:
         testmode = entry.options.get(TESTMODE)
         testfolder = entry.options.get(TESTFOLDER)
+        excluded = entry.options.get(CONF_EXCLUDE) or []
         # Check if option change does not require reload when only timeout or interval was changed
-        if testmode == coordinator.client.testmode() and (
-            os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
-            == coordinator.client.api.testDir()
-            or not testmode
+        if (
+            testmode == coordinator.client.testmode()
+            and (
+                os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
+                == coordinator.client.api.testDir()
+                or not testmode
+            )
+            and set(excluded) == set(coordinator.client.exclude_categories)
         ):
             do_reload = False
-            # modify changed intervals without reload
+            # modify changed client parameters without reload
             seconds = int(entry.options.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL_DEF))
             if seconds != int(coordinator.update_interval.seconds):
                 coordinator.update_interval = timedelta(seconds=seconds)
@@ -131,9 +141,9 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
                     seconds,
                 )
             # set device detail refresh multiplier
-            coordinator.client.deviceintervals(
-                entry.options.get(INTERVALMULT, INTERVALMULT_DEF)
-            )
+            coordinator.client.deviceintervals(entry.options.get(INTERVALMULT))
+            # set Api request delay time
+            coordinator.client.delay_time(entry.options.get(CONF_DELAY_TIME))
             # add modified coordinator back to hass
             hass.data[DOMAIN][entry.entry_id] = coordinator
 
@@ -145,6 +155,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry, also triggered when integration is reloaded by UI."""
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
+    # unregister services if no config remains
+    if not hass.data[DOMAIN]:
+        hass.services.async_remove(DOMAIN, SERVICE_GET_SOLARBANK_SCHEDULE)
+        hass.services.async_remove(DOMAIN, SERVICE_SET_SOLARBANK_SCHEDULE)
+        hass.services.async_remove(DOMAIN, SERVICE_UPDATE_SOLARBANK_SCHEDULE)
     return unloaded
 
 

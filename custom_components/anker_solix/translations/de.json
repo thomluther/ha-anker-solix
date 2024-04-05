@@ -1,4 +1,22 @@
 {
+    "selector": {
+        "exclude": {
+            "options": {
+                "site_price": "System Preiswerte",
+                "device_auto_upgrade": "Auto-Updates",
+                "solarbank_cutoff": "Solarbank Reservewerte",
+                "solarbank_fittings": "Solarbank Zubehör",
+                "solarbank_solar_info": "Solarbank WR Info",
+                "solarbank_energy": "Solarbank Energiestatistik",
+                "system": "Systeme",
+                "solarbank": "Solarbänke",
+                "inverter": "Wechselrichter",
+                "pps": "Power Stationen",
+                "powerpanel": "Power Panels",
+                "powercooler": "Power Kühler"
+            }
+        }
+    },
     "config": {
         "step": {
             "user": {
@@ -36,11 +54,14 @@
                 "data": {
                     "scan_interval": "Update Intervall (30-600 Sekunden)",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
+                    "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "exclude": "Ausgeschlossene Entitäts-Kategorien",
                     "testmode": "Benutze den Testmode für die Integration",
                     "testfolder": "Ordner mit json Dateien für den Integrationstest"
                 },
                 "data_description": {
                     "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden nur einmal pro Minute aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
                     "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
                 }
             }
@@ -356,22 +377,12 @@
     "services": {
         "get_solarbank_schedule": {
             "name": "Abfrage des aktuellen Solarbank Zeitplans",
-            "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diesen Service geschickt",
-            "fields": {
-                "entity_id": {
-                    "name": "Entität ID",
-                    "description": "Solarbank Einspeisevorgabe Sensor dessen Zeitplan abgefragt werden soll"
-                }
-            }
+            "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diesen Service geschickt"
         },
         "set_solarbank_schedule": {
             "name": "Erstelle einen neuen Solarbank Zeitplan",
             "description": "Erstelle einen neuen Zeitplan für die Solarbank mit dem definierten Zeitintervall. Ein bestehender Zeitplan wird dabei komplett ersetzt!",
             "fields": {
-                "entity_id": {
-                    "name": "Entität ID",
-                    "description": "Solarbank Einspeisevorgabe Sensor dessen Zeitplan erstellt werden soll"
-                },
                 "start_time": {
                     "name": "Startzeit",
                     "description": "Startzeit des Intervalls (Sekunden werden ignoriert)"
@@ -398,10 +409,6 @@
             "name": "Aktualisiere einen Solarbank Zeitplan",
             "description": "Ein existierender Zeitplan wird mit dem definierten Zeitintervall aktualisiert. Angrenzende Zeitintervalle werden dabei zeitlich angepasst und überlagernde ersetzt.",
             "fields": {
-                "entity_id": {
-                    "name": "Entität ID",
-                    "description": "Solarbank Einspeisevorgabe Sensor dessen Zeitplan aktualisiert werden soll"
-                },
                 "start_time": {
                     "name": "Startzeit",
                     "description": "Startzeit des Intervalls (Sekunden werden ignoriert)"

@@ -9,6 +9,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import (
     CONF_COUNTRY_CODE,
+    CONF_DELAY_TIME,
+    CONF_EXCLUDE,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
@@ -33,15 +35,20 @@ from .const import (
     TESTMODE,
 )
 
-SCAN_INTERVAL_DEF = 60
-INTERVALMULT_DEF = 10  # multiplier for scan interval
+# Define integration option limits and defaults
+SCAN_INTERVAL_DEF = api_client.DEFAULT_UPDATE_INTERVAL
+INTERVALMULT_DEF = api_client.DEFAULT_DEVICE_MULTIPLIER  # multiplier for scan interval
+DELAY_TIME_DEF = api_client.api.SolixDefaults.REQUEST_DELAY_DEF
 
 _SCAN_INTERVAL_MIN = 10 if ALLOW_TESTMODE else 30
 _SCAN_INTERVAL_MAX = 600
 _SCAN_INTERVAL_STEP = 10
-_INTERVALMULT_MIN = 1
-_INTERVALMULT_MAX = 30
-_INTERVALMULT_STEP = 1
+_INTERVALMULT_MIN = 2
+_INTERVALMULT_MAX = 60
+_INTERVALMULT_STEP = 2
+_DELAY_TIME_MIN = 0.0
+_DELAY_TIME_MAX = 2.0
+_DELAY_TIME_STEP = 0.1
 _ALLOW_TESTMODE = bool(ALLOW_TESTMODE)
 
 
@@ -203,80 +210,107 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
             str, str
         ] = {}  # NOTE: Passed option placeholder do not work with translation files, HASS Bug?
 
-        if not (jsonfolders := api_client.json_example_folders()):
-            # Add empty element to ensure proper list validation
-            jsonfolders = [""]
-
         if user_input:
             if user_input.get(TESTFOLDER) or not user_input.get(TESTMODE):
                 return self.async_create_entry(title="", data=user_input)
             # Test mode enabled but no existing folder selected
             errors[TESTFOLDER] = "folder_invalid"
 
-        opt_schema = {
-            vol.Optional(
-                CONF_SCAN_INTERVAL,
-                default=(user_input or self.config_entry.options).get(
-                    CONF_SCAN_INTERVAL,
-                    SCAN_INTERVAL_DEF,
-                ),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=_SCAN_INTERVAL_MIN,
-                    max=_SCAN_INTERVAL_MAX,
-                    step=_SCAN_INTERVAL_STEP,
-                    unit_of_measurement="sec",
-                    mode=selector.NumberSelectorMode.BOX,
-                ),
-            ),
-            vol.Optional(
-                INTERVALMULT,
-                default=(user_input or self.config_entry.options).get(
-                    INTERVALMULT, INTERVALMULT_DEF
-                ),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=_INTERVALMULT_MIN,
-                    max=_INTERVALMULT_MAX,
-                    step=_INTERVALMULT_STEP,
-                    unit_of_measurement="updates",
-                    mode=selector.NumberSelectorMode.SLIDER,
-                ),
-            ),
-        }
-        if _ALLOW_TESTMODE:
-            opt_schema.update(
-                {
-                    vol.Optional(
-                        TESTMODE,
-                        default=(user_input or self.config_entry.options).get(
-                            TESTMODE, False
-                        ),
-                    ): selector.BooleanSelector(),
-                    vol.Optional(
-                        TESTFOLDER,
-                        description={
-                            "suggested_value": (
-                                user_input or self.config_entry.options
-                            ).get(
-                                TESTFOLDER,
-                                jsonfolders[0] if len(jsonfolders) > 0 else "",
-                            )
-                        },
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=jsonfolders, mode="dropdown", sort=True
-                        )
-                    ),
-                }
-            )
-
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema(opt_schema),
+            data_schema=vol.Schema(
+                get_options_schema(user_input or self.config_entry.options)
+            ),
             errors=errors,
             description_placeholders=placeholders,
         )
+
+
+def get_options_schema(entry: dict = None) -> dict:
+    """Create the options schema dictionary."""
+
+    if entry is None:
+        entry = {}
+    schema = {
+        vol.Optional(
+            CONF_SCAN_INTERVAL,
+            default=entry.get(
+                CONF_SCAN_INTERVAL,
+                SCAN_INTERVAL_DEF,
+            ),
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=_SCAN_INTERVAL_MIN,
+                max=_SCAN_INTERVAL_MAX,
+                step=_SCAN_INTERVAL_STEP,
+                unit_of_measurement="sec",
+                mode=selector.NumberSelectorMode.BOX,
+            ),
+        ),
+        vol.Optional(
+            INTERVALMULT,
+            default=entry.get(INTERVALMULT, INTERVALMULT_DEF),
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=_INTERVALMULT_MIN,
+                max=_INTERVALMULT_MAX,
+                step=_INTERVALMULT_STEP,
+                unit_of_measurement="updates",
+                mode=selector.NumberSelectorMode.SLIDER,
+            ),
+        ),
+        vol.Optional(
+            CONF_DELAY_TIME,
+            default=entry.get(CONF_DELAY_TIME, DELAY_TIME_DEF),
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=_DELAY_TIME_MIN,
+                max=_DELAY_TIME_MAX,
+                step=_DELAY_TIME_STEP,
+                unit_of_measurement="sec",
+                mode=selector.NumberSelectorMode.SLIDER,
+            ),
+        ),
+        vol.Optional(
+            CONF_EXCLUDE,
+            default=entry.get(
+                CONF_EXCLUDE,
+                list(api_client.DEFAULT_EXCLUDE_CATEGORIES),
+            ),
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=list(api_client.API_CATEGORIES),
+                mode="dropdown",
+                multiple=True,
+                translation_key=CONF_EXCLUDE,
+            )
+        ),
+    }
+    if _ALLOW_TESTMODE:
+        if not (jsonfolders := api_client.json_example_folders()):
+            # Add empty element to ensure proper list validation
+            jsonfolders = [""]
+        schema.update(
+            {
+                vol.Optional(
+                    TESTMODE,
+                    default=entry.get(TESTMODE, False),
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    TESTFOLDER,
+                    description={
+                        "suggested_value": entry.get(
+                            TESTFOLDER, next(iter(jsonfolders), "")
+                        )
+                    },
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=jsonfolders, mode="dropdown", sort=True
+                    )
+                ),
+            }
+        )
+    return schema
 
 
 async def async_check_and_remove_devices(

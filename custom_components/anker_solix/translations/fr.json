@@ -1,4 +1,22 @@
 {
+    "selector": {
+        "exclude": {
+            "options": {
+                "site_price": "Valeurs de prix du système",
+                "device_auto_upgrade": "Mises à jour automatiques",
+                "solarbank_cutoff": "Valeurs de réserve de Solarbank",
+                "solarbank_fittings": "Accessoires de Solarbank",
+                "solarbank_solar_info": "Info onduleur de Solarbank",
+                "solarbank_energy": "Statistiques sur l'énergie de Solarbank",
+                "system": "Systèmes",
+                "solarbank": "Solarbanks",
+                "inverter": "Onduleurs",
+                "pps": "Centrales électriques portables",
+                "powerpanel": "Panneaux électriques",
+                "powercooler": "Refroidisseur d'électricité"
+            }
+        }
+    },
     "config": {
         "step": {
             "user": {
@@ -36,11 +54,14 @@
                 "data": {
                     "scan_interval": "Intervalle de mise à jour (30-600 secondes)",
                     "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
+                    "delay_time": "Délai pour les requêtes Api suivantes",
+                    "exclude": "Catégories d'entités exclues",
                     "testmode": "Utiliser le mode test d'intégration",
                     "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
                 },
                 "data_description": {
                     "scan_interval": "Remarque : Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
                 }
             }
@@ -355,23 +376,13 @@
     },
     "services": {
         "get_solarbank_schedule": {
-            "name": "Demandez l'horaire actuel de Solarbank",
-            "description": "L'horaire effective de Solarbank sera fournie en réponse à la demande de service",
-            "fields": {
-                "entity_id": {
-                    "name": "ID de l'entité",
-                    "description": "Capteur de puissance de sortie du solarbank, dont l'horaire doit être demandé"
-                }
-            }
+            "name": "Demandez l'horaire actuel de solarbank",
+            "description": "L'horaire effective de solarbank sera fournie en réponse à la demande de service"
         },
         "set_solarbank_schedule": {
             "name": "Créer un nouveau horaire de solarbank",
             "description": "Crée un nouveau planning pour la solarbank avec l'intervalle de temps défini. Un horaire existant sera alors complètement remplacé !",
             "fields": {
-                "entity_id": {
-                    "name": "ID de l'entité",
-                    "description": "Capteur de puissance de sortie du solarbank, dont l'horaire doit être défini"
-                },
                 "start_time": {
                     "name": "Heure de début",
                     "description": "Heure de début de l'intervalle (les secondes sont ignorées)"
@@ -398,10 +409,6 @@
             "name": "Mise à jour du tableau horaire de solarbank",
             "description": "Un horaire de solarbank existant est mis à jour avec l'intervalle de temps défini. Les intervalles de temps adjacents sont ajustés dans le temps et ceux qui se chevauchent sont remplacés",
             "fields": {
-                "entity_id": {
-                    "name": "ID de l'entité",
-                    "description": "Capteur de puissance de sortie du solarbank, dont l'horaire doit être mis à jour"
-                },
                 "start_time": {
                     "name": "Heure de début",
                     "description": "Heure de début de l'intervalle (les secondes sont ignorées)"

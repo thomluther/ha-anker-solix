@@ -75,6 +75,10 @@ Device type | Description
 `solarbank` | Anker Solix Solarbanks configured in the system
 `inverter` | Anker Solix inverters configured in the system
 
+**Attention:**
+
+While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile App under device details are either provided through the local Bluetooth interface or through an MQTT cloud server where all your devices report their actual values (for the time they are prompted in the App). Therefore the integration cannot be enhanced for more detailed entities of stand alone devices.
+
 
 ## Installation via HACS (recommended)
 Use this button:
