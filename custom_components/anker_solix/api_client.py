@@ -8,12 +8,38 @@ import socket
 import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_COUNTRY_CODE, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import (
+    CONF_COUNTRY_CODE,
+    CONF_DELAY_TIME,
+    CONF_EXCLUDE,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+)
 
 from .const import EXAMPLESFOLDER, INTERVALMULT, LOGGER, TESTMODE
 from .solixapi import api, errors
 
 _LOGGER = LOGGER
+MIN_DEVICE_REFRESH: int = 30  # min device refresh delay in seconds
+DEFAULT_UPDATE_INTERVAL: int = 60  # default interval in seconds for refresh cycle
+DEFAULT_DEVICE_MULTIPLIER: int = (
+    10  # default interval multiplier for device details refresh cycle
+)
+# Api categories and device types supported for exclusion from integration
+API_CATEGORIES: list = [
+    #api.SolixDeviceType.SOLARBANK.value,
+    #api.SolixDeviceType.INVERTER.value,
+    #api.SolixDeviceType.PPS.value,
+    #api.SolixDeviceType.POWERPANEL.value,
+    #api.SolixDeviceType.POWERCOOLER.value,
+    api.ApiCategories.solarbank_energy,
+    #api.ApiCategories.solarbank_cutoff,
+    #api.ApiCategories.solarbank_fittings,
+    #api.ApiCategories.solarbank_solar_info,
+    #api.ApiCategories.device_auto_upgrade,
+    #api.ApiCategories.site_price,
+]
+DEFAULT_EXCLUDE_CATEGORIES: list = [api.ApiCategories.solarbank_energy]
 
 
 def json_example_folders() -> list:
@@ -46,9 +72,8 @@ class AnkerSolixApiClient:
     deviceinterval: Optionally specify on how many refresh intervals a device update is fetched, that needs additional API requires per device
     """
 
-    MIN_DEVICE_REFRESH: int = 30
-    DEFAULT_DEVICE_INTERVAL: int = 10
     last_device_refresh: datetime | None
+    exclude_categories: list
     _intervalcount: int
     _allow_refresh: bool
 
@@ -75,13 +100,15 @@ class AnkerSolixApiClient:
             session,
             _LOGGER,
         )
-        self._deviceintervals = int(
-            data.get(INTERVALMULT) or self.DEFAULT_DEVICE_INTERVAL
+        self.api.requestDelay(
+            float(data.get(CONF_DELAY_TIME,api.SolixDefaults.REQUEST_DELAY_DEF))
         )
-        self._testmode = bool(data.get(TESTMODE) or False)
+        self._deviceintervals = int(data.get(INTERVALMULT,DEFAULT_DEVICE_MULTIPLIER))
+        self._testmode = bool(data.get(TESTMODE,False))
         self._intervalcount = 0
         self._allow_refresh = True
         self.last_device_refresh = None
+        self.exclude_categories = data.get(CONF_EXCLUDE,DEFAULT_EXCLUDE_CATEGORIES)
 
     async def authenticate(self, restart: bool = False) -> bool:
         """Get (chached) login response from api, if restart is True, the login will be refreshed from server to test credentials."""
@@ -128,12 +155,12 @@ class AnkerSolixApiClient:
                         and (
                             datetime.now().astimezone() - self.last_device_refresh
                         ).total_seconds()
-                        < self.MIN_DEVICE_REFRESH
+                        < MIN_DEVICE_REFRESH
                     ):
                         _LOGGER.warning(
                             "Api Coordinator %s cannot enforce device update within less than %s seconds, using data from Api dictionaries",
                             self.api.nickname,
-                            str(self.MIN_DEVICE_REFRESH),
+                            str(MIN_DEVICE_REFRESH),
                         )
                     else:
                         _LOGGER.debug(
@@ -143,17 +170,22 @@ class AnkerSolixApiClient:
                             if self._testmode
                             else "",
                         )
+                        # TODO: refresh sites without excluded types
                         await self.api.update_sites(fromFile=self._testmode)
-                        await self.api.update_site_details(fromFile=self._testmode)
+                        # Fetch site details without excluded types or categories
+                        await self.api.update_site_details(
+                            fromFile=self._testmode,
+                            exclude=set(self.exclude_categories),
+                        )
+                        # Fetch device details without excluded types or categories
                         await self.api.update_device_details(
                             fromFile=self._testmode,
-                            devtypes={api.SolixDeviceType.SOLARBANK.value},
+                            exclude=set(self.exclude_categories),
                         )
-                        if (
-                            not self._testmode
-                        ):  # TODO: Fetch energy only if enabled via options
+                        if not self._testmode:
+                            # Fetch energy if not excluded via options
                             await self.api.update_device_energy(
-                                {api.SolixDeviceType.SOLARBANK.value}
+                                exclude=set(self.exclude_categories)
                             )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
@@ -163,6 +195,7 @@ class AnkerSolixApiClient:
                         self.api.nickname,
                         f"from folder {self.api.testDir()}" if self._testmode else "",
                     )
+                    # TODO: refresh sites without excluded types
                     await self.api.update_sites(fromFile=self._testmode)
                     # update device details only after given refresh interval count
                     self._intervalcount -= 1
@@ -174,26 +207,30 @@ class AnkerSolixApiClient:
                             if self._testmode
                             else "",
                         )
-                        await self.api.update_site_details(fromFile=self._testmode)
+                        # Fetch site details without excluded types or categories
+                        await self.api.update_site_details(
+                            fromFile=self._testmode,
+                            exclude=set(self.exclude_categories),
+                        )
+                        # Fetch device details without excluded types or categories
                         await self.api.update_device_details(
                             fromFile=self._testmode,
-                            devtypes={api.SolixDeviceType.SOLARBANK.value},
+                            exclude=set(self.exclude_categories),
                         )
-                        if (
-                            not self._testmode
-                        ):  # TODO: Fetch energy only if enabled via options
+                        if not self._testmode:
+                            # Fetch energy if not excluded via options
                             await self.api.update_device_energy(
-                                {api.SolixDeviceType.SOLARBANK.value}
+                                exclude=set(self.exclude_categories)
                             )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
-                # combine site and device details dict
+                # combine site and device details dictionaries for single data cache
                 data = self.api.sites | self.api.devices
             else:
-                # do not provide data when refresh suspended to avoid stale data from cache are used for real
+                # do not provide data when refresh suspended to avoid stale data from cache is used for real
                 data = {}
             _LOGGER.debug("Coordinator %s data: %s", self.api.nickname, data)
-            return data
+            return data  # noqa: TRY300
         except TimeoutError as exception:
             raise AnkerSolixApiClientCommunicationError(
                 f"Timeout error fetching information: {exception}",
@@ -217,34 +254,54 @@ class AnkerSolixApiClient:
 
     def testmode(self, mode: bool = None) -> bool:
         """Query or set testmode for client."""
-        if mode is None:
-            return self._testmode
-        if self._testmode != mode:
+        if mode is not None and self._testmode != mode:
+            self._testmode = mode
             _LOGGER.info(
                 "Api Coordinator %s testmode was changed to %s",
                 self.api.nickname,
                 ("ENABLED" if mode else "DISABLED"),
             )
-            self._testmode = mode
         return self._testmode
 
     def deviceintervals(self, intervals: int = None) -> int:
         """Query or set deviceintervals for client."""
-        if intervals is None:
-            return self._deviceintervals
-        if self._deviceintervals != intervals:
+        if (
+            intervals is not None
+            and isinstance(intervals, int)
+            and self._deviceintervals != intervals
+        ):
+            self._deviceintervals = intervals
+            self._intervalcount = min(intervals, self._intervalcount)
             _LOGGER.info(
                 "Api Coordinator %s device refresh multiplier was changed to %s",
                 self.api.nickname,
                 intervals,
             )
-            self._deviceintervals = intervals
-            self._intervalcount = min(intervals, self._intervalcount)
         return self._deviceintervals
+
+    def delay_time(self, seconds: float = None) -> float:
+        """Query or set Api request delay time for client."""
+        if (
+            seconds is not None
+            and isinstance(seconds, float)
+            and seconds != self.api.requestDelay()
+        ):
+            newdelay = self.api.requestDelay(seconds)
+            _LOGGER.info(
+                "Api Coordinator %s Api request delay time was changed to %.3f seconds",
+                self.api.nickname,
+                newdelay,
+            )
+        return self.api.requestDelay()
 
     def allow_refresh(self, allow: bool = None) -> bool:
         """Query or set api refresh capability for client."""
-        if allow is None:
-            return self._allow_refresh
-        self._allow_refresh = allow
+        if allow is not None and allow != self._allow_refresh:
+            self._allow_refresh = allow
+            _LOGGER.info(
+                "Api Coordinator %s refresh was changed to %s",
+                self.api.nickname,
+                ("ENABLED" if allow else "DISABLED"),
+            )
         return self._allow_refresh
+

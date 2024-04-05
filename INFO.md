@@ -69,15 +69,20 @@ If you want to switch from your main account to the shared account, delete first
 
 ## Data refresh configuration options
 
-The data on the cloud that can be retrieved via the Api is refreshed only once per minute. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further when no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the data.
+The data on the cloud which can be retrieved via the Api is refreshed only once per minute. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further when no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the data.
 
 **Note:** The solarbank data timestamp is the only device category timestamp that seems to provide valid data (inverter data timestamp is not updated by the cloud).
 
 During each refresh interval, the power sensor values will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut off, auto-upgrade, schedule etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 30 seconds ago to avoid unnecessary Api traffic.
 
-The refresh options can be configured after creation of an integration entry. Following are the default options:
+The cloud Api also enforces a request limit but actual metrics for this limit are unknown. You may see the configuration entry flagged with an error, that may indicate 429: Too many requests. In that case, all entities may be unknown or show stale data until further Api requests are permitted. To avoid hitting the request limit, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second. Furthermore the Solarbank energy statistic entities which were introduced with verion 1.1.0 have been excluded from the configuration entry per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/hacs-anker-solix/discussions/32).
+The statistics can be re-enabled by removing them from the exclusion list. Future enhancements will add more exclusion options for categories and device types that are of no interest. This may help further to reduce the required Api requests and customize the configuration to the entity types that are meaningful to you.
+
+The refresh options can be configured after creation of an integration entry. Following are the default options as of version 1.1.1:
 
 ![Options][options-img]
+
+**Note:** When you add categories to the exclusion list, the affected entities are removed from the HA registry during integration reload but they still show up in the UI as entities no longer provided by the integration. You need to remove those UI entities manually from the entity details dialog.
 
 
 ## Anker account limitation and usage recommendations
@@ -243,6 +248,7 @@ I will also tell you why:
 - If you have additional and local (real time) sensors from smart meters or inverters, they might help to see the modification results faster. But still, the solarbank is too slow until it settled reliably for a changed home load. Furthermore it all depends on the cloud and internet availability for any automation. Alternativaly I recommend to automate the solarbank discharge only locally via limiting the inverter when you have real time automation capabilities for your inverter limits. [I realized this project as described in the forum](https://community.home-assistant.io/t/using-anker-solix-solarbank-e1600-in-ha/636063) with Hoymiles inverter, OpenDTU and a Tasmota reader device for the grid meter and that works extremly well.
   - **Attention:** Don't use the inverter limit during solar production since this will negatively impact your possible solar yield and the solarbank may end up in crazy power regulations all the time.
 - Additionally, each parameter or schedule change requires 2 Api requests, one to submit the whole changed schedule and another one to query the applied and resulting schedule again for sensor updates. To enforce some protection for the Api and accomodate the slow solarbank reaction, an increase of the home load is just allowed every 30 seconds at least (decreases or other interval parameter changes are not limited)
+  - **Attention:** Cloud Api requests are limited, but actually the enforced limits in regards to quantity and time frames are unknown. Each change may bring you towards the enforced limit and not only block further changes, but also render all integration entities unavailable or stale
 - If you have some experience with the solarbank behavior, you may also know how weird it sometimes reacts on changed conditions during the day (or even unchanged conditions). This makes it difficult to adjust the home load setting automatically to a meaningful value that will accomplish the desired home load result.
 - If you plan to automate moderate changes in the home load, use a timer helper that is restarted upon each change of the settings and used as condition for validation whether another change (increase) should be applied. I would not recommend to apply changes, especially increases in the home load, in less than 2-3 minute intervals, a trusted re-evaluation of the change results and further reaction can just be done after such a delay. Remember that each Solarbank datapoint is just a single value of a one minute interval. The value average in that interval can be completely different, especially if you compare Solarbank data with real time data of other power devices in your home!
 
@@ -328,14 +334,19 @@ content: |
 
   {% set entity = 'sensor.solarbank_e1600_home_preset' %}
   {% set slots = (state_attr(entity,'schedule')).ranges|default([])|list %}
-  {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format('Start', 'End', 'Preset','Export','Prio', 'SB1', 'SB2', 'Name') }}
-  {{ ":---:|:---:|---:|:---:|:---:|---:|---:|:---" }}
+  {% set isnow = now().time().replace(second=0,microsecond=0) %}
+  {% if slots %}
+    {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format('Start', 'End','Preset','Export','Prio', 'SB1', 'SB2', 'Name') }}
+    {{ ":---:|:---:|---:|:---:|:---:|---:|---:|:---" }}
+  {% else %}
+    {{ "No schedule available"}}
+  {% endif %}
   {% for slot in slots -%}
+    {%- set bs = '_**' if strptime(slot.start_time,"%H:%M").time() <= isnow < strptime(slot.end_time.replace('24:00','23:59'),"%H:%M").time() else '' -%}
+    {%- set be = '**_' if bs else '' -%}
     {%- set sb2 = '-/-' if slot.device_power_loads|default([])|length < 2 else slot.device_power_loads[1].power~" W" -%}
-      {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format(slot.start_time, slot.end_time, slot.appliance_loads[0].power~" W", 'On' if slot.turn_on else 'Off', slot.charge_priority~' %', slot.device_power_loads[0].power~" W", sb2, slot.appliance_loads[0].name) }}
-  {% endfor %}
-  {{ "No schedule available" if slots|length == 0 else ""}}
-
+      {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format(bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.appliance_loads[0].power~" W"~be, bs~'On'~be if slot.turn_on else bs~'Off'~be, bs~slot.charge_priority~' %'~be, bs~slot.device_power_loads[0].power~" W"~be, bs~sb2~be, bs~slot.appliance_loads[0].name)~be }}
+  {% endfor -%}
 ```
 
 **Notes:**

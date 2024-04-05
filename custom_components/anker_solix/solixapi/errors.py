@@ -27,6 +27,10 @@ class RequestError(AnkerSolixError):
     """Request error."""
 
 
+class RequestLimitError(AnkerSolixError):
+    """Request Limit exceeded error."""
+
+
 class VerifyCodeError(AnkerSolixError):
     """Verify code error."""
 
@@ -70,6 +74,7 @@ class RetryExceeded(AnkerSolixError):
 ERRORS: dict[int, type[AnkerSolixError]] = {
     401: AuthorizationError,
     403: AuthorizationError,
+    429: RequestLimitError,
     997: ConnectError,
     998: NetworkError,
     999: ServerError,
