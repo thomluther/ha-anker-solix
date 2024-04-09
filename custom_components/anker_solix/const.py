@@ -36,6 +36,7 @@ TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurem
 CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
 
 SERVICE_GET_SOLARBANK_SCHEDULE = "get_solarbank_schedule"
+SERVICE_CLEAR_SOLARBANK_SCHEDULE = "clear_solarbank_schedule"
 SERVICE_SET_SOLARBANK_SCHEDULE = "set_solarbank_schedule"
 SERVICE_UPDATE_SOLARBANK_SCHEDULE = "update_solarbank_schedule"
 

@@ -1029,6 +1029,8 @@ class AnkerSolixApi:
         else:
             self._logger.debug("Request Body: %s", json)
         body_text = ""
+        # enforce configured delay between any subsequent request
+        await self._wait_delay()
         async with self._session.request(
             method, url, headers=mergedHeaders, json=json
         ) as resp:
@@ -1158,7 +1160,6 @@ class AnkerSolixApi:
                 )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                 mysite.update({"site_admin": admin})
                 # Update scene info for site
-                await self._wait_delay()
                 self._logger.debug("Getting scene info for site")
                 scene = await self.get_scene_info(myid, fromFile=fromFile)
                 mysite.update(scene)
@@ -1318,7 +1319,6 @@ class AnkerSolixApi:
             exclude = set()
         self._logger.debug("Updating Sites Details")
         # Fetch unread account messages once and put in site details for all sites
-        await self._wait_delay()
         self._logger.debug("Getting unread messages indicator")
         await self.get_message_unread(fromFile=fromFile)
         for site_id, site in self.sites.items():
@@ -1326,7 +1326,6 @@ class AnkerSolixApi:
             if site.get("site_admin", False):
                 # Fetch site price and CO2 settings
                 if ({ApiCategories.site_price} - exclude):
-                    await self._wait_delay()
                     self._logger.debug("Getting price and CO2 settings for site")
                     await self.get_site_price(siteId=site_id, fromFile=fromFile)
         return self.sites
@@ -1346,12 +1345,10 @@ class AnkerSolixApi:
         self._logger.debug("Updating Device Details")
         # Fetch firmware version of device
         # This response will also contain unbound / standalone devices not added to a site
-        await self._wait_delay()
         self._logger.debug("Getting bind devices")
         await self.get_bind_devices(fromFile=fromFile)
         # Get the setting for effective automated FW upgrades
         if ({ApiCategories.device_auto_upgrade} - exclude):
-            await self._wait_delay()
             self._logger.debug("Getting OTA settings")
             await self.get_auto_upgrade(fromFile=fromFile)
         # Fetch other relevant device information that requires site id and/or SN
@@ -1373,7 +1370,6 @@ class AnkerSolixApi:
                         wifi_index = 0
                     # fetch site wifi list if not queried yet
                     if site_id not in site_wifi:
-                        await self._wait_delay()
                         site_wifi[site_id] = (
                             await self.get_wifi_list(siteId=site_id, fromFile=fromFile)
                         ).get("wifi_info_list") or []
@@ -1386,7 +1382,6 @@ class AnkerSolixApi:
                 if dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude):
                     # Fetch active Power Cutoff setting for solarbanks
                     if ({ApiCategories.solarbank_cutoff} - exclude):
-                        await self._wait_delay()
                         self._logger.debug("Getting Power Cutoff settings for device")
                         await self.get_power_cutoff(
                             siteId=site_id, deviceSn=sn, fromFile=fromFile
@@ -1394,12 +1389,10 @@ class AnkerSolixApi:
 
                     # Fetch defined inverter details for solarbanks
                     if ({ApiCategories.solarbank_solar_info} - exclude):
-                        await self._wait_delay()
                         self._logger.debug("Getting inverter settings for device")
                         await self.get_solar_info(solarbankSn=sn, fromFile=fromFile)
 
                     # Fetch schedule for device types supporting it
-                    await self._wait_delay()
                     self._logger.debug("Getting schedule details for device")
                     await self.get_device_load(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
@@ -1407,7 +1400,6 @@ class AnkerSolixApi:
 
                     # Fetch device fittings for device types supporting it
                     if ({ApiCategories.solarbank_fittings} - exclude):
-                        await self._wait_delay()
                         self._logger.debug("Getting fittings for device")
                         await self.get_device_fittings(
                             siteId=site_id, deviceSn=sn, fromFile=fromFile
@@ -1438,7 +1430,6 @@ class AnkerSolixApi:
                 today = datetime.today().strftime("%Y-%m-%d")
                 yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today
-                await self._wait_delay()
                 data = await self.energy_daily(
                     siteId=site_id,
                     deviceSn=sn,
@@ -1449,7 +1440,6 @@ class AnkerSolixApi:
                 energy["today"] = data.get(today) or {}
                 if yesterday != (energy.get("last_period") or {}).get("date"):
                     # Fetch energy from previous day once
-                    await self._wait_delay()
                     data = await self.energy_daily(
                         siteId=site_id,
                         deviceSn=sn,
@@ -2678,7 +2668,6 @@ class AnkerSolixApi:
                     }
                 )
         # Add solar production which contains percentages
-        await self._wait_delay()
         resp = await self.energy_analysis(
             siteId=siteId,
             deviceSn=deviceSn,
@@ -2714,7 +2703,6 @@ class AnkerSolixApi:
                 daylist = [startDay + timedelta(days=x) for x in range(numDays)]
                 for day in daylist:
                     daystr = day.strftime("%Y-%m-%d")
-                    await self._wait_delay()  # delay to avoid hammering API
                     resp = await self.energy_analysis(
                         siteId=siteId,
                         deviceSn=deviceSn,

@@ -1,4 +1,5 @@
 """Sensor platform for anker_solix."""
+
 from __future__ import annotations  # noqa: I001
 
 from dataclasses import dataclass
@@ -46,6 +47,7 @@ from .const import (
     TEST_NUMBERVARIANCE,
     LAST_PERIOD,
     LAST_RESET,
+    SERVICE_CLEAR_SOLARBANK_SCHEDULE,
     SERVICE_GET_SOLARBANK_SCHEDULE,
     SERVICE_SET_SOLARBANK_SCHEDULE,
     SERVICE_UPDATE_SOLARBANK_SCHEDULE,
@@ -520,7 +522,7 @@ SITE_SENSORS = [
             ]
             or [None]
         )[0],
-        device_class=SensorDeviceClass.MONETARY,
+        # device_class=SensorDeviceClass.MONETARY,   # remove MONETARY device class as fix for issue #35
         suggested_display_precision=2,
         force_creation_fn=lambda d: True,
         value_fn=lambda d, jk, _: float(
@@ -659,6 +661,12 @@ async def async_setup_entry(
         func=SERVICE_GET_SOLARBANK_SCHEDULE,
         required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
         supports_response=SupportsResponse.ONLY,
+    )
+    platform.async_register_entity_service(
+        name=SERVICE_CLEAR_SOLARBANK_SCHEDULE,
+        schema=SOLARBANK_ENTITY_SCHEMA,
+        func=SERVICE_CLEAR_SOLARBANK_SCHEDULE,
+        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
     )
     platform.async_register_entity_service(
         name=SERVICE_SET_SOLARBANK_SCHEDULE,
@@ -891,6 +899,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         )
 
     @callback
+    async def clear_solarbank_schedule(self, **kwargs: Any) -> None:
+        """Clear the active solarbank schedule."""
+        return await self._solarbank_schedule_service(
+            service_name=SERVICE_CLEAR_SOLARBANK_SCHEDULE, **kwargs
+        )
+
+    @callback
     async def set_solarbank_schedule(self, **kwargs: Any) -> None:
         """Set the defined solarbank schedule slot."""
         return await self._solarbank_schedule_service(
@@ -1046,6 +1061,16 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 # trigger coordinator update with api dictionary data
                 await self.coordinator.async_refresh_data_from_apidict()
                 return {"schedule": result.get("home_load_data")}
+
+            elif service_name in [SERVICE_CLEAR_SOLARBANK_SCHEDULE]:
+                LOGGER.debug("%s service will be applied", service_name)
+                await self.coordinator.client.api.set_device_parm(
+                    siteId=data.get("site_id") or "",
+                    paramData={"ranges": []},
+                    deviceSn=self._context_base,
+                )
+                # trigger coordinator update with api dictionary data
+                await self.coordinator.async_refresh_data_from_apidict()
 
 
 class AnkerSolixEnergySensor(AnkerSolixSensor, RestoreSensor):
