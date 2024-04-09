@@ -158,6 +158,7 @@
     },
     "services": {
         "get_solarbank_schedule": "mdi:sun-clock",
+        "clear_solarbank_schedule": "mdi:history",
         "set_solarbank_schedule": "mdi:sun-clock",
         "update_solarbank_schedule": "mdi:sun-clock"
     }

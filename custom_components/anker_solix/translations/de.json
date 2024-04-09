@@ -379,6 +379,10 @@
             "name": "Abfrage des aktuellen Solarbank Zeitplans",
             "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diesen Service geschickt"
         },
+        "clear_solarbank_schedule": {
+            "name": "Löschen des Solarbank Zeitplans",
+            "description": "Der aktuelle Zeitplan der Solarbank wird gelöscht"
+        },
         "set_solarbank_schedule": {
             "name": "Erstelle einen neuen Solarbank Zeitplan",
             "description": "Erstelle einen neuen Zeitplan für die Solarbank mit dem definierten Zeitintervall. Ein bestehender Zeitplan wird dabei komplett ersetzt!",

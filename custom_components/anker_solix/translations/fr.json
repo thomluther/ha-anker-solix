@@ -379,6 +379,10 @@
             "name": "Demandez l'horaire actuel de solarbank",
             "description": "L'horaire effective de solarbank sera fournie en réponse à la demande de service"
         },
+        "clear_solarbank_schedule": {
+            "name": "Effacer l'horaire de solarbank",
+            "description": "L'horaire de solarbank sera effacé"
+        },
         "set_solarbank_schedule": {
             "name": "Créer un nouveau horaire de solarbank",
             "description": "Crée un nouveau planning pour la solarbank avec l'intervalle de temps défini. Un horaire existant sera alors complètement remplacé !",

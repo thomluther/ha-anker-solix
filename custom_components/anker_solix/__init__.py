@@ -30,6 +30,7 @@ from .const import (
     EXAMPLESFOLDER,
     INTERVALMULT,
     LOGGER,
+    SERVICE_CLEAR_SOLARBANK_SCHEDULE,
     SERVICE_GET_SOLARBANK_SCHEDULE,
     SERVICE_SET_SOLARBANK_SCHEDULE,
     SERVICE_UPDATE_SOLARBANK_SCHEDULE,
@@ -158,6 +159,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # unregister services if no config remains
     if not hass.data[DOMAIN]:
         hass.services.async_remove(DOMAIN, SERVICE_GET_SOLARBANK_SCHEDULE)
+        hass.services.async_remove(DOMAIN, SERVICE_CLEAR_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_SET_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_UPDATE_SOLARBANK_SCHEDULE)
     return unloaded

@@ -379,6 +379,10 @@
             "name": "Request the actual Solarbank schedule",
             "description": "The actual Solarbank schedule will be provided as response to the service request"
         },
+        "clear_solarbank_schedule": {
+            "name": "Clear the Solarbank schedule",
+            "description": "The Solarbank schedule will be cleared"
+        },
         "set_solarbank_schedule": {
             "name": "Set a new Solarbank Schedule",
             "description": "Create a new time schedule for the Solarbank with the defined time interval. An existing time schedule is completely replaced by the new interval!",
