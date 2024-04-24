@@ -4,10 +4,10 @@
   "data": {
     "data": [
       {
-        "device_sn": "DILM86K2GJV2NRAI",
+        "device_sn": "G55HAP9LVQO2LAPM",
         "product_code": "A17C0",
-        "bt_ble_id": "3C:EA:AD:9F:DD:F7",
-        "bt_ble_mac": "3CEAAD9FDDF7",
+        "bt_ble_id": "FE:DC:EB:33:AA:9A",
+        "bt_ble_mac": "FEDCEB33AA9A",
         "device_name": "Solarbank E1600",
         "alias_name": "SB E1600",
         "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
@@ -26,5 +26,5 @@
       }
     ]
   },
-  "trace_id": "acff073fd7e842994b11373fd1d3449e"
+  "trace_id": "8fed8fc1bba815a1efa844983cecef9e"
 }

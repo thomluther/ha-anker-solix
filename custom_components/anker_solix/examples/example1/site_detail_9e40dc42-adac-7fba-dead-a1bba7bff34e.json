@@ -3,7 +3,7 @@
   "msg": "success!",
   "data": {
     "site_info": {
-      "site_id": "bdd7d770-bcb7-d22b-cafc-d0b2eddc4e23",
+      "site_id": "9e40dc42-adac-7fba-dead-a1bba7bff34e",
       "site_name": "BKW",
       "site_img": "",
       "device_type_list": [
@@ -23,7 +23,7 @@
     "solarbank_list": [
       {
         "device_pn": "A17C0",
-        "device_sn": "DILM86K2GJV2NRAI",
+        "device_sn": "G55HAP9LVQO2LAPM",
         "device_name": "SB E1600",
         "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
         "battery_power": "",
@@ -44,5 +44,5 @@
     ],
     "powerpanel_list": []
   },
-  "trace_id": "84caedc36bfe9b3f0ed1c89ceb5c0ee2"
+  "trace_id": "daee0eafcbcefbcafc9a0adb3519ea6f"
 }

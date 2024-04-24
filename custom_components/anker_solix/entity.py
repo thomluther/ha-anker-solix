@@ -1,4 +1,5 @@
 """AnkerSolixEntity class."""
+
 from __future__ import annotations  # noqa: I001
 
 from dataclasses import dataclass
@@ -57,6 +58,7 @@ class AnkerSolixEntityRequiredKeyMixin:
     """Sensor entity description with required extra keys."""
 
     json_key: str
+
 
 class AnkerSolixEntityFeature(IntFlag):
     """Supported features of the Anker Solix Entities."""

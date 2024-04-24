@@ -32,6 +32,23 @@
                     "username": "Recommendation: Create a second account in the Anker App and share your system with the second account. A parallel usage of the same account in this integration and the Anker App is not possible.",
                     "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration. A consent automatically includes future updates, which can extend the integration functionality.\nFurther information: {terms_link}"
                 }
+            },
+            "user_options": {
+                "title": "Anker Solix options",
+                "description": "Change usage of the Api",
+                "data": {
+                    "scan_interval": "Update interval (30-600 seconds)",
+                    "dev_interval_mult": "Interval multiplier for device details",
+                    "delay_time": "Delay for subsequent Api requests",
+                    "exclude": "Excluded entity categories",
+                    "testmode": "Use integration test mode",
+                    "testfolder": "Folder with json files for integration testing"
+                },
+                "data_description": {
+                    "scan_interval": "Note: Data on the cloud server is updated only once per minute. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
+                    "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
+                }
             }
         },
         "error": {
@@ -40,6 +57,7 @@
             "exceeded": "Login attempts exceeded: {error_detail}",
             "duplicate_devices": "{username} has shared devices with existing account {shared_account}, you cannot configure both at the same time!",
             "accept_terms": "Usage terms and conditions must be accepted",
+            "folder_invalid": "Valid folder required for testmode",
             "unknown": "Unknown error occurred:: {error_detail}"
         },
         "abort": {

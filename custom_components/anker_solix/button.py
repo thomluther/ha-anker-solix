@@ -1,4 +1,5 @@
 """Switch platform for anker_solix."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -8,7 +9,7 @@ import os
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import CONF_EXCLUDE, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -37,6 +38,7 @@ class AnkerSolixButtonDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
 
 
 DEVICE_BUTTONS = [
@@ -46,6 +48,7 @@ DEVICE_BUTTONS = [
         json_key="",
         force_creation=True,
         entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
 ]
 
@@ -79,8 +82,13 @@ async def async_setup_entry(
                 desc
                 for desc in entity_list
                 if bool(CREATE_ALL_ENTITIES)
-                or desc.force_creation
-                or desc.value_fn(data, desc.json_key) is not None
+                or (
+                    not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
+                    and (
+                        desc.force_creation
+                        or desc.value_fn(data, desc.json_key) is not None
+                    )
+                )
             ):
                 entity = AnkerSolixButton(
                     coordinator, description, context, entity_type
@@ -150,16 +158,16 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                     datetime.now().astimezone()
                     - self.coordinator.client.last_device_refresh
                 ).total_seconds()
-                < self.coordinator.client.MIN_DEVICE_REFRESH
+                < self.coordinator.client.min_device_refresh
             ):
                 raise ServiceValidationError(
-                    f"Devices for {self.coordinator.client.api.nickname} cannot be updated within less than {self.coordinator.client.MIN_DEVICE_REFRESH} seconds",
+                    f"Devices for {self.coordinator.client.api.nickname} cannot be updated within less than {self.coordinator.client.min_device_refresh} seconds",
                     translation_domain=DOMAIN,
                     translation_key="device_refresh",
                     translation_placeholders={
                         "coordinator": self.coordinator.client.api.nickname,
                         "min_dev_refresh": str(
-                            self.coordinator.client.MIN_DEVICE_REFRESH
+                            self.coordinator.client.min_device_refresh
                         ),
                     },
                 )

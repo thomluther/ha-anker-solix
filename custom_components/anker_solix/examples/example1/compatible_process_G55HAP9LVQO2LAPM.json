@@ -5,7 +5,7 @@
     "ota_complete_status": 2,
     "process_skip_type": 2,
     "solar_info": {
-      "solar_sn": "9XK0FGWY2TWW",
+      "solar_sn": "YTZL4ZEJ4R5B",
       "solar_brand": "ANKER",
       "solar_model": "A5143",
       "brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f",
@@ -15,5 +15,5 @@
       "solar_model_name": "MI80 Microinverter(BLE)"
     }
   },
-  "trace_id": "7dbfd7538ad24749c1abfcf0fd93de5f"
+  "trace_id": "077b4ed2b6fccac0a9dfcf8e4fdd85a6"
 }

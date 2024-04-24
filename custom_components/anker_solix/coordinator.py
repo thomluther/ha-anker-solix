@@ -1,4 +1,5 @@
 """DataUpdateCoordinator for Anker Solix."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -13,6 +14,7 @@ from .api_client import (
     AnkerSolixApiClientAuthenticationError,
     AnkerSolixApiClientCommunicationError,
     AnkerSolixApiClientError,
+    AnkerSolixApiClientRetryExceededError,
 )
 from .const import DOMAIN, LOGGER
 
@@ -46,7 +48,10 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         """Update data via library."""
         try:
             return await self.client.async_get_data()
-        except AnkerSolixApiClientAuthenticationError as exception:
+        except (
+            AnkerSolixApiClientAuthenticationError,
+            AnkerSolixApiClientRetryExceededError,
+        ) as exception:
             raise ConfigEntryAuthFailed(exception) from exception
         except (
             AnkerSolixApiClientError,

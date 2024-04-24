@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import CONF_EXCLUDE, PERCENTAGE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -22,7 +22,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.api import SolixDeviceType
+from .solixapi.api import ApiCategories, SolixDeviceType
 
 
 @dataclass(frozen=True)
@@ -39,6 +39,7 @@ class AnkerSolixSelectDescription(
     options_fn: Callable[[dict, str], list | None] = (
         lambda d, jk: list(d.get(jk), []) or None
     )
+    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
 
 
 DEVICE_SELECTS = [
@@ -52,6 +53,10 @@ DEVICE_SELECTS = [
             for item in d.get("power_cutoff_data") or []
         ],
         unit_of_measurement=PERCENTAGE,
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_cutoff} - s
+        ),
     ),
 ]
 
@@ -70,8 +75,7 @@ SITE_SELECTS = [
             "원",
         ],
         value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
-        # entity_category=EntityCategory.DIAGNOSTIC,
-        # force_creation=True,
+        exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
     ),
 ]
 
@@ -103,8 +107,13 @@ async def async_setup_entry(
                 desc
                 for desc in entity_list
                 if bool(CREATE_ALL_ENTITIES)
-                or desc.force_creation
-                or desc.value_fn(data, desc.json_key) is not None
+                or (
+                    not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
+                    and (
+                        desc.force_creation
+                        or desc.value_fn(data, desc.json_key) is not None
+                    )
+                )
             ):
                 entity = AnkerSolixSelect(
                     coordinator, description, context, entity_type

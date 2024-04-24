@@ -3,6 +3,7 @@
 For more details about this integration, please refer to
 https://github.com/thomluther/hacs-anker-solix
 """
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -84,10 +85,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Registers update listener to update config entry when options are updated.
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
-    # check again if config shares devices with another config and also remove orphaned devices no longer contained in actual api data
+    # check again if config shares devices with another config and also remove orphaned devices no longer contained in actual api data or excluded
     # This is run upon reloads or config option changes
     if shared_cfg := await async_check_and_remove_devices(
-        hass, entry.data, coordinator.data
+        hass=hass,
+        user_input=entry.data,
+        apidata=coordinator.data,
+        excluded=set(entry.options.get(CONF_EXCLUDE, [])),
     ):
         # device is already registered for another account, abort configuration
         entry.async_cancel_retry_setup()

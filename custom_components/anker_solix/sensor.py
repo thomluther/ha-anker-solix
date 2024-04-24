@@ -30,6 +30,7 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfTemperature,
     PERCENTAGE,
+    CONF_EXCLUDE,
 )
 
 from homeassistant.core import HomeAssistant, SupportsResponse, callback
@@ -61,6 +62,7 @@ from .const import (
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .solixapi.api import (
+    ApiCategories,
     SolarbankStatus,
     SolixDeviceStatus,
     SolixDeviceType,
@@ -89,6 +91,7 @@ class AnkerSolixSensorDescription(
     attrib_fn: Callable[[dict, str], dict | None] = lambda d, _: None
     unit_fn: Callable[[dict, str], dict | None] = lambda d, _: None
     force_creation_fn: Callable[[dict], bool] = lambda d: False
+    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
     nested_sensor: bool = False
     feature: AnkerSolixEntityFeature | None = None
 
@@ -103,6 +106,7 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: {
             "status": d.get("status"),
         },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
         key="charging_status_desc",
@@ -111,6 +115,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.ENUM,
         options=[status.name for status in SolarbankStatus],  # noqa: C416
         attrib_fn=lambda d, _: {"charging_status": d.get("charging_status")},
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="charging_power",
@@ -120,6 +125,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="input_power",
@@ -129,6 +135,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="output_power",
@@ -138,6 +145,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="ac_generate_power",
@@ -147,6 +155,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Output preset per device
@@ -163,10 +172,11 @@ DEVICE_SENSORS = [
         feature=AnkerSolixEntityFeature.SOLARBANK_SCHEDULE,
         # This entry has the unit with the number and needs to be removed
         value_fn=lambda d, jk, _: str(d.get(jk) or "").replace("W", "") or None,
-        # Force the creation for solarbanks, this could be empty if disconnected?
+        # Force the creation for solarbanks since data could be empty if disconnected?
         force_creation_fn=lambda d: bool(
             d.get("type") == SolixDeviceType.SOLARBANK.value
         ),
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="state_of_charge",
@@ -176,6 +186,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="battery_energy",
@@ -190,6 +201,7 @@ DEVICE_SENSORS = [
                 [str(d.get("battery_capacity") or "----"), UnitOfEnergy.WATT_HOUR]
             )
         },
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="bws_surplus",
@@ -199,6 +211,7 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
         key="temperature",
@@ -208,12 +221,14 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
         key="sw_version",
         translation_key="sw_version",
         json_key="sw_version",
         entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
         key="inverter_info",
@@ -226,6 +241,10 @@ DEVICE_SENSORS = [
             "solar_model": (d.get("solar_info") or {}).get("solar_model"),
             "solar_sn": (d.get("solar_info") or {}).get("solar_sn"),
         },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_solar_info} - s
+        ),
     ),
     AnkerSolixSensorDescription(
         key="fittings",
@@ -250,6 +269,10 @@ DEVICE_SENSORS = [
                 "bt_ble_mac"
             ),
         },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_fittings} - s
+        ),
     ),
     AnkerSolixSensorDescription(
         key="daily_discharge_energy",
@@ -268,6 +291,10 @@ DEVICE_SENSORS = [
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solarbank_discharge"),
         },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_energy} - s
+        ),
     ),
     AnkerSolixSensorDescription(
         key="daily_charge_energy",
@@ -286,6 +313,10 @@ DEVICE_SENSORS = [
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solarbank_charge"),
         },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_energy} - s
+        ),
     ),
     AnkerSolixSensorDescription(
         key="daily_solar_production",
@@ -304,6 +335,10 @@ DEVICE_SENSORS = [
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_production"),
         },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_energy} - s
+        ),
     ),
     AnkerSolixSensorDescription(
         key="daily_solar_share",
@@ -325,6 +360,10 @@ DEVICE_SENSORS = [
                 )
             ),
         },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_energy} - s
+        ),
     ),
     AnkerSolixSensorDescription(
         key="daily_battery_share",
@@ -346,6 +385,10 @@ DEVICE_SENSORS = [
                 )
             ),
         },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_energy} - s
+        ),
     ),
 ]
 
@@ -360,6 +403,7 @@ SITE_SENSORS = [
             list((d.get("solarbank_info") or {}).get(jk) or [])
         ),
         force_creation_fn=lambda d: True,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="pps_list",
@@ -370,6 +414,7 @@ SITE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d, jk, _: len(list((d.get("pps_info") or {}).get(jk) or [])),
         force_creation_fn=lambda d: True,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="solar_list",
@@ -379,6 +424,7 @@ SITE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d, jk, _: len(list(d.get(jk) or [])),
         force_creation_fn=lambda d: True,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="powerpanel_list",
@@ -389,6 +435,7 @@ SITE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d, jk, _: len(list(d.get(jk) or [])),
         force_creation_fn=lambda d: True,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.POWERPANEL.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank charing power on site
@@ -400,6 +447,7 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank input power on site
@@ -411,6 +459,7 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank output power on site
@@ -422,6 +471,7 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank state of charge on site
@@ -433,6 +483,7 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: 100 * float((d.get("solarbank_info") or {}).get(jk)),
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         # timestamp of solabank data
@@ -441,42 +492,43 @@ SITE_SENSORS = [
         json_key="updated_time",
         # value_fn=lambda d, jk, _: datetime.strptime((d.get("solarbank_info") or {}).get(jk), "%Y-%m-%d %H:%M:%S").astimezone().isoformat(),
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps charging power on site
         key="pps_charging_power",
         translation_key="pps_charging_power",
         json_key="total_charging_power",
-        entity_registry_enabled_default=False,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("pps_info") or {}).get(jk),
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps output power on site
         key="pps_output_power",
         translation_key="pps_output_power",
         json_key="total_output_power",
-        entity_registry_enabled_default=False,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("pps_info") or {}).get(jk),
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps state of charge on site
         key="pps_state_of_charge",
         translation_key="pps_state_of_charge",
         json_key="total_battery_power",
-        entity_registry_enabled_default=False,
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: 100 * float((d.get("pps_info") or {}).get(jk)),
         suggested_display_precision=0,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="total_co2_saving",
@@ -596,6 +648,7 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         # This entry has the unit with the number and needs to be removed
         value_fn=lambda d, jk, _: str(d.get(jk) or "").replace("W", "") or None,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
 
@@ -632,13 +685,21 @@ async def async_setup_entry(
                     ]
                 else:
                     sn_list = [context]
+                # create list of sensors to create based on data and config options
                 for sn in (
                     serial
                     for serial in sn_list
                     if bool(CREATE_ALL_ENTITIES)
-                    or description.force_creation_fn(data)
-                    or description.value_fn(data, description.json_key, serial)
-                    is not None
+                    or (
+                        not description.exclude_fn(
+                            set(entry.options.get(CONF_EXCLUDE, [])), data
+                        )
+                        and (
+                            description.force_creation_fn(data)
+                            or description.value_fn(data, description.json_key, serial)
+                            is not None
+                        )
+                    )
                 ):
                     if description.device_class == SensorDeviceClass.ENERGY:
                         entity = AnkerSolixEnergySensor(

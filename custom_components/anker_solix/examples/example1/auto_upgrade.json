@@ -5,7 +5,7 @@
     "main_switch": true,
     "device_list": [
       {
-        "device_sn": "DILM86K2GJV2NRAI",
+        "device_sn": "G55HAP9LVQO2LAPM",
         "device_name": "Solarbank E1600",
         "auto_upgrade": false,
         "alias_name": "SB E1600",
@@ -13,5 +13,5 @@
       }
     ]
   },
-  "trace_id": "145dab32b452d3db2a81ce9506ee4010"
+  "trace_id": "c6f8bd0ae3dd9eb8b3dbd8c84d2afba5"
 }

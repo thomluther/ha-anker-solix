@@ -1,4 +1,5 @@
 """Binary sensor platform for anker_solix."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -12,7 +13,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory
+from homeassistant.const import CONF_EXCLUDE, PERCENTAGE, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -38,6 +39,7 @@ class AnkerSolixBinarySensorDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
 
 
 DEVICE_SENSORS = [
@@ -53,6 +55,7 @@ DEVICE_SENSORS = [
             "bt_mac": d.get("bt_ble_mac"),
             "wireless_type": d.get("wireless_type"),
         },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
 ]
 
@@ -100,8 +103,13 @@ async def async_setup_entry(
                 desc
                 for desc in entity_list
                 if bool(CREATE_ALL_ENTITIES)
-                or desc.force_creation
-                or desc.value_fn(data, desc.json_key) is not None
+                or (
+                    not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
+                    and (
+                        desc.force_creation
+                        or desc.value_fn(data, desc.json_key) is not None
+                    )
+                )
             ):
                 entity = AnkerSolixBinarySensor(
                     coordinator, description, context, entity_type

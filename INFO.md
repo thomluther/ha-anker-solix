@@ -28,7 +28,7 @@ This Home Assistant custom component integration allows seamless integration wit
 It follows the Anker cloud Api structures, which allows registered users to define one or more Power Systems, called site in the Api with a unique site_id.
 The configured user must have defined at least one owning system, or have access to a shared system, to see devices for a configured integration account.
 For each accessible system by the configured account, the integration will create one System Device with the appropriate system sensors. These sensors typically reflect the values that are presented in the Anker mobile app main view of a system.
-Following example shows how configured integration accounts may look:
+Following example shows how configured integration accounts may look like:
 
 ![Configured Integration][integration-img]
 
@@ -61,28 +61,10 @@ Following are screenshots from basic dashboard cards including the latest sensor
 ![Solarbank Dashboard Light Theme][solarbank-dashboard-light-img]
 
 
-**Note:** When using a shared system account for the integration, device detail information is limited and changes are not premitted. Therefore shared system account users may get presented no changable entities by the integration.
+**Note:** When using a shared system account for the integration, device detail information is limited and changes are not premitted. Therefore shared system account users may get presented only a subset and no changable entities by the integration.
 
 The integration will setup the entities with unique IDs based on device serials or a combination of serial numbers. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. While the entity history is not lost, it implies that you cannot configure different accounts at the same time when they share a system. Otherwise, it would cause HA setup errors because of non unique entities. Therefore, new integration configurations are validated and not allowed when they share systems or devices with an active configuration.
 If you want to switch from your main account to the shared account, delete first the active configuration and then create a new configuration with the other account. When the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured recorder interval is over. The default HA recorder history interval is 10 days.
-
-
-## Data refresh configuration options
-
-The data on the cloud which can be retrieved via the Api is refreshed only once per minute. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further when no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the data.
-
-**Note:** The solarbank data timestamp is the only device category timestamp that seems to provide valid data (inverter data timestamp is not updated by the cloud).
-
-During each refresh interval, the power sensor values will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut off, auto-upgrade, schedule etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 30 seconds ago to avoid unnecessary Api traffic.
-
-The cloud Api also enforces a request limit but actual metrics for this limit are unknown. You may see the configuration entry flagged with an error, that may indicate 429: Too many requests. In that case, all entities may be unknown or show stale data until further Api requests are permitted. To avoid hitting the request limit, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second. Furthermore the Solarbank energy statistic entities which were introduced with verion 1.1.0 have been excluded from the configuration entry per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/hacs-anker-solix/discussions/32).
-The statistics can be re-enabled by removing them from the exclusion list. Future enhancements will add more exclusion options for categories and device types that are of no interest. This may help further to reduce the required Api requests and customize the configuration to the entity types that are meaningful to you.
-
-The refresh options can be configured after creation of an integration entry. Following are the default options as of version 1.1.1:
-
-![Options][options-img]
-
-**Note:** When you add categories to the exclusion list, the affected entities are removed from the HA registry during integration reload but they still show up in the UI as entities no longer provided by the integration. You need to remove those UI entities manually from the entity details dialog.
 
 
 ## Anker account limitation and usage recommendations
@@ -101,6 +83,26 @@ System members cannot manage (yet) any devices of the shared system or view any 
 A work around to overcome this account limitation has been implemented via an Api switch in the System Device. When disabled, the integration stops any Api communication for all systems of the disabled account. During that time, you can use the owning account again for login through the Anker app and modify device settings as needed. Afterwards you can re-activate Api communication in the integration again, which will automatically re-login and continue reporting data. While the Api switch is off, all sensors will be unavailable to avoid reporting of stale data.
 
 To simplify usage of this workaround, please see below for an example automation, which sends a sticky mobile notification when the Api switch was disabled, using actionable buttons to launch the Anker App directly from the notification. It provides also actionable buttons to re-enable the switch again and clear the sticky notification. This avoids forgetting to re-enable your data collection when you are finished with your tasks in the Anker App.
+
+
+## Data refresh configuration options
+
+The data on the cloud which can be retrieved via the Api is refreshed only once per minute. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further when no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the data.
+
+**Note:** The solarbank data timestamp is the only device category timestamp that seems to provide valid data (inverter data timestamp is not updated by the cloud).
+
+During each refresh interval, the power sensor values will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut off, auto-upgrade, schedule etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 30 seconds ago to avoid unnecessary Api traffic.
+
+The cloud Api also enforces a request limit but actual metrics for this limit are unknown. You may see the configuration entry flagged with an error, that may indicate 429: Too many requests. In that case, all entities may be unknown or show stale data until further Api requests are permitted. To avoid hitting the request limit, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second. Furthermore the Solarbank energy statistic entities which were introduced with verion 1.1.0 have been excluded from the configuration entry per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/hacs-anker-solix/discussions/32).
+The statistics can be re-enabled by removing them from the exclusion list.
+The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after sucessfull account authorization and before the first data collection is done. Excluded device or details categories can be reviewed and changed as needed. Device types of no interest can be excluded completely. Exclusion of specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
+
+Following are the default options as of version 1.2.0:
+
+![Options][options-img]
+
+**Note:** Prior version 1.2.0, when you added categories to the exclusion list, the affected entities were removed from the HA registry during integration reload but they still showed up in the UI as entities no longer provided by the integration. You needed to remove those UI entities manually from the entity details dialog.
+Starting with version 1.2.0, a change in the exclude list will completely remove the affected devices and re-register them with remaining entites as necessary. This avoids manual cleanup of excluded entities.
 
 
 ## How to create a second Anker Power account
