@@ -52,7 +52,11 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 - The Anker account used in the integration cannot longer be used in the Anker mobile app since the cloud Api only allows 1 active client user token at a time. Existing user tokens will be removed from the server upon new client authentication requests. That means the integration kicks out the App user and vice versa.
 - It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While Wifi is disconnected, the reported data may be stale. You can use the Cloud state sensor of the end device to verify the cloud connection state and potentially stale data.
 - The integration supports only Solarbank and Anker inverter devices which are defined in a power system. While it may present also standalone devices that are not defined in a system, those standalone devices do not provide usage or consumption data via the cloud Api.
-- Further devices that can be added to a power system and managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developers (open issue on git with example data)
+- Further devices that can be added to a power system and managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developers.
+
+**Note:**
+
+To export randomized example data of your Anker power system configuration, please refer to the [anker-solix Python library][anker-solix-api] and the tool [export_system.py](https://github.com/thomluther/anker-solix-api#export_systempy). You can open an [issue](https://github.com/thomluther/anker-solix-api/issues) there and upload a zip file with the exported json files, together with a short description of your setup. Make sure to add your device to a Power System via the Anker mobile app before exporting the configuration. Standalone devices will barely provide data through the cloud Api.
 
 
 ## Supported sensors and devices
@@ -94,7 +98,7 @@ Or following procedure:
    - **Category:** Integration
 1. Click "Save" and then click "Install" on the `Anker Solix` integration.
 
-Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see instructions below to copy the image files manually.
+Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see [Optional entity pictures](#optional-entity-pictures) for instructions to copy the image files manually.
 
 **Installation Notes:**
 - It was observed that when adding the repository to HACS, an error may occur although it was added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
