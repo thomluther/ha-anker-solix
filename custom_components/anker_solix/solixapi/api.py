@@ -882,7 +882,7 @@ class AnkerSolixApi:
         """Get or set the api request delay in seconds."""
         if (
             delay is not None
-            and isinstance(delay, (float, int))
+            and isinstance(delay, float | int)
             and float(delay) != float(self._request_delay)
         ):
             self._request_delay = float(
@@ -898,7 +898,7 @@ class AnkerSolixApi:
 
     async def _wait_delay(self, delay: float | None = None) -> None:
         """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occured."""
-        if delay is not None and isinstance(delay, (float, int)):
+        if delay is not None and isinstance(delay, float | int):
             delay = float(
                 min(
                     SolixDefaults.REQUEST_DELAY_MAX,

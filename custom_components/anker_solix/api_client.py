@@ -279,7 +279,7 @@ class AnkerSolixApiClient:
         """Query or set deviceintervals for client."""
         if (
             intervals is not None
-            and isinstance(intervals, (float,int))
+            and isinstance(intervals, float | int)
             and self._deviceintervals != int(intervals)
         ):
             self._deviceintervals = int(intervals)
@@ -295,7 +295,7 @@ class AnkerSolixApiClient:
         """Query or set Api request delay time for client."""
         if (
             seconds is not None
-            and isinstance(seconds, (float, int))
+            and isinstance(seconds, float | int)
             and float(seconds) != float(self.api.requestDelay())
         ):
             newdelay = self.api.requestDelay(float(seconds))
