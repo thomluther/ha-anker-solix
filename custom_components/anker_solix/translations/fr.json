@@ -29,18 +29,36 @@
                     "accept_terms": "Accepter les conditions générales d'utilisation de l'intégration"
                 },
                 "data_description": {
-                    "username": "Recommandation : créez un deuxième compte dans l'application Anker et partagez votre système avec le deuxième compte. Une utilisation parallèle du même compte dans cette intégration et dans l'application Anker n'est pas possible.",
-                    "accept_terms": "L'utilisateur supporte seul le risque d'une éventuelle perte de la garantie du fabricant ou de tout dommage causé par l'utilisation de l'intégration. Un consentement inclut automatiquement les mises à jour futures, qui peuvent étendre la fonctionnalité d'intégration.\nPlus d'informations : {terms_link}"
+                    "username": "Recommandation: créez un deuxième compte dans l'application Anker et partagez votre système avec le deuxième compte. Une utilisation parallèle du même compte dans cette intégration et dans l'application Anker n'est pas possible.",
+                    "accept_terms": "L'utilisateur supporte seul le risque d'une éventuelle perte de la garantie du fabricant ou de tout dommage causé par l'utilisation de l'intégration. Un consentement inclut automatiquement les mises à jour futures, qui peuvent étendre la fonctionnalité d'intégration.\nPlus d'informations : {terms_link}"
+                }
+            },
+            "user_options": {
+                "title": "Options Anker Solix",
+                "description": "Modifier l'utilisation de l'API",
+                "data": {
+                    "scan_interval": "Intervalle de mise à jour (30-600 secondes)",
+                    "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
+                    "delay_time": "Délai pour les requêtes Api suivantes",
+                    "exclude": "Catégories d'entités exclues",
+                    "testmode": "Utiliser le mode test d'intégration",
+                    "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
+                },
+                "data_description": {
+                    "scan_interval": "Remarque: Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
+                    "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
                 }
             }
         },
         "error": {
-            "auth": "Le nom d'utilisateur/mot de passe est incorrect : {error_detail}",
-            "connection": "Impossible de se connecter au serveur : {error_detail}",
-            "exceeded": "Tentatives de connexion dépassées : {error_detail}",
+            "auth": "Le nom d'utilisateur/mot de passe est incorrect: {error_detail}",
+            "connection": "Impossible de se connecter au serveur: {error_detail}",
+            "exceeded": "Tentatives de connexion dépassées: {error_detail}",
             "duplicate_devices": "{username} a partagé des appareils avec le compte existant {shared_account}, vous ne pouvez pas configurer les deux en même temps !",
             "accept_terms": "Les conditions générales d'utilisation doivent être acceptées",
-            "unknown": "Une erreur inconnue s'est produite:: {error_detail}"
+            "folder_invalid": "Dossier valide requis pour le mode test",
+            "unknown": "Une erreur inconnue s'est produite: {error_detail}"
         },
         "abort": {
             "already_configured": "Ce compte est déjà configuré"
@@ -60,7 +78,7 @@
                     "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
                 },
                 "data_description": {
-                    "scan_interval": "Remarque : Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "scan_interval": "Remarque: Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
                     "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
                 }

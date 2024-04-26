@@ -7,7 +7,7 @@
     "solarbank_list": [
       {
         "device_pn": "A17C0",
-        "device_sn": "DILM86K2GJV2NRAI",
+        "device_sn": "G55HAP9LVQO2LAPM",
         "device_name": "SB E1600",
         "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
         "battery_power": "",
@@ -28,5 +28,5 @@
     ],
     "powerpanel_list": []
   },
-  "trace_id": "3607fa3ff416d93ded855c2ee9b10bea"
+  "trace_id": "4acd422dafadcb3f2ccabbe1fb92ceda"
 }

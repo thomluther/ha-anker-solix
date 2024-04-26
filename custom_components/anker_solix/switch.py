@@ -1,4 +1,5 @@
 """Switch platform for anker_solix."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -6,7 +7,7 @@ from dataclasses import dataclass
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import CONF_EXCLUDE, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -33,6 +34,7 @@ class AnkerSolixSwitchDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
 
 
 DEVICE_SWITCHES = [
@@ -40,11 +42,13 @@ DEVICE_SWITCHES = [
         key="auto_upgrade",
         translation_key="auto_upgrade",
         json_key="auto_upgrade",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSwitchDescription(
         key="preset_allow_export",
         translation_key="preset_allow_export",
         json_key="preset_allow_export",
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
 
@@ -87,8 +91,13 @@ async def async_setup_entry(
                 desc
                 for desc in entity_list
                 if bool(CREATE_ALL_ENTITIES)
-                or desc.force_creation
-                or desc.value_fn(data, desc.json_key) is not None
+                or (
+                    not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
+                    and (
+                        desc.force_creation
+                        or desc.value_fn(data, desc.json_key) is not None
+                    )
+                )
             ):
                 sensor = AnkerSolixSwitch(
                     coordinator, description, context, entity_type

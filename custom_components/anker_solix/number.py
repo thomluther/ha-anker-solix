@@ -1,4 +1,5 @@
 """Number platform for anker_solix."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -14,7 +15,7 @@ from homeassistant.components.number import (
     NumberMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfPower
+from homeassistant.const import CONF_EXCLUDE, PERCENTAGE, UnitOfPower
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -30,7 +31,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.api import SolixDefaults, SolixDeviceType
+from .solixapi.api import ApiCategories, SolixDefaults, SolixDeviceType
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,7 @@ class AnkerSolixNumberDescription(
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
 
 
 DEVICE_NUMBERS = [
@@ -58,6 +60,7 @@ DEVICE_NUMBERS = [
         native_step=10,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixNumberDescription(
         # Charge Priority level to use for schedule slot
@@ -70,6 +73,7 @@ DEVICE_NUMBERS = [
         native_step=5,
         native_unit_of_measurement=PERCENTAGE,
         device_class=NumberDeviceClass.BATTERY,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
 
@@ -85,8 +89,7 @@ SITE_NUMBERS = [
         native_min_value=0,
         native_max_value=1000,
         native_step=0.01,
-        # force_creation=True,
-        # entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
     ),
 ]
 
@@ -118,8 +121,13 @@ async def async_setup_entry(
                 desc
                 for desc in entity_list
                 if bool(CREATE_ALL_ENTITIES)
-                or desc.force_creation
-                or desc.value_fn(data, desc.json_key) is not None
+                or (
+                    not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
+                    and (
+                        desc.force_creation
+                        or desc.value_fn(data, desc.json_key) is not None
+                    )
+                )
             ):
                 entity = AnkerSolixNumber(
                     coordinator, description, context, entity_type

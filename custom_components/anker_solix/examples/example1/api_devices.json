@@ -1,27 +1,27 @@
 {
-  "DILM86K2GJV2NRAI": {
-    "device_sn": "DILM86K2GJV2NRAI",
+  "G55HAP9LVQO2LAPM": {
+    "device_sn": "G55HAP9LVQO2LAPM",
     "type": "solarbank",
-    "site_id": "bdd7d770-bcb7-d22b-cafc-d0b2eddc4e23",
+    "site_id": "9e40dc42-adac-7fba-dead-a1bba7bff34e",
     "is_admin": true,
     "device_pn": "A17C0",
-    "battery_soc": "6",
+    "battery_soc": "17",
     "battery_capacity": "1600",
-    "battery_energy": "96",
-    "charging_power": "64",
+    "battery_energy": "272",
+    "charging_power": "-190",
     "power_unit": "W",
-    "charging_status": "3",
-    "charging_status_desc": "charge_bypass",
+    "charging_status": "2",
+    "charging_status_desc": "discharge",
     "status": "1",
     "status_desc": "online",
     "wireless_type": "1",
-    "input_power": "154",
-    "output_power": "90",
-    "set_output_power": "0",
+    "input_power": "0",
+    "output_power": "190",
+    "set_output_power": "300",
     "power_cutoff": 5,
     "alias": "SB E1600",
-    "set_system_output_power": "0",
-    "bt_ble_mac": "3CEAAD9FDDF7",
+    "set_system_output_power": "300",
+    "bt_ble_mac": "FEDCEB33AA9A",
     "name": "Solarbank E1600",
     "wifi_online": true,
     "charge": false,
@@ -29,7 +29,7 @@
     "sw_version": "v1.5.6",
     "auto_upgrade": false,
     "wifi_name": "wifi-network-1",
-    "wifi_signal": "54",
+    "wifi_signal": "50",
     "power_cutoff_data": [
       {
         "id": 1,
@@ -49,7 +49,7 @@
     "solar_info": {
       "solar_brand": "ANKER",
       "solar_model": "A5143",
-      "solar_sn": "9XK0FGWY2TWW",
+      "solar_sn": "YTZL4ZEJ4R5B",
       "solar_model_name": "MI80 Microinverter(BLE)"
     },
     "schedule": {
@@ -57,7 +57,7 @@
         {
           "id": 0,
           "start_time": "00:00",
-          "end_time": "06:30",
+          "end_time": "07:20",
           "turn_on": true,
           "appliance_loads": [
             {
@@ -71,21 +71,21 @@
           "power_setting_mode": 1,
           "device_power_loads": [
             {
-              "device_sn": "DILM86K2GJV2NRAI",
+              "device_sn": "G55HAP9LVQO2LAPM",
               "power": 150
             }
           ]
         },
         {
           "id": 0,
-          "start_time": "06:30",
-          "end_time": "18:30",
+          "start_time": "07:20",
+          "end_time": "19:40",
           "turn_on": false,
           "appliance_loads": [
             {
               "id": 0,
               "name": "Benutzerdefiniert",
-              "power": 100,
+              "power": 140,
               "number": 1
             }
           ],
@@ -93,14 +93,14 @@
           "power_setting_mode": 1,
           "device_power_loads": [
             {
-              "device_sn": "DILM86K2GJV2NRAI",
-              "power": 50
+              "device_sn": "G55HAP9LVQO2LAPM",
+              "power": 70
             }
           ]
         },
         {
           "id": 0,
-          "start_time": "18:30",
+          "start_time": "19:40",
           "end_time": "24:00",
           "turn_on": true,
           "appliance_loads": [
@@ -115,7 +115,7 @@
           "power_setting_mode": 1,
           "device_power_loads": [
             {
-              "device_sn": "DILM86K2GJV2NRAI",
+              "device_sn": "G55HAP9LVQO2LAPM",
               "power": 150
             }
           ]
@@ -130,8 +130,8 @@
       "display_advanced_mode": 0,
       "advanced_mode_min_load": 0
     },
-    "preset_system_output_power": 100,
-    "preset_allow_export": false,
+    "preset_system_output_power": 300,
+    "preset_allow_export": true,
     "preset_charge_priority": 10,
     "fittings": {}
   }

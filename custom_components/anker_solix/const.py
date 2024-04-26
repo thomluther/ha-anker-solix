@@ -1,4 +1,5 @@
 """Constants for Anker Solix."""
+
 from datetime import datetime
 from logging import Logger, getLogger
 

@@ -20,17 +20,17 @@
     "statistics": [
       {
         "type": "1",
-        "total": "135.13",
+        "total": "183.54",
         "unit": "kwh"
       },
       {
         "type": "2",
-        "total": "134.72",
+        "total": "182.99",
         "unit": "kg"
       },
       {
         "type": "3",
-        "total": "44.59",
+        "total": "60.57",
         "unit": "\u20ac"
       }
     ],
@@ -39,40 +39,40 @@
       "solarbank_list": [
         {
           "device_pn": "A17C0",
-          "device_sn": "DILM86K2GJV2NRAI",
+          "device_sn": "G55HAP9LVQO2LAPM",
           "device_name": "SB E1600",
           "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
-          "battery_power": "6",
+          "battery_power": "17",
           "bind_site_status": "",
-          "charging_power": "90",
+          "charging_power": "190",
           "power_unit": "W",
-          "charging_status": "3",
+          "charging_status": "2",
           "status": "1",
           "wireless_type": "1",
           "main_version": "",
-          "photovoltaic_power": "154",
-          "output_power": "90",
+          "photovoltaic_power": "0",
+          "output_power": "190",
           "create_time": 1695392386,
           "set_load_power": "",
           "output_cutoff_data": 5,
           "is_display": true
         }
       ],
-      "total_charging_power": "64",
+      "total_charging_power": "0",
       "power_unit": "W",
       "charging_status": "0",
-      "total_battery_power": "0.06",
-      "updated_time": "2024-03-27 11:49:04",
-      "total_photovoltaic_power": "154",
-      "total_output_power": "90.00",
+      "total_battery_power": "0.17",
+      "updated_time": "2024-04-24 01:33:08",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "190.00",
       "display_set_power": false,
       "is_display_data": true
     },
-    "retain_load": "0W",
+    "retain_load": "300W",
     "updated_time": "01-01-0001 00:00:00",
     "power_site_type": 2,
-    "site_id": "bdd7d770-bcb7-d22b-cafc-d0b2eddc4e23",
+    "site_id": "9e40dc42-adac-7fba-dead-a1bba7bff34e",
     "powerpanel_list": []
   },
-  "trace_id": "e6a2f3f712a7c2498a25ae7c0bafef3e"
+  "trace_id": "64eeaeab8d80ee6bab68bf981b9cda1d"
 }

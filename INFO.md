@@ -28,7 +28,7 @@ This Home Assistant custom component integration allows seamless integration wit
 It follows the Anker cloud Api structures, which allows registered users to define one or more Power Systems, called site in the Api with a unique site_id.
 The configured user must have defined at least one owning system, or have access to a shared system, to see devices for a configured integration account.
 For each accessible system by the configured account, the integration will create one System Device with the appropriate system sensors. These sensors typically reflect the values that are presented in the Anker mobile app main view of a system.
-Following example shows how configured integration accounts may look:
+Following example shows how configured integration accounts may look like:
 
 ![Configured Integration][integration-img]
 
@@ -61,10 +61,28 @@ Following are screenshots from basic dashboard cards including the latest sensor
 ![Solarbank Dashboard Light Theme][solarbank-dashboard-light-img]
 
 
-**Note:** When using a shared system account for the integration, device detail information is limited and changes are not premitted. Therefore shared system account users may get presented no changable entities by the integration.
+**Note:** When using a shared system account for the integration, device detail information is limited and changes are not premitted. Therefore shared system account users may get presented only a subset and no changable entities by the integration.
 
 The integration will setup the entities with unique IDs based on device serials or a combination of serial numbers. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. While the entity history is not lost, it implies that you cannot configure different accounts at the same time when they share a system. Otherwise, it would cause HA setup errors because of non unique entities. Therefore, new integration configurations are validated and not allowed when they share systems or devices with an active configuration.
 If you want to switch from your main account to the shared account, delete first the active configuration and then create a new configuration with the other account. When the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured recorder interval is over. The default HA recorder history interval is 10 days.
+
+
+## Anker account limitation and usage recommendations
+
+Usage of the same Anker account in the integration and the Anker mobile app at the same time is not possible due to security reasons enforced by Anker. For more details refer to the Anker Account information in the [README](README.md).
+Therfore, it is recommended to use a second account in the integration that has the power system shared as a member. For instructions to create a second account and share the system, see [How to create a second Anker Power account](#how-to-create-a-second-anker-power-account).
+Following is the integration configuration dialog:
+
+![configuration][config-img]
+
+
+**Attention:**
+
+System members cannot manage any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behaviour when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
+
+A work around to overcome this account limitation has been implemented via an Api switch in the System Device. When disabled, the integration stops any Api communication for all systems of the disabled account. During that time, you can use the owning account again for login through the Anker app and modify device settings as needed. Afterwards you can re-activate Api communication in the integration again, which will automatically re-login and continue reporting data. While the Api switch is off, all sensors will be unavailable to avoid reporting of stale data.
+
+To simplify usage of this workaround, please see [Automation to send and clear sticky, actionable notifications to your smart phone based on Api switch setting](#automation-to-send-and-clear-sticky-actionable-notifications-to-your-smart-phone-based-on-api-switch-setting) for an example automation, which sends a sticky mobile notification when the Api switch was disabled, using actionable buttons to launch the Anker App directly from the notification. It provides also actionable buttons to re-enable the switch again and clear the sticky notification. This avoids forgetting to re-enable your data collection when you are finished with your tasks in the Anker App.
 
 
 ## Data refresh configuration options
@@ -76,31 +94,15 @@ The data on the cloud which can be retrieved via the Api is refreshed only once 
 During each refresh interval, the power sensor values will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut off, auto-upgrade, schedule etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 30 seconds ago to avoid unnecessary Api traffic.
 
 The cloud Api also enforces a request limit but actual metrics for this limit are unknown. You may see the configuration entry flagged with an error, that may indicate 429: Too many requests. In that case, all entities may be unknown or show stale data until further Api requests are permitted. To avoid hitting the request limit, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second. Furthermore the Solarbank energy statistic entities which were introduced with verion 1.1.0 have been excluded from the configuration entry per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/hacs-anker-solix/discussions/32).
-The statistics can be re-enabled by removing them from the exclusion list. Future enhancements will add more exclusion options for categories and device types that are of no interest. This may help further to reduce the required Api requests and customize the configuration to the entity types that are meaningful to you.
+The statistics can be re-enabled by removing them from the exclusion list.
+The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after sucessfull account authorization and before the first data collection is done. Excluded device or details categories can be reviewed and changed as needed. Device types of no interest can be excluded completely. Exclusion of specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
 
-The refresh options can be configured after creation of an integration entry. Following are the default options as of version 1.1.1:
+Following are the default options as of version 1.2.0:
 
 ![Options][options-img]
 
-**Note:** When you add categories to the exclusion list, the affected entities are removed from the HA registry during integration reload but they still show up in the UI as entities no longer provided by the integration. You need to remove those UI entities manually from the entity details dialog.
-
-
-## Anker account limitation and usage recommendations
-
-Usage of the same Anker account in the integration and the Anker mobile app at the same time is not possible due to security reasons enforced by Anker. For more details refer to the Anker Account information in the [README](README.md).
-Therfore, it is recommended to use a second account in the integration that has the power system shared as a member. For instruction to create a second account and share the system, see below.
-Following is the integration configuration dialog:
-
-![configuration][config-img]
-
-
-**Attention:**
-
-System members cannot manage (yet) any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behaviour when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
-
-A work around to overcome this account limitation has been implemented via an Api switch in the System Device. When disabled, the integration stops any Api communication for all systems of the disabled account. During that time, you can use the owning account again for login through the Anker app and modify device settings as needed. Afterwards you can re-activate Api communication in the integration again, which will automatically re-login and continue reporting data. While the Api switch is off, all sensors will be unavailable to avoid reporting of stale data.
-
-To simplify usage of this workaround, please see below for an example automation, which sends a sticky mobile notification when the Api switch was disabled, using actionable buttons to launch the Anker App directly from the notification. It provides also actionable buttons to re-enable the switch again and clear the sticky notification. This avoids forgetting to re-enable your data collection when you are finished with your tasks in the Anker App.
+**Note:** Prior version 1.2.0, when you added categories to the exclusion list, the affected entities were removed from the HA registry during integration reload but they still showed up in the UI as entities no longer provided by the integration. You needed to remove those UI entities manually from the entity details dialog.
+Starting with version 1.2.0, a change in the exclude list will completely remove the affected devices and re-register them with remaining entites as necessary. This avoids manual cleanup of excluded entities.
 
 
 ## How to create a second Anker Power account
@@ -250,7 +252,7 @@ I will also tell you why:
 - Additionally, each parameter or schedule change requires 2 Api requests, one to submit the whole changed schedule and another one to query the applied and resulting schedule again for sensor updates. To enforce some protection for the Api and accomodate the slow solarbank reaction, an increase of the home load is just allowed every 30 seconds at least (decreases or other interval parameter changes are not limited)
   - **Attention:** Cloud Api requests are limited, but actually the enforced limits in regards to quantity and time frames are unknown. Each change may bring you towards the enforced limit and not only block further changes, but also render all integration entities unavailable or stale
 - If you have some experience with the solarbank behavior, you may also know how weird it sometimes reacts on changed conditions during the day (or even unchanged conditions). This makes it difficult to adjust the home load setting automatically to a meaningful value that will accomplish the desired home load result.
-- If you plan to automate moderate changes in the home load, use a timer helper that is restarted upon each change of the settings and used as condition for validation whether another change (increase) should be applied. I would not recommend to apply changes, especially increases in the home load, in less than 2-3 minute intervals, a trusted re-evaluation of the change results and further reaction can just be done after such a delay. Remember that each Solarbank datapoint is just a single value of a one minute interval. The value average in that interval can be completely different, especially if you compare Solarbank data with real time data of other power devices in your home!
+- If you plan to automate moderate changes in the home load, use a timer helper that is restarted upon each change of the settings and used as condition for validation whether another change (increase) should be applied. I would not recommend to apply changes, especially increases in the home load, in less than 2-3 minute intervals, a trusted re-evaluation of the change results and further reaction can just be done after such a delay. Remember that each provided Solarbank datapoint is just a single sample within 60 seconds or more. The value average in that interval can be completely different, especially if you compare Solarbank data with real time data of other power devices in your home!
 
 Meaningful automation ideas that might work for the solarbank:
 - Use schedule serivces to apply different set of schedules for different weekdays (workday, homeoffice, weekend etc). The Anker App does not provide this capability, but with HA automations you could create new schedules for given days in advance. Use first the Set schedule service which will create a new all day interval and then Update schedule service to insert additional intervals as needed. Try the service sequence manually to validate if they accomplish the desired end result for your schedule.
@@ -299,8 +301,10 @@ You can specify the solarbank device id or the entity ID of the solarbank output
 
 #### 3. **Interactive solarbank schedule modification via a parameterized script that executes a schedule service with provided parameters**
 
-Home Assistant 2024.3 provides a new capability to define fields for script parameters that can be filled via the more info dialog of the script entity prior execution. This allows easy integration of schedule modifications to your dashboard (see example script and dashboard below).
+Home Assistant 2024.3 provides a new capability to define fields for script parameters that can be filled via the more info dialog of the script entity prior execution. This allows easy integration of schedule modifications to your dashboard (see [Script to manually modify appliance schedule for your solarbank](#script-to-manually-modify-appliance-schedule-for-your-solarbank)).
 
+
+### Schedule service details and limitations
 
 Following are screenshots showing the schedule service UI panel (identical for Set schedule and Update schedule service), and the Get schedule service with an example:
 
@@ -318,7 +322,7 @@ While not the full entity ranges supported by the integration can be applied to 
 - The end time of 24:00 must be provided as 23:59 since the datetime range does not know hour 24. Any seconds that are specified are ignored
 - Homeassistant and the Solarbank should have simlar time, but especially same timezone to adopt the time slots correctly. Even more important it is for finding the current/active schedule time interval where individual parameter changes must be applied
   - Depending on the front end (and timezone used with the front end), the time fields may eventually be converted. All backend datetime calculations by the integration use the local time zone of the HA host. The HA host must be in the same time zone the Solarbank is using, which is typically the case when they are on the same local network.
-- Situations have been observed during testing where an active home load export was applied in the schedule, but the solarbank did not react on the applied schedule. While the cloud schedule was showing the export enabled with a certain load set, verification in the Anker App presented a different picture: There the schedule load was set to **0 W in the slider** which is typically not possible in the App...The only way to get out of such weird schedules on the appliance is to make the interval change via the Anker App since it may use other interfaces than just the cloud Api (Bluetooth and another Cloud MQTT server)
+- Situations have been observed during testing where an active home load export was applied in the schedule, but the solarbank did not react on the applied schedule. While the cloud schedule was showing the export enabled with a certain load set, verification in the Anker App presented a different picture: There the schedule load was set to **0 W in the slider** which is typically not possible in the App...The only way to get out of such weird schedules on the appliance is to make the interval change via the Anker App since it may use other interfaces than just the cloud Api (Bluetooth and another Cloud MQTT server). This problem was only noticed when just a single resulting interval remains in the schedule that is sent via the Api, for example setting a new schedule or making an update with a full day interval. To avoid this problem, make sure your schedule has more than one time interval and you do NOT use the Set new Solarbank schedule service. Instead you can apply schedule changes via the Update Solarbank schedule service which is NOT covering the full day.
 
 
 ## Markdown card to show the defined Solarbank schedule

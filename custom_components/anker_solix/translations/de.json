@@ -32,6 +32,23 @@
                     "username": "Empfehlung: Lege ein zweites Konto in der Anker App an und teile dein System mit dem Zweitkonto. Eine gleichzeitige Kontonutzung in der Integration und der Anker App ist nicht möglich.",
                     "accept_terms": "Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch Nutzung der Integration auftreten können. Eine Zustimmung inkludiert automatisch zukünftige Updates, welche den Funktionsumfang erweitern können.\nWeitere Informationen: {terms_link}"
                 }
+            },
+            "user_options": {
+                "title": "Anker Solix Optionen",
+                "description": "Ändere die Nutzung der Schnittstelle",
+                "data": {
+                    "scan_interval": "Update Intervall (30-600 Sekunden)",
+                    "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
+                    "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "exclude": "Ausgeschlossene Entitäts-Kategorien",
+                    "testmode": "Benutze den Testmode für die Integration",
+                    "testfolder": "Ordner mit json Dateien für den Integrationstest"
+                },
+                "data_description": {
+                    "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden nur einmal pro Minute aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
+                    "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
+                }
             }
         },
         "error": {
@@ -40,6 +57,7 @@
             "exceeded": "Anzahl Loginversuche überschritten: {error_detail}",
             "duplicate_devices": "{username} teilt Geräte mit dem konfigurierten Konto {shared_account}, es können nicht beide gleichzeitig konfiguriert werden!",
             "accept_terms": "Nutzungsbedingungen müssen akzeptiert werden",
+            "folder_invalid": "Gültiger Ordner erforderlich für den Testmode",
             "unknown": "Unbekannter Fehler aufgetreten: {error_detail}"
         },
         "abort": {

@@ -1,4 +1,5 @@
 """Anker Solix API Client Wrapper."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -27,17 +28,17 @@ DEFAULT_DEVICE_MULTIPLIER: int = (
 )
 # Api categories and device types supported for exclusion from integration
 API_CATEGORIES: list = [
-    #api.SolixDeviceType.SOLARBANK.value,
-    #api.SolixDeviceType.INVERTER.value,
-    #api.SolixDeviceType.PPS.value,
-    #api.SolixDeviceType.POWERPANEL.value,
-    #api.SolixDeviceType.POWERCOOLER.value,
+    api.SolixDeviceType.PPS.value,
+    api.SolixDeviceType.POWERPANEL.value,
+    api.SolixDeviceType.INVERTER.value,
+    api.SolixDeviceType.SOLARBANK.value,
+    # api.SolixDeviceType.POWERCOOLER.value,
     api.ApiCategories.solarbank_energy,
-    #api.ApiCategories.solarbank_cutoff,
-    #api.ApiCategories.solarbank_fittings,
-    #api.ApiCategories.solarbank_solar_info,
-    #api.ApiCategories.device_auto_upgrade,
-    #api.ApiCategories.site_price,
+    api.ApiCategories.solarbank_cutoff,
+    api.ApiCategories.solarbank_fittings,
+    api.ApiCategories.solarbank_solar_info,
+    api.ApiCategories.device_auto_upgrade,
+    api.ApiCategories.site_price,
 ]
 DEFAULT_EXCLUDE_CATEGORIES: list = [api.ApiCategories.solarbank_energy]
 
@@ -73,6 +74,7 @@ class AnkerSolixApiClient:
     """
 
     last_device_refresh: datetime | None
+    min_device_refresh: int = MIN_DEVICE_REFRESH
     exclude_categories: list
     _intervalcount: int
     _allow_refresh: bool
@@ -101,14 +103,14 @@ class AnkerSolixApiClient:
             _LOGGER,
         )
         self.api.requestDelay(
-            float(data.get(CONF_DELAY_TIME,api.SolixDefaults.REQUEST_DELAY_DEF))
+            float(data.get(CONF_DELAY_TIME, api.SolixDefaults.REQUEST_DELAY_DEF))
         )
-        self._deviceintervals = int(data.get(INTERVALMULT,DEFAULT_DEVICE_MULTIPLIER))
-        self._testmode = bool(data.get(TESTMODE,False))
+        self._deviceintervals = int(data.get(INTERVALMULT, DEFAULT_DEVICE_MULTIPLIER))
+        self._testmode = bool(data.get(TESTMODE, False))
         self._intervalcount = 0
         self._allow_refresh = True
         self.last_device_refresh = None
-        self.exclude_categories = data.get(CONF_EXCLUDE,DEFAULT_EXCLUDE_CATEGORIES)
+        self.exclude_categories = data.get(CONF_EXCLUDE, DEFAULT_EXCLUDE_CATEGORIES)
 
     async def authenticate(self, restart: bool = False) -> bool:
         """Get (chached) login response from api, if restart is True, the login will be refreshed from server to test credentials."""
@@ -118,17 +120,17 @@ class AnkerSolixApiClient:
             raise AnkerSolixApiClientCommunicationError(
                 f"Timeout error fetching information: {exception}",
             ) from exception
-        except (aiohttp.ClientError, socket.gaierror) as exception:
+        except (aiohttp.ClientError, socket.gaierror, errors.ConnectError) as exception:
             raise AnkerSolixApiClientCommunicationError(
-                f"Error fetching information: {exception}",
+                f"Api Connection Error: {exception}",
             ) from exception
-        except errors.AuthorizationError as exception:
+        except (errors.AuthorizationError, errors.InvalidCredentialsError) as exception:
             raise AnkerSolixApiClientAuthenticationError(
                 f"Authentication failed: {exception}",
             ) from exception
         except errors.RetryExceeded as exception:
             raise AnkerSolixApiClientRetryExceededError(
-                f"Retries exceeded: {exception}",
+                f"Login Retries exceeded: {exception}",
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
             raise AnkerSolixApiClientError(
@@ -155,12 +157,12 @@ class AnkerSolixApiClient:
                         and (
                             datetime.now().astimezone() - self.last_device_refresh
                         ).total_seconds()
-                        < MIN_DEVICE_REFRESH
+                        < self.min_device_refresh
                     ):
                         _LOGGER.warning(
                             "Api Coordinator %s cannot enforce device update within less than %s seconds, using data from Api dictionaries",
                             self.api.nickname,
-                            str(MIN_DEVICE_REFRESH),
+                            str(self.min_device_refresh),
                         )
                     else:
                         _LOGGER.debug(
@@ -170,7 +172,6 @@ class AnkerSolixApiClient:
                             if self._testmode
                             else "",
                         )
-                        # TODO: refresh sites without excluded types
                         await self.api.update_sites(fromFile=self._testmode)
                         # Fetch site details without excluded types or categories
                         await self.api.update_site_details(
@@ -189,13 +190,18 @@ class AnkerSolixApiClient:
                             )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
+                        if not self._testmode:
+                            _LOGGER.debug(
+                                "Api Coordinator %s request statistics: %s",
+                                self.api.nickname,
+                                self.api.request_count,
+                            )
                 else:
                     _LOGGER.debug(
                         "Api Coordinator %s is updating sites %s",
                         self.api.nickname,
                         f"from folder {self.api.testDir()}" if self._testmode else "",
                     )
-                    # TODO: refresh sites without excluded types
                     await self.api.update_sites(fromFile=self._testmode)
                     # update device details only after given refresh interval count
                     self._intervalcount -= 1
@@ -224,6 +230,12 @@ class AnkerSolixApiClient:
                             )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
+                    if not self._testmode:
+                        _LOGGER.debug(
+                            "Api Coordinator %s request statistics: %s",
+                            self.api.nickname,
+                            self.api.request_count,
+                        )
                 # combine site and device details dictionaries for single data cache
                 data = self.api.sites | self.api.devices
             else:
@@ -235,9 +247,9 @@ class AnkerSolixApiClient:
             raise AnkerSolixApiClientCommunicationError(
                 f"Timeout error fetching information: {exception}",
             ) from exception
-        except (aiohttp.ClientError, socket.gaierror) as exception:
+        except (aiohttp.ClientError, socket.gaierror, errors.ConnectError) as exception:
             raise AnkerSolixApiClientCommunicationError(
-                f"Error fetching information: {exception}",
+                f"Api Connection Error: {exception}",
             ) from exception
         except (errors.AuthorizationError, errors.InvalidCredentialsError) as exception:
             raise AnkerSolixApiClientAuthenticationError(
@@ -252,7 +264,7 @@ class AnkerSolixApiClient:
                 f"Api Request Error: {type(exception)}: {exception}"
             ) from exception
 
-    def testmode(self, mode: bool = None) -> bool:
+    def testmode(self, mode: bool | None = None) -> bool:
         """Query or set testmode for client."""
         if mode is not None and self._testmode != mode:
             self._testmode = mode
@@ -263,30 +275,30 @@ class AnkerSolixApiClient:
             )
         return self._testmode
 
-    def deviceintervals(self, intervals: int = None) -> int:
+    def deviceintervals(self, intervals: int | None = None) -> int:
         """Query or set deviceintervals for client."""
         if (
             intervals is not None
-            and isinstance(intervals, int)
-            and self._deviceintervals != intervals
+            and isinstance(intervals, float | int)
+            and self._deviceintervals != int(intervals)
         ):
-            self._deviceintervals = intervals
-            self._intervalcount = min(intervals, self._intervalcount)
+            self._deviceintervals = int(intervals)
+            self._intervalcount = min(self._deviceintervals, self._intervalcount)
             _LOGGER.info(
                 "Api Coordinator %s device refresh multiplier was changed to %s",
                 self.api.nickname,
-                intervals,
+                self._deviceintervals,
             )
         return self._deviceintervals
 
-    def delay_time(self, seconds: float = None) -> float:
+    def delay_time(self, seconds: float | None = None) -> float:
         """Query or set Api request delay time for client."""
         if (
             seconds is not None
-            and isinstance(seconds, float)
-            and seconds != self.api.requestDelay()
+            and isinstance(seconds, float | int)
+            and float(seconds) != float(self.api.requestDelay())
         ):
-            newdelay = self.api.requestDelay(seconds)
+            newdelay = self.api.requestDelay(float(seconds))
             _LOGGER.info(
                 "Api Coordinator %s Api request delay time was changed to %.3f seconds",
                 self.api.nickname,
@@ -294,7 +306,7 @@ class AnkerSolixApiClient:
             )
         return self.api.requestDelay()
 
-    def allow_refresh(self, allow: bool = None) -> bool:
+    def allow_refresh(self, allow: bool | None = None) -> bool:
         """Query or set api refresh capability for client."""
         if allow is not None and allow != self._allow_refresh:
             self._allow_refresh = allow
@@ -304,4 +316,3 @@ class AnkerSolixApiClient:
                 ("ENABLED" if allow else "DISABLED"),
             )
         return self._allow_refresh
-
