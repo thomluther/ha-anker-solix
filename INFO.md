@@ -304,6 +304,8 @@ You can specify the solarbank device id or the entity ID of the solarbank output
 Home Assistant 2024.3 provides a new capability to define fields for script parameters that can be filled via the more info dialog of the script entity prior execution. This allows easy integration of schedule modifications to your dashboard (see [Script to manually modify appliance schedule for your solarbank](#script-to-manually-modify-appliance-schedule-for-your-solarbank)).
 
 
+### Schedule service details and limitations
+
 Following are screenshots showing the schedule service UI panel (identical for Set schedule and Update schedule service), and the Get schedule service with an example:
 
 **1. Set or Update schedule service UI panel example, using the entity as target**
