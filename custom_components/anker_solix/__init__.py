@@ -122,16 +122,16 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     do_reload = True
     if coordinator and coordinator.client:
-        testmode = entry.options.get(TESTMODE)
-        testfolder = entry.options.get(TESTFOLDER)
+        testmode = entry.options.get(TESTMODE,False)
+        testfolder = entry.options.get(TESTFOLDER,"")
         excluded = entry.options.get(CONF_EXCLUDE) or []
         # Check if option change does not require reload when only timeout or interval was changed
         if (
             testmode == coordinator.client.testmode()
             and (
+                not testmode or
                 os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
                 == coordinator.client.api.testDir()
-                or not testmode
             )
             and set(excluded) == set(coordinator.client.exclude_categories)
         ):
