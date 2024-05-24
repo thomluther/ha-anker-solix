@@ -4,12 +4,12 @@
   "data": {
     "data": [
       {
-        "device_sn": "PK2UE3X006JF",
+        "device_sn": "DQTGB647Q061",
         "product_code": "A5143",
-        "bt_ble_id": "140FBCB617F0",
-        "bt_ble_mac": "140FBCB617F0",
+        "bt_ble_id": "A7DF7F67F01B",
+        "bt_ble_mac": "A7DF7F67F01B",
         "device_name": "MI80 Microinverter(BLE)",
-        "alias_name": "MI80 Microinverter(BLE)",
+        "alias_name": "Microlino",
         "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
         "link_time": 1707581381737,
         "wifi_online": false,
@@ -24,10 +24,10 @@
         "hes_data": null
       },
       {
-        "device_sn": "WO42TA2RIXLX2WLZ",
+        "device_sn": "M4HZ9WIT677F634H",
         "product_code": "A17C0",
-        "bt_ble_id": "DDCEDE2CA2D880D6B3E9CF5E01BEBAC0",
-        "bt_ble_mac": "4BDB6A35CFFD",
+        "bt_ble_id": "492326389903A28C1BBFBA754B7C1D11",
+        "bt_ble_mac": "9DACB2D2BC48",
         "device_name": "Solarbank E1600",
         "alias_name": "SB1",
         "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
@@ -45,10 +45,10 @@
         "hes_data": null
       },
       {
-        "device_sn": "6TXY2KVEWX2UB78L",
+        "device_sn": "F5AAWDBMU83C3TWF",
         "product_code": "A17C0",
-        "bt_ble_id": "728D453D7CA8D5D9AFEF1D89BBAE7FED",
-        "bt_ble_mac": "EE3BFBD6DB9B",
+        "bt_ble_id": "E2D6EF3D7CEB24FD53A5EE3598BE0DB7",
+        "bt_ble_mac": "AAB7E04E2CF9",
         "device_name": "Solarbank E1600",
         "alias_name": "SB2",
         "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
@@ -67,5 +67,5 @@
       }
     ]
   },
-  "trace_id": "4cd860c899ec772afefdefd1e042daf9"
+  "trace_id": "47bffdb0a0ea02cefde34dafad0a9c59"
 }

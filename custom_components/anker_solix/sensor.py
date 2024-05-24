@@ -58,12 +58,14 @@ from .const import (
     END_TIME,
     ALLOW_EXPORT,
     APPLIANCE_LOAD,
+    DEVICE_LOAD,
     CHARGE_PRIORITY_LIMIT,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .solixapi.api import (
     ApiCategories,
     SolarbankStatus,
+    SolarbankPowerMode,
     SolixDeviceStatus,
     SolixDeviceType,
     SolarbankTimeslot,
@@ -158,7 +160,7 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSensorDescription(
-        # Output preset per device
+        # Resulting Output preset per device
         # This may also present 0 W if the allow discharge switch is disabled, even if the W preset value remains and the minimum bypass per defined inverter will be used
         # This is confusing in the App and the Api, since there may be the minimum bypass W applied even if 0 W is shown.
         # 0 W is only applied truly if the 0 W Switch is installed for non Anker inverters, or if MI80 is used which supports the 0 W setting natively
@@ -176,6 +178,21 @@ DEVICE_SENSORS = [
         force_creation_fn=lambda d: bool(
             d.get("type") == SolixDeviceType.SOLARBANK.value
         ),
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="set_power_mode",
+        translation_key="set_power_mode",
+        json_key="preset_power_mode",
+        device_class=SensorDeviceClass.ENUM,
+        options=[mode.name for mode in SolarbankPowerMode],  # noqa: C416
+        value_fn=lambda d, jk, _: next(
+            iter([item.name for item in SolarbankPowerMode if item.value == d.get(jk)]),
+            None,
+        ),
+        attrib_fn=lambda d, _: {
+            "mode": d.get("preset_power_mode"),
+        },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1012,7 +1029,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             and hasattr(self.coordinator, "data")
             and self._context_base in self.coordinator.data
         ):
-            data = self.coordinator.data.get(self._context_base)
+            data: dict = self.coordinator.data.get(self._context_base)
             if service_name in [
                 SERVICE_SET_SOLARBANK_SCHEDULE,
                 SERVICE_UPDATE_SOLARBANK_SCHEDULE,
@@ -1024,6 +1041,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         load = kwargs.get(APPLIANCE_LOAD)
                         if load == cv.ENTITY_MATCH_NONE:
                             load = None
+                        dev_load = kwargs.get(DEVICE_LOAD)
+                        if dev_load == cv.ENTITY_MATCH_NONE:
+                            dev_load = None
                         export = kwargs.get(ALLOW_EXPORT)
                         if export == cv.ENTITY_MATCH_NONE:
                             export = None
@@ -1033,10 +1053,24 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         # check if now is in given time range and ensure preset increase is limited by min interval
                         now = datetime.now().astimezone()
                         start_time.astimezone()
+                        # get old device load, which is none for single solarbanks, use old system preset instead
+                        old_dev = data.get("preset_device_output_power") or data.get("preset_system_output_power")
+                        old_dev = dev_load if old_dev is None else old_dev
+                        # set the system load that should be checked for increase
+                        check_load = (
+                            load
+                            if dev_load is None
+                            else int(
+                                self._last_schedule_service_value + (dev_load - old_dev)
+                            )
+                            if load is None
+                            and self._last_schedule_service_value is not None
+                            else None
+                        )
                         if (
                             self._last_schedule_service_value
-                            and load
-                            and load > int(self._last_schedule_service_value)
+                            and check_load
+                            and check_load > int(self._last_schedule_service_value)
                             and start_time.astimezone().time()
                             <= now.time()
                             < end_time.astimezone().time()
@@ -1049,17 +1083,17 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             LOGGER.debug(
                                 "%s cannot be increased to %s because minimum change delay of %s seconds is not passed",
                                 self.entity_id,
-                                load,
+                                check_load,
                                 _SCAN_INTERVAL_MIN,
                             )
                             # Raise alert to frontend
                             raise ServiceValidationError(
-                                f"{self.entity_id} cannot be increased to {load} because minimum change delay of {_SCAN_INTERVAL_MIN} seconds is not passed",
+                                f"{self.entity_id} cannot be increased to {check_load} because minimum change delay of {_SCAN_INTERVAL_MIN} seconds is not passed",
                                 translation_domain=DOMAIN,
                                 translation_key="increase_blocked",
                                 translation_placeholders={
                                     "entity_id": self.entity_id,
-                                    "value": load,
+                                    "value": check_load,
                                     "delay": _SCAN_INTERVAL_MIN,
                                 },
                             )
@@ -1070,6 +1104,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             start_time=start_time,
                             end_time=end_time,
                             appliance_load=load,
+                            device_load=dev_load,
                             allow_export=export,
                             charge_priority_limit=prio,
                         )
@@ -1087,10 +1122,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             )
                         else:
                             result = False
-                        if result:
-                            self._last_schedule_service_value = load or None
                         # trigger coordinator update with api dictionary data
                         await self.coordinator.async_refresh_data_from_apidict()
+                        # refresh last applied system load
+                        if result:
+                            self._last_schedule_service_value = (
+                                self.coordinator.data.get(self._context_base) or {}
+                            ).get("preset_system_output_power") or None
                     else:
                         raise ServiceValidationError(
                             f"The service {service_name} cannot be executed: {'start_time must be earlier than end_time'}.",

@@ -63,6 +63,19 @@ DEVICE_NUMBERS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixNumberDescription(
+        # Device output setting, determined by schedule
+        key="preset_device_output_power",
+        translation_key="preset_device_output_power",
+        json_key="preset_device_output_power",
+        mode=NumberMode.SLIDER,
+        native_min_value=SolixDefaults.PRESET_MIN,
+        native_max_value=SolixDefaults.PRESET_MAX,
+        native_step=5,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=NumberDeviceClass.POWER,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixNumberDescription(
         # Charge Priority level to use for schedule slot
         key="preset_charge_priority",
         translation_key="preset_charge_priority",
@@ -170,11 +183,20 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
 
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
-            data = coordinator.data.get(context) or {}
+            data: dict = coordinator.data.get(context) or {}
             self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
+            # update number limits based on solarbank count in system
+            if self._attribute_name == "preset_system_output_power":
+                self.native_max_value = int(
+                    self.native_max_value * (data.get("solarbank_count") or 1)
+                )
+            if self._attribute_name == "preset_device_output_power":
+                self.native_min_value = int(
+                    self.native_min_value / (data.get("solarbank_count") or 1)
+                )
         else:
             # get the site info data from site context entry of coordinator data
-            data = (coordinator.data.get(context, {})).get("site_info", {})
+            data: dict = (coordinator.data.get(context, {})).get("site_info") or {}
             self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
         self._native_value = None
@@ -252,11 +274,17 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 # round the number to the defined steps if set via service call
                 if self.step:
                     value = self.step * round(value / self.step)
-                if self._attribute_name == "preset_system_output_power":
+                if self._attribute_name in [
+                    "preset_system_output_power",
+                    "preset_device_output_power",
+                ]:
                     # for increasing load value, change only if min delay passed
                     if (
                         (
-                            str(self._native_value).isdigit()
+                            (
+                                str(self._native_value).isdigit()
+                                or isinstance(self._native_value, int | float)
+                            )
                             and value < int(self._native_value)
                         )
                         or not self.last_changed
@@ -269,7 +297,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         await self.coordinator.client.api.set_home_load(
                             siteId=data.get("site_id") or "",
                             deviceSn=self.coordinator_context,
-                            preset=int(value),
+                            preset=int(value)
+                            if self._attribute_name == "preset_system_output_power"
+                            else None,
+                            dev_preset=int(value)
+                            if self._attribute_name == "preset_device_output_power"
+                            else None,
                         )
                         self.last_changed = datetime.now().astimezone()
                         # update sites for workaround with active output power preset fields

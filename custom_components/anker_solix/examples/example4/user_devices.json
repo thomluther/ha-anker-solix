@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [
+      {
+        "device_pn": "A17C0",
+        "device_sn": "XGR9TZEI1N9OO8BN",
+        "device_name": "PV Left",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "1",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "1",
+        "wireless_type": "1",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 0,
+        "set_load_power": "",
+        "output_cutoff_data": 0,
+        "is_display": false
+      },
+      {
+        "device_pn": "A17C0",
+        "device_sn": "W8Z0AY4TF8L03KMS",
+        "device_name": "PV Right",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "1",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "1",
+        "wireless_type": "1",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 0,
+        "set_load_power": "",
+        "output_cutoff_data": 0,
+        "is_display": false
+      }
+    ],
+    "powerpanel_list": []
+  },
+  "trace_id": "e0be919057dd45fd729cdd7be62ecb6a"
+}

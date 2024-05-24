@@ -1,8 +1,0 @@
-{
-  "code": 0,
-  "msg": "success!",
-  "data": {
-    "param_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"07:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":150,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"07:30\",\"end_time\":\"09:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":150,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"09:30\",\"end_time\":\"17:30\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":150,\"number\":1}],\"charge_priority\":100},{\"id\":0,\"start_time\":\"17:30\",\"end_time\":\"24:00\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":150,\"number\":1}],\"charge_priority\":80}],\"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":1,\"default_charge_priority\":80,\"is_zero_output_tips\":0}"
-  },
-  "trace_id": "40a3cdc83c5e79ebb2eb5d91be3dade2"
-}

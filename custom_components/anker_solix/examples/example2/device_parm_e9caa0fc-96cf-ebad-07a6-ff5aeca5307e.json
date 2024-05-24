@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"07:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":170,\"number\":1}],\"charge_priority\":80,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"F5AAWDBMU83C3TWF\",\"power\":85},{\"device_sn\":\"M4HZ9WIT677F634H\",\"power\":85}]},{\"id\":0,\"start_time\":\"07:30\",\"end_time\":\"09:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":170,\"number\":1}],\"charge_priority\":80,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"F5AAWDBMU83C3TWF\",\"power\":85},{\"device_sn\":\"M4HZ9WIT677F634H\",\"power\":85}]},{\"id\":0,\"start_time\":\"09:30\",\"end_time\":\"17:30\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":170,\"number\":1}],\"charge_priority\":65,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"F5AAWDBMU83C3TWF\",\"power\":85},{\"device_sn\":\"M4HZ9WIT677F634H\",\"power\":85}]},{\"id\":0,\"start_time\":\"17:30\",\"end_time\":\"24:00\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":170,\"number\":1}],\"charge_priority\":80,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"F5AAWDBMU83C3TWF\",\"power\":85},{\"device_sn\":\"M4HZ9WIT677F634H\",\"power\":85}]}],\"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":1,\"default_charge_priority\":80,\"is_zero_output_tips\":0,\"display_advanced_mode\":1,\"advanced_mode_min_load\":50}"
+  },
+  "trace_id": "09fad9bdb7cccabb15643cfcc97d3072"
+}

@@ -60,6 +60,10 @@ Following are screenshots from basic dashboard cards including the latest sensor
 
 ![Solarbank Dashboard Light Theme][solarbank-dashboard-light-img]
 
+**6. Additional device preset entites only available in supported dual Solarbank systems**
+
+![Dual Solarbank Entities][dual-solarbank-entities-img]
+
 
 **Note:** When using a shared system account for the integration, device detail information is limited and changes are not premitted. Therefore shared system account users may get presented only a subset and no changable entities by the integration.
 
@@ -226,16 +230,17 @@ max: 3
 
 **Attention: Setting the solarbank output power for the house is not as straight forward as you might think and applying changed settings may give you a different result as expected or as represented by the output preset sensor.**
 
-Following is some more background on this to explain the complexity. The home load power cannot be set directly for the solarbank. It can only be set indirectly by a time schedule, which typically covers a full day from 00:00 to 24:00h. There cannot be different schedules on various days, it's only a single schedule that is shared by all solarbanks configured into the system. Typically for single solarbank systems, the solarbank covers the full home load that is defined for the time interval. For dual solarbank setups, both share 50% of the home load power preset per default. This share was fixed and could not be changed so far. Starting with the Anker App 2.2.1 and new solarbank firmware 1.5.6, the share between both solarbanks can also be modified. However, this capability is not built into the Python library for the time being. It's not clear how the share can be modified via the cloud Api and you need a dual solarbank setup to explore those capabilities.
+Following is some more background on this to explain the complexity. The home load power cannot be set directly for the solarbank. It can only be set indirectly by a time schedule, which typically covers a full day from 00:00 to 24:00h. There cannot be different schedules on various days, it's only a single schedule that is shared by all solarbanks configured into the system. Typically for single solarbank systems, the solarbank covers the full home load that is defined for the time interval. For dual solarbank setups, both share 50% of the home load power preset per default. This share was fixed and could not be changed so far. Starting with the Anker App 2.2.1 and new solarbank firmware 1.5.6, the share between both solarbanks can also be modified. Starting with integration version 1.3.0, this capability is also supported with additional entities that will be created for dual solarbank systems supporing individual device presets. It is a new preset mode that was implemented in the schedule structure.
 
 Following are the customizable parameters of a time interval that are supported by the integration and the Python Api library:
 - Start and End time of a schedule interval
-- Appliance home load preset (0-800 W), using the default 50% share in dual solarbank setups
+- Appliance home load preset (100 - 800/1600 W). If changed in dual solarbanks systems, it will always use normal preset mode with the default 50% device share
+- Device load preset (50-800 W) for dual solarbank systems supporting individual device presets. A change will always enable advanced preset mode and also affect the appliance load preset accordingly
 - Export switch
 - Charge Priority Limit (0-100 %), typically only seen in the App when Anker MI80 inverter is configured
 
-Those given ranges are being enforced by the integration and the Api library. However, while those ranges are also accepted by the appliance when provided via a schedule, the appliance may ignore them when they are outside of its internally used/defined boundaries. For example, you can set an Appliance home load of 50 W which is also represented in the schedule interval. The appliance however will still apply the internal minimum limit of 100 W or 150 W depending on the configured inverter type for your solarbank.
-It is typically the combination of those 3 settings, as well as the actual situation of the battery SOC, the temperature and the defined/used inverter in combination with either the charge priority setting or activation of the 0 W switch that all determine which home load preset will be applied by the appliance. The applied home load is typically represented in the App for the active time interval, and this is what you can also see in the Solarbank System sensor for the preset output power. But rest assured, even if it shows 0 W home load preset is applied, it does not warrant you there won't be any output power to the house!
+Those given ranges depend on the number of solarbanks in the system and are being enforced by the integration and the Api library. However, while those ranges are also accepted by the appliance when provided via a schedule, the appliance may ignore them when they are outside of its internally used/defined boundaries. For example, you can set an Appliance home load of 100 W which is also represented in the schedule interval. The appliance however will still apply the internal minimum limit of 150 W depending on the configured inverter type for your solarbank.
+It is typically the combination of those settings, as well as the actual situation of the battery SOC, the temperature and the defined/used inverter in combination with either the charge priority setting or activation of the 0 W switch that all determine which home load preset will be applied by the appliance. The applied home load is typically represented in the App for the active time interval, and this is what you can also see in the Solarbank System sensor for the preset output power. But rest assured, even if it shows 0 W home load preset is applied, it does not warrant you there won't be any output power to the house!
 
 ### To conclude: The appliance home load preset for the solarbank is just the desired output, but the truth can be completely different
 
@@ -266,15 +271,15 @@ The user bears the sole risk for a possible loss of the manufacturer's warranty 
 
 ### How can you modify the home load and the solarbank schedule
 
-Following 3 methods are implemented with version 1.1.0 of the integration:
+Following 3 methods are implemented:
 
-#### 1. **Direct parameter changes via entity modifications for Appliance Home Load preset, allowance of export and charge priority limit**
+#### 1. **Direct parameter changes via entity modifications for Appliance and/or Device Home Load preset, allowance of export and charge priority limit**
 
-Any change in those 3 entities is immediately applied to the current time slot in the existing schedule. Please see the Solarbank dashboard screenshots above for examples of the entity representation.
+Any change in those entities is immediately applied to the current time slot in the existing schedule. Please see the Solarbank dashboard screenshots above for examples of the entity representation. While the schedule is shared for the appliance, each solarbank in a dual solarbank setup will be presented with those entities. A change in the device load preset will however enable advanced preset mode and only change the corresponding solarbank output. However, it will also result in a change of the appliance home load preset accordingly.
 
 **A word of caution:**
 
-When you represent the home load number entity as input field in your dashboard cards, do **NOT use the step up/down arrows** but enter the home load value directly in the field. Each step via the field arrows triggers a settings change immediately, and increases are restricted for min. 30 second intervals. Preferrably use a slider for manual number modifications, since the value is just applied to the entity  once you release the slider movement (do not release the slider until you moved it to the desired value).
+When you represent the home load number entities as input field in your dashboard cards, do **NOT use the step up/down arrows** but enter the home load value directly in the field. Each step via the field arrows triggers a settings change immediately, and increases are restricted for min. 30 second intervals. Preferrably use a slider for manual number modifications, since the value is just applied to the entity once you release the slider movement (do not release the slider until you moved it to the desired value).
 
 #### 2. **Solarbank schedule modifications via services**
 
@@ -294,10 +299,19 @@ You can specify the solarbank device id or the entity ID of the solarbank output
     - When one of the update interval boundaries remains the same as the existing interval, the existing interval values will be re-used for the updated interval in case they were not specified.
     - This allows quick interval updates for one boundary or specific parameters only without the need to specify all parameters again
   - All 3 parameters are mandatory per interval for a schedule update via the Api. If they are not specified with the service, existing ones will be re-used when it makes sense or following defaults will be applied:
-    - 100 W Home load preset
+    - 100 W Home load preset in normal preset mode if neither appliance nor device load presets are provided
     - Allow Export is ON
     - 80 % Charge Priority limit
   - The Set schedule service also requires to specify the time interval for the first slot. However, testing has shown that the provided times are ignored and a full day interval is always created when only a single interval is provided with a schedule update via the Api.
+
+For dual solarbank systems, following load preset rules will be applied
+  - If only appliance load preset provided, the normal preset mode will be used which applies a 50% share to both solarbanks
+  - If only device load preset provided, the advanced power mode will be used if supported by existing schedule structure. The appliance load preset will be adjusted accordingly, but the other solarbank device preset will not be changed. It will fall back to normal appliance load usage if advanced power mode not supported by existing schedule structure.
+  - If appliance and device load preset are provided, the advanced power mode will be used if supported by existing schedule structure. The appliance load preset will be used accordingly within the capabable limits, resulting from the provided device preset and the preset difference that will be applied to the other solarbank device. It will fall back to normal appliance load usage if advanced power mode not supported by existing schedule structure.
+  - If neither appliance nor device presets are provided, the existing power presets and mode will remain unchanged and reused if at least start or end time remain unchanged. Otherwise the default preset will be applied for the interval
+  - If only device preset is provided for single solarbank systems, it will be applied as appliance load preset instead, which in fact is the same result for such systems
+
+Note: Usage of advanced preset mode is determined by existing schedule structure. When no schedule is defined and the set schedule service is used with a device preset requiring the advanced power preset mode, but the solarbanks are not on required firmware level to accept the new schedule structure, the service call may fail with an Api request error.
 
 #### 3. **Interactive solarbank schedule modification via a parameterized script that executes a schedule service with provided parameters**
 
@@ -341,16 +355,16 @@ content: |
   {% set slots = (state_attr(entity,'schedule')).ranges|default([])|list %}
   {% set isnow = now().time().replace(second=0,microsecond=0) %}
   {% if slots %}
-    {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format('Start', 'End','Preset','Export','Prio', 'SB1', 'SB2', 'Name') }}
-    {{ ":---:|:---:|---:|:---:|:---:|---:|---:|:---" }}
+    {{ "%s | %s | %s | %s | %s | %s | %s | %s | %s"|format('Start', 'End', 'Preset', 'Export', 'Prio', 'Mode', 'SB1', 'SB2', 'Name') }}
+    {{ ":---:|:---:|---:|:---:|:---:|:---:|---:|---:|:---" }}
   {% else %}
     {{ "No schedule available"}}
-  {% endif %}
-  {% for slot in slots -%}
+  {%- endif -%}
+  {%- for slot in slots -%}
     {%- set bs = '_**' if strptime(slot.start_time,"%H:%M").time() <= isnow < strptime(slot.end_time.replace('24:00','23:59'),"%H:%M").time() else '' -%}
     {%- set be = '**_' if bs else '' -%}
     {%- set sb2 = '-/-' if slot.device_power_loads|default([])|length < 2 else slot.device_power_loads[1].power~" W" -%}
-      {{ "%s | %s | %s | %s | %s | %s | %s | %s"|format(bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.appliance_loads[0].power~" W"~be, bs~'On'~be if slot.turn_on else bs~'Off'~be, bs~slot.charge_priority~' %'~be, bs~slot.device_power_loads[0].power~" W"~be, bs~sb2~be, bs~slot.appliance_loads[0].name)~be }}
+      {{ "%s | %s | %s | %s | %s | %s | %s | %s | %s"|format(bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.appliance_loads[0].power~" W"~be, bs~'On'~be if slot.turn_on else bs~'Off'~be, bs~slot.charge_priority~' %'~be, bs~(slot.power_setting_mode or '-')~be, bs~slot.device_power_loads[0].power~" W"~be, bs~sb2~be, bs~slot.appliance_loads[0].name)~be }}
   {% endfor -%}
 ```
 
@@ -360,7 +374,7 @@ content: |
 - The applied appliance home load preset can show 0 W even if appliance home load preset is different, but Allow Export switch is off. It also depends on the state of charge and the charge priority limit and the defined/installed inverter. Even if the preset sensor state shows 0 W, it does not mean that there won't be output to the house. It simply reflects the same value as presented in the App for the current interval.
 - Starting with Anker App 2.2.1, you can modify the default 50 % preset share between a dual Solarbank setup. The SB1 and SB2 values of the schedule will show the applied preset per Solarbank in that case, which is also reflected in the individual device preset sensor. For single Solarbank setups, the individual device presets of the schedule are ignored by the appliance and the appliance preset is used.
 - Even if each Solarbank device has its own Home Preset sensor (reflecting their contribution to the applied home load preset for the device) and schedule attribute, all Solarbanks in a system share the same schedule. Therefore a parameter change of one solarbank also affects the second solarbank. The applied home load settings are ALLWAYS for the schedule, which is still shared by all solarbanks in the system.
-
+- The schedule structure for the normal preset mode is always reflecting 50% of the appliance load preset to the device load preset. This is also the case for single solarbank systems. A simple schedule structure rule is that with no or normal preset mode, the appliance load preset will be applied. For advanced preset mode which is only accepted in dual solarbank systems, the individual device load presets will be applied and the appliance load setting will be ignored.
 
 
 ## Script to manually modify appliance schedule for your solarbank
@@ -403,15 +417,26 @@ fields:
     selector:
       time: null
   appliance_load:
-    name: Home load preset
+    name: Appliance load preset
     description: Watt to be delivered to the house
     required: false
     default: 100
     selector:
       number:
-        min: 0
-        max: 800
+        min: 100
+        max: 1600
         step: 10
+        unit_of_measurement: W
+  device_load:
+    name: Device load preset
+    description: Watt to be delivered by the solarbank device
+    required: false
+    default: 50
+    selector:
+      number:
+        min: 50
+        max: 800
+        step: 5
         unit_of_measurement: W
   allow_export:
     name: Allow export
@@ -445,6 +470,8 @@ sequence:
         {{end_time}}
       appliance_load: |
         {{appliance_load|default(None)}}
+      device_load: |
+        {{device_load|default(None)}}
       allow_export: |
         {{allow_export|default(None)}}
       charge_priority_limit: |
@@ -488,6 +515,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [notification-img]: doc/notification.png
 [solarbank-dashboard-img]: doc/solarbank-dashboard.png
 [solarbank-dashboard-light-img]: doc/solarbank-dashboard-light.png
+[dual-solarbank-entities-img]:  doc/dual-solarbank-entities.png
 [system-dashboard-img]: doc/system-dashboard.png
 [schedule-markdown-img]: doc/schedule-markdown.png
 [schedule-script-img]: doc/change-schedule-script.png

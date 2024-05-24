@@ -3,18 +3,26 @@
   "msg": "success!",
   "data": {
     "site_info": {
-      "site_id": "beddfef9-acaa-89de-f6c9-31fc9a499c65",
+      "site_id": "e9caa0fc-96cf-ebad-07a6-ff5aeca5307e",
       "site_name": "AnkerPrime",
       "site_img": "",
-      "device_type_list": null,
+      "device_type_list": [
+        3,
+        1
+      ],
       "ms_type": 0,
-      "power_site_type": 0,
-      "is_allow_delete": false
+      "power_site_type": 2,
+      "is_allow_delete": false,
+      "support_device_models": [
+        "A17C0",
+        "A5143",
+        "A1771"
+      ]
     },
     "solar_list": [
       {
-        "device_sn": "PK2UE3X006JF",
-        "device_name": "MI80 Microinverter(BLE)",
+        "device_sn": "DQTGB647Q061",
+        "device_name": "Microlino",
         "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
         "bind_site_status": "",
         "generate_power": "",
@@ -29,7 +37,7 @@
     "solarbank_list": [
       {
         "device_pn": "A17C0",
-        "device_sn": "6TXY2KVEWX2UB78L",
+        "device_sn": "F5AAWDBMU83C3TWF",
         "device_name": "SB2",
         "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
         "battery_power": "",
@@ -42,12 +50,13 @@
         "main_version": "",
         "photovoltaic_power": "",
         "output_power": "",
-        "create_time": 0,
-        "set_load_power": ""
+        "create_time": 1707039514,
+        "set_load_power": "",
+        "output_cutoff_data": 0
       },
       {
         "device_pn": "A17C0",
-        "device_sn": "WO42TA2RIXLX2WLZ",
+        "device_sn": "M4HZ9WIT677F634H",
         "device_name": "SB1",
         "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
         "battery_power": "",
@@ -60,11 +69,12 @@
         "main_version": "",
         "photovoltaic_power": "",
         "output_power": "",
-        "create_time": 0,
-        "set_load_power": ""
+        "create_time": 1707130510,
+        "set_load_power": "",
+        "output_cutoff_data": 0
       }
     ],
     "powerpanel_list": []
   },
-  "trace_id": "bc44b7bcdfadcbec2fbe2b04ff8deb6d"
+  "trace_id": "625c69d4cf4550ef33c3c1dd664cd551"
 }

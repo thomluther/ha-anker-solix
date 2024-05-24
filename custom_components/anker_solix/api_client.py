@@ -32,6 +32,7 @@ API_CATEGORIES: list = [
     api.SolixDeviceType.POWERPANEL.value,
     api.SolixDeviceType.INVERTER.value,
     api.SolixDeviceType.SOLARBANK.value,
+    # api.SolixDeviceType.SMARTMETER.value,
     # api.SolixDeviceType.POWERCOOLER.value,
     api.ApiCategories.solarbank_energy,
     api.ApiCategories.solarbank_cutoff,

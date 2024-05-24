@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f",
+    "solar_brand": "ANKER",
+    "solar_model": "A5143",
+    "solar_sn": "8SJMOPKAILJW",
+    "solar_model_name": "MI80 Microinverter(BLE)"
+  },
+  "trace_id": "7ad2d67ffeedd4911daa4eccff11affc"
+}

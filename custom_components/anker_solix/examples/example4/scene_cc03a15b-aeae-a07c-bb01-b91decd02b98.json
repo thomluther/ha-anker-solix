@@ -1,0 +1,98 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "131.85",
+        "unit": "kwh"
+      },
+      {
+        "type": "2",
+        "total": "131.45",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "44.83",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C0",
+          "device_sn": "W8Z0AY4TF8L03KMS",
+          "device_name": "PV Right",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+          "battery_power": "60",
+          "bind_site_status": "",
+          "charging_power": "120",
+          "power_unit": "W",
+          "charging_status": "2",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "0",
+          "output_power": "120",
+          "create_time": 1712077664,
+          "set_load_power": "135",
+          "output_cutoff_data": 10,
+          "is_display": true
+        },
+        {
+          "device_pn": "A17C0",
+          "device_sn": "XGR9TZEI1N9OO8BN",
+          "device_name": "PV Left",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+          "battery_power": "64",
+          "bind_site_status": "",
+          "charging_power": "136",
+          "power_unit": "W",
+          "charging_status": "2",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "0",
+          "output_power": "136",
+          "create_time": 1712077664,
+          "set_load_power": "135",
+          "output_cutoff_data": 10,
+          "is_display": true
+        }
+      ],
+      "total_charging_power": "0",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.62",
+      "updated_time": "2024-05-22 20:12:12",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "256.00",
+      "display_set_power": true,
+      "is_display_data": true
+    },
+    "retain_load": "270W",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 2,
+    "site_id": "cc03a15b-aeae-a07c-bb01-b91decd02b98",
+    "powerpanel_list": []
+  },
+  "trace_id": "2dcaa3ecfdd965ed25c82e0c2824dddb"
+}

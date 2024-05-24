@@ -142,7 +142,7 @@ _API_ENDPOINTS = {
     "get_device_load": "power_service/v1/app/device/get_device_home_load",  # Get defined device schedule (same data as provided with device param query)
     "set_device_load": "power_service/v1/app/device/set_device_home_load",  # Set defined device schedule, Accepts the new schedule, but does NOT change it? Maybe future use for schedules per device
     "get_ota_info": "power_service/v1/app/compatible/get_ota_info",  # Get OTA status for solarbank and/or inverter serials
-    "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Not clear what this does, shows some OTA settings
+    "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Get info of available OTA update
     "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar inverter definition for solarbanks, works only with owner account
     "get_cutoff": "power_service/v1/app/compatible/get_power_cutoff",  # Get Power Cutoff settings (Min SOC) for provided site id and device sn, works only with owner account
     "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, only works for onwer accounts
@@ -153,8 +153,10 @@ _API_ENDPOINTS = {
     "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
     "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
-    "get_message": "power_service/v1/get_message",  # get list of max Messages from certain time, last_time format unknown
-    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # get mqtt server and certificates, not explored or used
+    "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
+    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
+    "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
+    "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -169,7 +171,7 @@ _API_ENDPOINTS = {
     'power_service/v1/site/add_site_devices',
     'power_service/v1/site/delete_site_devices',
     'power_service/v1/site/update_site_devices',
-    'power_service/v1/site/get_addable_site_list,   # show to which defined site a given model type can be added
+    'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -190,18 +192,16 @@ _API_ENDPOINTS = {
     'power_service/v1/message_not_disturb',  # change do not disurb messages settings
     'power_service/v1/read_message',
     'power_service/v1/del_message',
-    'power_service/v1/product_categories',  # GET method to list all supported products with details and web picture links
-    'power_service/v1/product_accessories',  # GET method to list all supported products accessories with details and web picture links
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/logging/get_device_logging',
     'app/devicerelation/up_alias_name',  # Update Alias name of device? Fails with (10003) Failed to request
     'app/devicerelation/un_relate_and_unbind_device',
     'app/devicerelation/relate_device',
-
-
-
-
+    'power_service/v1/app/device/get_device_attrs', # not found yet on server
+    'power_service/v1/app/device/set_device_attrs', # not found yet on server
+    'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
+    'power_service/v1/app/device/get_relate_belong' # shows belonging of given device
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -245,6 +245,7 @@ class SolixDeviceType(Enum):
     SYSTEM = "system"
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
+    SMARTMETER = "smartmeter"
     PPS = "pps"
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
@@ -254,6 +255,13 @@ class SolixParmType(Enum):
     """Enumuration for Anker Solix Parameter types."""
 
     SOLARBANK_SCHEDULE = "4"
+
+
+class SolarbankPowerMode(Enum):
+    """Enumuration for Anker Solix Solarbank Power setting modes."""
+
+    normal = 1
+    advanced = 2
 
 
 @dataclass(frozen=True)
@@ -270,9 +278,12 @@ class ApiCategories:
 
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
-    """Dataclass for Anker Solix device capacities in Wh by Part Number."""
+    """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
 
     A17C0: int = 1600  # SOLIX E1600 Solarbank
+    A17C1: int = 1600  # SOLIX E1600 Solarbank 2 Pro
+    A17C1321: int = 1600  # SOLIX E1600 Solarbank 2 Expansion battery
+    A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1751: int = 512  # Anker PowerHouse 535 Portable Power Station
     A1753: int = 768  # SOLIX C800 Portable Power Station
@@ -280,12 +291,13 @@ class SolixDeviceCapacity:
     A1755: int = 768  # SOLIX C800X Portable Power Station
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
-    A17C1: int = 1056  # SOLIX C1000 Expansion Battery
+    #A17C1: int = 1056  # SOLIX C1000 Expansion Battery # same PN as Solarbank 2?
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
     A1780: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1780_1: int = 2048  # Expansion Battery for F2000
+    A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WLAN
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
@@ -297,9 +309,13 @@ class SolixDeviceCategory:
 
     # Solarbanks
     A17C0: str = SolixDeviceType.SOLARBANK.value  # SOLIX E1600 Solarbank
+    A17C1: str = SolixDeviceType.SOLARBANK.value  # SOLIX E1600 Solarbank 2 Pro
+    A17C3: str = SolixDeviceType.SOLARBANK.value  # SOLIX E1600 Solarbank 2 Plus
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
+    # Smart Meter
+    A17X7: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter
     # Portable Power Stations (PPS)
     A1720: str = (
         SolixDeviceType.PPS.value
@@ -337,11 +353,14 @@ class SolixDefaults:
     """Dataclass for Anker Solix defaults to be used."""
 
     # Output Power presets for Solarbank schedule timeslot settings
-    PRESET_MIN: int = 0
+    PRESET_MIN: int = 100
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
+    PRESET_NOSCHEDULE: int = 200
     # Export Switch preset for Solarbank schedule timeslot settings
     ALLOW_EXPORT: bool = True
+    # Preset power mode for Solarbank schedule timeslot settings
+    POWER_MODE: int = SolarbankPowerMode.normal.value
     # Charge Priority limit preset for Solarbank schedule timeslot settings
     CHARGE_PRIORITY_MIN: int = 0
     CHARGE_PRIORITY_MAX: int = 100
@@ -386,6 +405,9 @@ class SolarbankTimeslot:
     end_time: datetime
     appliance_load: int | None = (
         None  # mapped to appliance_loads setting using a default 50% share for dual solarbank setups
+    )
+    device_load: int | None = (
+        None  # mapped to device load setting of provided solarbank serial
     )
     allow_export: bool | None = None  # mapped to the turn_on boolean
     charge_priority_limit: int | None = None  # mapped to charge_priority setting
@@ -485,33 +507,34 @@ class AnkerSolixApi:
         self._last_request_time: datetime | None = None
 
         # Define Encryption for password, using ECDH assymetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
-        # uncompressed public key from EU Anker server in the format 04 [32 byte x vlaue] [32 byte y value]
+        # uncompressed public key from EU Anker server in the format 04 [32 byte x value] [32 byte y value]
         # Both, the EU and COM Anker server public key is the same and login response is provided for both upon an authentication request
         # However, if country ID assignment is to wrong server, no sites or devices will be listed for the authenticated account.
         self._api_public_key_hex = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076"
-        self._curve = (
-            ec.SECP256R1()
-        )  # Encryption curve SECP256R1 (identical to prime256v1)
-        self._ecdh = ec.generate_private_key(
-            self._curve, default_backend()
-        )  # returns EllipticCurvePrivateKey
-        self._public_key = self._ecdh.public_key()  # returns EllipticCurvePublicKey
+        # Encryption curve SECP256R1 (identical to prime256v1)
+        self._curve = ec.SECP256R1()
+        # get EllipticCurvePrivateKey
+        self._ecdh = ec.generate_private_key(self._curve, default_backend())
+        # get EllipticCurvePublicKey
+        self._public_key = self._ecdh.public_key()
+        # get bytes of shared secret
         self._shared_key = self._ecdh.exchange(
             ec.ECDH(),
             ec.EllipticCurvePublicKey.from_encoded_point(
                 self._curve, bytes.fromhex(self._api_public_key_hex)
             ),
-        )  # returns bytes of shared secret
+        )
 
         # track active devices bound to any site
         self._site_devices: set = set()
 
-        # Define class variables saving the most recent site and device data
+        # reset class variables for saving the most recent site and device data (Api cache)
         self.nickname: str = ""
         self.sites: dict = {}
         self.devices: dict = {}
 
     def _md5(self, text: str) -> str:
+        """Return MD5 hash in hex for given string."""
         h = hashes.Hash(hashes.MD5())
         h.update(text.encode("utf-8"))
         return h.finalize().hex()
@@ -637,7 +660,7 @@ class AnkerSolixApi:
         """
         sn = devData.get("device_sn")
         if sn:
-            device = self.devices.get(sn, {})  # lookup old device info if any
+            device: dict = self.devices.get(sn, {})  # lookup old device info if any
             device.update({"device_sn": str(sn)})
             if devType:
                 device.update({"type": devType.lower()})
@@ -752,6 +775,8 @@ class AnkerSolixApi:
                         device.update({"charge": bool(value)})
                     elif key in ["auto_upgrade"]:
                         device.update({"auto_upgrade": bool(value)})
+                    elif key in ["is_ota_update"]:
+                        device.update({"is_ota_update": bool(value)})
                     elif (
                         key in ["power_cutoff", "output_cutoff_data"]
                         and str(value).isdigit()
@@ -775,14 +800,29 @@ class AnkerSolixApi:
                         ]:
                             value.pop(key, None)
                         device.update({"solar_info": dict(value)})
+                    elif key in ["solarbank_count"] and value:
+                        device.update({"solarbank_count": value})
                     # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
-                    # When individual device schedules are support in future, this info is needed per device anyway
-                    elif key in ["schedule"] and isinstance(value, dict) and value:
+                    # When individual device schedules are supported in future, this info is needed per device anyway
+                    elif key in ["schedule"] and isinstance(value, dict):
                         device.update({"schedule": dict(value)})
-                        # default active presets to None
-                        device.pop("preset_system_output_power", None)
-                        device.pop("preset_allow_export", None)
-                        device.pop("preset_charge_priority", None)
+                        # set default presets for no active schedule slot
+                        cnt = device.get("solarbank_count", 0)
+                        device.update(
+                            {
+                                "preset_system_output_power": SolixDefaults.PRESET_NOSCHEDULE,
+                                "preset_allow_export": SolixDefaults.ALLOW_EXPORT,
+                                "preset_charge_priority": SolixDefaults.CHARGE_PRIORITY_DEF,
+                                "preset_power_mode": SolixDefaults.POWER_MODE
+                                if cnt > 1
+                                else None,
+                                "preset_device_output_power": int(
+                                    SolixDefaults.PRESET_NOSCHEDULE / cnt
+                                )
+                                if cnt > 1
+                                else None,
+                            }
+                        )
                         # get actual presets from current slot
                         now = datetime.now().time().replace(microsecond=0)
                         # set now to new daytime if close to end of day
@@ -804,17 +844,37 @@ class AnkerSolixApi:
                                         end_time, "%H:%M"
                                     ).time()
                                 if start_time <= now < end_time:
+                                    preset_power = (slot.get("appliance_loads") or [{}])[0].get("power")
                                     device.update(
                                         {
-                                            "preset_system_output_power": (
-                                                slot.get("appliance_loads") or [{}]
-                                            )[0].get("power"),
+                                            "preset_system_output_power": preset_power,
                                             "preset_allow_export": slot.get("turn_on"),
                                             "preset_charge_priority": slot.get(
                                                 "charge_priority"
                                             ),
                                         }
                                     )
+                                    # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
+                                    power_mode = slot.get("power_setting_mode")
+                                    dev_presets = slot.get("device_power_loads") or [{}]
+                                    dev_power = next(
+                                        iter(
+                                            [
+                                                d.get("power")
+                                                for d in dev_presets
+                                                if d.get("device_sn") == sn
+                                            ]
+                                        ),
+                                        None,
+                                    )
+                                    if cnt > 1:
+                                        # adjust device power value for default share which is always using 50%, also for single solarbank setups
+                                        device.update(
+                                            {
+                                                "preset_power_mode": power_mode,
+                                                "preset_device_output_power": dev_power,
+                                            }
+                                        )
 
                     # inverter specific keys
                     elif key in ["generate_power"]:
@@ -848,7 +908,7 @@ class AnkerSolixApi:
                                     ),
                                 }
                             )
-                except Exception as err:  # pylint: disable=broad-exception-caught
+                except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
                         "%s occured when updating device details for key %s with value %s: %s",
                         type(err),
@@ -1052,7 +1112,7 @@ class AnkerSolixApi:
             # Is the separate timestamp relevant for encryption?
             pass
             # Extra Api header arguments used by the mobile App for request encryption
-            # Response will return encrypted boy and a signature
+            # Response will return encrypted body and a signature field
             # mergedHeaders.update({
             #     "x-replay-info": "replay",
             #     "x-encryption-info": "algo_ecdh",
@@ -1266,8 +1326,9 @@ class AnkerSolixApi:
                         sb_total_charge_calc += charge_calc
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                     new_sites.update({myid: mysite})
+                    # add count of solarbanks to device details
                     sn = self._update_dev(
-                        solarbank,
+                        solarbank | {"solarbank_count": len(sb_list)},
                         devType=SolixDeviceType.SOLARBANK.value,
                         siteId=myid,
                         isAdmin=admin,
@@ -1440,18 +1501,18 @@ class AnkerSolixApi:
                         await self.get_power_cutoff(
                             siteId=site_id, deviceSn=sn, fromFile=fromFile
                         )
-
+                    # Fetch available OTA update for solarbanks
+                    self._logger.debug("Getting OTA update info for device")
+                    await self.get_ota_update(deviceSn=sn, fromFile=fromFile)
                     # Fetch defined inverter details for solarbanks
                     if {ApiCategories.solarbank_solar_info} - exclude:
                         self._logger.debug("Getting inverter settings for device")
                         await self.get_solar_info(solarbankSn=sn, fromFile=fromFile)
-
                     # Fetch schedule for device types supporting it
                     self._logger.debug("Getting schedule details for device")
                     await self.get_device_load(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
-
                     # Fetch device fittings for device types supporting it
                     if {ApiCategories.solarbank_fittings} - exclude:
                         self._logger.debug("Getting fittings for device")
@@ -1964,7 +2025,7 @@ class AnkerSolixApi:
         siteId: str,
         deviceSn: str,
         loadData: dict,
-    ) -> dict:
+    ) -> bool:
         """Set device home load (e.g. solarbank schedule).
 
         Example input for system with single solarbank:
@@ -1978,7 +2039,8 @@ class AnkerSolixApi:
             '"charge_priority":0,"power_setting_mode":1,"device_power_loads":[{"device_sn":"9JVB42LJK8J0P5RY","power":150}]}],'
             '"min_load":100,"max_load":800,"step":0,"is_charge_priority":0,"default_charge_priority":0,"is_zero_output_tips":1,"display_advanced_mode":0,"advanced_mode_min_load":0}'
         }
-        Attention: This method and endpoint actually accepts the inputs, but does not change anything. The set_device_parm endpoint may have to be used
+        Attention: This method and endpoint actually accepts the input data, but does not change anything on the solarbank.
+        The set_device_parm endpoint may have to be used. Eventually this method is used for Solarbank 2 since that will use a different schedule structure?
         """
         data = {
             "site_id": siteId,
@@ -2056,7 +2118,7 @@ class AnkerSolixApi:
         paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
         command: int = 17,
         deviceSn: str | None = None,
-    ) -> dict:
+    ) -> bool:
         """Set device parameters (e.g. solarbank schedule).
 
         command: Must be 17 for solarbank schedule.
@@ -2089,31 +2151,56 @@ class AnkerSolixApi:
         deviceSn: str,
         all_day: bool = False,
         preset: int | None = None,
+        dev_preset: int | None = None,
         export: bool | None = None,
         charge_prio: int | None = None,
-        set_slot: SolarbankTimeslot = None,
-        insert_slot: SolarbankTimeslot = None,
-    ) -> bool:
+        set_slot: SolarbankTimeslot | None = None,
+        insert_slot: SolarbankTimeslot | None = None,
+        test_schedule: dict
+        | None = None,  # used only for testing instead of real schedule
+        test_count: int
+        | None = None,  # used only for testing instead of real solarbank count
+    ) -> bool | dict:
         """Set the home load parameters for a given site id and device for actual or all slots in the existing schedule.
 
         If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
         Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
         When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
 
-        Example schedule as provided via Api:
-        {{"ranges":[
+        Example schedules for Solarbank as provided via Api:
+        {"ranges":[
             {"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},
             {"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},
             {"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],
-        "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}
+        "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}
+
+        Newer ranges structure with individual device power loads:
+        {"ranges":[
+            {"id":0,"start_time":"00:00","end_time":"08:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Custom","power":270,"number":1}],"charge_priority":10,
+                "power_setting_mode":1,"device_power_loads":[{"device_sn":"W8Z0AY4TF8L03KMS","power":135},{"device_sn":"XGR9TZEI1N9OO8BN","power":135}]},
+            {"id":0,"start_time":"08:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Custom","power":300,"number":1}],"charge_priority":10,
+                "power_setting_mode":2,"device_power_loads":[{"device_sn":"W8Z0AY4TF8L03KMS","power":100},{"device_sn":"XGR9TZEI1N9OO8BN","power":200}]}],
+        "min_load":100,"max_load":800,"step":0,"is_charge_priority":1,"default_charge_priority":80,"is_zero_output_tips":0,"display_advanced_mode":1,"advanced_mode_min_load":50}
         """
         # fast quit if nothing to change
-        if not str(charge_prio).isdigit():
-            charge_prio = None
-        if not str(preset).isdigit():
-            preset = None
+        charge_prio = (
+            int(charge_prio)
+            if str(charge_prio).isdigit() or isinstance(charge_prio, int | float)
+            else None
+        )
+        preset = (
+            int(preset)
+            if str(preset).isdigit() or isinstance(preset, int | float)
+            else None
+        )
+        dev_preset = (
+            int(dev_preset)
+            if str(dev_preset).isdigit() or isinstance(dev_preset, int | float)
+            else None
+        )
         if (
             preset is None
+            and dev_preset is None
             and export is None
             and charge_prio is None
             and set_slot is None
@@ -2121,15 +2208,39 @@ class AnkerSolixApi:
         ):
             return False
         # set flag for required current parameter update
-        if set_slot is None and insert_slot is None:
-            pending_now_update = True
-        else:
-            pending_now_update = False
+        pending_now_update = bool(set_slot is None and insert_slot is None)
         # obtain actual device schedule from internal dict or fetch via api
-        if not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
+        if test_schedule is not None:
+            schedule = test_schedule
+        elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
             schedule = (
                 await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
             ).get("home_load_data") or {}
+        ranges = schedule.get("ranges") or []
+        # get appliance load name from first existing slot to avoid mixture
+        # NOTE: The solarbank may behave weird if a mixture is found or the name does not match with some internal settings
+        # The name cannot be queried, but seems to be 'custom' by default. However, the mobile app translates it to whather language is defined in the App
+        appliance_name = None
+        pending_insert = False
+        sb_count = 0
+        if len(ranges) > 0:
+            appliance_name = (ranges[0].get("appliance_loads") or [{}])[0].get("name")
+            # default to single solarbank if schedule does not include device parms yet (old firmware?)
+            sb_count = len(ranges[0].get("device_power_loads") or [{}])
+            if insert_slot:
+                # set flag for pending insert slot
+                pending_insert = True
+        elif insert_slot:
+            # use insert_slot for set_slot to define a single new slot when no slots exist
+            set_slot = insert_slot
+        # try to update solarbank count from Api dict if no schedule defined
+        if sb_count == 0 and not (
+            sb_count := (self.devices.get(deviceSn) or {}).get("solarbank_count")
+        ):
+            sb_count = 1
+        if test_count is not None and isinstance(test_count, int):
+            sb_count = test_count
+        # get appliance and device limits based on number of solar banks
         if (min_load := str(schedule.get("min_load"))).isdigit():
             # min_load = int(min_load)
             # Allow lower min setting as defined by API minimum. This however may be ignored if outsite of appliance defined slot boundaries.
@@ -2140,20 +2251,77 @@ class AnkerSolixApi:
             max_load = int(max_load)
         else:
             max_load = SolixDefaults.PRESET_MAX
-        ranges = schedule.get("ranges") or []
-        # get appliance load name from first existing slot to avoid mixture
-        # NOTE: The solarbank may behave weird if a mixture is found or the name does not match with some internal settings
-        # The name cannot be queried, but seems to be 'custom' by default. However, the mobile app translates it to whather language is defined in the App
-        appliance_name = None
-        pending_insert = False
-        if len(ranges) > 0:
-            appliance_name = (ranges[0].get("appliance_loads") or [{}])[0].get("name")
-            if insert_slot:
-                # set flag for pending insert slot
-                pending_insert = True
-        elif insert_slot:
-            # use insert_slot for set_slot to define a single new slot when no slots exist
-            set_slot = insert_slot
+        # adjust appliance max limit based on number of solar banks
+        max_load = int(max_load * sb_count)
+        if (min_load_dev := str(schedule.get("advanced_mode_min_load"))).isdigit():
+            min_load_dev = int(min_load_dev)
+        else:
+            min_load_dev = int(SolixDefaults.PRESET_MIN / 2)
+        # max load of device is not specified separately, use appliance default
+        max_load_dev = SolixDefaults.PRESET_MAX
+        # verify if and which power mode to be considered
+        # If only appliance preset provided, always use normal power mode. The device presets must not be specified in schedule, default of 50% share will be applied automatically
+        # If device preset provided, always use advanced power mode if supported by existing schedule structure and adjust appliance load. Fall back to legacy appliance load usage
+        # If appliance and device preset provided, always use advanced power mode if supported by existing schedule structure and adjust other device load. Fall back to legacy appliance load usage
+        # If neither appliance nor device preset provided, leave power mode unchanged. Legacy mode will be used with default 50% share when default applicane load must be set
+        if sb_count > 1:
+            if (
+                dev_preset is not None
+                or (insert_slot and insert_slot.device_load is not None)
+                or (set_slot and set_slot.device_load is not None)
+            ):
+                power_mode = SolarbankPowerMode.advanced.value
+                # ensure any provided device load is within limits
+                if dev_preset is not None:
+                    dev_preset = min(max(dev_preset, min_load_dev), max_load_dev)
+                if insert_slot and insert_slot.device_load is not None:
+                    insert_slot.device_load = min(
+                        max(insert_slot.device_load, min_load_dev), max_load_dev
+                    )
+                if set_slot and set_slot.device_load is not None:
+                    set_slot.device_load = min(
+                        max(set_slot.device_load, min_load_dev), max_load_dev
+                    )
+            elif (
+                preset is not None
+                or (insert_slot and insert_slot.appliance_load is not None)
+                or (set_slot and set_slot.appliance_load is not None)
+            ):
+                power_mode = SolarbankPowerMode.normal.value
+            else:
+                power_mode = None
+        else:
+            power_mode = None
+            # For single solarbank systems, use a given device load as appliance load if no appliance load provided. Ignore device loads otherwise
+            if dev_preset is not None:
+                preset = dev_preset if preset is None else preset
+                dev_preset = None
+            if insert_slot and insert_slot.device_load is not None:
+                insert_slot.appliance_load = (
+                    insert_slot.device_load
+                    if insert_slot.appliance_load is None
+                    else insert_slot.appliance_load
+                )
+                insert_slot.device_load = None
+            if set_slot and set_slot.device_load is not None:
+                set_slot.appliance_load = (
+                    set_slot.device_load
+                    if set_slot.appliance_load is None
+                    else set_slot.appliance_load
+                )
+                set_slot.device_load = None
+        # Adjust provided appliance limits
+        # appliance limits depend on device load setting and other device setting. Must be reduced for individual slots if necessary
+        if preset is not None:
+            preset = min(max(preset, min_load), max_load)
+        if insert_slot and insert_slot.appliance_load is not None:
+            insert_slot.appliance_load = min(
+                max(insert_slot.appliance_load, min_load), max_load
+            )
+        if set_slot and set_slot.appliance_load is not None:
+            set_slot.appliance_load = min(
+                max(set_slot.appliance_load, min_load), max_load
+            )
 
         new_ranges = []
         # update individual values in current slot or insert SolarbankTimeslot and adjust adjacent slots
@@ -2195,7 +2363,11 @@ class AnkerSolixApi:
                         # Use daily end time if now after last slot
                         insert = copy.deepcopy(slot)
                         insert.update(
-                            {"start_time": next_start.isoformat(timespec="minutes")}
+                            {
+                                "start_time": last_time.isoformat(timespec="minutes")
+                                if now < start_time
+                                else end_time.isoformat(timespec="minutes")
+                            }
                         )
                         insert.update(
                             {
@@ -2206,21 +2378,58 @@ class AnkerSolixApi:
                                 else "24:00"
                             }
                         )
+                        # adjust appliance load depending on device load preset and ensure appliance load is consistent with device load min/max values
+                        appliance_load = (
+                            SolixDefaults.PRESET_DEF
+                            if preset is None and dev_preset is None
+                            else (dev_preset * sb_count)
+                            if preset is None
+                            else preset
+                            if dev_preset is None
+                            or power_mode is None
+                            or "power_setting_mode" not in insert
+                            else max(
+                                min(
+                                    preset,
+                                    dev_preset + max_load_dev * (sb_count - 1),
+                                ),
+                                dev_preset + min_load_dev * (sb_count - 1),
+                            )
+                        )
                         (insert.get("appliance_loads") or [{}])[0].update(
                             {
                                 "power": min(
                                     max(
-                                        int(
-                                            SolixDefaults.PRESET_DEF
-                                            if preset is None
-                                            else preset
-                                        ),
+                                        int(appliance_load),
                                         min_load,
                                     ),
                                     max_load,
                                 ),
                             }
                         )
+                        # optional advanced power mode settings if supported by schedule
+                        if "power_setting_mode" in insert and power_mode is not None:
+                            insert.update({"power_setting_mode": power_mode})
+                            if (
+                                power_mode == SolarbankPowerMode.advanced.value
+                                and dev_preset is not None
+                            ):
+                                for dev in insert.get("device_power_loads") or []:
+                                    if (
+                                        isinstance(dev, dict)
+                                        and dev.get("device_sn") == deviceSn
+                                    ):
+                                        dev.update({"power": int(dev_preset)})
+                                    elif isinstance(dev, dict):
+                                        # other solarbanks get the difference equally shared
+                                        dev.update(
+                                            {
+                                                "power": int(
+                                                    (appliance_load - dev_preset)
+                                                    / (sb_count - 1)
+                                                ),
+                                            }
+                                        )
                         insert.update(
                             {
                                 "turn_on": SolixDefaults.ALLOW_EXPORT
@@ -2255,6 +2464,10 @@ class AnkerSolixApi:
                         or idx == len(ranges)
                     ):
                         # copy slot, update and insert the new slot
+                        overwrite = (
+                            insert_slot.start_time.time() != start_time
+                            and insert_slot.end_time.time() != end_time
+                        )
                         # re-use old slot parms if insert slot has not defined optional parms
                         insert = copy.deepcopy(slot)
                         insert.update(
@@ -2271,18 +2484,79 @@ class AnkerSolixApi:
                                 ).replace("23:59", "24:00")
                             }
                         )
-                        if insert_slot.appliance_load is not None or (
-                            insert_slot.start_time.time() < start_time
-                            and insert_slot.end_time.time() != end_time
-                        ):
+                        # reuse old appliance load if not overwritten
+                        if insert_slot.appliance_load is None and not overwrite:
+                            insert_slot.appliance_load = (
+                                insert.get("appliance_loads") or [{}]
+                            )[0].get("power")
+                            # reuse an active advanced power mode setting
+                            if (
+                                insert.get("power_setting_mode")
+                                == SolarbankPowerMode.advanced.value
+                                and insert_slot.device_load is None
+                            ):
+                                insert_slot.device_load = next(
+                                    iter(
+                                        [
+                                            dev.get("power")
+                                            for dev in insert.get("device_power_loads")
+                                            or []
+                                            if isinstance(dev, dict)
+                                            and dev.get("device_sn") == deviceSn
+                                        ]
+                                    ),
+                                    None,
+                                )
+                                if insert_slot.device_load is not None:
+                                    power_mode = SolarbankPowerMode.advanced.value
+                            elif isinstance(insert_slot.device_load, int | float):
+                                # correct appliance load with other device loads and new device load
+                                insert_slot.appliance_load = (
+                                    insert_slot.device_load
+                                    + sum(
+                                        [
+                                            dev.get("power")
+                                            for dev in (
+                                                insert.get("device_power_loads") or []
+                                            )
+                                            if dev.get("device_sn") != deviceSn
+                                        ]
+                                    )
+                                )
+                        # adjust appliance load depending on device load preset and ensure appliance load is consistent with device load min/max values
+                        insert_slot.appliance_load = (
+                            SolixDefaults.PRESET_DEF
+                            if insert_slot.appliance_load is None
+                            and insert_slot.device_load is None
+                            else (insert_slot.device_load * sb_count)
+                            if insert_slot.appliance_load is None
+                            else insert_slot.appliance_load
+                            if insert_slot.device_load is None
+                            or power_mode is None
+                            or "power_setting_mode" not in insert
+                            else max(
+                                min(
+                                    insert_slot.appliance_load,
+                                    insert_slot.device_load
+                                    + max_load_dev * (sb_count - 1),
+                                ),
+                                insert_slot.device_load + min_load_dev * (sb_count - 1),
+                            )
+                        )
+                        if insert_slot.appliance_load is not None:
+                            insert_slot.appliance_load = min(
+                                max(insert_slot.appliance_load, min_load), max_load
+                            )
+                        if insert_slot.appliance_load is not None or overwrite:
                             (insert.get("appliance_loads") or [{}])[0].update(
                                 {
                                     "power": min(
                                         max(
                                             int(
-                                                SolixDefaults.PRESET_DEF
-                                                if insert_slot.appliance_load is None
-                                                else insert_slot.appliance_load
+                                                insert_slot.appliance_load
+                                                if insert_slot.appliance_load
+                                                is not None
+                                                else SolixDefaults.PRESET_DEF
                                             ),
                                             min_load,
                                         ),
@@ -2290,10 +2564,49 @@ class AnkerSolixApi:
                                     ),
                                 }
                             )
-                        if insert_slot.allow_export is not None or (
-                            insert_slot.start_time.time() < start_time
-                            and insert_slot.end_time.time() != end_time
-                        ):
+                            # optional advanced power mode settings if supported by schedule
+                            if "power_setting_mode" in insert:
+                                insert.update(
+                                    {
+                                        "power_setting_mode": power_mode
+                                        or SolixDefaults.POWER_MODE
+                                    }
+                                )
+                                # if power_mode == SolarbankPowerMode.advanced.value or overwrite:
+                                for dev in insert.get("device_power_loads") or []:
+                                    if (
+                                        isinstance(dev, dict)
+                                        and dev.get("device_sn") == deviceSn
+                                    ):
+                                        dev.update(
+                                            {
+                                                "power": int(
+                                                    insert_slot.appliance_load
+                                                    / sb_count
+                                                )
+                                                if insert_slot.device_load is None
+                                                else int(insert_slot.device_load)
+                                            }
+                                        )
+                                    elif isinstance(dev, dict):
+                                        # other solarbanks get the difference equally shared
+                                        dev.update(
+                                            {
+                                                "power": int(
+                                                    insert_slot.appliance_load
+                                                    / sb_count
+                                                )
+                                                if insert_slot.device_load is None
+                                                else int(
+                                                    (
+                                                        insert_slot.appliance_load
+                                                        - insert_slot.device_load
+                                                    )
+                                                    / (sb_count - 1)
+                                                ),
+                                            }
+                                        )
+                        if insert_slot.allow_export is not None or overwrite:
                             insert.update(
                                 {
                                     "turn_on": SolixDefaults.ALLOW_EXPORT
@@ -2301,10 +2614,7 @@ class AnkerSolixApi:
                                     else insert_slot.allow_export
                                 }
                             )
-                        if insert_slot.charge_priority_limit is not None or (
-                            insert_slot.start_time.time() < start_time
-                            and insert_slot.end_time.time() != end_time
-                        ):
+                        if insert_slot.charge_priority_limit is not None or overwrite:
                             insert.update(
                                 {
                                     "charge_priority": min(
@@ -2392,21 +2702,53 @@ class AnkerSolixApi:
                         )
                         # re-use old slot parms for insert if end time of insert slot is same as original slot
                         if insert_slot.end_time.time() == end_time:
+                            # reuse old appliance load
                             if insert_slot.appliance_load is None:
-                                insert_slot.appliance_load = int(
-                                    (slot.get("appliance_loads") or [{}])[0].get(
-                                        "power"
+                                insert_slot.appliance_load = (
+                                    slot.get("appliance_loads") or [{}]
+                                )[0].get("power")
+                                # reuse an active advanced power mode setting
+                                if (
+                                    slot.get("power_setting_mode")
+                                    == SolarbankPowerMode.advanced.value
+                                    and insert_slot.device_load is None
+                                ):
+                                    insert_slot.device_load = next(
+                                        iter(
+                                            [
+                                                dev.get("power")
+                                                for dev in slot.get(
+                                                    "device_power_loads"
+                                                )
+                                                or []
+                                                if isinstance(dev, dict)
+                                                and dev.get("device_sn") == deviceSn
+                                            ]
+                                        ),
+                                        None,
                                     )
-                                    or SolixDefaults.PRESET_DEF
-                                )
+                                    if insert_slot.device_load is not None:
+                                        power_mode = SolarbankPowerMode.advanced.value
+                                elif isinstance(insert_slot.device_load, int | float):
+                                    # correct appliance load with other device loads and new device load
+                                    insert_slot.appliance_load = (
+                                        insert_slot.device_load
+                                        + sum(
+                                            [
+                                                dev.get("power")
+                                                for dev in (
+                                                    slot.get("device_power_loads") or []
+                                                )
+                                                if dev.get("device_sn") != deviceSn
+                                            ]
+                                        )
+                                    )
+
                             if insert_slot.allow_export is None:
-                                insert_slot.allow_export = bool(
-                                    slot.get("turn_on") or SolixDefaults.ALLOW_EXPORT
-                                )
+                                insert_slot.allow_export = slot.get("turn_on")
                             if insert_slot.charge_priority_limit is None:
-                                insert_slot.charge_priority_limit = int(
-                                    slot.get("charge_priority")
-                                    or SolixDefaults.CHARGE_PRIORITY_DEF
+                                insert_slot.charge_priority_limit = slot.get(
+                                    "charge_priority"
                                 )
 
                     elif next_start and next_start < end_time:
@@ -2421,16 +2763,58 @@ class AnkerSolixApi:
                         next_start = None
 
                     elif not insert_slot and (all_day or start_time <= now < end_time):
-                        # update parameters in current slot or all slots
+                        # update required parameters in current slot or all slots
+                        # Get other device loads if device load is provided
+                        dev_other = 0
+                        if dev_preset is not None:
+                            dev_other = sum(
+                                [
+                                    dev.get("power")
+                                    for dev in (slot.get("device_power_loads") or [])
+                                    if dev.get("device_sn") != deviceSn
+                                ]
+                            )
+                        # adjust appliance load depending on device load preset and ensure appliance load is consistent with device load min/max values
+                        preset = (
+                            preset
+                            if dev_preset is None
+                            else (dev_preset + dev_other)
+                            if preset is None
+                            else max(
+                                min(
+                                    preset,
+                                    dev_preset + max_load_dev * (sb_count - 1),
+                                ),
+                                dev_preset + min_load_dev * (sb_count - 1),
+                            )
+                        )
                         if preset is not None:
                             (slot.get("appliance_loads") or [{}])[0].update(
-                                {
-                                    "power": min(
-                                        max(int(preset), min_load),
-                                        max_load,
-                                    )
-                                }
+                                {"power": int(preset)}
                             )
+                        # optional advanced power mode settings if supported by schedule
+                        if "power_setting_mode" in slot and power_mode is not None:
+                            slot.update({"power_setting_mode": power_mode})
+                            if (
+                                power_mode == SolarbankPowerMode.advanced.value
+                                and dev_preset is not None
+                            ):
+                                for dev in slot.get("device_power_loads") or []:
+                                    if (
+                                        isinstance(dev, dict)
+                                        and dev.get("device_sn") == deviceSn
+                                    ):
+                                        dev.update({"power": int(dev_preset)})
+                                    elif isinstance(dev, dict):
+                                        # other solarbanks get the difference equally shared
+                                        dev.update(
+                                            {
+                                                "power": int(
+                                                    (preset - dev_preset)
+                                                    / (sb_count - 1)
+                                                ),
+                                            }
+                                        )
                         if export is not None:
                             slot.update({"turn_on": export})
                         if charge_prio is not None:
@@ -2480,21 +2864,33 @@ class AnkerSolixApi:
         # If no slot exists or new slot to be set, set defaults or given set_slot parameters
         if len(new_ranges) == 0:
             if not set_slot:
-                # define parameters to be used for a new slot
+                # fill set_slot with given parameters
                 set_slot = SolarbankTimeslot(
                     start_time=datetime.strptime("00:00", "%H:%M"),
                     end_time=datetime.strptime("23:59", "%H:%M"),
-                    appliance_load=SolixDefaults.PRESET_DEF
-                    if preset is None
-                    else preset,
-                    allow_export=SolixDefaults.ALLOW_EXPORT
-                    if export is None
-                    else export,
-                    charge_priority_limit=SolixDefaults.CHARGE_PRIORITY_DEF
-                    if charge_prio is None
-                    else charge_prio,
+                    appliance_load=preset,
+                    device_load=dev_preset,
+                    allow_export=export,
+                    charge_priority_limit=charge_prio,
                 )
             # generate the new slot
+            # adjust appliance load depending on device load preset and ensure appliance load is consistent with device load min/max values
+            appliance_load = (
+                SolixDefaults.PRESET_DEF
+                if set_slot.appliance_load is None and set_slot.device_load is None
+                else (set_slot.device_load * sb_count)
+                if set_slot.appliance_load is None
+                else set_slot.appliance_load
+                if set_slot.device_load is None
+                else max(
+                    min(
+                        set_slot.appliance_load,
+                        set_slot.device_load + max_load_dev * (sb_count - 1),
+                    ),
+                    set_slot.device_load + min_load_dev * (sb_count - 1),
+                )
+            )
+
             slot = {
                 "start_time": datetime.strftime(set_slot.start_time, "%H:%M"),
                 "end_time": datetime.strftime(set_slot.end_time, "%H:%M").replace(
@@ -2507,11 +2903,7 @@ class AnkerSolixApi:
                     {
                         "power": min(
                             max(
-                                int(
-                                    SolixDefaults.PRESET_DEF
-                                    if set_slot.appliance_load is None
-                                    else set_slot.appliance_load
-                                ),
+                                int(appliance_load),
                                 min_load,
                             ),
                             max_load,
@@ -2530,6 +2922,46 @@ class AnkerSolixApi:
                     SolixDefaults.CHARGE_PRIORITY_MAX,
                 ),
             }
+            # optional advanced power mode settings if device load and appliance load got provided
+            if (
+                power_mode is SolarbankPowerMode.advanced.value
+                and set_slot.device_load is not None
+                and set_slot.appliance_load is not None
+            ):
+                # try to get solarbank serials from site dict
+                solarbanks = {
+                    sb.get("device_sn")
+                    for sb in (
+                        (
+                            (self.sites.get(siteId) or {}).get("solarbank_info") or {}
+                        ).get("solarbank_list")
+                        or [{}]
+                    )
+                }
+                if len(solarbanks) == sb_count and deviceSn in solarbanks:
+                    slot.update({"power_setting_mode": power_mode})
+                    device_power_loads = []
+                    for sn in solarbanks:
+                        if sn == deviceSn:
+                            device_power_loads.append(
+                                {
+                                    "device_sn": sn,
+                                    "power": int(set_slot.device_load),
+                                },
+                            )
+                        else:
+                            # other solarbanks get the difference equally shared
+                            device_power_loads.append(
+                                {
+                                    "device_sn": sn,
+                                    "power": int(
+                                        (appliance_load - set_slot.device_load)
+                                        / (sb_count - 1)
+                                    ),
+                                },
+                            )
+                    slot.update({"device_power_loads": device_power_loads})
+
             # use previous appliance name if a slot was defined originally
             if appliance_name:
                 (slot.get("appliance_loads") or [{}])[0].update(
@@ -2540,9 +2972,12 @@ class AnkerSolixApi:
             "Ranges to apply: %s",
             new_ranges,
         )
+        schedule.update({"ranges": new_ranges})
+        # return resulting schedule for test purposes without Api call
+        if test_count is not None or test_schedule is not None:
+            return schedule
         # Make the Api call with final schedule and check for return code, the set call will also update api dict
         # NOTE: set_device_load does not seem to be usable yet for changing the home load, or is only usable in dual bank setups for changing the appliance load share as well?
-        schedule.update({"ranges": new_ranges})
         return await self.set_device_parm(
             siteId=siteId,
             paramData=schedule,
@@ -2624,7 +3059,12 @@ class AnkerSolixApi:
             resp = await self.request(
                 "post", _API_ENDPOINTS["get_ota_update"], json=data
             )
-        return resp.get("data", {})
+        data = resp.get("data") or {}
+        # update devices dict with new ota data
+        self._update_dev(
+            {"device_sn": deviceSn, "is_ota_update": data.get("is_ota_update")}
+        )
+        return data
 
     async def check_upgrade_record(
         self, recordType: int = 2, fromFile: bool = False
@@ -2648,7 +3088,11 @@ class AnkerSolixApi:
         return resp.get("data", {})
 
     async def get_upgrade_record(
-        self, deviceSn: str | None = None, siteId: str | None = None, recordType: int | None = None, fromFile: bool = False
+        self,
+        deviceSn: str | None = None,
+        siteId: str | None = None,
+        recordType: int | None = None,
+        fromFile: bool = False,
     ) -> dict:
         """Get upgrade record for a device serial or site ID, shows update history. Type 1 works for solarbank, type 2 for site ID.
 
@@ -2662,7 +3106,10 @@ class AnkerSolixApi:
             "device_sn": "9JVB42LJK8J0P5RY","device_name": "9JVB42LJK8J0P5RY","child_upgrade_records": null}]},
         """
         if deviceSn:
-            data = {"device_sn": deviceSn, "type": 1 if recordType is None else recordType}
+            data = {
+                "device_sn": deviceSn,
+                "type": 1 if recordType is None else recordType,
+            }
         elif siteId:
             data = {"site_id": siteId, "type": 2 if recordType is None else recordType}
         else:
@@ -2670,7 +3117,10 @@ class AnkerSolixApi:
             data = {"type": recordType}
         if fromFile:
             resp = self._loadFromFile(
-                os.path.join(self._testdir, f"get_upgrade_record_{deviceSn if deviceSn else siteId if siteId else recordType}.json")
+                os.path.join(
+                    self._testdir,
+                    f"get_upgrade_record_{deviceSn if deviceSn else siteId if siteId else recordType}.json",
+                )
             )
         else:
             resp = await self.request(

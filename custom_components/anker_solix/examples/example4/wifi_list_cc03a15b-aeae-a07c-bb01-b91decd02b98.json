@@ -5,13 +5,13 @@
     "wifi_info_list": [
       {
         "wifi_name": "wifi-network-1",
-        "wifi_signal": "98"
+        "wifi_signal": "56"
       },
       {
         "wifi_name": "wifi-network-1",
-        "wifi_signal": "94"
+        "wifi_signal": "66"
       }
     ]
   },
-  "trace_id": "5df3a423dae8ba2abcc75f4abea92d65"
+  "trace_id": "ad177344a3fef8daaebecd6fe84fcdd8"
 }

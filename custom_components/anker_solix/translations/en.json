@@ -116,6 +116,13 @@
                     }
                 }
             },
+            "ota_update": {
+                "name": "OTA Update",
+                "state": {
+                    "on": "Available",
+                    "off": "Current"
+                }
+            },
             "site_admin": {
                 "name": "System administration",
                 "state": {
@@ -134,6 +141,9 @@
         "number": {
             "preset_system_output_power": {
                 "name": "System output preset"
+            },
+            "preset_device_output_power": {
+                "name": "Device output preset"
             },
             "preset_charge_priority": {
                 "name": "Charge priority limit"
@@ -201,6 +211,18 @@
                 "state_attributes": {
                     "schedule": {
                         "name": "Schedule"
+                    }
+                }
+            },
+            "set_power_mode": {
+                "name": "Preset mode",
+                "state": {
+                    "normal": "Normal",
+                    "advanced": "Advanced"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
                     }
                 }
             },
@@ -415,7 +437,11 @@
                 },
                 "appliance_load": {
                     "name": "Home load preset",
-                    "description": "Watt to be delivered to the house"
+                    "description": "Watt to be delivered to the house by all devices"
+                },
+                "device_load": {
+                    "name": "Device load preset",
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets"
                 },
                 "allow_export": {
                     "name": "Allow export",
@@ -441,7 +467,11 @@
                 },
                 "appliance_load": {
                     "name": "Home load preset",
-                    "description": "Watt to be delivered to the house"
+                    "description": "Watt to be delivered to the house by all devices"
+                },
+                "device_load": {
+                    "name": "Device load preset",
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets"
                 },
                 "allow_export": {
                     "name": "Allow export",
