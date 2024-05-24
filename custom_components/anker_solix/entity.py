@@ -26,7 +26,7 @@ class AnkerSolixPicturePath:
 
     A17C0: str = os.path.join(IMAGEPATH, "Solarbank_E1600_pub.png")
     A17C1: str = os.path.join(IMAGEPATH, "Solarbank_2_pro_A17C1.png")
-    A17C3: str = os.path.join(IMAGEPATH, "solarbank_2_plus_A17C3.png")
+    A17C3: str = os.path.join(IMAGEPATH, "Solarbank_2_plus_A17C3.png")
     A17Y0: str = os.path.join(IMAGEPATH, "Fitting_A17Y0_pub.png")
 
     A5140: str = os.path.join(IMAGEPATH, "MI60_A5140_pub.png")
