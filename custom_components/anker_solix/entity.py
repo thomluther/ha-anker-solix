@@ -18,15 +18,16 @@ class AnkerSolixPicturePath:
 
     SOLARBANK: str = os.path.join(IMAGEPATH, "Solarbank_E1600_pub.png")
     INVERTER: str = os.path.join(IMAGEPATH, "MI80_A5143_pub.png")
-    SMARTMETER: str = os.path.join(IMAGEPATH, "Smartmeter_A17X7.png")
+    SMARTMETER: str = os.path.join(IMAGEPATH, "Smartmeter_A17X7_pub.png")
     PPS: str = os.path.join(IMAGEPATH, "PPS_F1200_A1771_pub.png")
     POWERPANEL: str = os.path.join(IMAGEPATH, "Power_Panel_A17B1.png")
 
     A17B1: str = os.path.join(IMAGEPATH, "Power_Panel_A17B1.png")
 
     A17C0: str = os.path.join(IMAGEPATH, "Solarbank_E1600_pub.png")
-    A17C1: str = os.path.join(IMAGEPATH, "Solarbank_2_pro_A17C1.png")
-    A17C3: str = os.path.join(IMAGEPATH, "Solarbank_2_plus_A17C3.png")
+    A17C1: str = os.path.join(IMAGEPATH, "Solarbank_2_pro_A17C1_pub.png")
+    A17C2: str = os.path.join(IMAGEPATH, "Solarbank_2_A17C2_pub.png")
+    A17C3: str = os.path.join(IMAGEPATH, "Solarbank_2_plus_A17C3_pub.png")
     A17Y0: str = os.path.join(IMAGEPATH, "Fitting_A17Y0_pub.png")
 
     A5140: str = os.path.join(IMAGEPATH, "MI60_A5140_pub.png")
