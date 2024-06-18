@@ -3,6 +3,7 @@
 Required Python modules:
 pip install cryptography
 pip install aiohttp
+pip install aiofiles
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ import os
 import sys
 import time as systime
 
+import aiofiles
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from cryptography.hazmat.backends import default_backend
@@ -582,7 +584,7 @@ class AnkerSolixApi:
             return datacopy
         return data
 
-    def _loadFromFile(self, filename: str) -> dict:
+    async def _loadFromFile(self, filename: str) -> dict:
         """Load json data from given file for testing."""
         if self.mask_credentials:
             masked_filename = filename.replace(
@@ -592,8 +594,8 @@ class AnkerSolixApi:
             masked_filename = filename
         try:
             if os.path.isfile(filename):
-                with open(filename, encoding="utf-8") as file:
-                    data = json.load(file)
+                async with aiofiles.open(filename, encoding="utf-8") as file:
+                    data = json.loads(await file.read())
                     self._logger.debug("Loaded JSON from file %s:", masked_filename)
                     self._logger.debug(
                         "Data: %s",
@@ -609,7 +611,7 @@ class AnkerSolixApi:
             self._logger.error(err)
         return {}
 
-    def _saveToFile(self, filename: str, data: dict | None = None) -> bool:
+    async def _saveToFile(self, filename: str, data: dict | None = None) -> bool:
         """Save json data to given file for testing."""
         if self.mask_credentials:
             masked_filename = filename.replace(
@@ -620,8 +622,8 @@ class AnkerSolixApi:
         if not data:
             data = {}
         try:
-            with open(filename, "w", encoding="utf-8") as file:
-                json.dump(data, file, indent=2)
+            async with aiofiles.open(filename, "w", encoding="utf-8") as file:
+                await file.write(json.dumps(data, indent=2))
                 self._logger.debug("Saved JSON to file %s:", masked_filename)
                 return True
         except OSError as err:
@@ -989,7 +991,7 @@ class AnkerSolixApi:
                     os.remove(self._authFile)
         # First check if cached login response is availble and login params can be filled, otherwise query server for new login tokens
         if os.path.isfile(self._authFile):
-            data = self._loadFromFile(self._authFile)
+            data = await self._loadFromFile(self._authFile)
             self._authFileTime = os.path.getmtime(self._authFile)
             self._logger.debug(
                 "Cached Login for %s from %s:",
@@ -1038,8 +1040,8 @@ class AnkerSolixApi:
             )
             self._loggedIn = True
             # Cache login response in file for reuse
-            with open(self._authFile, "w", encoding="utf-8") as authfile:
-                json.dump(data, authfile, indent=2, skipkeys=True)
+            async with aiofiles.open(self._authFile, "w", encoding="utf-8") as authfile:
+                await authfile.write(json.dumps(data, indent=2, skipkeys=True))
                 self._logger.debug("Response cached in file: %s", self._authFile)
                 self._authFileTime = os.path.getmtime(self._authFile)
 
@@ -1532,40 +1534,49 @@ class AnkerSolixApi:
 
         Yesterday energy will be queried only once if not available yet, but not updated in subsequent refreshes.
         Energy data can also be fetched by shared accounts.
+        It was found that energy data is tracked only per site, but not individual devices even if a device SN parameter is required.
         """
-        # define allowed device types to query, default to no energy data
+        # define allowed device types to query, default to all energy data
         if not exclude:
             exclude = set()
         for sn, device in self.devices.items():
             site_id = device.get("site_id", "")
             dev_Type = device.get("type", "")
+            queried_sites: dict = {}
             if (
                 dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude)
                 and {ApiCategories.solarbank_energy} - exclude
             ):
-                self._logger.debug("Getting Energy details for device")
-                energy = device.get("energy_details") or {}
-                today = datetime.today().strftime("%Y-%m-%d")
-                yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-                # Fetch energy from today
-                data = await self.energy_daily(
-                    siteId=site_id,
-                    deviceSn=sn,
-                    startDay=datetime.fromisoformat(today),
-                    numDays=1,
-                    dayTotals=True,
-                )
-                energy["today"] = data.get(today) or {}
-                if yesterday != (energy.get("last_period") or {}).get("date"):
-                    # Fetch energy from previous day once
+                # check if site was already queried for device
+                if site_id in queried_sites:
+                    # copy energy data returned for other device
+                    self._logger.debug("Copying Energy details for device")
+                    energy = queried_sites.get(site_id)
+                else:
+                    self._logger.debug("Getting Energy details for device")
+                    energy = device.get("energy_details") or {}
+                    today = datetime.today().strftime("%Y-%m-%d")
+                    yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+                    # Fetch energy from today
                     data = await self.energy_daily(
                         siteId=site_id,
                         deviceSn=sn,
-                        startDay=datetime.fromisoformat(yesterday),
+                        startDay=datetime.fromisoformat(today),
                         numDays=1,
                         dayTotals=True,
                     )
-                    energy["last_period"] = data.get(yesterday) or {}
+                    energy["today"] = data.get(today) or {}
+                    if yesterday != (energy.get("last_period") or {}).get("date"):
+                        # Fetch energy from previous day once
+                        data = await self.energy_daily(
+                            siteId=site_id,
+                            deviceSn=sn,
+                            startDay=datetime.fromisoformat(yesterday),
+                            numDays=1,
+                            dayTotals=True,
+                        )
+                        energy["last_period"] = data.get(yesterday) or {}
+                    queried_sites[site_id] = energy
                 device["energy_details"] = energy
                 self.devices[sn] = device
 
@@ -1592,7 +1603,7 @@ class AnkerSolixApi:
                 'quantity_min_limit_map': {'A5103': 1}, 'quantity_max_limit_map': {'A5103': 6}}]}
         """
         if fromFile:
-            resp = self._loadFromFile(os.path.join(self._testdir, "site_rules.json"))
+            resp = await self._loadFromFile(os.path.join(self._testdir, "site_rules.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["site_rules"])
         return resp.get("data", {})
@@ -1604,7 +1615,7 @@ class AnkerSolixApi:
         {'site_list': [{'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'site_name': 'BKW', 'site_img': '', 'device_type_list': [3], 'ms_type': 2, 'power_site_type': 2, 'is_allow_delete': True}]}
         """
         if fromFile:
-            resp = self._loadFromFile(os.path.join(self._testdir, "site_list.json"))
+            resp = await self._loadFromFile(os.path.join(self._testdir, "site_list.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["site_list"])
         return resp.get("data", {})
@@ -1627,7 +1638,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"scene_{siteId}.json")
             )
         else:
@@ -1647,7 +1658,7 @@ class AnkerSolixApi:
         "powerpanel_list":[]}
         """
         if fromFile:
-            resp = self._loadFromFile(os.path.join(self._testdir, "homepage.json"))
+            resp = await self._loadFromFile(os.path.join(self._testdir, "homepage.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["homepage"])
         return resp.get("data", {})
@@ -1661,7 +1672,7 @@ class AnkerSolixApi:
         "link_time":1695392302068,"wifi_online":false,"wifi_name":"","relate_type":["ble","wifi"],"charge":false,"bws_surplus":0,"device_sw_version":"v1.4.4","has_manual":false}]}
         """
         if fromFile:
-            resp = self._loadFromFile(os.path.join(self._testdir, "bind_devices.json"))
+            resp = await self._loadFromFile(os.path.join(self._testdir, "bind_devices.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["bind_devices"])
         data = resp.get("data", {})
@@ -1689,7 +1700,7 @@ class AnkerSolixApi:
         'photovoltaic_power': '', 'output_power': '', 'create_time': 0}]}
         """
         if fromFile:
-            resp = self._loadFromFile(os.path.join(self._testdir, "user_devices.json"))
+            resp = await self._loadFromFile(os.path.join(self._testdir, "user_devices.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["user_devices"])
         return resp.get("data", {})
@@ -1701,7 +1712,7 @@ class AnkerSolixApi:
         {'device_list': None, 'guide_txt': ''}
         """
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, "charging_devices.json")
             )
         else:
@@ -1716,7 +1727,7 @@ class AnkerSolixApi:
         """
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"solar_info_{solarbankSn}.json")
             )
         else:
@@ -1739,7 +1750,7 @@ class AnkerSolixApi:
         """
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"compatible_process_{solarbankSn}.json")
             )
         else:
@@ -1759,7 +1770,7 @@ class AnkerSolixApi:
         'icon': 'https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png'}]}
         """
         if fromFile:
-            resp = self._loadFromFile(os.path.join(self._testdir, "auto_upgrade.json"))
+            resp = await self._loadFromFile(os.path.join(self._testdir, "auto_upgrade.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["get_auto_upgrade"])
         data = resp.get("data", {})
@@ -1834,7 +1845,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"wifi_list_{siteId}.json")
             )
         else:
@@ -1853,7 +1864,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"power_cutoff_{deviceSn}.json")
             )
         else:
@@ -1906,7 +1917,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"price_{siteId}.json")
             )
         else:
@@ -1986,7 +1997,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"device_load_{deviceSn}.json")
             )
         else:
@@ -2075,7 +2086,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "param_type": paramType}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"device_parm_{siteId}.json")
             )
         else:
@@ -2998,7 +3009,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"device_fittings_{deviceSn}.json")
             )
         else:
@@ -3033,7 +3044,7 @@ class AnkerSolixApi:
         """
         data = {"solar_bank_sn": solarbankSn, "solar_sn": inverterSn}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(
                     self._testdir, f"ota_info_{solarbankSn or inverterSn}.json"
                 )
@@ -3052,7 +3063,7 @@ class AnkerSolixApi:
         """
         data = {"device_sn": deviceSn, "insert_sn": insertSn}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"ota_update_{deviceSn}.json")
             )
         else:
@@ -3078,7 +3089,7 @@ class AnkerSolixApi:
         """
         data = {"type": recordType}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"check_upgrade_record_{recordType}.json")
             )
         else:
@@ -3116,7 +3127,7 @@ class AnkerSolixApi:
             recordType = 0 if recordType is None else recordType
             data = {"type": recordType}
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(
                     self._testdir,
                     f"get_upgrade_record_{deviceSn if deviceSn else siteId if siteId else recordType}.json",
@@ -3285,7 +3296,7 @@ class AnkerSolixApi:
         {"has_unread_msg": false}
         """
         if fromFile:
-            resp = self._loadFromFile(
+            resp = await self._loadFromFile(
                 os.path.join(self._testdir, "message_unread.json")
             )
         else:
