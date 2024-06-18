@@ -116,6 +116,13 @@
                     }
                 }
             },
+            "ota_update": {
+                "name": "OTA Update",
+                "state": {
+                    "on": "Verfügbar",
+                    "off": "Aktuell"
+                }
+            },
             "site_admin": {
                 "name": "Systemadministration",
                 "state": {
@@ -134,6 +141,9 @@
         "number": {
             "preset_system_output_power": {
                 "name": "System Einspeisevorgabe"
+            },
+            "preset_device_output_power": {
+                "name": "Geräte Einspeisevorgabe"
             },
             "preset_charge_priority": {
                 "name": "Ladeprioritätslimit"
@@ -201,6 +211,18 @@
                 "state_attributes": {
                     "schedule": {
                         "name": "Zeitplan"
+                    }
+                }
+            },
+            "set_power_mode": {
+                "name": "Vorgabe Modus",
+                "state": {
+                    "normal": "Normal",
+                    "advanced": "Erweitert"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Modus"
                     }
                 }
             },
@@ -415,7 +437,11 @@
                 },
                 "appliance_load": {
                     "name": "Einspeisevorgabe",
-                    "description": "Watt die in Haus eingespeist werden sollen"
+                    "description": "Watt die ins Haus eingespeist werden sollen von allen Geräten"
+                },
+                "device_load": {
+                    "name": "Geräte Einspeisevorgabe",
+                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe."
                 },
                 "allow_export": {
                     "name": "Export erlauben",
@@ -441,7 +467,11 @@
                 },
                 "appliance_load": {
                     "name": "Einspeisevorgabe",
-                    "description": "Watt die in Haus eingespeist werden sollen"
+                    "description": "Watt die ins Haus eingespeist werden sollen von allen Geräten"
+                },
+                "device_load": {
+                    "name": "Geräte Einspeisevorgabe",
+                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe."
                 },
                 "allow_export": {
                     "name": "Export erlauben",

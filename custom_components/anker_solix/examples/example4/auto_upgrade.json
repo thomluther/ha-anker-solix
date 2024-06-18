@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": false,
+    "device_list": [
+      {
+        "device_sn": "XGR9TZEI1N9OO8BN",
+        "device_name": "Solarbank E1600",
+        "auto_upgrade": false,
+        "alias_name": "PV Left",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png"
+      },
+      {
+        "device_sn": "W8Z0AY4TF8L03KMS",
+        "device_name": "Solarbank E1600",
+        "auto_upgrade": false,
+        "alias_name": "PV Right",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png"
+      }
+    ]
+  },
+  "trace_id": "ddd22ba3e9b3eec1fcb23bde0cce8958"
+}

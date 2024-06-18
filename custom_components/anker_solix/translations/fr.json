@@ -116,6 +116,13 @@
                     }
                 }
             },
+            "ota_update": {
+                "name": "Mise à jour OTA",
+                "state": {
+                    "on": "Disponible",
+                    "off": "En cours"
+                }
+            },
             "site_admin": {
                 "name": "Administration système",
                 "state": {
@@ -134,6 +141,9 @@
         "number": {
             "preset_system_output_power": {
                 "name": "Réglage puissance de sortie du système"
+            },
+            "preset_device_output_power": {
+                "name": "Réglage puissance de sortie de l'appareil"
             },
             "preset_charge_priority": {
                 "name": "Limite de priorité de charge"
@@ -201,6 +211,18 @@
                 "state_attributes": {
                     "schedule": {
                         "name": "Horaire"
+                    }
+                }
+            },
+            "set_power_mode": {
+                "name": "Mode puissance de sortie",
+                "state": {
+                    "normal": "Normal",
+                    "advanced": "Avancé"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
                     }
                 }
             },
@@ -415,7 +437,11 @@
                 },
                 "appliance_load": {
                     "name": "Réglage puissance de sortie",
-                    "description": "Watt à livrer à la maison"
+                    "description": "Watt à livrer à la maison par tous les appareils"
+                },
+                "device_load": {
+                    "name": "Réglage puissance de sortie de l'appareil",
+                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils"
                 },
                 "allow_export": {
                     "name": "Autoriser l'exportation",
@@ -441,7 +467,11 @@
                 },
                 "appliance_load": {
                     "name": "Réglage puissance de sortie",
-                    "description": "Watt à livrer à la maison"
+                    "description": "Watt à livrer à la maison par tous les appareils"
+                },
+                "device_load": {
+                    "name": "Réglage puissance de sortie de l'appareil",
+                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils"
                 },
                 "allow_export": {
                     "name": "Autoriser l'exportation",

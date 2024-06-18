@@ -30,9 +30,7 @@ LAST_PERIOD: str = "last_period"
 LAST_RESET: str = "last_reset"
 SHARED_ACCOUNT: str = "shared_account"
 IMAGEFOLDER: str = "images"
-ALLOW_TESTMODE: bool = (
-    False  # True will enable configuration options for testmode and testfolder
-)
+ALLOW_TESTMODE: bool = False  # True will enable configuration options for testmode and testfolder
 TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
 CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
 
@@ -44,6 +42,7 @@ SERVICE_UPDATE_SOLARBANK_SCHEDULE = "update_solarbank_schedule"
 START_TIME = "start_time"
 END_TIME = "end_time"
 APPLIANCE_LOAD = "appliance_load"
+DEVICE_LOAD = "device_load"
 CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
 ALLOW_EXPORT = "allow_export"
 
@@ -58,6 +57,17 @@ VALID_APPLIANCE_LOAD = vol.Any(
         vol.Coerce(int),
         vol.Range(
             min=api.SolixDefaults.PRESET_MIN,
+            max=api.SolixDefaults.PRESET_MAX * 2,
+        ),
+    ),
+)
+VALID_DEVICE_LOAD = vol.Any(
+    None,
+    cv.ENTITY_MATCH_NONE,
+    vol.All(
+        vol.Coerce(int),
+        vol.Range(
+            min=int(api.SolixDefaults.PRESET_MIN / 2),
             max=api.SolixDefaults.PRESET_MAX,
         ),
     ),
@@ -81,6 +91,9 @@ SOLARBANK_TIMESLOT_DICT: dict = {
     vol.Optional(
         APPLIANCE_LOAD,
     ): VALID_APPLIANCE_LOAD,
+    vol.Optional(
+        DEVICE_LOAD,
+    ): VALID_DEVICE_LOAD,
     vol.Optional(
         CHARGE_PRIORITY_LIMIT,
     ): VALID_CHARGE_PRIORITY,

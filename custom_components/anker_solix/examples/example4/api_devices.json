@@ -1,0 +1,202 @@
+{
+  "W8Z0AY4TF8L03KMS": {
+    "device_sn": "W8Z0AY4TF8L03KMS",
+    "type": "solarbank",
+    "site_id": "cc03a15b-aeae-a07c-bb01-b91decd02b98",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "battery_soc": "60",
+    "battery_capacity": "1600",
+    "battery_energy": "960",
+    "charging_power": "-120",
+    "power_unit": "W",
+    "charging_status": "2",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "120",
+    "set_output_power": "135",
+    "power_cutoff": 10,
+    "alias": "PV Right",
+    "solarbank_count": 2,
+    "bt_ble_mac": "59BA809BE6EC",
+    "name": "Solarbank E1600",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.6.2",
+    "auto_upgrade": false,
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "56",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "is_ota_update": false,
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A5143",
+      "solar_sn": "8SJMOPKAILJW",
+      "solar_model_name": "MI80 Microinverter(BLE)"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Custom",
+              "power": 270,
+              "number": 1
+            }
+          ],
+          "charge_priority": 10,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "W8Z0AY4TF8L03KMS",
+              "power": 135
+            },
+            {
+              "device_sn": "XGR9TZEI1N9OO8BN",
+              "power": 135
+            }
+          ]
+        }
+      ],
+      "min_load": 100,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 1,
+      "default_charge_priority": 80,
+      "is_zero_output_tips": 0,
+      "display_advanced_mode": 1,
+      "advanced_mode_min_load": 50
+    },
+    "preset_system_output_power": 270,
+    "preset_allow_export": true,
+    "preset_charge_priority": 10,
+    "preset_power_mode": 1,
+    "preset_device_output_power": 135,
+    "set_system_output_power": "270",
+    "fittings": {}
+  },
+  "XGR9TZEI1N9OO8BN": {
+    "device_sn": "XGR9TZEI1N9OO8BN",
+    "type": "solarbank",
+    "site_id": "cc03a15b-aeae-a07c-bb01-b91decd02b98",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "battery_soc": "64",
+    "battery_capacity": "1600",
+    "battery_energy": "1024",
+    "charging_power": "-136",
+    "power_unit": "W",
+    "charging_status": "2",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "136",
+    "set_output_power": "135",
+    "power_cutoff": 10,
+    "alias": "PV Left",
+    "solarbank_count": 2,
+    "bt_ble_mac": "7BECFACEB9AE",
+    "name": "Solarbank E1600",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.6.2",
+    "auto_upgrade": false,
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Custom",
+              "power": 270,
+              "number": 1
+            }
+          ],
+          "charge_priority": 10,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "W8Z0AY4TF8L03KMS",
+              "power": 135
+            },
+            {
+              "device_sn": "XGR9TZEI1N9OO8BN",
+              "power": 135
+            }
+          ]
+        }
+      ],
+      "min_load": 100,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 1,
+      "default_charge_priority": 80,
+      "is_zero_output_tips": 0,
+      "display_advanced_mode": 1,
+      "advanced_mode_min_load": 50
+    },
+    "preset_system_output_power": 270,
+    "preset_allow_export": true,
+    "preset_charge_priority": 10,
+    "preset_power_mode": 1,
+    "preset_device_output_power": 135,
+    "set_system_output_power": "270",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "56",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "is_ota_update": false,
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A5143",
+      "solar_sn": "8SJMOPKAILJW",
+      "solar_model_name": "MI80 Microinverter(BLE)"
+    },
+    "fittings": {}
+  }
+}

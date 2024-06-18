@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "ota_complete_status": 2,
+    "process_skip_type": 2,
+    "solar_info": {
+      "solar_sn": "DQTGB647Q061",
+      "solar_brand": "ANKER",
+      "solar_model": "A5143",
+      "brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f",
+      "model_img": "https://public-aiot-ore-qa.s3.us-west-2.amazonaws.com/anker-power/public/product/2023/09/18/iot-admin/77Y3rnoAVmzTQrSr/picl_A17C0FW_guide_SN_A5143.png",
+      "version": "Anker EZ1 1.0.0_b",
+      "ota_status": 3,
+      "solar_model_name": "MI80 Microinverter(BLE)"
+    }
+  },
+  "trace_id": "5e54a8eec15ace9fcee27f18b6eb1029"
+}

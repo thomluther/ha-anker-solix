@@ -57,6 +57,14 @@ DEVICE_SENSORS = [
         },
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
+    AnkerSolixBinarySensorDescription(
+        key="ota_update",
+        translation_key="ota_update",
+        json_key="is_ota_update",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=BinarySensorDeviceClass.UPDATE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
 ]
 
 SITE_SENSORS = [

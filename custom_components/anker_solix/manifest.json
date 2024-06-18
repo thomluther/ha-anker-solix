@@ -13,7 +13,8 @@
   "issue_tracker": "https://github.com/thomluther/hacs-anker-solix/issues",
   "requirements": [
     "aiohttp>=3.9.3",
+    "aiofiles>=23.2.0",
     "cryptography>=3.4.8"
   ],
-  "version": "1.2.2"
+  "version": "1.3.1"
 }

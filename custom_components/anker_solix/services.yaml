@@ -46,9 +46,18 @@ set_solarbank_schedule:
       default: 100
       selector:
         number:
-          min: 0
-          max: 800
+          min: 100
+          max: 1600
           step: 10
+          unit_of_measurement: "W"
+    device_load:
+      required: false
+      example: 50
+      selector:
+        number:
+          min: 50
+          max: 800
+          step: 5
           unit_of_measurement: "W"
     allow_export:
       required: false
@@ -89,13 +98,22 @@ update_solarbank_schedule:
         time:
     appliance_load:
       required: false
-      example: 0
+      example: 100
       default: 100
       selector:
         number:
-          min: 0
-          max: 800
+          min: 100
+          max: 1600
           step: 10
+          unit_of_measurement: "W"
+    device_load:
+      required: false
+      example: 50
+      selector:
+        number:
+          min: 50
+          max: 800
+          step: 5
           unit_of_measurement: "W"
     allow_export:
       required: false

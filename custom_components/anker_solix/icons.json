@@ -13,6 +13,13 @@
                     "off": "mdi:wifi-off"
                 }
             },
+            "ota_update": {
+                "default": "mdi:alert-circle-outline",
+                "state": {
+                    "on": "mdi:download-circle-outline",
+                    "off": "mdi:check-circle-outline"
+                }
+            },
             "site_admin": {
                 "default": "mdi:account-alert",
                 "state": {
@@ -31,6 +38,9 @@
         "number": {
             "preset_system_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"
+            },
+            "preset_device_output_power": {
+                "default": "mdi:generator-stationary"
             },
             "preset_charge_priority": {
                 "default": "mdi:battery-arrow-up"
@@ -112,6 +122,13 @@
             },
             "set_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"
+            },
+            "set_power_mode": {
+                "default": "mdi:numeric-0-box-outline",
+                "state": {
+                    "normal": "mdi:numeric-1-box-outline",
+                    "advanced": "mdi:numeric-2-box-multiple-outline"
+                }
             },
             "solarbank_timestamp": {
                 "default": "mdi:weather-cloudy-clock"

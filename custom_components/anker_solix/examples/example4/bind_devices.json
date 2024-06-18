@@ -1,0 +1,51 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "XGR9TZEI1N9OO8BN",
+        "product_code": "A17C0",
+        "bt_ble_id": "7B:EC:FA:CE:B9:AE",
+        "bt_ble_mac": "7BECFACEB9AE",
+        "device_name": "Solarbank E1600",
+        "alias_name": "PV Left",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "link_time": 1711822103,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.6.2",
+        "has_manual": false,
+        "hes_data": null
+      },
+      {
+        "device_sn": "W8Z0AY4TF8L03KMS",
+        "product_code": "A17C0",
+        "bt_ble_id": "59:BA:80:9B:E6:EC",
+        "bt_ble_mac": "59BA809BE6EC",
+        "device_name": "Solarbank E1600",
+        "alias_name": "PV Right",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "link_time": 1711821302,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.6.2",
+        "has_manual": false,
+        "hes_data": null
+      }
+    ]
+  },
+  "trace_id": "b4eeccbdebe7ee9ae8efd0abc8a4f5ac"
+}
