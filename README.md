@@ -76,8 +76,12 @@ Platform | Description
 Device type | Description
 -- | --
 `system` | Anker Solix 'Power System' as defined in the Anker App
-`solarbank` | Anker Solix Solarbanks configured in the system
-`inverter` | Anker Solix inverters configured in the system
+`solarbank` | Anker Solix Solarbanks configured in the system. Supported models are:<br>- A17C0: Solarbank E1600 (Gen 1)<br>**Note: Solarbank 2 devices are not supported at this time**
+`inverter` | Anker Solix inverters configured in the system. Supported models are:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
+
+**Other devices are neither supported nor tested with the Api library or the HA integration.**
+
+To get additional Anker power devices added, please review the [anker-solix Python library][anker-solix-api] and contribute to [open issues](https://github.com/thomluther/anker-solix-api/issues) or Api exploration, since additional devices can neither be tested by the developper, nor can they be added to the HA integration before their Api usage, parameters, structures  and fields are fully understood, interpreted and implemented into the Api library.
 
 **Attention:**
 
