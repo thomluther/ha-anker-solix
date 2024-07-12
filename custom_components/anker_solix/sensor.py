@@ -464,7 +464,8 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s) or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank input power on site
@@ -476,7 +477,8 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s) or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank output power on site
@@ -488,7 +490,8 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s) or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank state of charge on site
@@ -500,7 +503,8 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: 100 * float((d.get("solarbank_info") or {}).get(jk)),
         suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s) or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
     ),
     AnkerSolixSensorDescription(
         # timestamp of solabank data
@@ -509,7 +513,8 @@ SITE_SENSORS = [
         json_key="updated_time",
         # value_fn=lambda d, jk, _: datetime.strptime((d.get("solarbank_info") or {}).get(jk), "%Y-%m-%d %H:%M:%S").astimezone().isoformat(),
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s) or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps charging power on site
@@ -521,7 +526,8 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("pps_info") or {}).get(jk),
         suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.PPS.value} - s) or not list((d.get("pps_info") or {}).get("pps_list") or []),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps output power on site
@@ -533,7 +539,8 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (d.get("pps_info") or {}).get(jk),
         suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.PPS.value} - s) or not list((d.get("pps_info") or {}).get("pps_list") or []),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps state of charge on site
@@ -545,7 +552,8 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: 100 * float((d.get("pps_info") or {}).get(jk)),
         suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.PPS.value} - s) or not list((d.get("pps_info") or {}).get("pps_list") or []),
     ),
     AnkerSolixSensorDescription(
         key="total_co2_saving",
@@ -665,7 +673,8 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         # This entry has the unit with the number and needs to be removed
         value_fn=lambda d, jk, _: str(d.get(jk) or "").replace("W", "") or None,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # Common site field, may also be used by other devices beside solarbank
+        #exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
 
@@ -1208,11 +1217,7 @@ class AnkerSolixEnergySensor(AnkerSolixSensor, RestoreSensor):
 
     def reset_sensor_value(self):
         """Reset the sensor value."""
-        # Reset only if sensor has value to avoid mess up long term stats because of how total_increasing works
-        if self._last_known_value:
-            self._last_period = self._last_known_value
-            self._last_known_value = 0
-            self._attr_last_reset = datetime.now().astimezone()
+        self._last_known_value = 0
 
     @property
     def native_value(self):
@@ -1220,7 +1225,7 @@ class AnkerSolixEnergySensor(AnkerSolixSensor, RestoreSensor):
         super_native_value = super().native_value
         # For an energy sensor a value of 0 would mess up long term stats because of how total_increasing works
         if super_native_value == 0.0:
-            LOGGER.info(
+            LOGGER.debug(
                 "Returning last known value instead of 0.0 for %s to avoid resetting total_increasing counter",
                 self.name,
             )

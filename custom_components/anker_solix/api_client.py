@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 import os
 import socket
@@ -44,11 +45,13 @@ API_CATEGORIES: list = [
 DEFAULT_EXCLUDE_CATEGORIES: list = [api.ApiCategories.solarbank_energy]
 
 
-def json_example_folders() -> list:
+async def json_example_folders() -> list:
     """Get actual list of json example folders."""
     examplesfolder: str = os.path.join(os.path.dirname(__file__), EXAMPLESFOLDER)
+    loop = asyncio.get_running_loop()
+    contentlist = await loop.run_in_executor(None, os.scandir, examplesfolder)
     if os.path.isdir(examplesfolder):
-        return [f.name for f in os.scandir(examplesfolder) if f.is_dir()]
+        return [f.name for f in contentlist if f.is_dir()]
     return []
 
 

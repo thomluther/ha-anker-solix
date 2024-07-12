@@ -33,7 +33,7 @@ class AnkerSolixPicturePath:
     A5140: str = os.path.join(IMAGEPATH, "MI60_A5140_pub.png")
     A5143: str = os.path.join(IMAGEPATH, "MI80_A5143_pub.png")
 
-    A17X7: str = os.path.join(IMAGEPATH, "Smartmeter_A17X7.png")
+    A17X7: str = os.path.join(IMAGEPATH, "Smartmeter_A17X7_pub.png")
 
     A1753: str = os.path.join(IMAGEPATH, "PPS_C800X_A1755_pub.png")
     A1754: str = os.path.join(IMAGEPATH, "PPS_C800X_A1755_pub.png")

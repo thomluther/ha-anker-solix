@@ -207,7 +207,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user_options",
-            data_schema=vol.Schema(get_options_schema(user_options or self._options)),
+            data_schema=vol.Schema(await get_options_schema(user_options or self._options)),
             errors=errors,
             description_placeholders=placeholders,
         )
@@ -249,14 +249,14 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
-                get_options_schema(user_input or self.config_entry.options)
+                await get_options_schema(user_input or self.config_entry.options)
             ),
             errors=errors,
             description_placeholders=placeholders,
         )
 
 
-def get_options_schema(entry: dict | None = None) -> dict:
+async def get_options_schema(entry: dict | None = None) -> dict:
     """Create the options schema dictionary."""
 
     if entry is None:
@@ -319,7 +319,7 @@ def get_options_schema(entry: dict | None = None) -> dict:
         ),
     }
     if _ALLOW_TESTMODE:
-        if not (jsonfolders := api_client.json_example_folders()):
+        if not (jsonfolders := await api_client.json_example_folders()):
             # Add empty element to ensure proper list validation
             jsonfolders = [""]
         jsonfolders.sort()
