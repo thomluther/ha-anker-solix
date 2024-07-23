@@ -1,5 +1,7 @@
 """Select platform for anker_solix."""
 
+# type: ignore
+
 from __future__ import annotations
 
 from collections.abc import Callable
