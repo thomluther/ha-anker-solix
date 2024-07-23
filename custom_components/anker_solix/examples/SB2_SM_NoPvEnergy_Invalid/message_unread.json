@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "has_unread_msg": false
+  },
+  "trace_id": "285cdfcfff2ed17aecc5edcef4c51e8d"
+}

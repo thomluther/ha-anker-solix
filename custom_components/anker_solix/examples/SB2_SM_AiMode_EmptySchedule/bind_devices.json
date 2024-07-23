@@ -1,0 +1,55 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "RLMLTE5RUQHFZCM5",
+        "product_code": "A17C1",
+        "bt_ble_id": "C5B2CDE80BBEC2CAAAC23E41BC217B55",
+        "bt_ble_mac": "0BFF1F697DEB",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "alias_name": "Solarbank 2 E1600 Pro",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "link_time": 1719046272,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.0.5.4",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "Dining Room",
+        "tag_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/06/17/iot-admin/Te3LpcS7jXZhS924/icl_A17X8_location_Dining%20Room.png"
+      },
+      {
+        "device_sn": "LVLVKLAA2BEATOPK",
+        "product_code": "A17X7",
+        "bt_ble_id": "DFEBED6E75B67CA20A59103EC9E0FE88",
+        "bt_ble_mac": "3EDC7ECA2BDF",
+        "device_name": "Smart Meter",
+        "alias_name": "Smart Meter",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/opwTD5izbjD9DjKB/picl_A17X7_normal.png",
+        "link_time": 1718811648,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v0.0.0.29",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "Dining Room",
+        "tag_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/06/17/iot-admin/Te3LpcS7jXZhS924/icl_A17X8_location_Dining%20Room.png"
+      }
+    ]
+  },
+  "trace_id": "afe8abbb1deb4ecd1abfdbb71de6b8fc"
+}

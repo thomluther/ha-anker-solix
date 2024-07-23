@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"mode_type\":1,\"custom_rate_plan\":[],\"blend_plan\":null,\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"
+  },
+  "trace_id": "bd6b03ecd3a721eb58b9fa9e4b82af84"
+}

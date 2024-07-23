@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "is_ota_update": false,
+    "need_retry": false,
+    "retry_interval": 0,
+    "device_list": null
+  },
+  "trace_id": "d4817fb06dd0a628cc00e8faa27444f2"
+}

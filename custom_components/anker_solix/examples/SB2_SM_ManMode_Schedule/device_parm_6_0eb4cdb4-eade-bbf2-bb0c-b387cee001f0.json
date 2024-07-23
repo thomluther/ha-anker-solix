@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"mode_type\":3,\"custom_rate_plan\":[{\"index\":0,\"week\":[0,6],\"ranges\":[{\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":110}]},{\"index\":1,\"week\":[1,2,3,4,5],\"ranges\":[{\"start_time\":\"00:00\",\"end_time\":\"08:00\",\"power\":100},{\"start_time\":\"08:00\",\"end_time\":\"22:00\",\"power\":120},{\"start_time\":\"22:00\",\"end_time\":\"24:00\",\"power\":90}]}],\"blend_plan\":null,\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"
+  },
+  "trace_id": "19e76caca7e5eabcf4e3fe5afaabaf7e"
+}

@@ -24,6 +24,7 @@ from . import api_client
 from .const import (
     ACCEPT_TERMS,
     ALLOW_TESTMODE,
+    CONF_SKIP_INVALID,
     DOMAIN,
     ERROR_DETAIL,
     EXAMPLESFOLDER,
@@ -35,23 +36,25 @@ from .const import (
     TESTFOLDER,
     TESTMODE,
 )
-from .solixapi.api import ApiCategories, SolixDeviceType
+from .solixapi.types import ApiCategories, SolixDefaults, SolixDeviceType
 
 # Define integration option limits and defaults
-SCAN_INTERVAL_DEF = api_client.DEFAULT_UPDATE_INTERVAL
-INTERVALMULT_DEF = api_client.DEFAULT_DEVICE_MULTIPLIER  # multiplier for scan interval
-DELAY_TIME_DEF = api_client.api.SolixDefaults.REQUEST_DELAY_DEF
+SCAN_INTERVAL_DEF: int = api_client.DEFAULT_UPDATE_INTERVAL
+INTERVALMULT_DEF:int = api_client.DEFAULT_DEVICE_MULTIPLIER  # multiplier for scan interval
+DELAY_TIME_DEF: float = SolixDefaults.REQUEST_DELAY_DEF
 
-_SCAN_INTERVAL_MIN = 10 if ALLOW_TESTMODE else 30
-_SCAN_INTERVAL_MAX = 600
-_SCAN_INTERVAL_STEP = 10
-_INTERVALMULT_MIN = 2
-_INTERVALMULT_MAX = 60
-_INTERVALMULT_STEP = 2
-_DELAY_TIME_MIN = 0.0
-_DELAY_TIME_MAX = 2.0
-_DELAY_TIME_STEP = 0.1
-_ALLOW_TESTMODE = bool(ALLOW_TESTMODE)
+_SCAN_INTERVAL_MIN: int = 10 if ALLOW_TESTMODE else 30
+_SCAN_INTERVAL_MAX: int = 600
+_SCAN_INTERVAL_STEP: int = 10
+_INTERVALMULT_MIN: int = 2
+_INTERVALMULT_MAX: int = 60
+_INTERVALMULT_STEP: int = 2
+_DELAY_TIME_MIN: float = 0.0
+_DELAY_TIME_MAX: float = 2.0
+_DELAY_TIME_STEP: float = 0.1
+_ALLOW_TESTMODE: bool = bool(ALLOW_TESTMODE)
+_ACCEPT_TERMS: bool = False
+_SKIP_INVALID: bool = False
 
 
 class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -115,7 +118,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             vol.Required(
                 ACCEPT_TERMS,
-                default=(user_input or {}).get(ACCEPT_TERMS, False),
+                default=(user_input or {}).get(ACCEPT_TERMS, _ACCEPT_TERMS),
             ): selector.BooleanSelector(),
         }
         placeholders[TERMS_LINK] = TC_LINK
@@ -302,6 +305,10 @@ async def get_options_schema(entry: dict | None = None) -> dict:
             ),
         ),
         vol.Optional(
+            CONF_SKIP_INVALID,
+            default=entry.get(CONF_SKIP_INVALID, _SKIP_INVALID),
+        ): selector.BooleanSelector(),
+        vol.Optional(
             CONF_EXCLUDE,
             default=entry.get(
                 CONF_EXCLUDE,
@@ -362,11 +369,16 @@ async def async_check_and_remove_devices(
             SolixDeviceType.INVERTER.value,
             SolixDeviceType.PPS.value,
             SolixDeviceType.POWERPANEL.value,
+            SolixDeviceType.SMARTMETER.value,
+            SolixDeviceType.SMARTPLUG.value,
+            ApiCategories.solarbank_energy,
+            ApiCategories.smartmeter_energy,
+            ApiCategories.smartplug_energy,
+            ApiCategories.solar_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SYSTEM.value}
         # Subcategories for Solarbank only
         if {
-            ApiCategories.solarbank_energy,
             ApiCategories.solarbank_cutoff,
             ApiCategories.solarbank_fittings,
             ApiCategories.solarbank_solar_info,
@@ -381,6 +393,8 @@ async def async_check_and_remove_devices(
                 SolixDeviceType.INVERTER.value,
                 SolixDeviceType.PPS.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.SMARTPLUG.value,
             }
 
     # get all device entries for a domain

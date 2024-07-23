@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": true,
+    "device_list": [
+      {
+        "device_sn": "YF819ZFK2S1CZZRO",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "auto_upgrade": false,
+        "alias_name": "Solarbank 2 E1600 Pro",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png"
+      }
+    ]
+  },
+  "trace_id": "37f8b9df6362f32bb38f1d6bb6dbf5d6"
+}

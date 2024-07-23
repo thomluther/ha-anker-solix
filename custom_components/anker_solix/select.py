@@ -1,12 +1,11 @@
 """Select platform for anker_solix."""
 
-# type: ignore
-
 from __future__ import annotations
 
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
+import json
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -24,7 +23,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.api import ApiCategories, SolixDeviceType
+from .solixapi.types import ApiCategories, SolarbankUsageMode, SolixDeviceType
 
 
 @dataclass(frozen=True)
@@ -59,6 +58,20 @@ DEVICE_SELECTS = [
             {SolixDeviceType.SOLARBANK.value} - s
             and {ApiCategories.solarbank_cutoff} - s
         ),
+    ),
+    AnkerSolixSelectDescription(
+        # Solarbank 2 Usage Mode setting
+        key="preset_usage_mode",
+        translation_key="preset_usage_mode",
+        json_key="preset_usage_mode",
+        options_fn=lambda d, _: [
+            mode.name for mode in SolarbankUsageMode if "unknown" not in mode.name
+        ],
+        value_fn=lambda d, jk: next(
+            iter([item.name for item in SolarbankUsageMode if item.value == d.get(jk) and "unknown" not in item.name]),
+            None,
+        ),
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
 
@@ -208,7 +221,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             option (str): The option to set.
 
         """
-        if self.coordinator.client.testmode():
+        if self.coordinator.client.testmode() and not self._attribute_name == "preset_usage_mode":
             # Raise alert to frontend
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be changed while configuration is running in testmode",
@@ -240,6 +253,24 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         await self.coordinator.client.api.set_power_cutoff(
                             deviceSn=self.coordinator_context,
                             setId=int(selected_id[0]),
+                        )
+            elif self._attribute_name == "preset_usage_mode":
+                LOGGER.debug(
+                    "%s selection change to option %s will be applied",
+                    self.entity_id,
+                    option,
+                )
+                with suppress(ValueError, TypeError):
+                    resp = await self.coordinator.client.api.set_sb2_home_load(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        usage_mode=getattr(SolarbankUsageMode,option,None),
+                        test_schedule=data.get("schedule") or {} if self.coordinator.client.testmode() else None
+                    )
+                    if isinstance(resp,dict) and self.coordinator.client.testmode():
+                        LOGGER.info(
+                            "Resulting schedule to be applied:\n%s",
+                            json.dumps(resp,indent=2),
                         )
             elif self._attribute_name == "system_price_unit":
                 LOGGER.debug(

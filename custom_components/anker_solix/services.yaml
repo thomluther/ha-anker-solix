@@ -1,5 +1,14 @@
 # Service description for Anker Solix custom integration
 
+get_system_info:
+  target:
+    entity:
+      integration: anker_solix
+      domain: sensor
+      # anker_solix.AnkerSolixEntityFeature.SYSTEM_INFO is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - calendar.CalendarEntityFeature.UPDATE_EVENT
 get_solarbank_schedule:
   target:
     entity:

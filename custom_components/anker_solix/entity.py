@@ -19,8 +19,10 @@ class AnkerSolixPicturePath:
     SOLARBANK: str = os.path.join(IMAGEPATH, "Solarbank_E1600_pub.png")
     INVERTER: str = os.path.join(IMAGEPATH, "MI80_A5143_pub.png")
     SMARTMETER: str = os.path.join(IMAGEPATH, "Smartmeter_A17X7_pub.png")
+    SMARTPLUG: str = os.path.join(IMAGEPATH, "Smart_plug_A17X8.png")
     PPS: str = os.path.join(IMAGEPATH, "PPS_F1200_A1771_pub.png")
     POWERPANEL: str = os.path.join(IMAGEPATH, "Power_Panel_A17B1.png")
+    HES: str = os.path.join(IMAGEPATH, "HES_X1_A5101.png")
 
     A17B1: str = os.path.join(IMAGEPATH, "Power_Panel_A17B1.png")
 
@@ -70,6 +72,7 @@ class AnkerSolixEntityFeature(IntFlag):
     """Supported features of the Anker Solix Entities."""
 
     SOLARBANK_SCHEDULE = 1
+    SYSTEM_INFO = 4
 
 
 def get_AnkerSolixDeviceInfo(

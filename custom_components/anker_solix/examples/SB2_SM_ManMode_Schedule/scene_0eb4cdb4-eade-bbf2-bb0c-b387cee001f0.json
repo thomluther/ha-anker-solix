@@ -1,0 +1,114 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "151.70",
+        "unit": "kWh"
+      },
+      {
+        "type": "2",
+        "total": "151.24",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "24.27",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C1",
+          "device_sn": "MUODHDOXUGKSV12V",
+          "device_name": "Solarbank 2 E1600 Pro",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+          "battery_power": "39",
+          "bind_site_status": "",
+          "charging_power": "0",
+          "power_unit": "W",
+          "charging_status": "0",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "741",
+          "output_power": "0",
+          "create_time": 1719046667,
+          "set_load_power": "",
+          "sub_package_num": 1,
+          "output_cutoff_data": 5,
+          "is_display": true
+        }
+      ],
+      "total_charging_power": "741",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.39",
+      "updated_time": "1970-01-01 00:00:00",
+      "total_photovoltaic_power": "741",
+      "total_output_power": "0.00",
+      "display_set_power": false,
+      "battery_discharge_power": "0",
+      "ac_power": "0",
+      "to_home_load": "0",
+      "is_display_data": true,
+      "solar_power_1": "191",
+      "solar_power_2": "182",
+      "solar_power_3": "190",
+      "solar_power_4": "178"
+    },
+    "retain_load": "0W",
+    "scene_mode": 3,
+    "home_load_power": "684",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 5,
+    "site_id": "0eb4cdb4-eade-bbf2-bb0c-b387cee001f0",
+    "powerpanel_list": [],
+    "grid_info": {
+      "grid_list": [
+        {
+          "device_pn": "A17X7",
+          "device_sn": "2MY08BS0N4KIVHRE",
+          "device_name": "Smart Meter",
+          "device_img": "",
+          "create_time": 1719046667,
+          "status": "1",
+          "bind_site_status": "",
+          "wireless_type": ""
+        }
+      ],
+      "photovoltaic_to_grid_power": "0",
+      "grid_to_home_power": "684",
+      "grid_status": 0,
+      "has_history_data": true
+    },
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "multi_pv": false,
+      "smart_plug": false
+    },
+    "other_loads_power": "684"
+  },
+  "trace_id": "ea6ebf1cb8c2fdd9ac208aad8d5bb0ee"
+}

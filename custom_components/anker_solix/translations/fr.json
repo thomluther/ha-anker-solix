@@ -7,13 +7,18 @@
                 "solarbank_cutoff": "Valeurs de réserve de Solarbank",
                 "solarbank_fittings": "Accessoires de Solarbank",
                 "solarbank_solar_info": "Info onduleur de Solarbank",
+                "solar_energy": "Statistiques sur l'énergie solaire",
                 "solarbank_energy": "Statistiques sur l'énergie de Solarbank",
+                "smartmeter_energy": "Statistiques énergétiques du compteur intelligent",
+                "smartplug_energy": "Statistiques énergétiques des prises intelligentes",
                 "system": "Systèmes",
                 "solarbank": "Solarbanks",
                 "inverter": "Onduleurs",
                 "pps": "Centrales électriques portables",
                 "powerpanel": "Panneaux électriques",
-                "powercooler": "Refroidisseur d'électricité"
+                "powercooler": "Refroidisseur d'électricité",
+                "smartmeter": "Compteur intelligent",
+                "smartplugs": "Prises intelligentes"
             }
         }
     },
@@ -40,12 +45,14 @@
                     "scan_interval": "Intervalle de mise à jour (30-600 secondes)",
                     "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
                     "delay_time": "Délai pour les requêtes Api suivantes",
+                    "skip_invalid": "Ignorer les réponses de données non valides",
                     "exclude": "Catégories d'entités exclues",
                     "testmode": "Utiliser le mode test d'intégration",
                     "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
                 },
                 "data_description": {
                     "scan_interval": "Remarque: Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues.",
                     "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
                 }
@@ -73,12 +80,14 @@
                     "scan_interval": "Intervalle de mise à jour (30-600 secondes)",
                     "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
                     "delay_time": "Délai pour les requêtes Api suivantes",
+                    "skip_invalid": "Ignorer les réponses de données non valides",
                     "exclude": "Catégories d'entités exclues",
                     "testmode": "Utiliser le mode test d'intégration",
                     "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
                 },
                 "data_description": {
                     "scan_interval": "Remarque: Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues.",
                     "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
                 }
@@ -156,6 +165,13 @@
             "power_cutoff": {
                 "name": "Réserve SOC"
             },
+            "preset_usage_mode": {
+                "name": "Mode d'utilisation",
+                "state": {
+                    "automatic": "Automatique",
+                    "manual": "Manuel"
+                }
+            },
             "system_price_unit": {
                 "name": "Devise du prix"
             }
@@ -178,7 +194,9 @@
                 "name": "Mode",
                 "state": {
                     "detection": "Détection",
+                    "protection_charge": "Charge de protection",
                     "bypass": "Bypass",
+                    "bypass_discharge": "Bypass décharge",
                     "discharge": "Décharge",
                     "charge": "Charge",
                     "charge_bypass": "Charge et Bypass",
@@ -200,8 +218,29 @@
             "input_power": {
                 "name": "Puissance solaire"
             },
+            "solar_power_1": {
+                "name": "Solaire PV1"
+            },
+            "solar_power_2": {
+                "name": "Solaire PV2"
+            },
+            "solar_power_3": {
+                "name": "Solaire PV3"
+            },
+            "solar_power_4": {
+                "name": "Solaire PV4"
+            },
             "output_power": {
                 "name": "Puissance de sortie"
+            },
+            "ac_socket": {
+                "name": "AC puissance de la prise"
+            },
+            "ac_to_home_load": {
+                "name": "AC puissance domestique"
+            },
+            "home_load_power": {
+                "name": "Demande domestique"
             },
             "ac_generate_power": {
                 "name": "Alimentation AC"
@@ -257,6 +296,9 @@
             "sw_version": {
                 "name": "Firmware"
             },
+            "sub_package_num": {
+                "name": "Batterie supplémentaire"
+            },
             "fittings": {
                 "name": "Accessoire",
                 "state_attributes": {
@@ -274,61 +316,6 @@
                     }
                 }
             },
-            "daily_discharge_energy": {
-                "name": "Décharge journalière",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Dernière période"
-                    }
-                }
-            },
-            "daily_charge_energy": {
-                "name": "Charge journalière",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Dernière période"
-                    }
-                }
-            },
-            "daily_solar_production": {
-                "name": "Production solaire journalière",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Dernière période"
-                    }
-                }
-            },
-            "daily_solar_share": {
-                "name": "Part solaire journalière",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Dernière période"
-                    }
-                }
-            },
-            "daily_battery_share": {
-                "name": "Part journalière de batterie",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Dernière période"
-                    }
-                }
-            },
             "temperature": {
                 "name": "Température"
             },
@@ -343,6 +330,12 @@
             },
             "pps_list": {
                 "name": "Centrales électriques"
+            },
+            "smartmeter_list": {
+                "name": "Compteurs intelligents"
+            },
+            "smart_plug_list": {
+                "name": "Prises intelligentes"
             },
             "solarbank_charging_power": {
                 "name": "Alimentation de la batterie SB"
@@ -377,14 +370,205 @@
             "total_output_energy": {
                 "name": "Rendement total"
             },
-            "daily_output_energy": {
-                "name": "Rendement aujourd'hui"
-            },
             "set_system_output_power": {
                 "name": "Réglage puissance de sortie du système"
             },
             "site_charging_power": {
                 "name": "Puissance de charge du système"
+            },
+            "grid_status_desc": {
+                "name": "État du réseau",
+                "state": {
+                    "ok": "Ok",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "grid_status": {
+                        "name": "Code statut"
+                    }
+                }
+            },
+            "grid_to_home_power": {
+                "name": "Grid import"
+            },
+            "photovoltaic_to_grid_power": {
+                "name": "Grid export"
+            },
+            "daily_discharge_energy": {
+                "name": "Décharge journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_charge_energy": {
+                "name": "Charge journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_production": {
+                "name": "Production solaire journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_production_pv1": {
+                "name": "Solaire journalière PV 1",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_production_pv2": {
+                "name": "Solaire journalière PV 2",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_production_pv3": {
+                "name": "Solaire journalière PV 3",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_production_pv4": {
+                "name": "Solaire journalière PV 4",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_ac_socket": {
+                "name": "Prise de courant journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_battery_to_home": {
+                "name": "AC journalière à domicile",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_home_usage": {
+                "name": "Utilisation journalière à domicile",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_smartplugs_total": {
+                "name": "Prises intelligentes journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_grid_to_home": {
+                "name": "Importation journalière du réseau",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_to_grid": {
+                "name": "Exportation journalière du réseau",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_share": {
+                "name": "Part journalière de solaire",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_battery_share": {
+                "name": "Part journalière de batterie",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_grid_share": {
+                "name": "Part journalière du réseau",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
             }
         },
         "switch": {
@@ -415,6 +599,10 @@
         }
     },
     "services": {
+        "get_system_info": {
+            "name": "Demander les informations actuelles sur le système",
+            "description": "Les informations réelles sur le système seront fournies en réponse à la demande de service."
+        },
         "get_solarbank_schedule": {
             "name": "Demandez l'horaire actuel de solarbank",
             "description": "L'horaire effective de solarbank sera fournie en réponse à la demande de service"

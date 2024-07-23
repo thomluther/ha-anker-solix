@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import json
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -21,7 +22,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.api import SolixDeviceType
+from .solixapi.types import SolixDeviceType
 
 
 @dataclass(frozen=True)
@@ -176,8 +177,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         if self._attribute_name == "allow_refresh":
             self.coordinator.client.allow_refresh(allow=True)
             await self.coordinator.async_refresh_device_details()
-        # When running in Test mode do not switch
-        elif self.coordinator.client.testmode():
+        # When running in Test mode do not switch for entities not supporting test mode
+        elif self.coordinator.client.testmode() and self._attribute_name not in [
+            "preset_allow_export",
+        ]:
             # Raise alert to frontend
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be changed while configuration is running in testmode",
@@ -204,11 +207,19 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 LOGGER.debug(
                     "%s System allow export will be set %s", self.entity_id, True
                 )
-                await self.coordinator.client.api.set_home_load(
+                resp = await self.coordinator.client.api.set_home_load(
                     siteId=data.get("site_id") or "",
                     deviceSn=self.coordinator_context,
                     export=True,
+                    test_schedule=data.get("schedule") or {}
+                    if self.coordinator.client.testmode()
+                    else None,
                 )
+                if isinstance(resp, dict) and self.coordinator.client.testmode():
+                    LOGGER.info(
+                        "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
+                        json.dumps(resp, indent=2),
+                    )
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
                 LOGGER.error(
@@ -222,8 +233,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         if self._attribute_name == "allow_refresh":
             self.coordinator.client.allow_refresh(allow=False)
             await self.coordinator.async_refresh_data_from_apidict()
-        # When running in Test mode do not switch
-        elif self.coordinator.client.testmode():
+        # When running in Test mode do not switch for entities not supporting test mode
+        elif self.coordinator.client.testmode() and self._attribute_name not in [
+            "preset_allow_export",
+        ]:
             # Raise alert to frontend
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be changed while configuration is running in testmode",
@@ -248,11 +261,19 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 LOGGER.debug(
                     "%s System allow export will be set %s", self.entity_id, False
                 )
-                await self.coordinator.client.api.set_home_load(
+                resp = await self.coordinator.client.api.set_home_load(
                     siteId=data.get("site_id") or "",
                     deviceSn=self.coordinator_context,
                     export=False,
+                    test_schedule=data.get("schedule") or {}
+                    if self.coordinator.client.testmode()
+                    else None,
                 )
+                if isinstance(resp, dict) and self.coordinator.client.testmode():
+                    LOGGER.info(
+                        "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
+                        json.dumps(resp, indent=2),
+                    )
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
                 LOGGER.error(
