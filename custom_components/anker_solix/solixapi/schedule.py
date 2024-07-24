@@ -39,9 +39,7 @@ async def get_device_load(
             os.path.join(self._testdir, f"device_load_{deviceSn}.json")
         )
     else:
-        resp = await self.request(
-            "post", API_ENDPOINTS["get_device_load"], json=data
-        )
+        resp = await self.request("post", API_ENDPOINTS["get_device_load"], json=data)
     # The home_load_data is provided as string instead of object...Convert into object for proper handling
     # It must be converted back to a string when passing this as input to set home load
     string_data = (resp.get("data") or {}).get("home_load_data") or {}
@@ -68,6 +66,7 @@ async def get_device_load(
             }
         )
     return data
+
 
 async def set_device_load(
     self,
@@ -107,6 +106,7 @@ async def set_device_load(
     await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
     return True
 
+
 async def get_device_parm(
     self,
     siteId: str,
@@ -141,9 +141,7 @@ async def get_device_parm(
                 os.path.join(self._testdir, f"device_parm_{siteId}.json")
             )
     else:
-        resp = await self.request(
-            "post", API_ENDPOINTS["get_device_parm"], json=data
-        )
+        resp = await self.request("post", API_ENDPOINTS["get_device_parm"], json=data)
     # The home_load_data is provided as string instead of object...Convert into object for proper handling
     # It must be converted back to a string when passing this as input to set home load
     string_data = (resp.get("data", {})).get("param_data", {})
@@ -167,11 +165,12 @@ async def get_device_parm(
             {
                 "device_sn": sn,
                 "schedule": schedule,
-                #"current_home_load": data.get("current_home_load") or "",   # This field is not provided with get_device_parm
-                #"parallel_home_load": data.get("parallel_home_load") or "",   # This field is not provided with get_device_parm
+                # "current_home_load": data.get("current_home_load") or "",   # This field is not provided with get_device_parm
+                # "parallel_home_load": data.get("parallel_home_load") or "",   # This field is not provided with get_device_parm
             }
         )
     return data
+
 
 async def set_device_parm(
     self,
@@ -215,6 +214,7 @@ async def set_device_parm(
     await self.get_device_parm(siteId=siteId, paramType=paramType, deviceSn=deviceSn)
     return True
 
+
 async def set_home_load(  # noqa: C901
     self,
     siteId: str,
@@ -226,16 +226,15 @@ async def set_home_load(  # noqa: C901
     charge_prio: int | None = None,
     set_slot: SolarbankTimeslot | None = None,
     insert_slot: SolarbankTimeslot | None = None,
-    test_schedule: dict
-    | None = None,  # used only for testing instead of real schedule
+    test_schedule: dict | None = None,  # used only for testing instead of real schedule
     test_count: int
     | None = None,  # used only for testing instead of real solarbank count
 ) -> bool | dict:
     """Set the home load parameters for a given site id and solarbank 1 device for actual or all slots in the existing schedule.
 
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
-    Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
-    When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
+    Optionally when set_slot Solarbank Timeslot is provided, the given slot will replace the existing schedule completely.
+    When insert_slot SolarbankTimeslot is provided, the given slot will be incorporated into existing schedule. Adjacent overlapping slot times will be updated and overlay slots will be replaced.
 
     Example schedules for Solarbank 1 as provided via Api:
     {"ranges":[
@@ -283,13 +282,13 @@ async def set_home_load(  # noqa: C901
     if test_schedule is not None:
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
-        schedule = (
-            await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
-        ).get("home_load_data") or {}
+        schedule = (await self.get_device_load(siteId=siteId, deviceSn=deviceSn)).get(
+            "home_load_data"
+        ) or {}
     ranges = schedule.get("ranges") or []
     # get appliance load name from first existing slot to avoid mixture
     # NOTE: The solarbank may behave weird if a mixture is found or the name does not match with some internal settings
-    # The name cannot be queried, but seems to be 'custom' by default. However, the mobile app translates it to whather language is defined in the App
+    # The name cannot be queried, but seems to be 'custom' by default. However, the mobile app translates it to whatever language is defined in the App
     appliance_name = None
     pending_insert = False
     sb_count = 0
@@ -313,7 +312,7 @@ async def set_home_load(  # noqa: C901
     # get appliance and device limits based on number of solar banks
     if (min_load := str(schedule.get("min_load"))).isdigit():
         # min_load = int(min_load)
-        # Allow lower min setting as defined by API minimum. This however may be ignored if outsite of appliance defined slot boundaries.
+        # Allow lower min setting as defined by API minimum. This however may be ignored if outside of appliance defined slot boundaries.
         min_load = SolixDefaults.PRESET_MIN
     else:
         min_load = SolixDefaults.PRESET_MIN
@@ -333,7 +332,7 @@ async def set_home_load(  # noqa: C901
     # If only appliance preset provided, always use normal power mode. The device presets must not be specified in schedule, default of 50% share will be applied automatically
     # If device preset provided, always use advanced power mode if supported by existing schedule structure and adjust appliance load. Fall back to legacy appliance load usage
     # If appliance and device preset provided, always use advanced power mode if supported by existing schedule structure and adjust other device load. Fall back to legacy appliance load usage
-    # If neither appliance nor device preset provided, leave power mode unchanged. Legacy mode will be used with default 50% share when default applicane load must be set
+    # If neither appliance nor device preset provided, leave power mode unchanged. Legacy mode will be used with default 50% share when default appliance load must be set
     if sb_count > 1:
         if (
             dev_preset is not None
@@ -389,9 +388,7 @@ async def set_home_load(  # noqa: C901
             max(insert_slot.appliance_load, min_load), max_load
         )
     if set_slot and set_slot.appliance_load is not None:
-        set_slot.appliance_load = min(
-            max(set_slot.appliance_load, min_load), max_load
-        )
+        set_slot.appliance_load = min(max(set_slot.appliance_load, min_load), max_load)
 
     new_ranges = []
     # update individual values in current slot or insert SolarbankTimeslot and adjust adjacent slots
@@ -410,11 +407,7 @@ async def set_home_load(  # noqa: C901
                 ).time()
                 # "24:00" format not supported in strptime
                 end_time = datetime.strptime(
-                    (
-                        str(slot.get("end_time") or "00:00").replace(
-                            "24:00", "23:59"
-                        )
-                    ),
+                    (str(slot.get("end_time") or "00:00").replace("24:00", "23:59")),
                     "%H:%M",
                 ).time()
                 # check slot timings to update current, or insert new and modify adjacent slots
@@ -530,8 +523,7 @@ async def set_home_load(  # noqa: C901
                         insert = {}
 
                 if pending_insert and (
-                    insert_slot.start_time.time() <= start_time
-                    or idx == len(ranges)
+                    insert_slot.start_time.time() <= start_time or idx == len(ranges)
                 ):
                     # copy slot, update and insert the new slot
                     overwrite = (
@@ -581,17 +573,12 @@ async def set_home_load(  # noqa: C901
                                 power_mode = SolarbankPowerMode.advanced.value
                         elif isinstance(insert_slot.device_load, int | float):
                             # correct appliance load with other device loads and new device load
-                            insert_slot.appliance_load = (
-                                insert_slot.device_load
-                                + sum(
-                                    [
-                                        dev.get("power")
-                                        for dev in (
-                                            insert.get("device_power_loads") or []
-                                        )
-                                        if dev.get("device_sn") != deviceSn
-                                    ]
-                                )
+                            insert_slot.appliance_load = insert_slot.device_load + sum(
+                                [
+                                    dev.get("power")
+                                    for dev in (insert.get("device_power_loads") or [])
+                                    if dev.get("device_sn") != deviceSn
+                                ]
                             )
                     # adjust appliance load depending on device load preset and ensure appliance load is consistent with device load min/max values
                     insert_slot.appliance_load = (
@@ -607,8 +594,7 @@ async def set_home_load(  # noqa: C901
                         else max(
                             min(
                                 insert_slot.appliance_load,
-                                insert_slot.device_load
-                                + max_load_dev * (sb_count - 1),
+                                insert_slot.device_load + max_load_dev * (sb_count - 1),
                             ),
                             insert_slot.device_load + min_load_dev * (sb_count - 1),
                         )
@@ -624,8 +610,7 @@ async def set_home_load(  # noqa: C901
                                     max(
                                         int(
                                             insert_slot.appliance_load
-                                            if insert_slot.appliance_load
-                                            is not None
+                                            if insert_slot.appliance_load is not None
                                             else SolixDefaults.PRESET_DEF
                                         ),
                                         min_load,
@@ -651,8 +636,7 @@ async def set_home_load(  # noqa: C901
                                     dev.update(
                                         {
                                             "power": int(
-                                                insert_slot.appliance_load
-                                                / sb_count
+                                                insert_slot.appliance_load / sb_count
                                             )
                                             if insert_slot.device_load is None
                                             else int(insert_slot.device_load)
@@ -663,8 +647,7 @@ async def set_home_load(  # noqa: C901
                                     dev.update(
                                         {
                                             "power": int(
-                                                insert_slot.appliance_load
-                                                / sb_count
+                                                insert_slot.appliance_load / sb_count
                                             )
                                             if insert_slot.device_load is None
                                             else int(
@@ -691,8 +674,7 @@ async def set_home_load(  # noqa: C901
                                     max(
                                         int(
                                             SolixDefaults.CHARGE_PRIORITY_DEF
-                                            if insert_slot.charge_priority_limit
-                                            is None
+                                            if insert_slot.charge_priority_limit is None
                                             else insert_slot.charge_priority_limit
                                         ),
                                         SolixDefaults.CHARGE_PRIORITY_MIN,
@@ -708,16 +690,13 @@ async def set_home_load(  # noqa: C901
                         pending_insert = False
                         if insert_slot.end_time.time() >= end_time:
                             # set start of next slot if not end of day
-                            if (
-                                end_time
-                                < datetime.strptime("23:59", "%H:%M").time()
-                            ):
+                            if end_time < datetime.strptime("23:59", "%H:%M").time():
                                 next_start = insert_slot.end_time.time()
                             last_time = insert_slot.end_time.time()
                             # skip current slot since overlapped by insert slot
                             continue
                         if split_slot:
-                            # insert second part of a preceeding slot that was split
+                            # insert second part of a preceding slot that was split
                             new_ranges.append(split_slot)
                             split_slot = {}
                             # delay start time of current slot not needed if previous slot was split
@@ -762,13 +741,9 @@ async def set_home_load(  # noqa: C901
                                 ).replace("23:59", "24:00")
                             }
                         )
-                    # shorten end of preceeding slot
+                    # shorten end of preceding slot
                     slot.update(
-                        {
-                            "end_time": datetime.strftime(
-                                insert_slot.start_time, "%H:%M"
-                            )
-                        }
+                        {"end_time": datetime.strftime(insert_slot.start_time, "%H:%M")}
                     )
                     # re-use old slot parms for insert if end time of insert slot is same as original slot
                     if insert_slot.end_time.time() == end_time:
@@ -787,9 +762,7 @@ async def set_home_load(  # noqa: C901
                                     iter(
                                         [
                                             dev.get("power")
-                                            for dev in slot.get(
-                                                "device_power_loads"
-                                            )
+                                            for dev in slot.get("device_power_loads")
                                             or []
                                             if isinstance(dev, dict)
                                             and dev.get("device_sn") == deviceSn
@@ -880,8 +853,7 @@ async def set_home_load(  # noqa: C901
                                     dev.update(
                                         {
                                             "power": int(
-                                                (preset - dev_preset)
-                                                / (sb_count - 1)
+                                                (preset - dev_preset) / (sb_count - 1)
                                             ),
                                         }
                                     )
@@ -917,7 +889,7 @@ async def set_home_load(  # noqa: C901
                 slot = insert
                 new_ranges.append(slot)
                 if split_slot:
-                    # insert second part of a preceeding slot that was split
+                    # insert second part of a preceding slot that was split
                     new_ranges.append(split_slot)
                     split_slot = {}
 
@@ -1002,9 +974,9 @@ async def set_home_load(  # noqa: C901
             solarbanks = {
                 sb.get("device_sn")
                 for sb in (
-                    (
-                        (self.sites.get(siteId) or {}).get("solarbank_info") or {}
-                    ).get("solarbank_list")
+                    ((self.sites.get(siteId) or {}).get("solarbank_info") or {}).get(
+                        "solarbank_list"
+                    )
                     or [{}]
                 )
             }
@@ -1034,9 +1006,7 @@ async def set_home_load(  # noqa: C901
 
         # use previous appliance name if a slot was defined originally
         if appliance_name:
-            (slot.get("appliance_loads") or [{}])[0].update(
-                {"name": appliance_name}
-            )
+            (slot.get("appliance_loads") or [{}])[0].update({"name": appliance_name})
         new_ranges.append(slot)
     self._logger.debug(
         "Ranges to apply: %s",
@@ -1055,7 +1025,6 @@ async def set_home_load(  # noqa: C901
     )
 
 
-
 async def set_sb2_home_load(  # noqa: C901
     self,
     siteId: str,
@@ -1071,7 +1040,7 @@ async def set_sb2_home_load(  # noqa: C901
 
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
     Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
-    When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
+    When insert_slot SolarbankTimeslot is provided, the given slot will be incorporated into existing schedule. Adjacent overlapping slot times will be updated and overlay slots will be replaced.
 
     Example schedule for Solarbank 2 as provided via Api:
     Example data for provided site_id with param_type 6 for SB2:
@@ -1131,16 +1100,17 @@ async def set_sb2_home_load(  # noqa: C901
 
     rate_plan = schedule.get("custom_rate_plan") or []
     new_rate_plan = []
-    pending_insert = False
+    # pending_insert = False
     if len(rate_plan) > 0:
         if insert_slot:
             # set flag for pending insert slot
-            pending_insert = True
+            # pending_insert = True
+            pass
     elif insert_slot:
         # use insert_slot for set_slot to define a single new slot when no slots exist
         set_slot = insert_slot
 
-    # TODO: Insert code to handle output preset changes or set_slot and insert_slot cases
+    # TODO(#SB2): Insert code to handle output preset changes or set_slot and insert_slot cases
     new_rate_plan = copy.deepcopy(rate_plan)
     # The SB2 schedule first needs to find a matching weekday plan or create a new one
     # If no weekdays are provided, the plan for actual weekday will be selected. Otherwise the plan with most matching weekdays will be selected
@@ -1148,7 +1118,9 @@ async def set_sb2_home_load(  # noqa: C901
     # If extra weekdays are provided for an existing plan, those will be removed from other plans where they are defined
 
     # If no rate plan exists or new slot to be set, set defaults or given set_slot parameters
-    if (not new_rate_plan or not ((new_rate_plan[0]).get("ranges") or [])) and (set_slot or preset is not None):
+    if (not new_rate_plan or not ((new_rate_plan[0]).get("ranges") or [])) and (
+        set_slot or preset is not None
+    ):
         if not set_slot:
             # fill set_slot with given parameters
             set_slot = Solarbank2Timeslot(
@@ -1166,11 +1138,11 @@ async def set_sb2_home_load(  # noqa: C901
             if set_slot.appliance_load is None
             else set_slot.appliance_load,
         }
-        rate: dict = next(iter(new_rate_plan),{})
+        rate: dict = next(iter(new_rate_plan), {})
         new_rate_plan: list = [
             {
-                "index": rate.get("index",0),
-                "week": rate.get("week",list(set_slot.weekdays)),
+                "index": rate.get("index", 0),
+                "week": rate.get("week", list(set_slot.weekdays)),
                 "ranges": [slot],
             }
         ]

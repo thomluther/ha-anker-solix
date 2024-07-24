@@ -53,7 +53,7 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 - The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
 - The Anker account used in the integration cannot longer be used in the Anker mobile app since the cloud Api only allows 1 active client user token at a time. Existing user tokens will be removed from the server upon new client authentication requests. That means the integration kicks out the App user and vice versa.
 - It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While Wifi is disconnected, the reported data may be stale. You can use the Cloud state sensor of the end device to verify the cloud connection state and potentially stale data.
-- The integration supports only power devices which are defined in a power system. While it may present also standalone devices that are not defined in a system, those standalone devices do not provide any usage or consumption data via the cloud Api and therefore will not present any power entites.
+- The integration supports only power devices which are defined in a power system. While it may present also standalone devices that are not defined in a system, those standalone devices do not provide any usage or consumption data via the cloud Api and therefore will not present any power entitles.
 - Further devices which can be added to a power system and managed by the Anker Power cloud may be added in future if example Api response data can be provided to the developers.
 
 **Note:**
@@ -80,7 +80,7 @@ Device type | Description
 `system` | Anker Solix 'Power System' as defined in the Anker App
 `solarbank` | Anker Solix Solarbank configured in the system. Supported models are:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro (No custom schedule support yet)<br>- A17C3: Solarbank 2 E1600 Plus  (No custom schedule support yet)<br>Note: A17C2  Solarbank 2 E1600 may be supported once released
 `inverter` | Anker Solix inverter configured in the system. Supported models are:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
-`smartmeter` | Anker Solix smart meter configured in the system. Supported models are:<br>- A17X7: 3 Phase WLAN Smart Meter
+`smartmeter` | Anker Solix smart meter configured in the system. Supported models are:<br>- A17X7: 3 Phase Wifi Smart Meter
 
 **Special note for Solarbank 2 devices and Smart Meters:**
 
