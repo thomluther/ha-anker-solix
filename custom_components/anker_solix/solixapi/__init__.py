@@ -1,1 +1,1 @@
-"""Anker Solix API."""
+"""Init for api."""

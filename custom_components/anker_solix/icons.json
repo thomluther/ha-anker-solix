@@ -53,6 +53,12 @@
             "power_cutoff": {
                 "default": "mdi:battery-heart-outline"
             },
+            "preset_usage_mode": {
+                "default": "mdi:account-clock",
+                "state": {
+                    "automatic": "mdi:auto-mode"
+                }
+            },
             "system_price_unit": {
                 "default": "mdi:cash-edit"
             }
@@ -70,7 +76,9 @@
                 "default": "mdi:battery-alert-variant",
                 "state": {
                     "detection": "mdi:battery-clock",
+                    "protection_charge": "mdi:home-battery-outline",
                     "bypass": "mdi:battery-remove",
+                    "bypass_discharge": "mdi:home-battery",
                     "discharge": "mdi:battery-minus",
                     "charge": "mdi:battery-plus",
                     "charge_bypass": "mdi:home-battery",
@@ -85,10 +93,31 @@
                 "default": "mdi:battery-charging"
             },
             "output_power": {
-                "default": "mdi:home-lightning-bolt-outline"
+                "default": "mdi:home-battery-outline"
+            },
+            "ac_to_home_load": {
+                "default": "mdi:home-import-outline"
+            },
+            "home_load_power": {
+                "default": "mdi:home-lightning-bolt"
             },
             "input_power": {
                 "default": "mdi:solar-power"
+            },
+            "solar_power_1": {
+                "default": "mdi:solar-panel"
+            },
+            "solar_power_2": {
+                "default": "mdi:solar-panel"
+            },
+            "solar_power_3": {
+                "default": "mdi:solar-panel"
+            },
+            "solar_power_4": {
+                "default": "mdi:solar-panel"
+            },
+            "ac_socket": {
+                "default": "mdi:power-plug-battery"
             },
             "fittings": {
                 "default": "mdi:tools"
@@ -102,11 +131,44 @@
             "daily_solar_production": {
                 "default": "mdi:solar-power-variant"
             },
+            "daily_solar_production_pv1": {
+                "default": "mdi:solar-power-variant"
+            },
+            "daily_solar_production_pv2": {
+                "default": "mdi:solar-power-variant"
+            },
+            "daily_solar_production_pv3": {
+                "default": "mdi:solar-power-variant"
+            },
+            "daily_solar_production_pv4": {
+                "default": "mdi:solar-power-variant"
+            },
+            "daily_ac_socket": {
+                "default": "mdi:power-plug-battery"
+            },
+            "daily_battery_to_home": {
+                "default": "mdi:home-battery"
+            },
+            "daily_home_usage": {
+                "default": "mdi:home-lightning-bolt"
+            },
+            "daily_smartplugs_total": {
+                "default": "mdi:lightning-bolt-circle"
+            },
+            "daily_grid_to_home": {
+                "default": "mdi:home-import-outline"
+            },
+            "daily_solar_to_grid": {
+                "default": "mdi:transmission-tower-import"
+            },
             "daily_solar_share": {
                 "default": "mdi:percent-circle"
             },
             "daily_battery_share": {
                 "default": "mdi:percent-box"
+            },
+            "daily_grid_share": {
+                "default": "mdi:home-percent"
             },
             "solarbank_list": {
                 "default": "mdi:counter"
@@ -118,6 +180,12 @@
                 "default": "mdi:counter"
             },
             "powerpanel_list": {
+                "default": "mdi:counter"
+            },
+            "smartmeter_list": {
+                "default": "mdi:counter"
+            },
+            "smart_plug_list": {
                 "default": "mdi:counter"
             },
             "set_output_power": {
@@ -139,6 +207,16 @@
             "sw_version": {
                 "default": "mdi:cog"
             },
+            "sub_package_num": {
+                "default": "mdi:package",
+                "state": {
+                    "1": "mdi:package-check",
+                    "2": "mdi:package-check",
+                    "3": "mdi:package-check",
+                    "4": "mdi:package-check",
+                    "5": "mdi:package-check"
+                }
+            },
             "total_co2_saving": {
                 "default": "mdi:sprout"
             },
@@ -147,6 +225,18 @@
             },
             "set_system_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"
+            },
+            "grid_status_desc": {
+                "default": "mdi:help-network-outline",
+                "state": {
+                    "ok": "mdi:meter-electric"
+                }
+            },
+            "grid_to_home_power": {
+                "default": "mdi:home-import-outline"
+            },
+            "photovoltaic_to_grid_power": {
+                "default": "mdi:transmission-tower-import"
             }
         },
         "switch": {
@@ -174,6 +264,7 @@
         }
     },
     "services": {
+        "get_system_info": "mdi:text-box-search-outline",
         "get_solarbank_schedule": "mdi:sun-clock",
         "clear_solarbank_schedule": "mdi:history",
         "set_solarbank_schedule": "mdi:sun-clock",

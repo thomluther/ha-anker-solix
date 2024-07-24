@@ -1,0 +1,118 @@
+{
+  "YF819ZFK2S1CZZRO": {
+    "device_sn": "YF819ZFK2S1CZZRO",
+    "type": "solarbank",
+    "site_id": "cfdb1fbc-d51e-c39f-13b3-597acb1ab7c5",
+    "is_admin": true,
+    "device_pn": "A17C1",
+    "generation": 2,
+    "battery_soc": "0",
+    "battery_capacity": "1600",
+    "battery_energy": "0",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "detection",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "0",
+    "set_output_power": "0",
+    "sub_package_num": 0,
+    "power_cutoff": 5,
+    "alias": "Solarbank 2 E1600 Pro",
+    "set_system_output_power": "0",
+    "data_valid": false,
+    "solarbank_count": 1,
+    "solar_power_1": "0",
+    "solar_power_2": "0",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "to_home_load": "0",
+    "bt_ble_mac": "7F1FDE52C2E4",
+    "name": "Solarbank 2 E1600 Pro",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.1.12",
+    "auto_upgrade": false,
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "48",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 0,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 1,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "schedule": {
+      "mode_type": 1,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 0
+            }
+          ]
+        }
+      ],
+      "blend_plan": null,
+      "default_home_load": 200,
+      "max_load": 800,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_system_output_power": 200,
+    "preset_allow_export": true,
+    "preset_charge_priority": 80,
+    "preset_power_mode": null,
+    "preset_device_output_power": null
+  },
+  "IY61SJY9VRCITKRM": {
+    "device_sn": "IY61SJY9VRCITKRM",
+    "type": "smartmeter",
+    "site_id": "cfdb1fbc-d51e-c39f-13b3-597acb1ab7c5",
+    "is_admin": true,
+    "device_pn": "A17X7",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "alias": "Smart Meter",
+    "data_valid": false,
+    "photovoltaic_to_grid_power": "0",
+    "grid_to_home_power": "0",
+    "grid_status": "0",
+    "grid_status_desc": "ok",
+    "bt_ble_mac": "AE64BEF0B8CE",
+    "name": "Smart Meter",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.0.29",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "48"
+  }
+}

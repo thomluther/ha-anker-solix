@@ -7,13 +7,18 @@
                 "solarbank_cutoff": "Solarbank Reservewerte",
                 "solarbank_fittings": "Solarbank Zubehör",
                 "solarbank_solar_info": "Solarbank WR Info",
+                "solar_energy": "Solar Energiestatistik",
                 "solarbank_energy": "Solarbank Energiestatistik",
+                "smartmeter_energy": "Smart Meter Energiestatistik",
+                "smartplug_energy": "Smarte Steckdosen Energiestatistik",
                 "system": "Systeme",
                 "solarbank": "Solarbänke",
                 "inverter": "Wechselrichter",
                 "pps": "Power Stationen",
                 "powerpanel": "Power Panels",
-                "powercooler": "Power Kühler"
+                "powercooler": "Power Kühler",
+                "smartmeter": "Smart Meter",
+                "smartplug": "Smarte Steckdosen"
             }
         }
     },
@@ -40,12 +45,14 @@
                     "scan_interval": "Update Intervall (30-600 Sekunden)",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "skip_invalid": "Ignoriere ungültige Antwortdaten",
                     "exclude": "Ausgeschlossene Entitäts-Kategorien",
                     "testmode": "Benutze den Testmode für die Integration",
                     "testfolder": "Ordner mit json Dateien für den Integrationstest"
                 },
                 "data_description": {
                     "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden nur einmal pro Minute aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
                     "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
                     "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
                 }
@@ -73,12 +80,14 @@
                     "scan_interval": "Update Intervall (30-600 Sekunden)",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "skip_invalid": "Ignoriere ungültige Antwortdaten",
                     "exclude": "Ausgeschlossene Entitäts-Kategorien",
                     "testmode": "Benutze den Testmode für die Integration",
                     "testfolder": "Ordner mit json Dateien für den Integrationstest"
                 },
                 "data_description": {
                     "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden nur einmal pro Minute aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
                     "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
                     "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
                 }
@@ -156,6 +165,13 @@
             "power_cutoff": {
                 "name": "Ladestandreserve"
             },
+            "preset_usage_mode": {
+                "name": "Benutzermodus",
+                "state": {
+                    "automatic": "Automatisch",
+                    "manual": "Manuell"
+                }
+            },
             "system_price_unit": {
                 "name": "Preis Währung"
             }
@@ -178,7 +194,9 @@
                 "name": "Betriebszustand",
                 "state": {
                     "detection": "Erkennung",
+                    "protection_charge": "Schutzladung",
                     "bypass": "Bypass",
+                    "bypass_discharge": "Bypass Entladung",
                     "discharge": "Entladung",
                     "charge": "Aufladung",
                     "charge_bypass": "Überschussladung",
@@ -200,8 +218,29 @@
             "input_power": {
                 "name": "Solarleistung"
             },
+            "solar_power_1": {
+                "name": "Solar PV1"
+            },
+            "solar_power_2": {
+                "name": "Solar PV2"
+            },
+            "solar_power_3": {
+                "name": "Solar PV3"
+            },
+            "solar_power_4": {
+                "name": "Solar PV4"
+            },
             "output_power": {
-                "name": "Einspeiseleistung"
+                "name": "DC Ausgangsleistung"
+            },
+            "ac_socket": {
+                "name": "AC Steckdose"
+            },
+            "ac_to_home_load": {
+                "name": "AC Hausabgabe"
+            },
+            "home_load_power": {
+                "name": "Hausbedarf"
             },
             "ac_generate_power": {
                 "name": "AC Leistung"
@@ -257,6 +296,9 @@
             "sw_version": {
                 "name": "Firmware"
             },
+            "sub_package_num": {
+                "name": "Erweiterungakku"
+            },
             "fittings": {
                 "name": "Zubehör",
                 "state_attributes": {
@@ -274,61 +316,6 @@
                     }
                 }
             },
-            "daily_discharge_energy": {
-                "name": "Entladung täglich",
-                "state_attributes": {
-                    "date": {
-                        "name": "Datum"
-                    },
-                    "last_period": {
-                        "name": "Letzte Periode"
-                    }
-                }
-            },
-            "daily_charge_energy": {
-                "name": "Ladung täglich",
-                "state_attributes": {
-                    "date": {
-                        "name": "Datum"
-                    },
-                    "last_period": {
-                        "name": "Letzte Periode"
-                    }
-                }
-            },
-            "daily_solar_production": {
-                "name": "Solarertrag täglich",
-                "state_attributes": {
-                    "date": {
-                        "name": "Datum"
-                    },
-                    "last_period": {
-                        "name": "Letzte Periode"
-                    }
-                }
-            },
-            "daily_solar_share": {
-                "name": "Solaranteil täglich",
-                "state_attributes": {
-                    "date": {
-                        "name": "Datum"
-                    },
-                    "last_period": {
-                        "name": "Letzte Periode"
-                    }
-                }
-            },
-            "daily_battery_share": {
-                "name": "Akkuanteil täglich",
-                "state_attributes": {
-                    "date": {
-                        "name": "Datum"
-                    },
-                    "last_period": {
-                        "name": "Letzte Periode"
-                    }
-                }
-            },
             "temperature": {
                 "name": "Temperatur"
             },
@@ -343,6 +330,12 @@
             },
             "pps_list": {
                 "name": "Power Stationen"
+            },
+            "smartmeter_list": {
+                "name": "Smart Meter"
+            },
+            "smart_plug_list": {
+                "name": "Smarte Steckdosen"
             },
             "solarbank_charging_power": {
                 "name": "SB Akkuleistung"
@@ -377,14 +370,205 @@
             "total_output_energy": {
                 "name": "Ertrag gesamt"
             },
-            "daily_output_energy": {
-                "name": "Ertrag heute"
-            },
             "set_system_output_power": {
                 "name": "System Einspeisevorgabe"
             },
             "site_charging_power": {
                 "name": "System Ladeleistung"
+            },
+            "grid_status_desc": {
+                "name": "Netz Status",
+                "state": {
+                    "ok": "Ok",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "grid_status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
+            "grid_to_home_power": {
+                "name": "Netzbezug"
+            },
+            "photovoltaic_to_grid_power": {
+                "name": "Netzeinspeisung"
+            },
+            "daily_discharge_energy": {
+                "name": "Tägliche Entladung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_charge_energy": {
+                "name": "Tägliche Aufladung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_production": {
+                "name": "Täglicher Solarertrag",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_production_pv1": {
+                "name": "Tägliche PV 1",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_production_pv2": {
+                "name": "Tägliche PV 2",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_production_pv3": {
+                "name": "Tägliche PV 3",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_production_pv4": {
+                "name": "Tägliche PV 4",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_ac_socket": {
+                "name": "Tägliche AC Steckdose",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_battery_to_home": {
+                "name": "Tägliche AC Hausabgabe",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_home_usage": {
+                "name": "Täglicher Hausverbrauch",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_smartplugs_total": {
+                "name": "Tägliche Smarte Steckdosen",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_grid_to_home": {
+                "name": "Täglicher Netzbezug",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_to_grid": {
+                "name": "Tägliche Netzeinspeisung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_share": {
+                "name": "Tagesanteil Solar",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_battery_share": {
+                "name": "Tagesanteil Akku",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_grid_share": {
+                "name": "Tagesanteil Netz",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
             }
         },
         "switch": {
@@ -415,6 +599,10 @@
         }
     },
     "services": {
+        "get_system_info": {
+            "name": "Abfrage der aktuellen Systeminformationen",
+            "description": "Die aktuelle Systeminformation wird als Antwort auf diesen Service geschickt"
+        },
         "get_solarbank_schedule": {
             "name": "Abfrage des aktuellen Solarbank Zeitplans",
             "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diesen Service geschickt"

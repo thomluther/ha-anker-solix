@@ -6,6 +6,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import json
 from typing import Any
 
 from homeassistant.components.number import (
@@ -31,7 +32,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.api import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.types import ApiCategories, SolixDefaults, SolixDeviceType
 
 
 @dataclass(frozen=True)
@@ -50,7 +51,7 @@ class AnkerSolixNumberDescription(
 
 DEVICE_NUMBERS = [
     AnkerSolixNumberDescription(
-        # System total output setting, determined by schedule
+        # System total output setting, determined by schedule, the limits will be adopted during creation
         key="preset_system_output_power",
         translation_key="preset_system_output_power",
         json_key="preset_system_output_power",
@@ -60,7 +61,10 @@ DEVICE_NUMBERS = [
         native_step=10,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # TODO(#SB2): Enable for SB2 once helper method ready to support presets,
+        exclude_fn=lambda s, d: not (
+            {SolixDeviceType.SOLARBANK.value} - s and (d.get("generation") or 0) < 2
+        ),
     ),
     AnkerSolixNumberDescription(
         # Device output setting, determined by schedule
@@ -187,9 +191,18 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
             # update number limits based on solarbank count in system
             if self._attribute_name == "preset_system_output_power":
-                self.native_max_value = int(
-                    self.native_max_value * (data.get("solarbank_count") or 1)
-                )
+                if (data.get("generation") or 0) > 1:
+                    # SB2 has min limit of 0W, they are typically correctly set in the schedule depending on device settings
+                    self.native_min_value = (data.get("schedule") or {}).get(
+                        "min_load"
+                    ) or 0
+                    self.native_max_value = (data.get("schedule") or {}).get(
+                        "max_load"
+                    ) or self.native_max_value
+                else:
+                    self.native_max_value = int(
+                        self.native_max_value * (data.get("solarbank_count") or 1)
+                    )
             if self._attribute_name == "preset_device_output_power":
                 self.native_min_value = int(
                     self.native_min_value / (data.get("solarbank_count") or 1)
@@ -258,7 +271,11 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             value (float): The value to set.
 
         """
-        if self.coordinator.client.testmode():
+        if self.coordinator.client.testmode() and self._attribute_name not in [
+            "preset_system_output_power",
+            "preset_device_output_power",
+            "preset_charge_priority",
+        ]:
             # Raise alert to frontend
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be changed while configuration is running in testmode",
@@ -294,19 +311,55 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         LOGGER.debug(
                             "%s change to %s will be applied", self.entity_id, value
                         )
-                        await self.coordinator.client.api.set_home_load(
-                            siteId=data.get("site_id") or "",
-                            deviceSn=self.coordinator_context,
-                            preset=int(value)
-                            if self._attribute_name == "preset_system_output_power"
-                            else None,
-                            dev_preset=int(value)
-                            if self._attribute_name == "preset_device_output_power"
-                            else None,
+                        siteId = data.get("site_id") or ""
+                        if (data.get("generation") or 0) > 1:
+                            # SB2 preset change
+                            resp = await self.coordinator.client.api.set_sb2_home_load(
+                                siteId=siteId,
+                                deviceSn=self.coordinator_context,
+                                preset=int(value),
+                                test_schedule=data.get("schedule") or {}
+                                if self.coordinator.client.testmode()
+                                else None,
+                            )
+                            if (
+                                isinstance(resp, dict)
+                                and self.coordinator.client.testmode()
+                            ):
+                                LOGGER.info(
+                                    "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
+                                    json.dumps(resp, indent=2),
+                                )
+                        else:
+                            # SB1 preset change
+                            resp = await self.coordinator.client.api.set_home_load(
+                                siteId=siteId,
+                                deviceSn=self.coordinator_context,
+                                preset=int(value)
+                                if self._attribute_name == "preset_system_output_power"
+                                else None,
+                                dev_preset=int(value)
+                                if self._attribute_name == "preset_device_output_power"
+                                else None,
+                                test_schedule=data.get("schedule") or {}
+                                if self.coordinator.client.testmode()
+                                else None,
+                            )
+                            if (
+                                isinstance(resp, dict)
+                                and self.coordinator.client.testmode()
+                            ):
+                                LOGGER.info(
+                                    "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
+                                    json.dumps(resp, indent=2),
+                                )
+                        # update sites required to get applied output power fields, they are no provided with get_device_parm endpoint
+                        # which fetches new schedule after update
+                        await self.coordinator.client.api.update_sites(
+                            siteId=siteId,
+                            fromFile=self.coordinator.client.testmode(),
                         )
                         self.last_changed = datetime.now().astimezone()
-                        # update sites for workaround with active output power preset fields
-                        await self.coordinator.client.api.update_sites()
                     else:
                         LOGGER.debug(
                             "%s cannot be increased to %s because minimum change delay of %s seconds is not passed",
@@ -329,11 +382,19 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     LOGGER.debug(
                         "%s change to %s will be applied", self.entity_id, value
                     )
-                    await self.coordinator.client.api.set_home_load(
+                    resp = await self.coordinator.client.api.set_home_load(
                         siteId=data.get("site_id") or "",
                         deviceSn=self.coordinator_context,
                         charge_prio=int(value),
+                        test_schedule=data.get("schedule") or {}
+                        if self.coordinator.client.testmode()
+                        else None,
                     )
+                    if isinstance(resp, dict) and self.coordinator.client.testmode():
+                        LOGGER.info(
+                            "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
+                            json.dumps(resp, indent=2),
+                        )
                 elif self._attribute_name == "system_price":
                     LOGGER.debug(
                         "%s change to %s will be applied", self.entity_id, value

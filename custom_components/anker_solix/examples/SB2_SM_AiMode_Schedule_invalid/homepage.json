@@ -1,0 +1,49 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "cfdb1fbc-d51e-c39f-13b3-597acb1ab7c5",
+        "site_name": "Maison",
+        "site_img": "",
+        "device_type_list": [
+          3,
+          6
+        ],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [
+      {
+        "device_pn": "",
+        "device_sn": "YF819ZFK2S1CZZRO",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "battery_power": "0",
+        "bind_site_status": "1",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "",
+        "wireless_type": "",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 0,
+        "set_load_power": "",
+        "sub_package_num": 0,
+        "output_cutoff_data": 0,
+        "is_display": false
+      }
+    ],
+    "powerpanel_list": []
+  },
+  "trace_id": "ffb6eaefe0f0b15d0acf23aa684eb9ad"
+}

@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "grid_list": [],
+    "smartplug_list": []
+  },
+  "trace_id": "75e0f4b60465ada8675ab9d1c7e331e4"
+}

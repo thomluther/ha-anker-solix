@@ -24,6 +24,7 @@ TESTFOLDER: str = "testfolder"
 INTERVALMULT: str = "dev_interval_mult"
 UPDT_INTV_MIN: str = "updt_interval_min"
 UPDT_INTV_MAX: str = "updt_interval_max"
+CONF_SKIP_INVALID: str = "skip_invalid"
 EXAMPLESFOLDER: str = "examples"
 ERROR_DETAIL: str = "error_detail"
 LAST_PERIOD: str = "last_period"
@@ -36,6 +37,7 @@ ALLOW_TESTMODE: bool = (
 TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
 CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
 
+SERVICE_GET_SYSTEM_INFO = "get_system_info"
 SERVICE_GET_SOLARBANK_SCHEDULE = "get_solarbank_schedule"
 SERVICE_CLEAR_SOLARBANK_SCHEDULE = "clear_solarbank_schedule"
 SERVICE_SET_SOLARBANK_SCHEDULE = "set_solarbank_schedule"
@@ -110,6 +112,6 @@ SOLARBANK_TIMESLOT_SCHEMA: vol.Schema = vol.All(
     ),
 )
 
-SOLARBANK_ENTITY_SCHEMA: vol.Schema = vol.All(
+SOLIX_ENTITY_SCHEMA: vol.Schema = vol.All(
     cv.make_entity_service_schema(cv.TARGET_SERVICE_FIELDS),
 )

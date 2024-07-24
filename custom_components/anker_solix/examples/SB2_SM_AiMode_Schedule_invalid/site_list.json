@@ -1,0 +1,30 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "cfdb1fbc-d51e-c39f-13b3-597acb1ab7c5",
+        "site_name": "Maison",
+        "site_img": "",
+        "device_type_list": [
+          6,
+          3
+        ],
+        "ms_type": 1,
+        "power_site_type": 5,
+        "is_allow_delete": true,
+        "support_device_models": [
+          "A17C1",
+          "A17X7",
+          "A17X8"
+        ],
+        "current_site_device_models": [
+          "A17C1",
+          "A17X7"
+        ]
+      }
+    ]
+  },
+  "trace_id": "6dad68f71fad1d9fd3cfc2dc7e0c9c24"
+}

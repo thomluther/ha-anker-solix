@@ -1,0 +1,167 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "rule_list": [
+      {
+        "power_site_type": 1,
+        "main_device_models": [
+          "A5143"
+        ],
+        "device_models": [
+          "A5143",
+          "A1771"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A1771": 1,
+          "A5143": 1
+        },
+        "quantity_max_limit_map": {
+          "A1771": 2,
+          "A5143": 1
+        }
+      },
+      {
+        "power_site_type": 2,
+        "main_device_models": [
+          "A17C0"
+        ],
+        "device_models": [
+          "A17C0",
+          "A5143",
+          "A1771"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A17C0": 1
+        },
+        "quantity_max_limit_map": {
+          "A1771": 2,
+          "A17C0": 2,
+          "A5143": 1
+        }
+      },
+      {
+        "power_site_type": 4,
+        "main_device_models": [
+          "A17B1"
+        ],
+        "device_models": [
+          "A17B1"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17B1": 1
+        }
+      },
+      {
+        "power_site_type": 5,
+        "main_device_models": [
+          "A17C1"
+        ],
+        "device_models": [
+          "A17C1",
+          "A17X7",
+          "A17X8"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17C1": 1,
+          "A17X7": 1,
+          "A17X8": 6
+        }
+      },
+      {
+        "power_site_type": 6,
+        "main_device_models": [
+          "A5341"
+        ],
+        "device_models": [
+          "A5341",
+          "A5101",
+          "A5220"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5341": 1
+        },
+        "quantity_max_limit_map": {
+          "A5341": 1
+        }
+      },
+      {
+        "power_site_type": 7,
+        "main_device_models": [
+          "A5101"
+        ],
+        "device_models": [
+          "A5101",
+          "A5220"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5101": 1
+        },
+        "quantity_max_limit_map": {
+          "A5101": 6
+        }
+      },
+      {
+        "power_site_type": 8,
+        "main_device_models": [
+          "A5102"
+        ],
+        "device_models": [
+          "A5102",
+          "A5220"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5102": 1
+        },
+        "quantity_max_limit_map": {
+          "A5102": 6
+        }
+      },
+      {
+        "power_site_type": 9,
+        "main_device_models": [
+          "A5103"
+        ],
+        "device_models": [
+          "A5103",
+          "A5220"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5103": 1
+        },
+        "quantity_max_limit_map": {
+          "A5103": 6
+        }
+      },
+      {
+        "power_site_type": 10,
+        "main_device_models": [
+          "A17C3"
+        ],
+        "device_models": [
+          "A17C3",
+          "A17X7",
+          "A17X8"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17C3": 1,
+          "A17X7": 1,
+          "A17X8": 6
+        }
+      }
+    ]
+  },
+  "trace_id": "be45e8c1c7980acdd2efc5ac16fbf026"
+}

@@ -19,7 +19,9 @@ from homeassistant.const import (
 )
 
 from .const import EXAMPLESFOLDER, INTERVALMULT, LOGGER, TESTMODE
-from .solixapi import api, errors
+from .solixapi import errors
+from .solixapi.api import AnkerSolixApi
+from .solixapi.types import ApiCategories, SolixDefaults, SolixDeviceType
 
 _LOGGER = LOGGER
 MIN_DEVICE_REFRESH: int = 30  # min device refresh delay in seconds
@@ -29,20 +31,24 @@ DEFAULT_DEVICE_MULTIPLIER: int = (
 )
 # Api categories and device types supported for exclusion from integration
 API_CATEGORIES: list = [
-    api.SolixDeviceType.PPS.value,
-    api.SolixDeviceType.POWERPANEL.value,
-    api.SolixDeviceType.INVERTER.value,
-    api.SolixDeviceType.SOLARBANK.value,
-    # api.SolixDeviceType.SMARTMETER.value,
-    # api.SolixDeviceType.POWERCOOLER.value,
-    api.ApiCategories.solarbank_energy,
-    api.ApiCategories.solarbank_cutoff,
-    api.ApiCategories.solarbank_fittings,
-    api.ApiCategories.solarbank_solar_info,
-    api.ApiCategories.device_auto_upgrade,
-    api.ApiCategories.site_price,
+    SolixDeviceType.PPS.value,
+    SolixDeviceType.POWERPANEL.value,
+    SolixDeviceType.INVERTER.value,
+    SolixDeviceType.SOLARBANK.value,
+    SolixDeviceType.SMARTMETER.value,
+    SolixDeviceType.SMARTPLUG.value,
+    #SolixDeviceType.POWERCOOLER.value,
+    ApiCategories.solarbank_energy,
+    ApiCategories.smartmeter_energy,
+    ApiCategories.solar_energy,
+    ApiCategories.smartplug_energy,
+    ApiCategories.solarbank_cutoff,
+    ApiCategories.solarbank_fittings,
+    ApiCategories.solarbank_solar_info,
+    ApiCategories.device_auto_upgrade,
+    ApiCategories.site_price,
 ]
-DEFAULT_EXCLUDE_CATEGORIES: list = [api.ApiCategories.solarbank_energy]
+DEFAULT_EXCLUDE_CATEGORIES: list = [ApiCategories.solarbank_energy,ApiCategories.smartmeter_energy,ApiCategories.solar_energy,ApiCategories.smartplug_energy,]
 
 
 async def json_example_folders() -> list:
@@ -99,7 +105,7 @@ class AnkerSolixApiClient:
         else:
             data = entry
 
-        self.api = api.AnkerSolixApi(
+        self.api = AnkerSolixApi(
             data.get(CONF_USERNAME),
             data.get(CONF_PASSWORD),
             data.get(CONF_COUNTRY_CODE),
@@ -107,7 +113,7 @@ class AnkerSolixApiClient:
             _LOGGER,
         )
         self.api.requestDelay(
-            float(data.get(CONF_DELAY_TIME, api.SolixDefaults.REQUEST_DELAY_DEF))
+            float(data.get(CONF_DELAY_TIME, SolixDefaults.REQUEST_DELAY_DEF))
         )
         self._deviceintervals = int(data.get(INTERVALMULT, DEFAULT_DEVICE_MULTIPLIER))
         self._testmode = bool(data.get(TESTMODE, False))
@@ -187,11 +193,11 @@ class AnkerSolixApiClient:
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )
-                        if not self._testmode:
-                            # Fetch energy if not excluded via options
-                            await self.api.update_device_energy(
-                                exclude=set(self.exclude_categories)
-                            )
+                        # Fetch energy if not excluded via options
+                        await self.api.update_device_energy(
+                            fromFile=self._testmode,
+                            exclude=set(self.exclude_categories)
+                        )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
                         if not self._testmode:
@@ -227,11 +233,11 @@ class AnkerSolixApiClient:
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )
-                        if not self._testmode:
-                            # Fetch energy if not excluded via options
-                            await self.api.update_device_energy(
-                                exclude=set(self.exclude_categories)
-                            )
+                        # Fetch energy if not excluded via options
+                        await self.api.update_device_energy(
+                            fromFile=self._testmode,
+                            exclude=set(self.exclude_categories)
+                        )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
                     if not self._testmode:

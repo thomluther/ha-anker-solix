@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "86f52099-dcdc-ac5b-d0ce-0da3ea62a8dc",
+    "home_load_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Custom\",\"power\":100,\"number\":0}],\"charge_priority\":100,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"RLMLTE5RUQHFZCM5\",\"power\":50}]}],\"min_load\":150,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":1,\"display_advanced_mode\":0,\"advanced_mode_min_load\":0}",
+    "current_home_load": "0W",
+    "parallel_home_load": "",
+    "parallel_display": false
+  },
+  "trace_id": "9eb9e550cd4dc2bcbdf2fbdba5d4ed7e"
+}

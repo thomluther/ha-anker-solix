@@ -7,13 +7,18 @@
                 "solarbank_cutoff": "Solarbank cutoff values",
                 "solarbank_fittings": "Solarbank accessories",
                 "solarbank_solar_info": "Solarbank inverter info",
+                "solar_energy": "Solar energy stats",
                 "solarbank_energy": "Solarbank energy stats",
+                "smartmeter_energy": "Smart meter energy stats",
+                "smartplug_energy": "Smart plug energy stats",
                 "system": "Systems",
                 "solarbank": "Solarbanks",
                 "inverter": "Inverter",
                 "pps": "Portable power stations",
                 "powerpanel": "Power panels",
-                "powercooler": "Power cooler"
+                "powercooler": "Power cooler",
+                "smartmeter": "Smart meter",
+                "smartplugs": "Smart plugs"
             }
         }
     },
@@ -40,12 +45,14 @@
                     "scan_interval": "Update interval (30-600 seconds)",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "delay_time": "Delay for subsequent Api requests",
+                    "skip_invalid": "Skip invalid data responses",
                     "exclude": "Excluded entity categories",
                     "testmode": "Use integration test mode",
                     "testfolder": "Folder with json files for integration testing"
                 },
                 "data_description": {
                     "scan_interval": "Note: Data on the cloud server is updated only once per minute. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
                     "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
                     "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
                 }
@@ -73,12 +80,14 @@
                     "scan_interval": "Update interval (30-600 seconds)",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "delay_time": "Delay for subsequent Api requests",
+                    "skip_invalid": "Skip invalid data responses",
                     "exclude": "Excluded entity categories",
                     "testmode": "Use integration test mode",
                     "testfolder": "Folder with json files for integration testing"
                 },
                 "data_description": {
                     "scan_interval": "Note: Data on the cloud server is updated only once per minute. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
                     "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
                     "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
                 }
@@ -156,6 +165,13 @@
             "power_cutoff": {
                 "name": "SOC reserve"
             },
+            "preset_usage_mode": {
+                "name": "Usage mode",
+                "state": {
+                    "automatic": "Automatic",
+                    "manual": "Manual"
+                }
+            },
             "system_price_unit": {
                 "name": "Price currency"
             }
@@ -178,7 +194,9 @@
                 "name": "Mode",
                 "state": {
                     "detection": "Detection",
+                    "protection_charge": "Protection charge",
                     "bypass": "Bypass",
+                    "bypass_discharge": "Bypass discharge",
                     "discharge": "Discharge",
                     "charge": "Charge",
                     "charge_bypass": "Charge bypass",
@@ -200,8 +218,29 @@
             "input_power": {
                 "name": "Solar power"
             },
+            "solar_power_1": {
+                "name": "Solar PV1"
+            },
+            "solar_power_2": {
+                "name": "Solar PV2"
+            },
+            "solar_power_3": {
+                "name": "Solar PV3"
+            },
+            "solar_power_4": {
+                "name": "Solar PV4"
+            },
             "output_power": {
-                "name": "Home power"
+                "name": "DC output power"
+            },
+            "ac_socket": {
+                "name": "AC socket power"
+            },
+            "ac_to_home_load": {
+                "name": "AC home power"
+            },
+            "home_load_power": {
+                "name": "Home demand"
             },
             "ac_generate_power": {
                 "name": "AC power"
@@ -257,6 +296,9 @@
             "sw_version": {
                 "name": "Firmware"
             },
+            "sub_package_num": {
+                "name": "Expansion battery"
+            },
             "fittings": {
                 "name": "Accessory",
                 "state_attributes": {
@@ -274,61 +316,6 @@
                     }
                 }
             },
-            "daily_discharge_energy": {
-                "name": "Daily discharge",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Last period"
-                    }
-                }
-            },
-            "daily_charge_energy": {
-                "name": "Daily charge",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Last period"
-                    }
-                }
-            },
-            "daily_solar_production": {
-                "name": "Daily solar yield",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Last period"
-                    }
-                }
-            },
-            "daily_solar_share": {
-                "name": "Daily solar share",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Last period"
-                    }
-                }
-            },
-            "daily_battery_share": {
-                "name": "Daily battery share",
-                "state_attributes": {
-                    "date": {
-                        "name": "Date"
-                    },
-                    "last_period": {
-                        "name": "Last period"
-                    }
-                }
-            },
             "temperature": {
                 "name": "Temperature"
             },
@@ -343,6 +330,12 @@
             },
             "pps_list": {
                 "name": "Power stations"
+            },
+            "smartmeter_list": {
+                "name": "Smart meters"
+            },
+            "smart_plug_list": {
+                "name": "Smart plugs"
             },
             "solarbank_charging_power": {
                 "name": "SB battery power"
@@ -377,14 +370,205 @@
             "total_output_energy": {
                 "name": "Yield total"
             },
-            "daily_output_energy": {
-                "name": "Yield today"
-            },
             "set_system_output_power": {
                 "name": "System home preset"
             },
             "site_charging_power": {
                 "name": "System charging power"
+            },
+            "grid_status_desc": {
+                "name": "Grid status",
+                "state": {
+                    "ok": "Ok",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "grid_status": {
+                        "name": "Status code"
+                    }
+                }
+            },
+            "grid_to_home_power": {
+                "name": "Grid import"
+            },
+            "photovoltaic_to_grid_power": {
+                "name": "Grid export"
+            },
+            "daily_discharge_energy": {
+                "name": "Daily discharge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_charge_energy": {
+                "name": "Daily charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production": {
+                "name": "Daily solar yield",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_pv1": {
+                "name": "Daily solar PV 1",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_pv2": {
+                "name": "Daily solar PV 2",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_pv3": {
+                "name": "Daily solar PV 3",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_production_pv4": {
+                "name": "Daily solar PV 4",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_ac_socket": {
+                "name": "Daily AC socket",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_battery_to_home": {
+                "name": "Daily AC to home",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_home_usage": {
+                "name": "Daily home usage",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_smartplugs_total": {
+                "name": "Daily smart plugs total",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_to_home": {
+                "name": "Daily grid import",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_to_grid": {
+                "name": "Daily grid export",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_share": {
+                "name": "Daily share solar",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_battery_share": {
+                "name": "Daily share battery",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_share": {
+                "name": "Daily share grid",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
             }
         },
         "switch": {
@@ -415,6 +599,10 @@
         }
     },
     "services": {
+        "get_system_info": {
+            "name": "Request actual system information",
+            "description": "The actual system information will be provided as response to the service request"
+        },
         "get_solarbank_schedule": {
             "name": "Request the actual Solarbank schedule",
             "description": "The actual Solarbank schedule will be provided as response to the service request"
