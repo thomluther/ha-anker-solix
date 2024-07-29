@@ -231,7 +231,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         Args:
             option (str): The option to set.
 
-                    """
+        """
         if self.coordinator.client.testmode() and not self._attribute_name == "preset_usage_mode":
             # Raise alert to frontend
             raise ServiceValidationError(
