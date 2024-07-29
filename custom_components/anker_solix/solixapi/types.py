@@ -295,8 +295,8 @@ class SolarbankPowerMode(IntEnum):
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank Power Usage modes."""
 
-    automatic = 1
-    unknown_2 = 2   # Does it exist?
+    smartmeter = 1
+    smartplugs = 2   # TODO to be validated if correct mode for smart plugs
     manual = 3
 
 @dataclass(frozen=True)

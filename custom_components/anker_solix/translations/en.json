@@ -168,7 +168,8 @@
             "preset_usage_mode": {
                 "name": "Usage mode",
                 "state": {
-                    "automatic": "Automatic",
+                    "smartmeter": "Smart meter",
+                    "smartplugs": "Smart plugs",
                     "manual": "Manual"
                 }
             },

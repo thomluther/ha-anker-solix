@@ -353,12 +353,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                     "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
                                     json.dumps(resp, indent=2),
                                 )
-                        # update sites required to get applied output power fields, they are no provided with get_device_parm endpoint
-                        # which fetches new schedule after update
-                        await self.coordinator.client.api.update_sites(
-                            siteId=siteId,
-                            fromFile=self.coordinator.client.testmode(),
-                        )
+                        # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
+                        # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
+                        # await self.coordinator.client.api.update_sites(
+                        #     siteId=siteId,
+                        #     fromFile=self.coordinator.client.testmode(),
+                        # )
                         self.last_changed = datetime.now().astimezone()
                     else:
                         LOGGER.debug(

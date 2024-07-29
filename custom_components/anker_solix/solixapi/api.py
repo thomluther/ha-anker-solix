@@ -365,13 +365,21 @@ class AnkerSolixApi:
                     # get_device_load cannot be used for SB2 schedules, but site refresh will pass this as workaround.
                     elif key in ["current_home_load"] and value:
                         # Value may include unit, remove unit to have content consistent
-                        device.update(
-                            {"set_system_output_power": str(value).replace("W", "")}
-                        )
-                        # Value for device home load may be empty for single solarbank, use this setting also for device preset in this case
+                        home_load = str(value).replace("W", "")
+                        device.update({"set_system_output_power": home_load})
+                        # Value for device set home load may be empty for single solarbank, use this setting also for device preset in this case
                         if not device.get("set_output_power"):
                             device.update(
-                                {"set_output_power": str(value).replace("W", "")}
+                                {
+                                    "set_output_power": str(
+                                        round(
+                                            int(home_load)
+                                            / devData.get("solarbank_count", 1)
+                                        )
+                                    )
+                                    if home_load.isdigit()
+                                    else home_load
+                                }
                             )
                     elif key in ["status"]:
                         device.update({"status": str(value)})
@@ -409,14 +417,14 @@ class AnkerSolixApi:
                         homeload = devData.get("to_home_load") or device.get(
                             "to_home_load"
                         )
-                        demand = devData.get("home_load_power")
+                        demand = devData.get("home_load_power") or 0
                         # use house demand for preset if in auto mode
                         if generation > 1 and (
                             (
                                 device.get("preset_usage_mode")
                                 or SolixDefaults.USAGE_MODE
                             )
-                            == SolarbankUsageMode.automatic.value
+                            in [SolarbankUsageMode.smartmeter.value,SolarbankUsageMode.smartplugs.value]
                         ):
                             preset = demand
                         if (
@@ -520,6 +528,8 @@ class AnkerSolixApi:
                             )
                         # get actual presets from current slot
                         now: datetime = datetime.now().time().replace(microsecond=0)
+                        sys_power = None
+                        dev_power = None
                         # set now to new daytime if close to end of day
                         if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
                             now = datetime.strptime("00:00", "%H:%M").time()
@@ -555,13 +565,17 @@ class AnkerSolixApi:
                                             end_time, "%H:%M"
                                         ).time()
                                     if start_time <= now < end_time:
+                                        sys_power = slot.get("power")
                                         device.update(
                                             {
-                                                "preset_system_output_power": slot.get(
-                                                    "power"
-                                                ),
+                                                "preset_system_output_power": sys_power,
                                             }
                                         )
+                                        break
+                            # adjust schedule preset for eventual reuse as active presets
+                            # Active Preset must only be considered if usage mode is manual
+                            sys_power = str(device.get("preset_system_output_power") or "") if (value.get("mode_type") or 0) == SolarbankUsageMode.manual.value else None
+                            dev_power = sys_power
                         else:
                             # Solarbank 1 schedule
                             for slot in value.get("ranges") or []:
@@ -583,15 +597,13 @@ class AnkerSolixApi:
                                         preset_power = (
                                             slot.get("appliance_loads") or [{}]
                                         )[0].get("power")
+                                        export = slot.get("turn_on")
+                                        prio = slot.get("charge_priority")
                                         device.update(
                                             {
                                                 "preset_system_output_power": preset_power,
-                                                "preset_allow_export": slot.get(
-                                                    "turn_on"
-                                                ),
-                                                "preset_charge_priority": slot.get(
-                                                    "charge_priority"
-                                                ),
+                                                "preset_allow_export": export,
+                                                "preset_charge_priority": prio,
                                             }
                                         )
                                         # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
@@ -617,6 +629,26 @@ class AnkerSolixApi:
                                                     "preset_device_output_power": dev_power,
                                                 }
                                             )
+                                        break
+                            # adjust schedule presets for eventual reuse as active presets
+                            # Charge priority and SOC must only be considered if MI80 inverter is configured for SB1
+                            prio = (device.get("preset_charge_priority") or 0) if ((device.get("solar_info") or {}).get("solar_model") or "") == "A5143" else 0
+                            if device.get("preset_allow_export") and int(prio) <= int(device.get("battery_soc") or "0"):
+                                sys_power = str(device.get("preset_system_output_power") or "")
+                                # active device power depends on SB count
+                                dev_power = device.get("preset_device_output_power") or None
+                                dev_power = str(dev_power if dev_power is not None and cnt > 1 else sys_power)
+                            else:
+                                sys_power = "0"
+                                dev_power = "0"
+                        # update appliance load in site cache upon device details or schedule updates not triggered by sites update
+                        if not devData.get("retain_load") and (mysite:= self.sites.get(device.get("site_id") or "") or {}) and sys_power:
+                            mysite.update({"retain_load": sys_power})
+                            # update also device fields for output power if not provided along with schedule update
+                            if not devData.get("current_home_load") and sys_power:
+                                device.update({"set_system_output_power": sys_power})
+                                if not devData.get("parallel_home_load") and dev_power:
+                                    device.update({"set_output_power": dev_power})
 
                     # inverter specific keys
                     elif key in ["generate_power"]:
@@ -702,7 +734,7 @@ class AnkerSolixApi:
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
-                        "%s occured when updating device details for key %s with value %s: %s",
+                        "%s occurred when updating device details for key %s with value %s: %s",
                         type(err),
                         key,
                         value,

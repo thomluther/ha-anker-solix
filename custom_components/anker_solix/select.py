@@ -181,6 +181,17 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         self._attr_options = self.entity_description.options_fn(
             data, self.entity_description.json_key
         )
+        # update options based on other devices configured in system
+        if self._attribute_name == "preset_usage_mode":
+            site_data = coordinator.data.get(data.get("site_id") or "") or {}
+            options = set(self._attr_options)
+            if not ((site_data.get("grid_info") or {}).get("grid_list") or []):
+                # Remove smart meter usage mode if no smart meter installed
+                options = options - {SolarbankUsageMode.smartmeter.name}
+            if not ((site_data.get("smartplug_info") or {}).get("smartplug_list") or []):
+                # Remove smart plugs usage mode if no smart plugs installed
+                options = options - {SolarbankUsageMode.smartplugs.name}
+            self._attr_options = list(options)
         # Make sure that options are limited to existing state if entity cannot be changed
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
@@ -220,7 +231,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         Args:
             option (str): The option to set.
 
-        """
+                    """
         if self.coordinator.client.testmode() and not self._attribute_name == "preset_usage_mode":
             # Raise alert to frontend
             raise ServiceValidationError(

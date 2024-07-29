@@ -168,7 +168,8 @@
             "preset_usage_mode": {
                 "name": "Mode d'utilisation",
                 "state": {
-                    "automatic": "Automatique",
+                    "smartmeter": "Compteur intelligent",
+                    "smartplugs": "Prises intelligentes",
                     "manual": "Manuel"
                 }
             },

@@ -1637,12 +1637,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
                                 json.dumps(result,indent=2),
                             )
-                        # update sites required to get applied output power fields, they are no provided with get_device_parm endpoint
-                        # which fetches new schedule after update
-                        await self.coordinator.client.api.update_sites(
-                            siteId=siteId,
-                            fromFile=self.coordinator.client.testmode(),
-                        )
+                        # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
+                        # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
+                        # await self.coordinator.client.api.update_sites(
+                        #     siteId=siteId,
+                        #     fromFile=self.coordinator.client.testmode(),
+                        # )
                         # trigger coordinator update with api dictionary data
                         await self.coordinator.async_refresh_data_from_apidict()
                         # refresh last applied system load
@@ -1725,12 +1725,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             paramData=schedule,
                             deviceSn=self._context_base,
                         )
-                # update sites required to get applied output power fields, they are no provided with get_device_parm endpoint
-                # which fetches new schedule after update
-                await self.coordinator.client.api.update_sites(
-                    siteId=siteId,
-                    fromFile=self.coordinator.client.testmode(),
-                )
+                # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
+                # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
+                # await self.coordinator.client.api.update_sites(
+                #     siteId=siteId,
+                #     fromFile=self.coordinator.client.testmode(),
+                # )
                 # trigger coordinator update with api dictionary data
                 await self.coordinator.async_refresh_data_from_apidict()
 

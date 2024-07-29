@@ -56,7 +56,8 @@
             "preset_usage_mode": {
                 "default": "mdi:account-clock",
                 "state": {
-                    "automatic": "mdi:auto-mode"
+                    "smartmeter": "mdi:auto-mode",
+                    "smartplugs": "mdi:power-plug"
                 }
             },
             "system_price_unit": {
