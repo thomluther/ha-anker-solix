@@ -121,7 +121,7 @@ In consequence, before the cloud change in July 2024 the HA integration typicall
 
 Note:
 
-The cloud change in July did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but instead always responds with last known data. It has the same effect as the skip invalid data responses option that was implemented.
+The cloud change in July did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
 
 ### Following are the default options as of version 2.0.0:
 
@@ -257,7 +257,7 @@ max: 3
 
 ### Modification of Solarbank 2 home load settings
 
-Version 2.0.0 of the integration only supports switching between automatic (AI) or manual (custom) home load usage modes when a smart meter is configured in the system. Otherwise only manual usage mode is supported, but schedule based modifications via the integration are not yet supported for Solarbank 2.
+Version 2.0.0 of the integration only supports switching between `Smart Meter` (AI) or `Manual` (custom) home load usage modes when a smart meter is configured in the system. Otherwise only `Manual` usage mode is supported, but schedule based modifications via direct output entities or schedule change services are not yet supported for Solarbank 2. This will be supported in a future release.
 
 ### Care must be taken when modifying Solarbank 1 home load settings
 
@@ -305,7 +305,7 @@ Meaningful automation ideas that might work for the Solarbank 1:
 If you are interested building your own automation for using the Solarbank 1 as surplus battery buffer without wasting generated solar energy to the grid unnecessarily, you may have a look to my [automation project that I documented in the discussions](https://github.com/thomluther/hacs-anker-solix/discussions/81).
 
 
-For Solarbank 2 systems with a smart meter, you can automate the switch of the home load usage mode between automatic and manual if you may have the need to change this in your setup. The Anker mobile app actually does not support scheduled switches of the home load usage mode.
+For Solarbank 2 systems with a smart meter, you can automate the switch of the home load usage mode between Smart Meter and Manual if you may have the need to change this in your setup. The Anker mobile app actually does not support scheduled switches of the home load usage mode.
 
 ---
 **At this point be warned again:**
@@ -322,7 +322,9 @@ Following 3 methods are implemented:
 
 Any change in those entities is immediately applied to either the current time slot in the existing schedule, or to the general schedule structure. Please see the Solarbank dashboard screenshots above for examples of the entity representation. While the schedule is shared for the appliance, each Solarbank 1 in a dual Solarbank setup will be presented with those entities. A change in the device load preset will however enable advanced preset mode and only change the corresponding solarbank output. However, it will also result in a change of the appliance home load preset accordingly.
 
-Solarbank 2 schedule intervals have less time interval settings and can only define the appliance output power. However, different Solarbank 2 schedules can be defined for various weekdays. One common setting for all schedules is the usage mode. If a smart meter is configured in your power system, you can set the usage mode to automatic (AI) and the Solarbank 2 will automatically adjust the appliance output to your house demand measured by the smart meter. So while you can still define schedules, they will be applied in automatic mode ONLY if the solarbank lost connection to the smart meter. For any gap in the defined schedule, the default output of 200 W will be applied.
+Solarbank 2 schedule intervals have less time interval settings and can only define the appliance output power. However, different Solarbank 2 schedules can be defined for various weekdays. One common setting for all schedules is the usage mode. If a smart meter is configured in your power system, you can set the usage mode to Smart Meter and the Solarbank 2 will automatically adjust the appliance output to your house demand measured by the smart meter. So while you can still define schedules via the Anker mobile app, they will be applied ONLY if the solarbank lost connection to the device that is used to provide automated power demand such as the smart meter. For any gap in the defined schedule, the default output of 200 W will be applied.
+
+**Attention: Home load changes or schedule changes are NOT yet supported for Solarbank 2**
 
 **A word of caution:**
 
