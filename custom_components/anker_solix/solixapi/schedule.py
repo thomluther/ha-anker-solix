@@ -399,7 +399,7 @@ async def set_home_load(  # noqa: C901
         if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
             now = datetime.strptime("00:00", "%H:%M").time()
         next_start = None
-        split_slot = {}
+        split_slot: dict = {}
         for idx, slot in enumerate(ranges, start=1):
             with contextlib.suppress(ValueError):
                 start_time = datetime.strptime(
@@ -411,7 +411,7 @@ async def set_home_load(  # noqa: C901
                     "%H:%M",
                 ).time()
                 # check slot timings to update current, or insert new and modify adjacent slots
-                insert = {}
+                insert: dict = {}
 
                 # Check if parameter update required for current time but it falls into gap of no defined slot.
                 # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications required for allday usage
@@ -424,7 +424,7 @@ async def set_home_load(  # noqa: C901
                     )
                 ):
                     # Use daily end time if now after last slot
-                    insert = copy.deepcopy(slot)
+                    insert: dict = copy.deepcopy(slot)
                     insert.update(
                         {
                             "start_time": last_time.isoformat(timespec="minutes")
@@ -1016,7 +1016,7 @@ async def set_home_load(  # noqa: C901
     # return resulting schedule for test purposes without Api call
     if test_count is not None or test_schedule is not None:
         return schedule
-    # Make the Api call with final schedule and check for return code, the set call will also update api dict
+    # Make the Api call with final schedule and return result, the set call will also update api dict
     # NOTE: set_device_load does not seem to be usable yet for changing the home load, or is only usable in dual bank setups for changing the appliance load share as well?
     return await self.set_device_parm(
         siteId=siteId,
@@ -1075,7 +1075,9 @@ async def set_sb2_home_load(  # noqa: C901
         and not (
             usage_mode == SolarbankUsageMode.smartplugs.value
             and len(
-                ((self.sites.get(siteId) or {}).get("smartplug_info") or {}).get("smartplug_list")
+                ((self.sites.get(siteId) or {}).get("smartplug_info") or {}).get(
+                    "smartplug_list"
+                )
                 or []
             )
             < 1
@@ -1089,6 +1091,7 @@ async def set_sb2_home_load(  # noqa: C901
         and insert_slot is None
     ):
         return False
+
     # set flag for required current parameter update
     pending_now_update = bool(set_slot is None and insert_slot is None)
     # obtain actual device schedule from internal dict or fetch via api
@@ -1102,6 +1105,37 @@ async def set_sb2_home_load(  # noqa: C901
                 deviceSn=deviceSn,
             )
         ).get("param_data") or {}
+
+    # get appliance limits
+    if (min_load := str(schedule.get("min_load"))).isdigit():
+        min_load = int(min_load)
+    else:
+        min_load = 0
+    if (max_load := str(schedule.get("max_load"))).isdigit():
+        max_load = int(max_load)
+    else:
+        max_load = SolixDefaults.PRESET_MAX
+    # Adjust provided appliance limits
+    # appliance limits depend on device load setting and other device setting. Must be reduced for individual slots if necessary
+    if preset is not None:
+        preset = min(max(preset, min_load), max_load)
+    if insert_slot and insert_slot.appliance_load is not None:
+        insert_slot.appliance_load = min(
+            max(insert_slot.appliance_load, min_load), max_load
+        )
+    if set_slot and set_slot.appliance_load is not None:
+        set_slot.appliance_load = min(max(set_slot.appliance_load, min_load), max_load)
+
+    # Adjust provided appliance limits
+    if preset is not None:
+        preset = min(max(preset, min_load), max_load)
+    if insert_slot and insert_slot.appliance_load is not None:
+        insert_slot.appliance_load = min(
+            max(insert_slot.appliance_load, min_load), max_load
+        )
+    if set_slot and set_slot.appliance_load is not None:
+        set_slot.appliance_load = min(max(set_slot.appliance_load, min_load), max_load)
+
     # update the usage mode in the overall schedule object
     if usage_mode is not None:
         schedule.update({"mode_type": usage_mode})
@@ -1124,11 +1158,11 @@ async def set_sb2_home_load(  # noqa: C901
     # First identify a matching rate plan for provided week days
     if preset is not None or set_slot or insert_slot:
         for idx in rate_plan:
-            if len((days := set(idx.get("week") or [])) & weekdays) > len(matched_days):
+            if len((days := set(idx.get("week") or [])) & weekdays) > len(matched_days & weekdays):
                 matched_days = days.copy()
                 index = idx.get("index")
                 # quit loop on total match
-                if len(matched_days) == len(weekdays):
+                if len(matched_days & weekdays) == len(weekdays):
                     break
         # set next index number if no matching days found
         if index is None:
@@ -1157,9 +1191,10 @@ async def set_sb2_home_load(  # noqa: C901
                 removed += 1
     else:
         # Reuse existing plan
-        new_rate_plan = copy.deepcopy(rate_plan)
+        new_rate_plan: dict = copy.deepcopy(rate_plan)
 
     ranges = [] if index is None else (new_rate_plan[index].get("ranges") or [])
+    new_ranges = []
     pending_insert = False
     if len(ranges) > 0:
         if insert_slot:
@@ -1169,17 +1204,255 @@ async def set_sb2_home_load(  # noqa: C901
         # use insert_slot for set_slot to define a single new slot when no slots exist
         set_slot = insert_slot
 
-    # TODO(#SB2): Insert code to handle output preset changes or set_slot and insert_slot cases
+    # update individual values in current slot or insert SolarbankTimeslot and adjust adjacent slots
+    if preset is not None or pending_insert:
+        now = datetime.now().time().replace(microsecond=0)
+        last_time = datetime.strptime("00:00", "%H:%M").time()
+        # set now to new daytime if close to end of day to determine which slot to modify
+        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+            now = datetime.strptime("00:00", "%H:%M").time()
+        next_start = None
+        split_slot: dict = {}
+        for idx, slot in enumerate(ranges, start=1):
+            with contextlib.suppress(ValueError):
+                start_time = datetime.strptime(
+                    slot.get("start_time") or "00:00", "%H:%M"
+                ).time()
+                # "24:00" format not supported in strptime
+                end_time = datetime.strptime(
+                    (str(slot.get("end_time") or "00:00").replace("24:00", "23:59")),
+                    "%H:%M",
+                ).time()
+                # check slot timings to update current, or insert new and modify adjacent slots
+                insert: dict = {}
 
-    # If no rate plan exists or new slot to be set, set defaults or given set_slot parameters
-    if (not new_rate_plan or not ranges) and (set_slot or preset is not None):
+                # Check if parameter update required for current time but it falls into gap of no defined slot.
+                # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications required for allday usage
+                if (
+                    not insert_slot
+                    and pending_now_update
+                    and (
+                        last_time <= now < start_time
+                        or (idx == len(ranges) and now >= end_time)
+                    )
+                ):
+                    # Use daily end time if now after last slot
+                    insert: dict = copy.deepcopy(slot)
+                    insert.update(
+                        {
+                            "start_time": last_time.isoformat(timespec="minutes")
+                            if now < start_time
+                            else end_time.isoformat(timespec="minutes")
+                        }
+                    )
+                    insert.update(
+                        {
+                            "end_time": (
+                                start_time.isoformat(timespec="minutes")
+                            ).replace("23:59", "24:00")
+                            if now < start_time
+                            else "24:00"
+                        }
+                    )
+                    # adjust appliance load depending on device load preset and ensure appliance load is consistent with device load min/max values
+                    appliance_load = (
+                        SolixDefaults.PRESET_DEF if preset is None else preset
+                    )
+                    insert.update(
+                        {
+                            "power": min(
+                                max(
+                                    int(appliance_load),
+                                    min_load,
+                                ),
+                                max_load,
+                            ),
+                        }
+                    )
+
+                    # if gap is before current slot, insert now
+                    if now < start_time:
+                        new_ranges.append(insert)
+                        last_time = start_time
+                        insert: dict = {}
+
+                if pending_insert and (
+                    insert_slot.start_time.time() <= start_time or idx == len(ranges)
+                ):
+                    # copy slot, update and insert the new slot
+                    overwrite = (
+                        insert_slot.start_time.time() != start_time
+                        and insert_slot.end_time.time() != end_time
+                    )
+                    # re-use old slot parms if insert slot has not defined optional parms
+                    insert: dict = copy.deepcopy(slot)
+                    insert.update(
+                        {
+                            "start_time": datetime.strftime(
+                                insert_slot.start_time, "%H:%M"
+                            )
+                        }
+                    )
+                    insert.update(
+                        {
+                            "end_time": datetime.strftime(
+                                insert_slot.end_time, "%H:%M"
+                            ).replace("23:59", "24:00")
+                        }
+                    )
+                    # reuse old appliance load if not overwritten
+                    if insert_slot.appliance_load is None and not overwrite:
+                        insert_slot.appliance_load = insert.get("power")
+                    if insert_slot.appliance_load is not None or overwrite:
+                        insert.update(
+                            {
+                                "power": min(
+                                    max(
+                                        int(
+                                            insert_slot.appliance_load
+                                            if insert_slot.appliance_load is not None
+                                            else SolixDefaults.PRESET_DEF
+                                        ),
+                                        min_load,
+                                    ),
+                                    max_load,
+                                ),
+                            }
+                        )
+                    # insert slot before current slot if not last
+                    if insert_slot.start_time.time() <= start_time:
+                        new_ranges.append(insert)
+                        insert = {}
+                        pending_insert = False
+                        if insert_slot.end_time.time() >= end_time:
+                            # set start of next slot if not end of day
+                            if end_time < datetime.strptime("23:59", "%H:%M").time():
+                                next_start = insert_slot.end_time.time()
+                            last_time = insert_slot.end_time.time()
+                            # skip current slot since overlapped by insert slot
+                            continue
+                        if split_slot:
+                            # insert second part of a preceding slot that was split
+                            new_ranges.append(split_slot)
+                            split_slot: dict = {}
+                            # delay start time of current slot not needed if previous slot was split
+                        else:
+                            # delay start time of current slot
+                            slot.update(
+                                {
+                                    "start_time": datetime.strftime(
+                                        insert_slot.end_time, "%H:%M"
+                                    ).replace("23:59", "24:00")
+                                }
+                            )
+                    else:
+                        # create copy of slot when insert slot will split last slot to add it later as well
+                        if insert_slot.end_time.time() < end_time:
+                            split_slot: dict = copy.deepcopy(slot)
+                            split_slot.update(
+                                {
+                                    "start_time": datetime.strftime(
+                                        insert_slot.end_time, "%H:%M"
+                                    ).replace("23:59", "24:00")
+                                }
+                            )
+                        if insert_slot.start_time.time() < end_time:
+                            # shorten end time of current slot when appended at the end
+                            slot.update(
+                                {
+                                    "end_time": datetime.strftime(
+                                        insert_slot.start_time, "%H:%M"
+                                    ).replace("23:59", "24:00")
+                                }
+                            )
+
+                elif pending_insert and insert_slot.start_time.time() <= end_time:
+                    # create copy of slot when insert slot will split current slot to add it later
+                    if insert_slot.end_time.time() < end_time:
+                        split_slot: dict = copy.deepcopy(slot)
+                        split_slot.update(
+                            {
+                                "start_time": datetime.strftime(
+                                    insert_slot.end_time, "%H:%M"
+                                ).replace("23:59", "24:00")
+                            }
+                        )
+                    # shorten end of preceding slot
+                    slot.update(
+                        {"end_time": datetime.strftime(insert_slot.start_time, "%H:%M")}
+                    )
+                    # re-use old slot parms for insert if end time of insert slot is same as original slot
+                    if insert_slot.end_time.time() == end_time:
+                        # reuse old appliance load
+                        if insert_slot.appliance_load is None:
+                            insert_slot.appliance_load = slot.get("power")
+
+                elif next_start and next_start < end_time:
+                    # delay start of slot following an insert
+                    slot.update(
+                        {
+                            "start_time": (
+                                next_start.isoformat(timespec="minutes")
+                            ).replace("23:59", "24:00")
+                        }
+                    )
+                    next_start = None
+
+                elif not insert_slot and (start_time <= now < end_time):
+                    # update required parameters in current slot
+                    # adjust appliance load
+                    if preset is not None:
+                        slot.update(
+                            {
+                                "power": min(
+                                    max(
+                                        int(preset),
+                                        min_load,
+                                    ),
+                                    max_load,
+                                ),
+                            }
+                        )
+                    # clear flag for pending parameter update for actual time
+                    if start_time <= now < end_time:
+                        pending_now_update = False
+
+            if (
+                last_time
+                <= datetime.strptime(
+                    (slot.get("start_time") or "00:00").replace("24:00", "23:59"),
+                    "%H:%M",
+                ).time()
+            ):
+                new_ranges.append(slot)
+
+            # fill gap after last slot for current time parameter changes or insert slots
+            if insert:
+                slot = insert
+                new_ranges.append(slot)
+                if split_slot:
+                    # insert second part of a preceding slot that was split
+                    new_ranges.append(split_slot)
+                    split_slot: dict = {}
+
+            # Track end time of last appended slot in list
+            last_time = datetime.strptime(
+                (
+                    str(new_ranges[-1].get("end_time") or "00:00").replace(
+                        "24:00", "23:59"
+                    )
+                ),
+                "%H:%M",
+            ).time()
+
+    # If no rate plan or new ranges exists or new slot to be set, set defaults or given set_slot parameters
+    if (not new_rate_plan or not new_ranges) and (set_slot or preset is not None):
         if not set_slot:
             # fill set_slot with given parameters
             set_slot = Solarbank2Timeslot(
                 start_time=datetime.strptime("00:00", "%H:%M"),
                 end_time=datetime.strptime("23:59", "%H:%M"),
                 appliance_load=preset,
-                weekdays=weekdays,
             )
         slot = {
             "start_time": datetime.strftime(set_slot.start_time, "%H:%M"),
@@ -1190,23 +1463,29 @@ async def set_sb2_home_load(  # noqa: C901
             if set_slot.appliance_load is None
             else set_slot.appliance_load,
         }
-        if new_rate_plan and index is not None:
-            new_rate_plan[index].update({"ranges": [slot]})
-        else:
-            new_rate_plan: list = [
-                {
-                    "index": 0,
-                    "week": list(set_slot.weekdays),
-                    "ranges": [slot],
-                }
-            ]
+        new_ranges.append(slot)
 
+    if new_rate_plan:
+        if index is not None:
+            new_rate_plan[index].update({"ranges": new_ranges})
+    else:
+        new_rate_plan: list = [
+            {
+                "index": 0,
+                "week": list(weekdays),
+                "ranges": new_ranges,
+            }
+        ]
+    self._logger.info(
+        "Rate plan to apply: %s",
+        new_rate_plan,
+    )
     if new_rate_plan:
         schedule.update({"custom_rate_plan": new_rate_plan})
     # return resulting schedule for test purposes without Api call
     if test_schedule is not None:
         return schedule
-    # Make the Api call with final schedule and check for return code, the set call will also update api dict
+    # Make the Api call with final schedule and return result, the set call will also update api dict
     return await self.set_device_parm(
         siteId=siteId,
         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
