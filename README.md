@@ -198,3 +198,12 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [license]: https://github.com/thomluther/hacs-anker-solix/blob/main/LICENSE
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
 
+## Additional Resources
+If you need more assistance on the topic, please have a look at the following external resources:
+
+### Blog-Posts
+- [simon42 - Anker Solix – Home Assistant Energiedashboard & Steuerung](https://www.simon42.com/anker-solix-home-assistant/)
+
+### Videos
+#### YouTube-Video on "Anker Solix - Home Assistant Integration & Energiedashboard ⚡" (🇩🇪)
+[![Anker Solix - Home Assistant Integration & Energiedashboard](https://img.youtube.com/vi/i-ES4cgn3qk/mqdefault.jpg)](https://www.youtube.com/watch?v=i-ES4cgn3qk)
