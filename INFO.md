@@ -14,7 +14,7 @@
 
 ## Disclaimer:
 
-🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially the Api library as well as the integration has been developed for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and additional enhancements also allow modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
+🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially the Api library as well as the integration has been developed for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and additional enhancements allow modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
 
 
 ## Usage terms and conditions:

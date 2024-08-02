@@ -16,12 +16,12 @@
 ![python badge][python-shield]
 
 
-This Home Assistant custom component integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker cloud. It was specifically developed to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80), Solarbank 2 E1600 and the Anker Smart Meter has been added to the Api library and are available through the integration. The Anker Power cloud also supports portable power stations (PPS) or home Power panels, which may be added in the future once Api data structures for those devices are known.
+This Home Assistant custom component integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker cloud. It was specifically developed to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80), Solarbank 2 E1600 and the Anker smart meter has been added to the Api library and is available through the integration. The Anker power cloud also supports portable power stations (PPS) or home power panels, which may be added in the future once Api data structures for those devices are known.
 
 
 ## Disclaimer:
 
-🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially, the Api library as well as the integration has been developed for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and additional enhancements also allow modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
+🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially, the Api library as well as the integration has been developed for monitoring of the Anker Solarbank only. Meanwhile also Anker inverters can be monitored and additional enhancements allow modifications to their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
 
 
 ## Usage terms and conditions:
@@ -199,11 +199,27 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
 
 ## Additional Resources
+
+- [Usage instructions and configuration of the integration](INFO.md)
+- [Possibilities to integrate the Solarbank into your Energy Dashboard](https://github.com/thomluther/hacs-anker-solix/discussions/16)
+- [Surplus charge automation for Solarbank E1600 (1st generation)](https://github.com/thomluther/hacs-anker-solix/discussions/81)
+
 If you need more assistance on the topic, please have a look at the following external resources:
 
 ### Blog-Posts
 - [simon42 - Anker Solix – Home Assistant Energiedashboard & Steuerung](https://www.simon42.com/anker-solix-home-assistant/)
 
 ### Videos
+#### YouTube-Video "Anker SOLIX in Home Assistant integrieren" (🇩🇪)
+[![Anker SOLIX in Home Assistant integrieren](https://img.youtube.com/vi/66jbUnKnkSA/mqdefault.jpg)](https://www.youtube.com/watch?v=66jbUnKnkSA)
+
 #### YouTube-Video on "Anker Solix - Home Assistant Integration & Energiedashboard ⚡" (🇩🇪)
 [![Anker Solix - Home Assistant Integration & Energiedashboard](https://img.youtube.com/vi/i-ES4cgn3qk/mqdefault.jpg)](https://www.youtube.com/watch?v=i-ES4cgn3qk)
+
+Spoiler: Zero grid export with E1600 not possible?
+[It works better as originally expected with certain requirements and given limitations](https://github.com/thomluther/hacs-anker-solix/discussions/81).
+
+#### YouTube-Video "Anker SOLIX 2 Pro mit Home Assistant maximal nutzen" (🇩🇪)
+[![Anker SOLIX 2 Pro mit Home Assistant maximal nutzen](https://img.youtube.com/vi/XXN2ho367ZE/mqdefault.jpg)](https://www.youtube.com/watch?v=XXN2ho367ZE)
+
+Spoiler: This shows integration capabilities before Solarbank 2 was supported with version 2.0.1
