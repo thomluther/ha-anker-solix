@@ -20,6 +20,17 @@
                 "smartmeter": "Smart Meter",
                 "smartplug": "Smarte Steckdosen"
             }
+        },
+        "weekday": {
+            "options": {
+                "sun": "Sonntag",
+                "mon": "Montag",
+                "tue": "Dienstag",
+                "wed": "Mittwoch",
+                "thu": "Donnerstag",
+                "fri": "Freitag",
+                "sat": "Samstag"
+            }
         }
     },
     "config": {
@@ -610,7 +621,13 @@
         },
         "clear_solarbank_schedule": {
             "name": "Löschen des Solarbank Zeitplans",
-            "description": "Der aktuelle Zeitplan der Solarbank wird gelöscht"
+            "description": "Der aktuelle Zeitplan der Solarbank wird gelöscht",
+            "fields": {
+                "week_days": {
+                    "name": "Wochentage",
+                    "description": "Ausgewählte Wochentage die vom Zeitplan gelöscht werden (ignoriert für Solarbank 1)"
+                }
+            }
         },
         "set_solarbank_schedule": {
             "name": "Erstelle einen neuen Solarbank Zeitplan",
@@ -624,21 +641,25 @@
                     "name": "Endzeit",
                     "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für 24:00 muss 23:59 eingegeben werden."
                 },
+                "week_days": {
+                    "name": "Wochentage",
+                    "description": "Wochentage für das definierte Zeitintervall (ignoriert für Solarbank 1)"
+                },
                 "appliance_load": {
                     "name": "Einspeisevorgabe",
                     "description": "Watt die ins Haus eingespeist werden sollen von allen Geräten"
                 },
                 "device_load": {
                     "name": "Geräte Einspeisevorgabe",
-                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe."
+                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2)"
                 },
                 "allow_export": {
                     "name": "Export erlauben",
-                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus"
+                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",
-                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist oder kein MI80 Wechselrichter eingestellt ist."
+                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
                 }
             }
         },
@@ -654,21 +675,25 @@
                     "name": "Endzeit",
                     "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für 24:00 muss 23:59 eingegeben werden."
                 },
+                "week_days": {
+                    "name": "Wochentage",
+                    "description": "Wochentage für das definierte Zeitintervall (ignoriert für Solarbank 1)"
+                },
                 "appliance_load": {
                     "name": "Einspeisevorgabe",
                     "description": "Watt die ins Haus eingespeist werden sollen von allen Geräten"
                 },
                 "device_load": {
                     "name": "Geräte Einspeisevorgabe",
-                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe."
+                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2)"
                 },
                 "allow_export": {
                     "name": "Export erlauben",
-                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus"
+                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",
-                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist oder kein MI80 Wechselrichter eingestellt ist."
+                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
                 }
             }
         }

@@ -257,15 +257,15 @@ max: 3
 
 ### Modification of Solarbank 2 home load settings
 
-Version 2.0.0 of the integration only supports switching between `Smart Meter` (AI) or `Manual` (custom) home load usage modes when a smart meter is configured in the system. Otherwise only `Manual` usage mode is supported, but schedule based modifications via direct output entities or schedule change services are not yet supported for Solarbank 2. This will be supported in a future release.
+Version 2.1.0 of the integration fully supports switching between `Smart Meter` (AI) or `Manual` (custom) home load usage modes when a smart meter is configured in the system. Otherwise only `Manual` usage mode is supported. Future versions may also support a new `Smart Plug` usage mode once smart plugs are supported and configured in your Anker power system. Furthermore the output preset can be adjusted directly, which will result in changes to the manual schedule applied to the solarbank. A preset change is only applied to the current schedule time interval and if none exists it will be created. Furthermore all schedule services now support modifications of any schedule intervals and weekdays.
 
-### Care must be taken when modifying Solarbank 1 home load settings
+### Care must be taken when modifying Solarbank home load settings
 
 **Attention:**
 
   **Setting the Solarbank 1 output power for the house is not as straight forward as you might think and applying changed settings may give you a different result as expected or as represented by the output preset sensor.**
 
-Following is some more background on this to explain the complexity. The home load power cannot be set directly for the Solarbank. It can only be set indirectly by a time schedule, which typically covers a full day from 00:00 to 24:00h. There cannot be different schedules on various days, it's only a single schedule that is shared by all solarbanks configured into the system. Typically for single solarbank systems, the solarbank covers the full home load that is defined for the time interval. For dual solarbank setups, both share 50% of the home load power preset per default. This share was fixed and could not be changed so far. Starting with the Anker App 2.2.1 and new solarbank firmware 1.5.6, the share between both solarbanks can also be modified. Starting with integration version 1.3.0, this capability is also supported with additional entities that will be created for dual solarbank systems supporting individual device presets. It is a new preset mode that was implemented in the schedule structure.
+Following is some more background on this to explain the complexity. The home load power cannot be set directly for the Solarbank. It can only be set indirectly by a time schedule, which typically covers a full day from 00:00 to 24:00h. There cannot be different schedules on various days for Solarbank 1, it's only a single schedule that is shared by all solarbanks configured into the system. Typically for single solarbank systems, the solarbank covers the full home load that is defined for the time interval. For dual solarbank setups, both share 50% of the home load power preset per default. This share was fixed and could not be changed so far. Starting with the Anker App 2.2.1 and new solarbank firmware 1.5.6, the share between both solarbanks can also be modified. Starting with integration version 1.3.0, this capability is also supported with additional entities that will be created for dual solarbank systems supporting individual device presets. It is a new preset mode that was implemented in the schedule structure.
 
 Following are the customizable parameters of a time interval that are supported by the integration and the Python Api library:
   - Start and End time of a schedule interval
@@ -300,12 +300,15 @@ Meaningful automation ideas that might work for the Solarbank 1:
   - Use time to time changes in the home load when you have expected higher consumption level for certain periods, e.g. cooking, vacuum cleaning, fridge cooling, etc. Basically anything that adds a steady power consumption for a longer period. Don't use it to cover short term consumers like toaster, electric kettles, mixer or coffee machines. Also the home load adoption for washing machines or laundry dryer might not be very effective and too slow since they are pretty dynamic in power consumption.
   - You have probably more automation ideas for your needs and feel free to share them with the community. But please keep the listed caveats in mind to judge whether an automation project makes sense or not. All efforts may be wasted at the end if the appliance does not behave as you might expect.
 
-### Pro tips for home load automation
+### Pro tips for home load automation with Solarbank 1
 
 If you are interested building your own automation for using the Solarbank 1 as surplus battery buffer without wasting generated solar energy to the grid unnecessarily, you may have a look to my [automation project that I documented in the discussions](https://github.com/thomluther/hacs-anker-solix/discussions/81).
 
 
-For Solarbank 2 systems with a smart meter, you can automate the switch of the home load usage mode between Smart Meter and Manual if you may have the need to change this in your setup. The Anker mobile app actually does not support scheduled switches of the home load usage mode.
+### Home load automation considerations for Solarbank 2
+
+For Solarbank 2 systems with a smart meter, you can automate the switch of the home load usage mode between `Smart Meter` and `Manual` if you may have the need to change this in your setup. The Anker mobile app actually does not support scheduled switches of the home load usage mode.
+Furthermore you can automate the manual appliance output preset, however this will only be applied when the `Manual` usage mode is active. The integration has built-in the same cool down of 30 seconds for subsequent increases of the output preset in order to limit the number of Api requests and schedule changes pushed by HA automation.
 
 ---
 **At this point be warned again:**
@@ -324,8 +327,6 @@ Any change in those entities is immediately applied to either the current time s
 
 Solarbank 2 schedule intervals have less time interval settings and can only define the appliance output power. However, different Solarbank 2 schedules can be defined for various weekdays. One common setting for all schedules is the usage mode. If a smart meter is configured in your power system, you can set the usage mode to Smart Meter and the Solarbank 2 will automatically adjust the appliance output to your house demand measured by the smart meter. So while you can still define schedules via the Anker mobile app, they will be applied ONLY if the solarbank lost connection to the device that is used to provide automated power demand such as the smart meter. For any gap in the defined schedule, the default output of 200 W will be applied.
 
-**Attention: Home load changes or schedule changes are NOT yet supported for Solarbank 2**
-
 **A word of caution:**
 
 When you represent the home load number entities as input field in your dashboard cards, do **NOT use the step up/down arrows** but enter the home load value directly in the field. Each step via the field arrows triggers a settings change immediately, and increases are restricted for min. 30 second intervals. Preferably use a slider for manual number modifications, since the value is just applied to the entity once you release the slider movement (do not release the slider until you moved it to the desired value).
@@ -338,13 +339,9 @@ They are useful to apply manual or automated changes for times that are beyond t
 
     Allows wiping out the defined schedule and defines a new interval with the customizable schedule parameters above
 
-    **Attention: This service is NOT yet supported for Solarbank 2**
-
   - **Update Solarbank schedule:**
 
     Allows inserting/updating/overwriting a time interval in the existing schedule with the customizable schedule parameters above. Adjacent intervals will be adjusted automatically
-
-    **Attention: This service is NOT yet supported for Solarbank 2**
 
   - **Request Solarbank schedule:**
 
@@ -352,22 +349,34 @@ They are useful to apply manual or automated changes for times that are beyond t
 
   - **Clear Solarbank schedule:**
 
-    Clear all defined solarbank schedule intervals. The solarbank will have no longer a schedule definition and use the default output preset all day (200 W).
+    Clear all defined solarbank schedule intervals. The solarbank will have no longer a schedule definition and use the default output preset all day (200 W). For solarbank 2, you can optionally clear the defined intervals only for the specified weekdays.
 
 You can specify the solarbank device id or the entity ID of the solarbank output preset sensor as target for those services. The service UI in HA developer tools will filter the devices and entities that support the solarbank schedule services. I recommend using the entity ID as target when using the service in automation since the device ID is an internal registry value which is difficult to map to a context. In general, most of the solarbank schedule changes should be done by the update service since the Api library has built in simplifications for time interval changes. The update service follows the insert methodology for the specified interval using following rules:
   - Adjacent slots are automatically adjusted with their start/end times
     - Completely overlay slots are automatically removed
     - Smaller interval inserts result in 1-3 intervals for the previous time range, depending on the update interval and existing interval time boundaries
     - For example if the update interval will be within an existing larger interval, it will split the existing interval at one or both ends. So the insert of one interval may result in 2 or 3 different intervals for the previous time range.
-  - Gaps will not be introduced by schedule updates
+  - New gaps will not be introduced by schedule updates, but existing gaps will remain if outside of the specified interval
   - If only the boundary between intervals needs to be changed, update only the interval that will increase because updating the interval that shrinks will split the existing interval
     - When one of the update interval boundaries remains the same as the existing interval, the existing interval values will be re-used for the updated interval in case they were not specified.
     - This allows quick interval updates for one boundary or specific parameters only without the need to specify all parameters again
-  - All 3 parameters are mandatory per interval for a schedule update via the Api. If they are not specified with the service, existing ones will be re-used when it makes sense or following defaults will be applied:
-    - 100 W Home load preset in normal preset mode if neither appliance nor device load presets are provided
-    - Allow Export is ON
-    - 80 % Charge Priority limit
-  - The Set schedule service also requires to specify the time interval for the first slot. However, testing has shown that the provided times are ignored and a full day interval is always created when only a single interval is provided with a schedule update via the Api.
+  - All interval parameters are mandatory for a schedule update via the Api. If they are not specified with the service, existing ones will be re-used when it makes sense or following defaults will be applied:
+    - 100 W Appliance Home load preset in normal preset mode if neither appliance nor device load presets are provided
+    - Current weekday or existing plan with current weekday if no weekdays provided (Solarbank 2 only)
+    - Allow Export is ON (Solarbank 1 only)
+    - 80 % Charge Priority limit (Solarbank 1 only)
+  - The Set schedule service also requires to specify the time interval for the first slot. However, testing for Solarbank 1 has shown that the provided times are ignored and a full day interval is always created when only a single interval is provided with a schedule update via the Api. For Solarbank 2, the first set slot behavior may be different.
+
+For Solarbank 2 systems, following weekday rules will be applied:
+  - When no weekdays are provided, the current weekday will be used.
+    - If no schedule exists yet, all weekdays will be used.
+  - When a plan exists already containing the current weekday, this plan will be modified
+  - When weekdays are provided, they are considered as following:
+    - If an existing plan is a complete subset of provided weekdays, this plan will be re-used. Extra provided days will be added to the plan.
+    - If an existing plan is no complete subset of provided weekdays, the first plan with most overlapping days will be cloned and modified as new plan for the provided weekdays.
+  - For the clear schedule service, only the provided weekdays will be removed from existing plans
+  - Any existing plan will be curated to avoid that same weekday is defined in different plans
+    - Empty plans will be removed from the schedule
 
 For dual Solarbank 1 systems, following load preset rules will be applied:
   - If only appliance load preset provided, the normal preset mode will be used which applies a 50% share to both solarbanks
@@ -400,13 +409,11 @@ Following are screenshots showing the schedule service UI panel (identical for S
 
 While not the full entity ranges supported by the integration can be applied to the device, some may provide enhanced capabilities compared to the Anker App. Following are important notes and limitations for schedule modifications via the cloud Api:
 
-  **Attention: Schedule modification is NOT yet supported for Solarbank 2**
-
   - Time slots can be defined in minute granularity and what I have seen, they are also applied (don't take my word for given)
   - The end time of 24:00 must be provided as 23:59 since the datetime range does not know hour 24. Any seconds that are specified are ignored
   - Home Assistant and the Solarbank should have similar time, but especially same timezone to adopt the time slots correctly. Even more important it is for finding the current/active schedule time interval where individual parameter changes must be applied
     - Depending on the front end (and timezone used with the front end), the time fields may eventually be converted. All backend datetime calculations by the integration use the local time zone of the HA host. The HA host must be in the same time zone the Solarbank is using, which is typically the case when they are on the same local network.
-  - Situations have been observed during testing where an active home load export was applied in the schedule, but the solarbank did not react on the applied schedule. While the cloud schedule was showing the export enabled with a certain load set, verification in the Anker App presented a different picture: There the schedule load was set to **0 W in the slider** which is typically not possible in the App...The only way to get out of such weird schedules on the appliance is to make the interval change via the Anker App since it may use other interfaces than just the cloud Api (Bluetooth and another Cloud MQTT server). This problem was only noticed when just a single resulting interval remains in the schedule that is sent via the Api, for example setting a new schedule or making an update with a full day interval. To avoid this problem, make sure your schedule has more than one time interval and you do NOT use the Set new Solarbank schedule service. Instead you can apply schedule changes via the Update Solarbank schedule service which is NOT covering the full day.
+  - Situations have been observed during testing with solarbank 1, where an active home load export was applied in the schedule, but the solarbank 1 did not react on the applied schedule. While the cloud schedule was showing the export enabled with a certain load set, verification in the Anker App presented a different picture: There the schedule load was set to **0 W in the slider** which is typically not possible in the App...The only way to get out of such weird schedules on the appliance is to make the interval change via the Anker App since it may use other interfaces than just the cloud Api (Bluetooth and another Cloud MQTT server). This problem was only noticed when just a single resulting interval remains in the schedule that is sent via the Api, for example setting a new schedule or making an update with a full day interval. To avoid this problem, make sure your schedule has more than one time interval and you do NOT use the Set new Solarbank schedule service. Instead you can apply schedule changes via the Update Solarbank schedule service which is NOT covering the full day.
 
 
 ## Markdown card to show the defined Solarbank schedule
@@ -498,18 +505,16 @@ content: |
 - Shared accounts have no access to the schedule
 - Solarbank 2 has less settings per time slot than Solarbank 1, making it easier to adjust
 - Solarbank 2 schedules can be created for individual weekdays. Each group of weekdays has its own plan ID. A weekday can only be configured into one plan ID
-- The defined schedule is only used when the usage mode is set to Manual (custom usage)
+- The defined schedule is only used when the usage mode is set to `Manual` (custom usage)
 
 
 ## Script to manually modify appliance schedule for your solarbank
-
-**Attention: This is NOT yet supported for Solarbank 2**
 
 With Home Assistant 2024.3 you have the option to manually enter parameters for a script prior execution. This is a nice capability that let's you add an UI capability for a service right into your dashboard. You just need to create a script with input fields that will run the selected solarbank service using the entered parameters. Following is a screenshot of the more info dialog for the script entity:
 
 ![Change schedule script][schedule-script-img]
 
-Below is an example script which you can use, you just need to replace the entity name in the service data entity_id field with your device sensor that represents the output preset and has the schedule attribute. If you have multiple systems, you can make the entity also a selectable field in the script similar to the service. For dual solarbank systems, you just need one of the 2 solarbank preset entities to apply the change, since the schedule is shared.
+Below are example scripts which you can use for either Solarbank 1 or Solarbank 2 devices, you just need to replace the entity name in the service data entity_id field with your device sensor that represents the output preset and has the schedule attribute. If you have multiple systems, you can make the entity also a selectable field in the script similar to the service. For dual solarbank systems, you just need one of the 2 solarbank preset entities to apply the change, since the schedule is shared.
 
 <details>
 <summary><b>Expand to see script code</b><br><br></summary>
@@ -517,7 +522,7 @@ Below is an example script which you can use, you just need to replace the entit
 #### Script code to adjust Solarbank 1 schedules
 
 ```
-alias: Change Solarbank Schedule
+alias: Change Solarbank 1 Schedule
 fields:
   service:
     name: Service
@@ -607,6 +612,85 @@ sequence:
         {{allow_export|default(None)}}
       charge_priority_limit: |
         {{charge_priority_limit|default(None)}}
+mode: single
+icon: mdi:sun-clock
+```
+
+#### Script code to adjust Solarbank 2 schedules
+
+```
+alias: Change Solarbank 2 Schedule
+fields:
+  service:
+    name: Service
+    description: Choose which service to use
+    required: true
+    default: anker_solix.update_solarbank_schedule
+    selector:
+      select:
+        mode: dropdown
+        options:
+          - label: Update schedule
+            value: anker_solix.update_solarbank_schedule
+          - label: Set schedule
+            value: anker_solix.set_solarbank_schedule
+  start_time:
+    name: Start time
+    description: Start time of the interval (seconds are ignored)
+    required: true
+    default: "00:00:00"
+    selector:
+      time: null
+  end_time:
+    name: End time
+    description: >-
+      End time of the interval (seconds are ignored). For 24:00 you must enter 23:59
+    required: true
+    default: "23:59:00"
+    selector:
+      time: null
+  week_days:
+    name: Weekdays
+    description: Weekdays for interval
+    required: false
+    selector:
+      select:
+        mode: list
+        multiple: true
+        translation_key: weekday
+        options:
+          - sun
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+          - sat
+  appliance_load:
+    name: Appliance load preset
+    description: Watt to be delivered to the house
+    required: false
+    default: 100
+    selector:
+      number:
+        min: 100
+        max: 800
+        step: 10
+        unit_of_measurement: W
+sequence:
+  - service: |
+      {{service}}
+    target:
+      entity_id: sensor.solarbank_2_e1600_pro_home_preset
+    data:
+      start_time: |
+        {{start_time}}
+      end_time: |
+        {{end_time}}
+      week_days: |
+        {{week_days|default(None)}}
+      appliance_load: |
+        {{appliance_load|default(None)}}
 mode: single
 icon: mdi:sun-clock
 ```

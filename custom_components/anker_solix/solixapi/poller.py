@@ -436,7 +436,7 @@ async def update_device_energy(
     for site_id, site in api.sites.items():
         # build device types set for daily energy query, depending on device types found for site
         # solarinfo will always be queried by daily energy and required for general site statistics
-        # However, daily energy should not be queried for solarbank or smartmeter devices when they or their energy category is explicetly excluded
+        # However, daily energy should not be queried for solarbank or smartmeter devices when they or their energy category is explicitly excluded
         if (
             (dev_list := site.get("solar_list") or [])
             and isinstance(dev_list, list)

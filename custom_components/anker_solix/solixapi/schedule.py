@@ -5,6 +5,7 @@ import copy
 from datetime import datetime
 import json
 import os
+from socket import inet_ntoa
 
 from .types import (
     API_ENDPOINTS,
@@ -233,8 +234,8 @@ async def set_home_load(  # noqa: C901
     """Set the home load parameters for a given site id and solarbank 1 device for actual or all slots in the existing schedule.
 
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
-    Optionally when set_slot Solarbank Timeslot is provided, the given slot will replace the existing schedule completely.
-    When insert_slot SolarbankTimeslot is provided, the given slot will be incorporated into existing schedule. Adjacent overlapping slot times will be updated and overlay slots will be replaced.
+    Optionally when set_slot is provided, the given slot will replace the existing schedule completely.
+    When insert_slot is provided, the given slot will be incorporated into existing schedule. Adjacent overlapping slot times will be updated and overlay slots will be replaced.
 
     Example schedules for Solarbank 1 as provided via Api:
     {"ranges":[
@@ -700,8 +701,8 @@ async def set_home_load(  # noqa: C901
                             new_ranges.append(split_slot)
                             split_slot = {}
                             # delay start time of current slot not needed if previous slot was split
-                        else:
-                            # delay start time of current slot
+                        elif insert_slot.end_time.time() > start_time:
+                            # delay start time of current slot if insert slot end falls into current slot
                             slot.update(
                                 {
                                     "start_time": datetime.strftime(
@@ -795,14 +796,15 @@ async def set_home_load(  # noqa: C901
                             )
 
                 elif next_start and next_start < end_time:
-                    # delay start of slot following an insert
-                    slot.update(
-                        {
-                            "start_time": (
-                                next_start.isoformat(timespec="minutes")
-                            ).replace("23:59", "24:00")
-                        }
-                    )
+                    # delay start of slot following an insert if it falls into the slot
+                    if next_start > start_time:
+                        slot.update(
+                            {
+                                "start_time": (
+                                    next_start.isoformat(timespec="minutes")
+                                ).replace("23:59", "24:00")
+                            }
+                        )
                     next_start = None
 
                 elif not insert_slot and (all_day or start_time <= now < end_time):
@@ -1035,11 +1037,16 @@ async def set_sb2_home_load(  # noqa: C901
     insert_slot: Solarbank2Timeslot | None = None,
     test_schedule: dict | None = None,  # used only for testing instead of real schedule
 ) -> bool | dict:
-    """Set the home load parameters for a given site id and solarbank 2 device for actual or all slots in the existing schedule.
+    """Set or change the home load parameters for a given site id and solarbank 2 device for any slot in the existing schedule.
 
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
-    Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
-    When insert_slot SolarbankTimeslot is provided, the given slot will be incorporated into existing schedule. Adjacent overlapping slot times will be updated and overlay slots will be replaced.
+    Optionally when set_slot is provided, the given slot will replace the existing schedule for the requested weekdays completely.
+    When insert_slot is provided, the given slot will be incorporated into existing schedule for the requested weekdays.
+    Adjacent overlapping slot times will be updated and overlay slots will be replaced.
+    If no weekdays are provided, the actual day or all days will be used, depending whether rate plan definitions exist already
+    Weekday rate plans can be separated and merged depending on provided weekdays in the Solarbank2Timeslot object.
+    When set_slot provides a Solarbank2Timeslot object with missing start or end time, it will be used to delete the rate plans the provided weekdays or delete all
+    if no weekdays are provided.
 
     Example schedule for Solarbank 2 as provided via Api:
     Example data for provided site_id with param_type 6 for SB2:
@@ -1090,6 +1097,7 @@ async def set_sb2_home_load(  # noqa: C901
         and set_slot is None
         and insert_slot is None
     ):
+        self._logger.error("No valid schedule options provided")
         return False
 
     # set flag for required current parameter update
@@ -1126,15 +1134,8 @@ async def set_sb2_home_load(  # noqa: C901
     if set_slot and set_slot.appliance_load is not None:
         set_slot.appliance_load = min(max(set_slot.appliance_load, min_load), max_load)
 
-    # Adjust provided appliance limits
-    if preset is not None:
-        preset = min(max(preset, min_load), max_load)
-    if insert_slot and insert_slot.appliance_load is not None:
-        insert_slot.appliance_load = min(
-            max(insert_slot.appliance_load, min_load), max_load
-        )
-    if set_slot and set_slot.appliance_load is not None:
-        set_slot.appliance_load = min(max(set_slot.appliance_load, min_load), max_load)
+    # set flag for plan deletion when set slot provided but any time field missing
+    delete_plan: bool = set_slot and (not set_slot.start_time or not set_slot.end_time)
 
     # update the usage mode in the overall schedule object
     if usage_mode is not None:
@@ -1143,34 +1144,76 @@ async def set_sb2_home_load(  # noqa: C901
     rate_plan = schedule.get("custom_rate_plan") or []
     new_rate_plan = []
 
+    # identify week days to be used, default to todays weekday or all
+    days: list[str] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+    weekdays = (
+        {int(datetime.now().strftime("%w"))}
+        if rate_plan and not delete_plan
+        else set(range(7))
+    )
+    # set flag to match weekdays with current plan if no weekdays provided
+    match_plan = True
+    if insert_slot and isinstance(insert_slot, Solarbank2Timeslot):
+        if insert_slot.weekdays:
+            weekdays = insert_slot.weekdays
+            match_plan = False
+        # Check insert_slot has required time parameters
+        if not (insert_slot.start_time and insert_slot.end_time):
+            self._logger.error(
+                "Incomplete interval definitions for insert_slot, missing %s",
+                "& ".join(
+                    (["start_time"] if not insert_slot.start_time else [])
+                    + (["end_time"] if not insert_slot.end_time else [])
+                ),
+            )
+            return False
+    elif set_slot and isinstance(set_slot, Solarbank2Timeslot) and set_slot.weekdays:
+            weekdays = set_slot.weekdays
+            match_plan = False
+    # allow weekday strings as used by HA and convert to proper weekday number as required for api
+    weekdays = {days.index(day) for day in weekdays if day in days} | (
+        weekdays & set(range(7))
+    )
+    if not weekdays:
+        self._logger.error(
+            "Invalid weekdays provided for schedule change: %s",
+            insert_slot.weekdays or set_slot.weekdays,
+        )
+        return False
+    # First identify a matching rate plan for provided week days
+    # When weekday combination exists, re-use the same. When provided weekdays have extra days to existing, merge extra weekdays to existing
+    # When existing weekdays are partial subset of provided weekdays, clone first plan with most matching days as new plan for the defined weekdays to separate them from existing plan
     matched_days = set()
     index = None
-    # identify week days to be used, default to todays weekday or all
-    weekdays = {int(datetime.now().strftime("%w"))} if rate_plan else set(range(7))
-    if (
-        insert_slot
-        and isinstance(insert_slot, Solarbank2Timeslot)
-        and insert_slot.weekdays
-    ):
-        weekdays = insert_slot.weekdays & set(range(7))
-    elif set_slot and isinstance(set_slot, Solarbank2Timeslot) and set_slot.weekdays:
-        weekdays = set_slot.weekdays & set(range(7))
-    # First identify a matching rate plan for provided week days
     if preset is not None or set_slot or insert_slot:
-        for idx in rate_plan:
-            if len((days := set(idx.get("week") or [])) & weekdays) > len(matched_days & weekdays):
-                matched_days = days.copy()
-                index = idx.get("index")
-                # quit loop on total match
-                if len(matched_days & weekdays) == len(weekdays):
-                    break
-        # set next index number if no matching days found
-        if index is None:
-            index = len(rate_plan)
-            rate_plan.append({"index": index, "week": sorted(weekdays), "ranges": []})
-        else:
-            # Merge new and existing weekdays
-            weekdays = weekdays | set(rate_plan[index].get("week") or [])
+        if not delete_plan:
+            for idx in rate_plan:
+                if len((days := set(idx.get("week") or [])) & weekdays) > len(
+                    matched_days & weekdays
+                ):
+                    matched_days = days.copy()
+                    index = idx.get("index")
+                    # re-use matching plan days if no weekdays provided
+                    if match_plan:
+                        weekdays = days.copy()
+                    # quit loop on total match
+                    if (matched_days & weekdays) == weekdays:
+                        # all days defined, reuse plan
+                        break
+            if index is None:
+                # set next index number if no matching days found
+                index = len(rate_plan)
+                rate_plan.append({"index": index, "week": weekdays, "ranges": []})
+            elif (matched_days & weekdays) != matched_days:
+                # Clone existing ranges to new plan if only partial subset of provided days
+                new_ranges = list(rate_plan[index].get("ranges") or [])
+                index = len(rate_plan)
+                rate_plan.append(
+                    {"index": index, "week": weekdays, "ranges": new_ranges}
+                )
+            else:
+                # Merge new and existing weekdays since existing plan is for complete subset of new weekdays
+                weekdays = weekdays | set(rate_plan[index].get("week") or [])
         # create new rate plan and curate existing weekdays
         removed = 0
         for idx in rate_plan:
@@ -1193,6 +1236,7 @@ async def set_sb2_home_load(  # noqa: C901
         # Reuse existing plan
         new_rate_plan: dict = copy.deepcopy(rate_plan)
 
+    # get the time ranges that may have to be modified
     ranges = [] if index is None else (new_rate_plan[index].get("ranges") or [])
     new_ranges = []
     pending_insert = False
@@ -1227,7 +1271,7 @@ async def set_sb2_home_load(  # noqa: C901
                 insert: dict = {}
 
                 # Check if parameter update required for current time but it falls into gap of no defined slot.
-                # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications required for allday usage
+                # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications (required for allday usage)
                 if (
                     not insert_slot
                     and pending_now_update
@@ -1336,8 +1380,8 @@ async def set_sb2_home_load(  # noqa: C901
                             new_ranges.append(split_slot)
                             split_slot: dict = {}
                             # delay start time of current slot not needed if previous slot was split
-                        else:
-                            # delay start time of current slot
+                        elif insert_slot.end_time.time() > start_time:
+                            # delay start time of current slot if insert slot end falls into current slot
                             slot.update(
                                 {
                                     "start_time": datetime.strftime(
@@ -1388,14 +1432,15 @@ async def set_sb2_home_load(  # noqa: C901
                             insert_slot.appliance_load = slot.get("power")
 
                 elif next_start and next_start < end_time:
-                    # delay start of slot following an insert
-                    slot.update(
-                        {
-                            "start_time": (
-                                next_start.isoformat(timespec="minutes")
-                            ).replace("23:59", "24:00")
-                        }
-                    )
+                    # delay start of slot following an insert if it falls into the slot
+                    if next_start > start_time:
+                        slot.update(
+                            {
+                                "start_time": (
+                                    next_start.isoformat(timespec="minutes")
+                                ).replace("23:59", "24:00")
+                            }
+                        )
                     next_start = None
 
                 elif not insert_slot and (start_time <= now < end_time):
@@ -1446,7 +1491,11 @@ async def set_sb2_home_load(  # noqa: C901
             ).time()
 
     # If no rate plan or new ranges exists or new slot to be set, set defaults or given set_slot parameters
-    if (not new_rate_plan or not new_ranges) and (set_slot or preset is not None):
+    if (
+        (not new_rate_plan or not new_ranges)
+        and (set_slot or preset is not None)
+        and not delete_plan
+    ):
         if not set_slot:
             # fill set_slot with given parameters
             set_slot = Solarbank2Timeslot(
@@ -1468,7 +1517,7 @@ async def set_sb2_home_load(  # noqa: C901
     if new_rate_plan:
         if index is not None:
             new_rate_plan[index].update({"ranges": new_ranges})
-    else:
+    elif not delete_plan:
         new_rate_plan: list = [
             {
                 "index": 0,
@@ -1480,8 +1529,7 @@ async def set_sb2_home_load(  # noqa: C901
         "Rate plan to apply: %s",
         new_rate_plan,
     )
-    if new_rate_plan:
-        schedule.update({"custom_rate_plan": new_rate_plan})
+    schedule.update({"custom_rate_plan": new_rate_plan})
     # return resulting schedule for test purposes without Api call
     if test_schedule is not None:
         return schedule

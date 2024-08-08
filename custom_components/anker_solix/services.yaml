@@ -27,6 +27,24 @@ clear_solarbank_schedule:
       # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
       supported_features:
         - calendar.CalendarEntityFeature.CREATE_EVENT
+  fields:
+    week_days:
+      required: false
+      example:
+        - sun
+      selector:
+        select:
+          mode: list
+          multiple: true
+          translation_key: weekday
+          options:
+            - sun
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
 set_solarbank_schedule:
   target:
     entity:
@@ -49,6 +67,23 @@ set_solarbank_schedule:
       default: "23:59:00"
       selector:
         time:
+    week_days:
+      required: false
+      example:
+        - sun
+      selector:
+        select:
+          mode: list
+          multiple: true
+          translation_key: weekday
+          options:
+            - sun
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
     appliance_load:
       required: false
       example: 100
@@ -76,7 +111,6 @@ set_solarbank_schedule:
     charge_priority_limit:
       required: false
       example: 80
-      default: 80
       selector:
         number:
           min: 0
@@ -105,6 +139,23 @@ update_solarbank_schedule:
       default: "23:59:00"
       selector:
         time:
+    week_days:
+      required: false
+      example:
+        - sun
+      selector:
+        select:
+          mode: list
+          multiple: true
+          translation_key: weekday
+          options:
+            - sun
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
     appliance_load:
       required: false
       example: 100
@@ -132,7 +183,6 @@ update_solarbank_schedule:
     charge_priority_limit:
       required: false
       example: 80
-      default: 80
       selector:
         number:
           min: 0

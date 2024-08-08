@@ -20,6 +20,17 @@
                 "smartmeter": "Smart meter",
                 "smartplugs": "Smart plugs"
             }
+        },
+        "weekday": {
+            "options": {
+                "sun": "Sunday",
+                "mon": "Monday",
+                "tue": "Tuesday",
+                "wed": "Wednesday",
+                "thu": "Thursday",
+                "fri": "Friday",
+                "sat": "Saturday"
+            }
         }
     },
     "config": {
@@ -610,8 +621,14 @@
         },
         "clear_solarbank_schedule": {
             "name": "Clear the Solarbank schedule",
-            "description": "The Solarbank schedule will be cleared"
-        },
+            "description": "The Solarbank schedule will be cleared",
+            "fields": {
+                "week_days": {
+                    "name": "Weekdays",
+                    "description": "Selected weekdays to be removed from schedule (ignored for Solarbank 1)"
+                }
+            }
+    },
         "set_solarbank_schedule": {
             "name": "Set a new Solarbank Schedule",
             "description": "Create a new time schedule for the Solarbank with the defined time interval. An existing time schedule is completely replaced by the new interval!",
@@ -624,21 +641,25 @@
                     "name": "End time",
                     "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
                 },
+                "week_days": {
+                    "name": "Weekdays",
+                    "description": "Weekdays for the defined time interval (ignored for Solarbank 1)"
+                },
                 "appliance_load": {
                     "name": "Home load preset",
                     "description": "Watt to be delivered to the house by all devices"
                 },
                 "device_load": {
                     "name": "Device load preset",
-                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets"
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2)"
                 },
                 "allow_export": {
                     "name": "Allow export",
-                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house"
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",
-                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set."
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2."
                 }
             }
         },
@@ -654,21 +675,25 @@
                     "name": "End time",
                     "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
                 },
+                "week_days": {
+                    "name": "Weekdays",
+                    "description": "Weekdays for the defined time interval (ignored for Solarbank 1)"
+                },
                 "appliance_load": {
                     "name": "Home load preset",
                     "description": "Watt to be delivered to the house by all devices"
                 },
                 "device_load": {
                     "name": "Device load preset",
-                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets"
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2)"
                 },
                 "allow_export": {
                     "name": "Allow export",
-                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house"
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",
-                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set."
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2."
                 }
             }
         }

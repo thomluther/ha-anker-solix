@@ -45,6 +45,7 @@ SERVICE_UPDATE_SOLARBANK_SCHEDULE = "update_solarbank_schedule"
 
 START_TIME = "start_time"
 END_TIME = "end_time"
+WEEK_DAYS = "week_days"
 APPLIANCE_LOAD = "appliance_load"
 DEVICE_LOAD = "device_load"
 CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
@@ -88,10 +89,15 @@ VALID_CHARGE_PRIORITY = vol.Any(
     ),
 )
 VALID_ALLOW_DISCHARGE = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
+VALID_WEEK_DAYS = vol.Any(None, cv.ENTITY_MATCH_NONE, cv.weekdays)
+
 
 SOLARBANK_TIMESLOT_DICT: dict = {
     vol.Required(START_TIME): VALID_DAYTIME,
     vol.Required(END_TIME): VALID_DAYTIME,
+    vol.Optional(
+        WEEK_DAYS,
+    ): VALID_WEEK_DAYS,
     vol.Optional(
         APPLIANCE_LOAD,
     ): VALID_APPLIANCE_LOAD,
@@ -111,6 +117,15 @@ SOLARBANK_TIMESLOT_SCHEMA: vol.Schema = vol.All(
         {**cv.TARGET_SERVICE_FIELDS, **SOLARBANK_TIMESLOT_DICT}
     ),
 )
+
+SOLIX_WEEKDAY_SCHEMA: vol.Schema = vol.All(
+    cv.make_entity_service_schema({**cv.TARGET_SERVICE_FIELDS,
+        vol.Optional(
+            WEEK_DAYS,
+        ): VALID_WEEK_DAYS,
+    }),
+)
+
 
 SOLIX_ENTITY_SCHEMA: vol.Schema = vol.All(
     cv.make_entity_service_schema(cv.TARGET_SERVICE_FIELDS),

@@ -121,7 +121,7 @@ class AnkerSolixApi:
         self._request_delay: float = SolixDefaults.REQUEST_DELAY_DEF
         self._last_request_time: datetime | None = None
 
-        # Define Encryption for password, using ECDH assymetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
+        # Define Encryption for password, using ECDH asymmetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
         # uncompressed public key from EU Anker server in the format 04 [32 byte x value] [32 byte y value]
         # Both, the EU and COM Anker server public key is the same and login response is provided for both upon an authentication request
         # However, if country ID assignment is to wrong server, no sites or devices will be listed for the authenticated account.
@@ -942,7 +942,7 @@ class AnkerSolixApi:
         return resp.get("data") or {}
 
     async def get_solar_info(self, solarbankSn: str, fromFile: bool = False) -> dict:
-        """Get the solar info that is condigured for a solarbank.
+        """Get the solar info that is configured for a solarbank.
 
         Example data:
         {"brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f","solar_brand": "ANKER","solar_model": "A5140","solar_sn": "","solar_model_name": "MI60 Microinverter"}
@@ -1012,7 +1012,7 @@ class AnkerSolixApi:
         return data
 
     async def set_auto_upgrade(self, devices: dict[str, bool]) -> bool:
-        """Set auto upgrade switches for given device dictonary.
+        """Set auto upgrade switches for given device dictionary.
 
         Example input:
         devices = {'9JVB42LJK8J0P5RY': True}

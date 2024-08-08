@@ -44,7 +44,7 @@ class NeedVerifyCodeError(AnkerSolixError):
 
 
 class VerifyCodeMaxError(AnkerSolixError):
-    """Maximum attempts of verications error."""
+    """Maximum attempts of verifications error."""
 
 
 class VerifyCodeNoneMatchError(AnkerSolixError):

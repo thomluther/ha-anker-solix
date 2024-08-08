@@ -97,7 +97,7 @@ API_COUNTRIES = {
 
 """Following are the Anker Power/Solix Cloud API endpoints known so far"""
 API_ENDPOINTS = {
-    "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as preseneted on App Home Page (mostly empty for shared accounts)
+    "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
     "site_detail": "power_service/v1/site/get_site_detail",  # Information for given site_id, can also be used by shared accounts
     "site_rules": "power_service/v1/site/get_site_rules",  # Information for supported power site types and their min and max qty per device model types
@@ -109,7 +109,7 @@ API_ENDPOINTS = {
     "wifi_list": "power_service/v1/site/get_wifi_info_list",  # List of available networks for provided site id
     "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owner account
     "update_site_price": "power_service/v1/site/update_site_price",  # Update power price and CO2 for given site, works only for site owner account
-    "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, only works for site owner accout
+    "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, only works for site owner account
     "set_auto_upgrade": "power_service/v1/app/set_auto_upgrade",  # Set/Enable Auto-Upgrade configuration, works only for site owner account
     "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version, works only for owner account
     "get_device_load": "power_service/v1/app/device/get_device_home_load",  # Get defined device schedule (same data as provided with device param query)
@@ -118,7 +118,7 @@ API_ENDPOINTS = {
     "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Get info of available OTA update
     "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar inverter definition for solarbanks, works only with owner account
     "get_cutoff": "power_service/v1/app/compatible/get_power_cutoff",  # Get Power Cutoff settings (Min SOC) for provided site id and device sn, works only with owner account
-    "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, only works for onwer accounts
+    "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, only works for owner accounts
     "compatible_process": "power_service/v1/app/compatible/get_compatible_process",  # contains solar_info plus OTA processing codes, works only with owner account
     "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Shows Accessories like Solarbank 0W Switch info
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
@@ -130,7 +130,7 @@ API_ENDPOINTS = {
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
     "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
     "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
-    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smartreader? NOT IMPLEMENTED YET
+    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? NOT IMPLEMENTED YET
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -163,11 +163,11 @@ API_ENDPOINTS = {
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
     'power_service/v1/app/get_phonecode_list',
-    'power_service/v1/app/device/set_device_attrs', # for solarbank 2 and/or smartreader?
+    'power_service/v1/app/device/set_device_attrs', # for solarbank 2 and/or smart meter?
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
-    'power_service/v1/message_not_disturb',  # change do not disurb messages settings
+    'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message',
     'power_service/v1/add_message',
     'power_service/v1/del_message',
@@ -334,7 +334,7 @@ class SolixDeviceCapacity:
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
     A1780: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1780_1: int = 2048  # Expansion Battery for F2000
-    A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WLAN
+    A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WIFI
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
@@ -513,9 +513,9 @@ class SolarbankTimeslot:
 
 @dataclass
 class Solarbank2Timeslot:
-    """Dataclass to define customizable attributes of an Anker Solix Solarbank 2 time slot as used for the schedule definition or update."""
+    """Dataclass to define customizable attributes of an Anker Solix Solarbank 2 time slot as used for the schedule definition, update or deletion."""
 
-    start_time: datetime
-    end_time: datetime
+    start_time: datetime | None
+    end_time: datetime | None
     appliance_load: int | None = None  # mapped to appliance_load setting
-    weekdays: set[int] | None = None  # set of weekdays where this slow applies, defaulting to all if None. Sun = 0, Sat = 6
+    weekdays: set[int|str] | None = None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6

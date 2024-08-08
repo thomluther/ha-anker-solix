@@ -61,9 +61,8 @@ DEVICE_NUMBERS = [
         native_step=10,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        # TODO(#SB2): Enable for SB2 once helper method ready to support presets,
         exclude_fn=lambda s, d: not (
-            {SolixDeviceType.SOLARBANK.value} - s and (d.get("generation") or 0) < 2
+            {SolixDeviceType.SOLARBANK.value} - s
         ),
     ),
     AnkerSolixNumberDescription(

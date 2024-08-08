@@ -123,7 +123,7 @@ async def energy_daily(  # noqa: C901
                     )
                     table.update({daystr: entry})
 
-    # Get home usage energy types if device is solarbank generation 2 or smartreader or smartplugs
+    # Get home usage energy types if device is solarbank generation 2 or smart meter or smart plugs
     if (
         SolixDeviceType.SOLARBANK.value in devTypes
         and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1

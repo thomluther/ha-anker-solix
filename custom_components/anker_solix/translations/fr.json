@@ -20,6 +20,17 @@
                 "smartmeter": "Compteur intelligent",
                 "smartplugs": "Prises intelligentes"
             }
+        },
+        "weekday": {
+            "options": {
+                "sun": "Dimanche",
+                "mon": "Lundi",
+                "tue": "Mardi",
+                "wed": "Mercredi",
+                "thu": "Jeudi",
+                "fri": "Vendredi",
+                "sat": "Samedi"
+            }
         }
     },
     "config": {
@@ -610,7 +621,13 @@
         },
         "clear_solarbank_schedule": {
             "name": "Effacer l'horaire de solarbank",
-            "description": "L'horaire de solarbank sera effacé"
+            "description": "L'horaire de solarbank sera effacé",
+            "fields": {
+                "week_days": {
+                    "name": "En semaine",
+                    "description": "Jours de la semaine sélectionnés à supprimer de l'horaire (ignoré pour Solarbank 1)"
+                }
+            }
         },
         "set_solarbank_schedule": {
             "name": "Créer un nouveau horaire de solarbank",
@@ -624,21 +641,25 @@
                     "name": "Heure de fin",
                     "description": "Heure de fin de l'intervalle (les secondes sont ignorées). Pour 24:00, il faut régler 23:59"
                 },
+                "week_days": {
+                    "name": "En semaine",
+                    "description": "Jours de la semaine pour l'intervalle défini (ignoré pour solarbank 1)"
+                },
                 "appliance_load": {
                     "name": "Réglage puissance de sortie",
                     "description": "Watt à livrer à la maison par tous les appareils"
                 },
                 "device_load": {
                     "name": "Réglage puissance de sortie de l'appareil",
-                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils"
+                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils (ignoré pour solarbank 2)"
                 },
                 "allow_export": {
                     "name": "Autoriser l'exportation",
-                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison"
+                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limite de la priorité de charge",
-                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé"
+                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé ou il s'agit d'un solarbank 2"
                 }
             }
         },
@@ -654,21 +675,25 @@
                     "name": "Heure de fin",
                     "description": "Heure de fin de l'intervalle (les secondes sont ignorées). Pour 24:00, il faut régler 23:59"
                 },
+                "week_days": {
+                    "name": "En semaine",
+                    "description": "Jours de la semaine pour l'intervalle défini (ignoré pour solarbank 1)"
+                },
                 "appliance_load": {
                     "name": "Réglage puissance de sortie",
                     "description": "Watt à livrer à la maison par tous les appareils"
                 },
                 "device_load": {
                     "name": "Réglage puissance de sortie de l'appareil",
-                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils"
+                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils (ignoré pour solarbank 2)"
                 },
                 "allow_export": {
                     "name": "Autoriser l'exportation",
-                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison"
+                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limite de la priorité de charge",
-                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé"
+                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé ou il s'agit d'un solarbank 2"
                 }
             }
         }

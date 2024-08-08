@@ -34,7 +34,7 @@ def requestDelay(self, delay: float | None = None) -> float:
     return self._request_delay
 
 async def _wait_delay(self, delay: float | None = None) -> None:
-    """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occured."""
+    """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occurred."""
     if delay is not None and isinstance(delay, float | int):
         delay = float(
             min(
