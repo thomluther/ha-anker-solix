@@ -5,7 +5,6 @@ import copy
 from datetime import datetime
 import json
 import os
-from socket import inet_ntoa
 
 from .types import (
     API_ENDPOINTS,
