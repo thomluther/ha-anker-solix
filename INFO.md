@@ -269,10 +269,11 @@ Following is some more background on this to explain the complexity. The home lo
 
 Following are the customizable parameters of a time interval that are supported by the integration and the Python Api library:
   - Start and End time of a schedule interval
-  - Appliance home load preset (100 - 800/1600 W). If changed in dual solarbanks systems, it will always use normal preset mode with the default 50% device share
-  - Device load preset (50-800 W) for dual solarbank systems supporting individual device presets. A change will always enable advanced preset mode and also affect the appliance load preset accordingly
-  - Export switch
-  - Charge Priority Limit (0-100 %), typically only seen in the App when Anker MI80 inverter is configured
+  - Week days for the schedule interval (ignored for Solarbank 1 systems)
+  - Appliance home load preset (0/100 - 800/1600 W). If changed in dual solarbanks systems, it will always use normal preset mode with the default 50% device share. Solarbank 2 devices support lower settings down to 0 W, while Solarbank 1 devices support min. 100 W
+  - Device load preset (50-800 W) for dual solarbank systems supporting individual device presets. A change will always enable advanced preset mode and also affect the appliance load preset accordingly. (ignored for Solarbank 2 systems)
+  - Export switch (ignored for Solarbank 2 systems)
+  - Charge Priority Limit (0-100 %), typically only seen in the App when Anker MI80 inverter is configured (ignored for Solarbank 2 systems)
 
 Those given ranges depend on the number of solarbanks in the system and are being enforced by the integration and the Api library. However, while those ranges are also accepted by the appliance when provided via a schedule, the appliance may ignore them when they are outside of its internally used/defined boundaries. For example, you can set an Appliance home load of 100 W which is also represented in the schedule interval. The appliance however will still apply the internal minimum limit of 150 W depending on the configured inverter type for your solarbank.
 It is typically the combination of those settings, as well as the actual situation of the battery SOC, the temperature and the defined/used inverter in combination with either the charge priority setting or activation of the 0 W switch that all determine which home load preset will be applied by the appliance. The applied home load is typically represented in the App for the active time interval, and this is what you can also see in the Solarbank System sensor for the preset output power. But rest assured, even if it shows 0 W home load preset is applied, it does not warrant you there won't be any output power to the house!
@@ -673,7 +674,7 @@ fields:
     default: 100
     selector:
       number:
-        min: 100
+        min: 0
         max: 800
         step: 10
         unit_of_measurement: W

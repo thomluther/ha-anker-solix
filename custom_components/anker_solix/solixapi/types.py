@@ -519,3 +519,4 @@ class Solarbank2Timeslot:
     end_time: datetime | None
     appliance_load: int | None = None  # mapped to appliance_load setting
     weekdays: set[int|str] | None = None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
+ # type: ignore

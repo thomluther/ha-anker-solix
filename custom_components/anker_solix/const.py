@@ -61,7 +61,8 @@ VALID_APPLIANCE_LOAD = vol.Any(
     vol.All(
         vol.Coerce(int),
         vol.Range(
-            min=api.SolixDefaults.PRESET_MIN,
+            #min=api.SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
+            min=0,
             max=api.SolixDefaults.PRESET_MAX * 2,
         ),
     ),
