@@ -12,6 +12,12 @@ body:
     description: "Paste the data from the System Health card in Home Assistant (https://www.home-assistant.io/more-info/system-health#github-issues)"
   validations:
     required: true
+- type: textarea
+  attributes:
+    label: "Integration version"
+    description: "Enter the version number of the integration that is in use (see HA UI integration details)"
+  validations:
+    required: true
 - type: checkboxes
   attributes:
     label: Checklist
