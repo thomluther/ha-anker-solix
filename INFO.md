@@ -269,7 +269,7 @@ Following is some more background on this to explain the complexity. The home lo
 
 Following are the customizable parameters of a time interval that are supported by the integration and the Python Api library:
   - Start and End time of a schedule interval
-  - Appliance home load preset (100 - 800/1600 W). If changed in dual solarbanks systems, it will always use normal preset mode with the default 50% device share
+  - Appliance home load preset (10 - 800/1600 W). If changed in dual solarbanks systems, it will always use normal preset mode with the default 50% device share
   - Device load preset (50-800 W) for dual solarbank systems supporting individual device presets. A change will always enable advanced preset mode and also affect the appliance load preset accordingly
   - Export switch
   - Charge Priority Limit (0-100 %), typically only seen in the App when Anker MI80 inverter is configured
@@ -559,7 +559,7 @@ fields:
     default: 100
     selector:
       number:
-        min: 100
+        min: 10
         max: 1600
         step: 10
         unit_of_measurement: W
@@ -752,4 +752,3 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [solarbank-2-pro-diag-img]: doc/Solarbank-2-pro-diag.png
 [smart-meter-device-img]: doc/Smart-Meter-device.png
 [get-system-info-service-img]: doc/get-system-info-service.png
-
