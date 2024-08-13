@@ -90,7 +90,7 @@ set_solarbank_schedule:
       default: 100
       selector:
         number:
-          min: 100
+          min: 10
           max: 1600
           step: 10
           unit_of_measurement: "W"
@@ -162,7 +162,7 @@ update_solarbank_schedule:
       default: 100
       selector:
         number:
-          min: 100
+          min: 10
           max: 1600
           step: 10
           unit_of_measurement: "W"

@@ -436,7 +436,7 @@ class SolixDefaults:
     """Dataclass for Anker Solix defaults to be used."""
 
     # Output Power presets for Solarbank schedule timeslot settings
-    PRESET_MIN: int = 100
+    PRESET_MIN: int = 10
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
     PRESET_NOSCHEDULE: int = 200
