@@ -32,7 +32,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.types import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
 
 
 @dataclass(frozen=True)

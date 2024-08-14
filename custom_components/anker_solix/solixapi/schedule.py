@@ -6,7 +6,7 @@ from datetime import datetime
 import json
 import os
 
-from .types import (
+from .apitypes import (
     API_ENDPOINTS,
     Solarbank2Timeslot,
     SolarbankPowerMode,
@@ -1167,8 +1167,8 @@ async def set_sb2_home_load(  # noqa: C901
             )
             return False
     elif set_slot and isinstance(set_slot, Solarbank2Timeslot) and set_slot.weekdays:
-            weekdays = set_slot.weekdays
-            match_plan = False
+        weekdays = set_slot.weekdays
+        match_plan = False
     # allow weekday strings as used by HA and convert to proper weekday number as required for api
     weekdays = {days.index(day) for day in weekdays if day in days} | (
         weekdays & set(range(7))

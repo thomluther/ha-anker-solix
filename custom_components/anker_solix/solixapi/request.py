@@ -12,7 +12,7 @@ from aiohttp.client_exceptions import ClientError
 from cryptography.hazmat.primitives import serialization
 
 from . import errors
-from .types import API_HEADERS, API_LOGIN, SolixDefaults
+from .apitypes import API_HEADERS, API_LOGIN, SolixDefaults
 
 
 def requestDelay(self, delay: float | None = None) -> float:

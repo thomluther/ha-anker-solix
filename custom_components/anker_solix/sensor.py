@@ -15,7 +15,7 @@ import homeassistant.helpers.config_validation as cv
 import json
 
 from .config_flow import _SCAN_INTERVAL_MIN
-from .solixapi.types import SolixParmType
+from .solixapi.apitypes import SolixParmType
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -68,7 +68,7 @@ from .const import (
     CONF_SKIP_INVALID,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
-from .solixapi.types import (
+from .solixapi.apitypes import (
     ApiCategories,
     SmartmeterStatus,
     SolarbankStatus,

@@ -21,7 +21,7 @@ from homeassistant.const import (
 from .const import EXAMPLESFOLDER, INTERVALMULT, LOGGER, TESTMODE
 from .solixapi import errors
 from .solixapi.api import AnkerSolixApi
-from .solixapi.types import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
 
 _LOGGER = LOGGER
 MIN_DEVICE_REFRESH: int = 30  # min device refresh delay in seconds

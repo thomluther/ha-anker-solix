@@ -6,7 +6,7 @@ from asyncio import sleep
 import contextlib
 from datetime import datetime, timedelta
 
-from .types import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
+from .apitypes import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
 
 
 async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -> dict:  # noqa: C901

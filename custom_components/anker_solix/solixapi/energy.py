@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 import os
 
-from .types import API_ENDPOINTS, SolixDeviceType
+from .apitypes import API_ENDPOINTS, SolixDeviceType
 
 
 async def energy_daily(  # noqa: C901

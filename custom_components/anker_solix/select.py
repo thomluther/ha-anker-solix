@@ -23,7 +23,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.types import ApiCategories, SolarbankUsageMode, SolixDeviceType
+from .solixapi.apitypes import ApiCategories, SolarbankUsageMode, SolixDeviceType
 
 
 @dataclass(frozen=True)

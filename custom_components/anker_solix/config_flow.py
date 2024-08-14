@@ -36,7 +36,7 @@ from .const import (
     TESTFOLDER,
     TESTMODE,
 )
-from .solixapi.types import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
 
 # Define integration option limits and defaults
 SCAN_INTERVAL_DEF: int = api_client.DEFAULT_UPDATE_INTERVAL

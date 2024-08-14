@@ -24,8 +24,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from . import poller
-from .helpers import RequestCounter
-from .types import (
+from .apitypes import (
     API_COUNTRIES,
     API_ENDPOINTS,
     API_SERVERS,
@@ -39,6 +38,7 @@ from .types import (
     SolixDeviceStatus,
     SolixDeviceType,
 )
+from .helpers import RequestCounter
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
