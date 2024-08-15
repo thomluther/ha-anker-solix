@@ -204,6 +204,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 - [Usage instructions and configuration of the integration](INFO.md)
 - [Possibilities to integrate the Solarbank into your Energy Dashboard](https://github.com/thomluther/hacs-anker-solix/discussions/16)
 - [Surplus charge automation for Solarbank E1600 (1st generation)](https://github.com/thomluther/hacs-anker-solix/discussions/81)
+- [How to monitor Solarbank battery efficiency and health](https://github.com/thomluther/hacs-anker-solix/discussions/109)
 
 If you need more assistance on the topic, please have a look at the following external resources:
 
