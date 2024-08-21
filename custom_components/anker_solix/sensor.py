@@ -249,6 +249,16 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSensorDescription(
+        key="current_power",
+        translation_key="current_power",
+        json_key="current_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
         # Resulting Output preset per device
         # This may also present 0 W if the allow discharge switch is disabled, even if the W preset value remains and the minimum bypass per defined inverter will be used
         # This is confusing in the App and the Api, since there may be the minimum bypass W applied even if 0 W is shown.
@@ -423,6 +433,22 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTMETER.value} - s),
         check_invalid=True,
     ),
+    AnkerSolixSensorDescription(
+        key="tag",
+        translation_key="tag",
+        json_key="tag",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s and {ApiCategories.device_tag} - s),
+        check_invalid=True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    AnkerSolixSensorDescription(
+        key="err_code",
+        translation_key="err_code",
+        json_key="err_code",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        check_invalid=True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 ]
 
 SITE_SENSORS = [
@@ -484,7 +510,7 @@ SITE_SENSORS = [
     AnkerSolixSensorDescription(
         key="smart_plug_list",
         translation_key="smart_plug_list",
-        json_key="smart_plug_list",
+        json_key="smartplug_list",
         # entity_registry_enabled_default=False,
         picture_path=AnkerSolixPicturePath.SMARTPLUG,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -1494,6 +1520,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         "service": service_name,
                     },
                 )
+        return None
 
     async def _solarbank_schedule_service(  # noqa: C901
         self, service_name: str, **kwargs: Any
@@ -1781,6 +1808,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         "service": service_name,
                     },
                 )
+        return None
 
 
 class AnkerSolixEnergySensor(AnkerSolixSensor, RestoreSensor):

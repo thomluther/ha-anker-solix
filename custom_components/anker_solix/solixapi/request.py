@@ -28,10 +28,9 @@ def requestDelay(self, delay: float | None = None) -> float:
                 max(SolixDefaults.REQUEST_DELAY_MIN, delay),
             )
         )
-        self._logger.info(
-            "Set api request delay to %.3f seconds", self._request_delay
-        )
+        self._logger.info("Set api request delay to %.3f seconds", self._request_delay)
     return self._request_delay
+
 
 async def _wait_delay(self, delay: float | None = None) -> None:
     """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occurred."""
@@ -51,6 +50,7 @@ async def _wait_delay(self, delay: float | None = None) -> None:
                 delay - (datetime.now() - self._last_request_time).total_seconds(),
             )
         )
+
 
 async def async_authenticate(self, restart: bool = False) -> bool:
     """Authenticate with server and get an access token. If restart is not enforced, cached login data may be used to obtain previous token."""
@@ -126,9 +126,7 @@ async def async_authenticate(self, restart: bool = False) -> bool:
     self._token = data.get("auth_token")
     self.nickname = data.get("nick_name")
     if data.get("token_expires_at"):
-        self._token_expiration = datetime.fromtimestamp(
-            data.get("token_expires_at")
-        )
+        self._token_expiration = datetime.fromtimestamp(data.get("token_expires_at"))
     else:
         self._token_expiration = None
         self._loggedIn = False
@@ -140,6 +138,7 @@ async def async_authenticate(self, restart: bool = False) -> bool:
         self._gtoken = None
         self._loggedIn = False
     return self._loggedIn
+
 
 async def request(
     self,
@@ -239,14 +238,12 @@ async def request(
                 pass
             if not data:
                 self._logger.error("Response Text: %s", body_text)
-                raise ClientError(f"No data response while requesting {endpoint}")
+                raise ClientError(f"No data response while requesting {endpoint}")  # noqa: TRY301
 
             if endpoint == API_LOGIN:
                 self._logger.debug(
                     "Response Data: %s",
-                    self.mask_values(
-                        data, "user_id", "auth_token", "email", "geo_key"
-                    ),
+                    self.mask_values(data, "user_id", "auth_token", "email", "geo_key"),
                 )
             else:
                 self._logger.debug("Response Data: %s", data)
@@ -282,9 +279,7 @@ async def request(
                             method, endpoint, headers=headers, json=json
                         )
                     self._logger.error("Re-Login failed for user %s", self._email)
-                errors.raise_error(
-                    data, prefix=f"Login failed for user {self._email}"
-                )
+                errors.raise_error(data, prefix=f"Login failed for user {self._email}")
                 # catch error if Api code not defined
                 raise errors.AuthorizationError(
                     f"Login failed for user {self._email}"
@@ -305,4 +300,3 @@ async def request(
             self._logger.error("%s", err)
             self._logger.error("Response Text: %s", body_text)
             raise
-

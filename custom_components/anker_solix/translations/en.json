@@ -4,6 +4,7 @@
             "options": {
                 "site_price": "System price values",
                 "device_auto_upgrade": "Auto-Updates",
+                "device_tag": "Device Labels",
                 "solarbank_cutoff": "Solarbank cutoff values",
                 "solarbank_fittings": "Solarbank accessories",
                 "solarbank_solar_info": "Solarbank inverter info",
@@ -18,7 +19,7 @@
                 "powerpanel": "Power panels",
                 "powercooler": "Power cooler",
                 "smartmeter": "Smart meter",
-                "smartplugs": "Smart plugs"
+                "smartplug": "Smart plugs"
             }
         },
         "weekday": {
@@ -37,6 +38,20 @@
         "step": {
             "user": {
                 "title": "Add your Anker Solix devices",
+                "description": "Enter credentials for your Anker cloud account",
+                "data": {
+                    "username": "Username/e-mail",
+                    "password": "Password",
+                    "country_code": "Country",
+                    "accept_terms": "Accept Integration usage terms and conditions"
+                },
+                "data_description": {
+                    "username": "Recommendation: Create a second account in the Anker App and share your system with the second account. A parallel usage of the same account in this integration and the Anker App is not possible.",
+                    "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration. A consent automatically includes future updates, which can extend the integration functionality.\nFurther information: {terms_link}"
+                }
+            },
+            "reconfigure": {
+                "title": "Change your configured account",
                 "description": "Enter credentials for your Anker cloud account",
                 "data": {
                     "username": "Username/e-mail",
@@ -79,7 +94,8 @@
             "unknown": "Unknown error occurred:: {error_detail}"
         },
         "abort": {
-            "already_configured": "This account is already configured"
+            "already_configured": "This account is already configured",
+            "reconfig_successful": "Configuration account successfully changed"
         }
     },
     "options": {
@@ -327,6 +343,15 @@
                         "name": "Bluetooth MAC"
                     }
                 }
+            },
+            "current_power": {
+                "name": "Power"
+            },
+            "tag": {
+                "name": "Label"
+            },
+            "err_code": {
+                "name": "Error code"
             },
             "temperature": {
                 "name": "Temperature"

@@ -198,7 +198,11 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                     )
                     # Update also the charge status description which may change after charging power correction
                     charge_status = api.devices[sn].get("charging_status")
-                    if charge_status in [SolarbankStatus.charge, SolarbankStatus.bypass, SolarbankStatus.detection]:
+                    if charge_status in [
+                        SolarbankStatus.charge,
+                        SolarbankStatus.bypass,
+                        SolarbankStatus.detection,
+                    ]:
                         api._update_dev(
                             {
                                 "device_sn": sn,
@@ -233,7 +237,7 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                     isAdmin=admin,
                 ):
                     api._site_devices.add(sn)
-            smartplug_info = mysite.get("smartplug_info") or {}
+            smartplug_info = mysite.get("smart_plug_info") or {}
             for smartplug in smartplug_info.get("smartplug_list") or []:
                 # work around for device_name which is actually the device_alias in scene info
                 if "device_name" in smartplug:

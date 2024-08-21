@@ -46,6 +46,7 @@ API_CATEGORIES: list = [
     ApiCategories.solarbank_fittings,
     ApiCategories.solarbank_solar_info,
     ApiCategories.device_auto_upgrade,
+    ApiCategories.device_tag,
     ApiCategories.site_price,
 ]
 DEFAULT_EXCLUDE_CATEGORIES: list = [ApiCategories.solarbank_energy,ApiCategories.smartmeter_energy,ApiCategories.solar_energy,ApiCategories.smartplug_energy,]

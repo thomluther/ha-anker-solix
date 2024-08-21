@@ -77,9 +77,6 @@ Following are anonymized examples how the Anker power devices will be presented 
 
 **Note:** When using a shared system account for the integration, device detail information is limited and changes are not permitted. Therefore shared system account users may get presented only a subset and no changeable entities by the integration.
 
-The integration will setup the entities with unique IDs based on device serials or a combination of serial numbers. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. While the entity history is not lost, it implies that you cannot configure different accounts at the same time when they share a system. Otherwise, it would cause HA setup errors because of non unique entities. Therefore, new integration configurations are validated and not allowed when they share systems or devices with an active configuration.
-If you want to switch from your main account to the shared account, delete first the active configuration and then create a new configuration with the other account. When the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured recorder interval is over. The default HA recorder history interval is 10 days.
-
 
 ## Anker account limitation and usage recommendations
 
@@ -129,6 +126,19 @@ The cloud change in July did not change the cloud data update frequency for Sola
 
 **Note:** Prior version 1.2.0, when you added categories to the exclusion list, the affected entities were removed from the HA registry during integration reload but they still showed up in the UI as entities no longer provided by the integration. You needed to remove those UI entities manually from the entity details dialog.
 Starting with version 1.2.0, a change in the exclusion list will completely remove the affected devices and re-register them with remaining entities as necessary. This avoids manual cleanup of excluded entities.
+
+
+## Switching between different Anker Power accounts
+
+The integration will setup the entities with unique IDs based on device serials or a combination of serial numbers. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. While the entity history is not lost, it implies that you cannot configure different accounts at the same time when they share a system. Otherwise, it would cause HA setup errors because of non unique entities. Therefore, new integration configurations are validated and not allowed when they share systems or devices with an active configuration.
+Up to release 2.1.0, when you wanted to switch between your main account to the shared account, you had to delete first the active configuration and then create a new configuration with the other account. When the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured recorder interval is over. The default HA recorder history interval is 10 days.
+
+Starting with HA 2024.04, there is a new option to reconfigure an active integration configuration. This reconfiguration capability has been implemented with release 2.1.0 of this integration and allows a simplified direct account reconfiguration from the integration's menu as shown in following example:
+![Reconfigure][reconfigure-img]
+
+**Note:**
+
+While changing your active configuration to another account, the same actions and validations will still be performed in background. Switching to another account that shares any system or device with any active configuration except the modified one is not allowed. Once the configuration change is confirmed for the new or same account, the active devices and entities will be removed and recreated to adjust for the manageable entities of that modified account.
 
 
 ## How to create a second Anker Power account
@@ -733,6 +743,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
 [integration-img]: doc/integration.png
 [config-img]: doc/configuration.png
+[reconfigure-img]: doc/reconfigure.png
 [options-img]: doc/options.png
 [system-img]: doc/system.png
 [inverter-img]: doc/inverter.png

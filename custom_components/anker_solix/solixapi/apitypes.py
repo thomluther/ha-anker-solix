@@ -131,6 +131,8 @@ API_ENDPOINTS = {
     "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
     "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
     "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? NOT IMPLEMENTED YET
+    "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
+    "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -146,7 +148,7 @@ API_ENDPOINTS = {
     'power_service/v1/site/delete_site_devices',
     'power_service/v1/site/update_site_devices',
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
-    '/power_service/v1/site/get_comb_addable_sites'
+    'power_service/v1/site/get_comb_addable_sites'
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -163,6 +165,7 @@ API_ENDPOINTS = {
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
     'power_service/v1/app/get_phonecode_list',
+    'power_service/v1/app/get_config', # shows empty config list, also for shared account
     'power_service/v1/app/device/set_device_attrs', # for solarbank 2 and/or smart meter?
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
@@ -179,6 +182,7 @@ API_ENDPOINTS = {
     'app/devicerelation/relate_device',
     'app/push/clear_count',
     'app/ota/batch/check_update',
+
 PPS and Power Panel related:
     "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel
     "charging_energy_service/get_system_running_info", # Cumulative Home/System Energy Savings since Home creation date
@@ -199,34 +203,50 @@ PPS and Power Panel related:
     "charging_energy_service/get_sns", # Displays Serial Numbers of attached PPS in Home
     "charging_energy_service/get_world_monetary_unit",
 
-    "charging_hes_svc/ota",
+    "charging_hes_svc/adjust_station_price_unit",
+    "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
-    "charging_hes_svc/get_installer_info",
+    "charging_hes_svc/check_device_bluetooth_password",
+    "charging_hes_svc/check_function",
+    "charging_hes_svc/device_command",
     "charging_hes_svc/download_energy_statistics",
-    "charging_hes_svc/get_wifi_info", # ssid and rssi for a device
-    "charging_hes_svc/update_wifi_config",
-    "charging_hes_svc/get_device_product_info", # List of Anker power devices
-    "charging_hes_svc/report_device_data",
     "charging_hes_svc/get_auto_disaster_prepare_status",
-    "charging_hes_svc/get_install_info",
+    "charging_hes_svc/get_auto_disaster_prepare_detail",
+    "charging_hes_svc/get_back_up_history",
+    "charging_hes_svc/get_conn_net_tips",
+    "charging_hes_svc/get_current_disaster_prepare_details",
+    "charging_hes_svc/get_device_command",
     "charging_hes_svc/get_device_pn_info",
     "charging_hes_svc/get_device_card_list",
     "charging_hes_svc/get_device_card_details",
+    "charging_hes_svc/get_device_product_info", # List of Anker power devices
+    "charging_hes_svc/get_energy_statistics",
+    "charging_hes_svc/get_electric_utility_and_electric_plan_list",
+    "charging_hes_svc/get_external_device_config",
+    "charging_hes_svc/get_heat_pump_plan_json",
+    "charging_hes_svc/get_hes_dev_info",
+    "charging_hes_svc/get_installer_info",
+    "charging_hes_svc/get_install_info",
+    "charging_hes_svc/get_mi_layout",
+    "charging_hes_svc/get_site_mi_list",
+    "charging_hes_svc/get_station_config_and_status",
+    "charging_hes_svc/get_system_running_info",
     "charging_hes_svc/get_system_running_time",
     "charging_hes_svc/get_system_profit_detail",
     "charging_hes_svc/get_tou_price_plan_detail",
-    "charging_hes_svc/get_electric_utility_and_electric_plan_list",
-    "charging_hes_svc/get_station_config_and_status",
-    "charging_hes_svc/get_current_disaster_prepare_details",
-    "charging_hes_svc/adjust_station_price_unit",
+    "charging_hes_svc/get_user_fault_info",
+    "charging_hes_svc/get_wifi_info", # ssid and rssi for a device
+    "charging_hes_svc/get_world_monetary_unit",
     "charging_hes_svc/update_hes_utility_rate_plan",
-    "charging_hes_svc/quit_auto_disaster_prepare",
-    "charging_hes_svc/restart_peak_session",
-    "charging_hes_svc/check_function",
-    "charging_hes_svc/remove_user_fault_info",
     "charging_hes_svc/user_event_alarm",
+    "charging_hes_svc/update_wifi_config",
+    "charging_hes_svc/ota",
+    "charging_hes_svc/quit_auto_disaster_prepare",
+    "charging_hes_svc/remove_user_fault_info",
+    "charging_hes_svc/restart_peak_session",
+    "charging_hes_svc/report_device_data",
+    "charging_hes_svc/start",
     "charging_hes_svc/sync_back_up_history",
-    "charging_hes_svc/cancel_pop",
 
 
 Structure of the JSON response for an API Login Request:
@@ -292,12 +312,14 @@ class SolarbankPowerMode(IntEnum):
     normal = 1
     advanced = 2
 
+
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank Power Usage modes."""
 
     smartmeter = 1
-    smartplugs = 2   # TODO to be validated if correct mode for smart plugs
+    smartplugs = 2  # TODO to be validated if correct mode for smart plugs
     manual = 3
+
 
 @dataclass(frozen=True)
 class ApiCategories:
@@ -305,6 +327,7 @@ class ApiCategories:
 
     site_price: str = "site_price"
     device_auto_upgrade: str = "device_auto_upgrade"
+    device_tag: str = "device_tag"
     solar_energy: str = "solar_energy"
     solarbank_energy: str = "solarbank_energy"
     solarbank_fittings: str = "solarbank_fittings"
@@ -312,6 +335,7 @@ class ApiCategories:
     solarbank_solar_info: str = "solarbank_solar_info"
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
+
 
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
@@ -464,6 +488,7 @@ class SolixDeviceStatus(Enum):
     online = "1"
     unknown = "unknown"
 
+
 class SolarbankStatus(Enum):
     """Enumeration for Anker Solix Solarbank status."""
 
@@ -518,4 +543,6 @@ class Solarbank2Timeslot:
     start_time: datetime | None
     end_time: datetime | None
     appliance_load: int | None = None  # mapped to appliance_load setting
-    weekdays: set[int|str] | None = None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
+    weekdays: set[int | str] | None = (
+        None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
+    )

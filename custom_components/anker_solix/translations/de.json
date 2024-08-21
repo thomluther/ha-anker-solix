@@ -4,6 +4,7 @@
             "options": {
                 "site_price": "System Preiswerte",
                 "device_auto_upgrade": "Auto-Updates",
+                "device_tag": "Geräte Etiketten",
                 "solarbank_cutoff": "Solarbank Reservewerte",
                 "solarbank_fittings": "Solarbank Zubehör",
                 "solarbank_solar_info": "Solarbank WR Info",
@@ -49,6 +50,20 @@
                     "accept_terms": "Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch Nutzung der Integration auftreten können. Eine Zustimmung inkludiert automatisch zukünftige Updates, welche den Funktionsumfang erweitern können.\nWeitere Informationen: {terms_link}"
                 }
             },
+            "reconfigure": {
+                "title": "Ändere deinen konfigurierten Zugang",
+                "description": "Gib die Anmeldeinformationen für deinen Anker Cloud Zugang ein",
+                "data": {
+                    "username": "Benutzername/e-Mail",
+                    "password": "Passwort",
+                    "country_code": "Land",
+                    "accept_terms": "Nutzungsbedingungen der Integration zustimmen"
+                },
+                "data_description": {
+                    "username": "Empfehlung: Lege ein zweites Konto in der Anker App an und teile dein System mit dem Zweitkonto. Eine gleichzeitige Kontonutzung in der Integration und der Anker App ist nicht möglich.",
+                    "accept_terms": "Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch Nutzung der Integration auftreten können. Eine Zustimmung inkludiert automatisch zukünftige Updates, welche den Funktionsumfang erweitern können.\nWeitere Informationen: {terms_link}"
+                }
+            },
             "user_options": {
                 "title": "Anker Solix Optionen",
                 "description": "Ändere die Nutzung der Schnittstelle",
@@ -79,7 +94,8 @@
             "unknown": "Unbekannter Fehler aufgetreten: {error_detail}"
         },
         "abort": {
-            "already_configured": "Dieses Konto ist bereits konfiguriert!"
+            "already_configured": "Dieses Konto ist bereits konfiguriert!",
+            "reconfig_successful": "Konfigurierter Zugang erfolgreich geändert"
         }
     },
     "options": {
@@ -327,6 +343,15 @@
                         "name": "Bluetooth MAC"
                     }
                 }
+            },
+            "current_power": {
+                "name": "Leistung"
+            },
+            "tag": {
+                "name": "Etikett"
+            },
+            "err_code": {
+                "name": "Fehlercode"
             },
             "temperature": {
                 "name": "Temperatur"

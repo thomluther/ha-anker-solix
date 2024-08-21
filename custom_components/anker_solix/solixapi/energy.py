@@ -118,7 +118,8 @@ async def energy_daily(  # noqa: C901
                         {
                             "date": daystr,
                             "ac_socket": resp.get("ac_out_put_total") or None,
-                            "battery_to_home": resp.get("battery_to_home_total") or None,
+                            "battery_to_home": resp.get("battery_to_home_total")
+                            or None,
                         }
                     )
                     table.update({daystr: entry})

@@ -324,6 +324,9 @@ class AnkerSolixApi:
                         "output_power",
                         "power_unit",
                         "bws_surplus",
+                        "current_power",
+                        "tag",
+                        "err_code",
                     ]:
                         device.update({key: str(value)})
                     elif key in ["wifi_name"] and value:
@@ -334,7 +337,7 @@ class AnkerSolixApi:
                         device.update({"battery_soc": str(value)})
                     elif key in ["photovoltaic_power"]:
                         device.update({"input_power": str(value)})
-                    # Add solarbank metrics depending on device type
+                    # Add solarbank metrics depending on device type or generation
                     elif (
                         key
                         in [
@@ -424,7 +427,10 @@ class AnkerSolixApi:
                                 device.get("preset_usage_mode")
                                 or SolixDefaults.USAGE_MODE
                             )
-                            in [SolarbankUsageMode.smartmeter.value,SolarbankUsageMode.smartplugs.value]
+                            in [
+                                SolarbankUsageMode.smartmeter.value,
+                                SolarbankUsageMode.smartplugs.value,
+                            ]
                         ):
                             preset = demand
                         if (
@@ -574,7 +580,12 @@ class AnkerSolixApi:
                                         break
                             # adjust schedule preset for eventual reuse as active presets
                             # Active Preset must only be considered if usage mode is manual
-                            sys_power = str(device.get("preset_system_output_power") or "") if (value.get("mode_type") or 0) == SolarbankUsageMode.manual.value else None
+                            sys_power = (
+                                str(device.get("preset_system_output_power") or "")
+                                if (value.get("mode_type") or 0)
+                                == SolarbankUsageMode.manual.value
+                                else None
+                            )
                             dev_power = sys_power
                         else:
                             # Solarbank 1 schedule
@@ -632,17 +643,42 @@ class AnkerSolixApi:
                                         break
                             # adjust schedule presets for eventual reuse as active presets
                             # Charge priority and SOC must only be considered if MI80 inverter is configured for SB1
-                            prio = (device.get("preset_charge_priority") or 0) if ((device.get("solar_info") or {}).get("solar_model") or "") == "A5143" else 0
-                            if device.get("preset_allow_export") and int(prio) <= int(device.get("battery_soc") or "0"):
-                                sys_power = str(device.get("preset_system_output_power") or "")
+                            prio = (
+                                (device.get("preset_charge_priority") or 0)
+                                if (
+                                    (device.get("solar_info") or {}).get("solar_model")
+                                    or ""
+                                )
+                                == "A5143"
+                                else 0
+                            )
+                            if device.get("preset_allow_export") and int(prio) <= int(
+                                device.get("battery_soc") or "0"
+                            ):
+                                sys_power = str(
+                                    device.get("preset_system_output_power") or ""
+                                )
                                 # active device power depends on SB count
-                                dev_power = device.get("preset_device_output_power") or None
-                                dev_power = str(dev_power if dev_power is not None and cnt > 1 else sys_power)
+                                dev_power = (
+                                    device.get("preset_device_output_power") or None
+                                )
+                                dev_power = str(
+                                    dev_power
+                                    if dev_power is not None and cnt > 1
+                                    else sys_power
+                                )
                             else:
                                 sys_power = "0"
                                 dev_power = "0"
                         # update appliance load in site cache upon device details or schedule updates not triggered by sites update
-                        if not devData.get("retain_load") and (mysite:= self.sites.get(device.get("site_id") or "") or {}) and sys_power:
+                        if (
+                            not devData.get("retain_load")
+                            and (
+                                mysite := self.sites.get(device.get("site_id") or "")
+                                or {}
+                            )
+                            and sys_power
+                        ):
                             mysite.update({"retain_load": sys_power})
                             # update also device fields for output power if not provided along with schedule update
                             if not devData.get("current_home_load") and sys_power:

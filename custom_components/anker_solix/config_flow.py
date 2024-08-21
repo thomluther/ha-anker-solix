@@ -40,7 +40,9 @@ from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
 
 # Define integration option limits and defaults
 SCAN_INTERVAL_DEF: int = api_client.DEFAULT_UPDATE_INTERVAL
-INTERVALMULT_DEF:int = api_client.DEFAULT_DEVICE_MULTIPLIER  # multiplier for scan interval
+INTERVALMULT_DEF: int = (
+    api_client.DEFAULT_DEVICE_MULTIPLIER
+)  # multiplier for scan interval
 DELAY_TIME_DEF: float = SolixDefaults.REQUEST_DELAY_DEF
 
 _SCAN_INTERVAL_MIN: int = 10 if ALLOW_TESTMODE else 30
@@ -91,36 +93,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         placeholders: dict[str, str] = {}
 
-        cfg_schema = {
-            vol.Required(
-                CONF_USERNAME,
-                default=(user_input or {}).get(CONF_USERNAME),
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.EMAIL, autocomplete="username"
-                )
-            ),
-            vol.Required(
-                CONF_PASSWORD,
-                default=(user_input or {}).get(CONF_PASSWORD),
-            ): selector.TextSelector(
-                selector.TextSelectorConfig(
-                    type=selector.TextSelectorType.PASSWORD,
-                    autocomplete="current-password",
-                ),
-            ),
-            vol.Required(
-                CONF_COUNTRY_CODE,
-                default=(user_input or {}).get(CONF_COUNTRY_CODE)
-                or self.hass.config.country,
-            ): selector.CountrySelector(
-                selector.CountrySelectorConfig(),
-            ),
-            vol.Required(
-                ACCEPT_TERMS,
-                default=(user_input or {}).get(ACCEPT_TERMS, _ACCEPT_TERMS),
-            ): selector.BooleanSelector(),
-        }
+        cfg_schema = await self.get_config_schema(user_input or self._data)
         placeholders[TERMS_LINK] = TC_LINK
 
         if user_input:
@@ -151,14 +124,6 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         # add some fixed configuration data
                         self._data[EXAMPLESFOLDER] = self.examplesfolder
 
-                        # set initial options for the config entry
-                        # options = {
-                        #     CONF_SCAN_INTERVAL: SCAN_INTERVAL_DEF,
-                        #     INTERVALMULT: INTERVALMULT_DEF,
-                        #     CONF_DELAY_TIME: DELAY_TIME_DEF,
-                        #     CONF_EXCLUDE: list(api_client.DEFAULT_EXCLUDE_CATEGORIES)
-                        # }
-
                         # next step to configure initial options
                         return await self.async_step_user_options(user_options=None)
 
@@ -188,6 +153,95 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders=placeholders,
         )
 
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+        """Add reconfigure step to allow to reconfigure a config entry."""
+
+        errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {}
+        config_entry: config_entries.ConfigEntry = (
+            self.hass.config_entries.async_get_entry(self.context.get("entry_id"))
+        )
+        # get existing config data as dict
+        self._data = config_entry.data.copy()
+        cfg_schema = await self.get_config_schema(user_input or self._data)
+        placeholders[TERMS_LINK] = TC_LINK
+
+        if user_input:
+            if not user_input.get(ACCEPT_TERMS, ""):
+                # Terms not accepted
+                errors[ACCEPT_TERMS] = ACCEPT_TERMS
+            else:
+                account_user = user_input.get(CONF_USERNAME, "")
+                try:
+                    # Obtain and cache authentication token for entered user
+                    client = await self._authenticate_client(user_input)
+                    # set testmode for client and json test file folder for api
+                    testmode = config_entry.options.get(TESTMODE, False)
+                    testfolder = config_entry.options.get(TESTFOLDER)
+                    if testmode and testfolder:
+                        # set json test file folder for api to be validated
+                        client.api.testDir(
+                            os.path.join(self._data.get(EXAMPLESFOLDER, ""), testfolder)
+                        )
+                    # get first site data for account and verify nothing is shared with existing configuration
+                    await client.api.update_sites(fromFile=testmode and testfolder)
+                    if cfg_entry := await async_check_and_remove_devices(
+                        hass=self.hass,
+                        user_input=user_input,
+                        apidata=client.api.sites | client.api.devices,
+                        configured_user=self._data.get(CONF_USERNAME),
+                    ):
+                        errors[CONF_USERNAME] = "duplicate_devices"
+                        placeholders[CONF_USERNAME] = str(account_user)
+                        placeholders[SHARED_ACCOUNT] = str(cfg_entry.title)
+                    else:
+                        # ensure removal of existing devices prior reload
+                        await async_check_and_remove_devices(
+                            hass=self.hass,
+                            user_input=self._data,
+                            apidata={},
+                        )
+                        # update fields of configuration flow
+                        self._data.update(user_input)
+                        self.client = client
+                        # update existing config entry
+                        return self.async_update_reload_and_abort(
+                            entry=config_entry,
+                            unique_id=account_user,
+                            title=self.client.api.nickname
+                            if self.client and self.client.api
+                            else account_user,
+                            data=self._data,
+                            options=config_entry.options,
+                            reason="reconfig_successful",
+                        )
+
+                except api_client.AnkerSolixApiClientAuthenticationError as exception:
+                    LOGGER.warning(exception)
+                    errors["base"] = "auth"
+                    placeholders[ERROR_DETAIL] = str(exception)
+                except api_client.AnkerSolixApiClientCommunicationError as exception:
+                    LOGGER.error(exception)
+                    errors["base"] = "connection"
+                    placeholders[ERROR_DETAIL] = str(exception)
+                except api_client.AnkerSolixApiClientRetryExceededError as exception:
+                    LOGGER.exception(exception)
+                    errors["base"] = "exceeded"
+                    placeholders[ERROR_DETAIL] = str(exception)
+                except (api_client.AnkerSolixApiClientError, Exception) as exception:  # pylint: disable=broad-except
+                    LOGGER.exception(exception)
+                    errors["base"] = "unknown"
+                    placeholders[ERROR_DETAIL] = (
+                        f"Exception {type(exception)}: {exception}"
+                    )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(cfg_schema),
+            errors=errors,
+            description_placeholders=placeholders,
+        )
+
     async def async_step_user_options(
         self, user_options: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
@@ -210,7 +264,9 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user_options",
-            data_schema=vol.Schema(await get_options_schema(user_options or self._options)),
+            data_schema=vol.Schema(
+                await get_options_schema(user_options or self._options)
+            ),
             errors=errors,
             description_placeholders=placeholders,
         )
@@ -225,6 +281,41 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
         await client.authenticate(restart=True)
         return client
+
+    async def get_config_schema(self, entry: dict | None = None) -> dict:
+        """Create the config schema dictionary."""
+
+        if entry is None:
+            entry = {}
+        return {
+            vol.Required(
+                CONF_USERNAME,
+                default=entry.get(CONF_USERNAME),
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(
+                    type=selector.TextSelectorType.EMAIL, autocomplete="username"
+                )
+            ),
+            vol.Required(
+                CONF_PASSWORD,
+                default=entry.get(CONF_PASSWORD),
+            ): selector.TextSelector(
+                selector.TextSelectorConfig(
+                    type=selector.TextSelectorType.PASSWORD,
+                    autocomplete="current-password",
+                ),
+            ),
+            vol.Required(
+                CONF_COUNTRY_CODE,
+                default=entry.get(CONF_COUNTRY_CODE) or self.hass.config.country,
+            ): selector.CountrySelector(
+                selector.CountrySelectorConfig(),
+            ),
+            vol.Required(
+                ACCEPT_TERMS,
+                default=entry.get(ACCEPT_TERMS, _ACCEPT_TERMS),
+            ): selector.BooleanSelector(),
+        }
 
 
 class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
@@ -317,8 +408,8 @@ async def get_options_schema(entry: dict | None = None) -> dict:
         ): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=list(api_client.API_CATEGORIES),
-                #mode="dropdown",
-                #mode="list",
+                # mode="dropdown",
+                # mode="list",
                 sort=False,
                 multiple=True,
                 translation_key=CONF_EXCLUDE,
@@ -352,7 +443,11 @@ async def get_options_schema(entry: dict | None = None) -> dict:
 
 
 async def async_check_and_remove_devices(
-    hass: HomeAssistant, user_input: dict, apidata: dict, excluded: set | None = None
+    hass: HomeAssistant,
+    user_input: dict,
+    apidata: dict,
+    excluded: set | None = None,
+    configured_user: str | None = None,
 ) -> config_entries.ConfigEntry | None:
     """Check if given user input with its initial apidata has shared devices with existing configuration.
 
@@ -387,6 +482,7 @@ async def async_check_and_remove_devices(
         # Subcategories for all managed Devices
         if {
             ApiCategories.device_auto_upgrade,
+            ApiCategories.device_tag,
         } & excluded:
             excluded = excluded | {
                 SolixDeviceType.SOLARBANK.value,
@@ -408,7 +504,10 @@ async def async_check_and_remove_devices(
                 username := str(user_input.get(CONF_USERNAME) or "").lower()
             ) and username != cfg_entry.unique_id:
                 # config entry of another account
-                if dev_entry.serial_number in apidata:
+                if (
+                    dev_entry.serial_number in apidata
+                    and configured_user != cfg_entry.unique_id
+                ):
                     return cfg_entry
             # device is registered for same account, check if still used in coordinator data or excluded and add to obsolete list for removal
             elif dev_entry.serial_number not in apidata or (
@@ -418,17 +517,18 @@ async def async_check_and_remove_devices(
             ):
                 obsolete_user_devs[dev_entry.id] = dev_entry.serial_number
 
-    # Remove the obsolete device entries
-    dev_registry = None
-    for dev_id, serial in obsolete_user_devs.items():
-        # ensure to obtain dev registry again if no longer available
-        if dev_registry is None:
-            dev_registry = dr.async_get(hass)
-        dev_registry.async_remove_device(dev_id)
-        # NOTE: removal of any underlying entities is handled by core
-        LOGGER.info(
-            "Removed device entry %s from registry for device %s due to excluded entities or unused device",
-            dev_id,
-            serial,
-        )
+    # Remove the obsolete device entries if not only checking for configured user during switch
+    if not configured_user:
+        dev_registry = None
+        for dev_id, serial in obsolete_user_devs.items():
+            # ensure to obtain dev registry again if no longer available
+            if dev_registry is None:
+                dev_registry = dr.async_get(hass)
+            dev_registry.async_remove_device(dev_id)
+            # NOTE: removal of any underlying entities is handled by core
+            LOGGER.info(
+                "Removed device entry %s from registry for device %s due to excluded entities or unused device",
+                dev_id,
+                serial,
+            )
     return None

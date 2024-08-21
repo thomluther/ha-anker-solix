@@ -4,6 +4,7 @@
             "options": {
                 "site_price": "Valeurs de prix du système",
                 "device_auto_upgrade": "Mises à jour automatiques",
+                "device_tag": "Étiquettes des appareils",
                 "solarbank_cutoff": "Valeurs de réserve de Solarbank",
                 "solarbank_fittings": "Accessoires de Solarbank",
                 "solarbank_solar_info": "Info onduleur de Solarbank",
@@ -18,7 +19,7 @@
                 "powerpanel": "Panneaux électriques",
                 "powercooler": "Refroidisseur d'électricité",
                 "smartmeter": "Compteur intelligent",
-                "smartplugs": "Prises intelligentes"
+                "smartplug": "Prises intelligentes"
             }
         },
         "weekday": {
@@ -37,6 +38,20 @@
         "step": {
             "user": {
                 "title": "Ajoutez vos appareils Anker Solix",
+                "description": "Entrez les identifiants de votre compte cloud Anker",
+                "data": {
+                    "username": "Nom d'utilisateur/e-mail",
+                    "password": "Mot de passe",
+                    "country_code": "Pays",
+                    "accept_terms": "Accepter les conditions générales d'utilisation de l'intégration"
+                },
+                "data_description": {
+                    "username": "Recommandation: créez un deuxième compte dans l'application Anker et partagez votre système avec le deuxième compte. Une utilisation parallèle du même compte dans cette intégration et dans l'application Anker n'est pas possible.",
+                    "accept_terms": "L'utilisateur supporte seul le risque d'une éventuelle perte de la garantie du fabricant ou de tout dommage causé par l'utilisation de l'intégration. Un consentement inclut automatiquement les mises à jour futures, qui peuvent étendre la fonctionnalité d'intégration.\nPlus d'informations : {terms_link}"
+                }
+            },
+            "reconfigure": {
+                "title": "Changez votre compte configuré",
                 "description": "Entrez les identifiants de votre compte cloud Anker",
                 "data": {
                     "username": "Nom d'utilisateur/e-mail",
@@ -79,7 +94,8 @@
             "unknown": "Une erreur inconnue s'est produite: {error_detail}"
         },
         "abort": {
-            "already_configured": "Ce compte est déjà configuré"
+            "already_configured": "Ce compte est déjà configuré",
+            "reconfig_successful": "Le compte de configuration a été modifié avec succès"
         }
     },
     "options": {
@@ -327,6 +343,15 @@
                         "name": "Bluetooth MAC"
                     }
                 }
+            },
+            "current_power": {
+                "name": "Puissance"
+            },
+            "tag": {
+                "name": "Étiquette"
+            },
+            "err_code": {
+                "name": "Code d'erreur"
             },
             "temperature": {
                 "name": "Température"

@@ -219,7 +219,7 @@ If you need more assistance on the topic, please have a look at the following ex
 [![Anker Solix - Home Assistant Integration & Energiedashboard](https://img.youtube.com/vi/i-ES4cgn3qk/mqdefault.jpg)](https://www.youtube.com/watch?v=i-ES4cgn3qk)
 
 Spoiler: Zero grid export with E1600 not possible?
-[It works better as originally expected with certain requirements and given limitations](https://github.com/thomluther/hacs-anker-solix/discussions/81).
+[It works better as originally expected with certain requirements while considering given limitations](https://github.com/thomluther/hacs-anker-solix/discussions/81).
 
 #### YouTube-Video "Anker SOLIX 2 Pro mit Home Assistant maximal nutzen" (🇩🇪)
 [![Anker SOLIX 2 Pro mit Home Assistant maximal nutzen](https://img.youtube.com/vi/XXN2ho367ZE/mqdefault.jpg)](https://www.youtube.com/watch?v=XXN2ho367ZE)

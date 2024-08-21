@@ -123,6 +123,15 @@
             "fittings": {
                 "default": "mdi:tools"
             },
+            "tag": {
+                "default": "mdi:tag-outline"
+            },
+            "err_code": {
+                "default": "mdi:alert-box",
+                "state": {
+                    "0": "mdi:checkbox-outline"
+                }
+            },
             "daily_discharge_energy": {
                 "default": "mdi:battery-minus-variant"
             },
