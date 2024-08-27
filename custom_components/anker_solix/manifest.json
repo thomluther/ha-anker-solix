@@ -7,14 +7,14 @@
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/thomluther/hacs-anker-solix",
+  "documentation": "https://github.com/thomluther/ha-anker-solix",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/thomluther/hacs-anker-solix/issues",
+  "issue_tracker": "https://github.com/thomluther/ha-anker-solix/issues",
   "requirements": [
     "aiohttp>=3.9.3",
     "aiofiles>=23.2.0",
     "cryptography>=3.4.8"
   ],
-  "version": "2.1.0"
+  "version": "2.1.1"
 }

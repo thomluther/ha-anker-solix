@@ -1,7 +1,7 @@
 """Custom integration to integrate anker_solix with Home Assistant.
 
 For more details about this integration, please refer to
-https://github.com/thomluther/hacs-anker-solix
+https://github.com/thomluther/ha-anker-solix
 """
 
 from __future__ import annotations

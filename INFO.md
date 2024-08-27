@@ -104,7 +104,7 @@ The data on the cloud which can be retrieved via the Api is typically refreshed 
 
 During each refresh interval, the power sensor values will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut off, auto-upgrade, schedule etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 30 seconds ago to avoid unnecessary Api traffic.
 
-The cloud Api also enforces a request limit but actual metrics for this limit are unknown. You may see the configuration entry flagged with an error, that may indicate 429: Too many requests. In that case, all entities may be unknown or show stale data until further Api requests are permitted. To avoid hitting the request limit, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second. Furthermore all energy statistic entities which started to get introduced with version 1.1.0 will be excluded from new configuration entries per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/hacs-anker-solix/discussions/32).
+The cloud Api also enforces a request limit but actual metrics for this limit are unknown. You may see the configuration entry flagged with an error, that may indicate 429: Too many requests. In that case, all entities may be unknown or show stale data until further Api requests are permitted. To avoid hitting the request limit, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second. Furthermore all energy statistic entities which started to get introduced with version 1.1.0 will be excluded from new configuration entries per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/ha-anker-solix/discussions/32).
 The energy statistics can be re-enabled by removing them from the exclusion list.
 The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after successful account authorization and before the first data collection is done. Excluded device or details categories can be reviewed and changed as needed. Device types of no interest can be excluded completely. Exclusion of specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
 
@@ -313,7 +313,7 @@ Meaningful automation ideas that might work for the Solarbank 1:
 
 ### Pro tips for home load automation with Solarbank 1
 
-If you are interested building your own automation for using the Solarbank 1 as surplus battery buffer without wasting generated solar energy to the grid unnecessarily, you may have a look to my [automation project that I documented in the discussions](https://github.com/thomluther/hacs-anker-solix/discussions/81).
+If you are interested building your own automation for using the Solarbank 1 as surplus battery buffer without wasting generated solar energy to the grid unnecessarily, you may have a look to my [automation project that I documented in the discussions](https://github.com/thomluther/ha-anker-solix/discussions/81).
 
 
 ### Home load automation considerations for Solarbank 2
@@ -730,15 +730,15 @@ Starting with version 2.0.0, a new service was added for the system total yield 
 If you like this project, please give it a star on [GitHub][anker-solix]
 ***
 
-[anker-solix]: https://github.com/thomluther/hacs-anker-solix
-[releases]: https://github.com/thomluther/hacs-anker-solix/releases
-[releases-shield]: https://img.shields.io/github/release/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[discussions]: https://github.com/thomluther/hacs-anker-solix/discussions
-[discussions-shield]: https://img.shields.io/github/discussions/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[anker-solix]: https://github.com/thomluther/ha-anker-solix
+[releases]: https://github.com/thomluther/ha-anker-solix/releases
+[releases-shield]: https://img.shields.io/github/release/thomluther/ha-anker-solix.svg?style=for-the-badge
+[discussions]: https://github.com/thomluther/ha-anker-solix/discussions
+[discussions-shield]: https://img.shields.io/github/discussions/thomluther/ha-anker-solix.svg?style=for-the-badge
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/badge/Licence-MIT-orange
-[license]: https://github.com/thomluther/hacs-anker-solix/blob/main/LICENSE
+[license]: https://github.com/thomluther/ha-anker-solix/blob/main/LICENSE
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
 [integration-img]: doc/integration.png

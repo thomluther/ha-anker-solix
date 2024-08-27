@@ -16,3 +16,5 @@ coverage.xml
 config/*
 !config/configuration.yaml
 **/authcache
+**/exports
+

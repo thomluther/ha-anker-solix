@@ -106,7 +106,7 @@ Or following procedure:
 1. Navigate to the "Integrations" tab.
 1. Click the three dots in the top-right corner and select "Custom Repositories."
 1. Add a new custom repository:
-   - **URL:** `https://github.com/thomluther/hacs-anker-solix`
+   - **URL:** `https://github.com/thomluther/ha-anker-solix`
    - **Category:** Integration
 1. Click "Save" and then click "Install" on the `Anker Solix` integration.
 
@@ -154,15 +154,15 @@ for the container or virtual environment where Home Assistant is being started. 
 
 ## Issues, Q&A and other discussions
 
-If you have a problem, [review existing issues or open a new issue](https://github.com/thomluther/hacs-anker-solix/issues) with detailed instructions describing the problem. You may need to enable Debug Output for your Integration configuration. Review your debug output before you post it. While sensitive login information is masked, your unique device information as returned from the Api is not masked (serial numbers, IDs etc). You may want to change that globally before providing a debug output.
+If you have a problem, [review existing issues or open a new issue](https://github.com/thomluther/ha-anker-solix/issues) with detailed instructions describing the problem. You may need to enable Debug Output for your Integration configuration. Review your debug output before you post it. While sensitive login information is masked, your unique device information as returned from the Api is not masked (serial numbers, IDs etc). You may want to change that globally before providing a debug output.
 
-If you have questions, observations, advises or want to share your experience, feel free to open a new [discussion topic](https://github.com/thomluther/hacs-anker-solix/discussions).
+If you have questions, observations, advises or want to share your experience, feel free to open a new [discussion topic](https://github.com/thomluther/ha-anker-solix/discussions).
 
 
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md).
-As a starter, you may want to add more [translations](https://github.com/thomluther/hacs-anker-solix/discussions/12) for your native language.
+As a starter, you may want to add more [translations](https://github.com/thomluther/ha-anker-solix/discussions/12) for your native language.
 
 
 ## Attribution
@@ -180,31 +180,31 @@ As a starter, you may want to add more [translations](https://github.com/thomlut
 If you like this project, please give it a star on [GitHub][anker-solix]
 ***
 
-[anker-solix]: https://github.com/thomluther/hacs-anker-solix
+[anker-solix]: https://github.com/thomluther/ha-anker-solix
 [anker-solix-api]: https://github.com/thomluther/anker-solix-api
-[releases]: https://github.com/thomluther/hacs-anker-solix/releases
-[releases-shield]: https://img.shields.io/github/release/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[issues]: https://github.com/thomluther/hacs-anker-solix/issues
-[issues-shield]: https://img.shields.io/github/issues/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[discussions]: https://github.com/thomluther/hacs-anker-solix/discussions
-[discussions-shield]: https://img.shields.io/github/discussions/thomluther/hacs-anker-solix.svg?style=for-the-badge
-[contributors]: https://github.com/thomluther/hacs-anker-solix/contributors
-[contributors-shield]: https://img.shields.io/github/contributors/thomluther/hacs-anker-solix.svg?style=for-the-badge
+[releases]: https://github.com/thomluther/ha-anker-solix/releases
+[releases-shield]: https://img.shields.io/github/release/thomluther/ha-anker-solix.svg?style=for-the-badge
+[issues]: https://github.com/thomluther/ha-anker-solix/issues
+[issues-shield]: https://img.shields.io/github/issues/thomluther/ha-anker-solix.svg?style=for-the-badge
+[discussions]: https://github.com/thomluther/ha-anker-solix/discussions
+[discussions-shield]: https://img.shields.io/github/discussions/thomluther/ha-anker-solix.svg?style=for-the-badge
+[contributors]: https://github.com/thomluther/ha-anker-solix/contributors
+[contributors-shield]: https://img.shields.io/github/contributors/thomluther/ha-anker-solix.svg?style=for-the-badge
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
 [hacs-repo-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
-[hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=https%3A%2F%2Fgithub.com%2Fthomluther%2Fhacs-anker-solix&category=Integration
+[hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=https%3A%2F%2Fgithub.com%2Fthomluther%2Fha-anker-solix&category=Integration
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/badge/Licence-MIT-orange
-[license]: https://github.com/thomluther/hacs-anker-solix/blob/main/LICENSE
+[license]: https://github.com/thomluther/ha-anker-solix/blob/main/LICENSE
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
 
 ## Additional Resources
 
 - [Usage instructions and configuration of the integration](INFO.md)
-- [Possibilities to integrate the Solarbank into your Energy Dashboard](https://github.com/thomluther/hacs-anker-solix/discussions/16)
-- [Surplus charge automation for Solarbank E1600 (1st generation)](https://github.com/thomluther/hacs-anker-solix/discussions/81)
-- [How to monitor Solarbank battery efficiency and health](https://github.com/thomluther/hacs-anker-solix/discussions/109)
+- [Possibilities to integrate the Solarbank into your Energy Dashboard](https://github.com/thomluther/ha-anker-solix/discussions/16)
+- [Surplus charge automation for Solarbank E1600 (1st generation)](https://github.com/thomluther/ha-anker-solix/discussions/81)
+- [How to monitor Solarbank battery efficiency and health](https://github.com/thomluther/ha-anker-solix/discussions/109)
 
 If you need more assistance on the topic, please have a look at the following external resources:
 
@@ -219,7 +219,7 @@ If you need more assistance on the topic, please have a look at the following ex
 [![Anker Solix - Home Assistant Integration & Energiedashboard](https://img.youtube.com/vi/i-ES4cgn3qk/mqdefault.jpg)](https://www.youtube.com/watch?v=i-ES4cgn3qk)
 
 Spoiler: Zero grid export with E1600 not possible?
-[It works better as originally expected with certain requirements while considering given limitations](https://github.com/thomluther/hacs-anker-solix/discussions/81).
+[It works better as originally expected with certain requirements while considering given limitations](https://github.com/thomluther/ha-anker-solix/discussions/81).
 
 #### YouTube-Video "Anker SOLIX 2 Pro mit Home Assistant maximal nutzen" (🇩🇪)
 [![Anker SOLIX 2 Pro mit Home Assistant maximal nutzen](https://img.youtube.com/vi/XXN2ho367ZE/mqdefault.jpg)](https://www.youtube.com/watch?v=XXN2ho367ZE)
