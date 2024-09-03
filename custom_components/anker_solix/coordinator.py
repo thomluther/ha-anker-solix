@@ -25,6 +25,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
 
     config_entry: ConfigEntry
     client: AnkerSolixApiClient
+    skip_update: bool
 
     def __init__(
         self,
@@ -36,6 +37,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize."""
         self.config_entry = config_entry
         self.client = client
+        self.skip_update = False
 
         super().__init__(
             hass=hass,
@@ -47,6 +49,9 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Update data via library."""
         try:
+            if self.skip_update:
+                # return existing data if update via Api should be skipped during systems export randomization
+                return self.data
             return await self.client.async_get_data()
         except (
             AnkerSolixApiClientAuthenticationError,

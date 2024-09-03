@@ -640,6 +640,10 @@
             "name": "Demander les informations actuelles sur le système",
             "description": "Les informations réelles sur le système seront fournies en réponse à la demande de service."
         },
+        "export_systems": {
+            "name": "Exporter les informations api anonymes des systèmes et dispositifs accessibles dans des fichiers JSON zippés",
+            "description": "Les réponses Api actuelles pour votre système Anker Solix et les informations sur l'appareil seront anonymisées et enregistrées dans des fichiers JSON. Le dossier de sortie zippé sera renvoyé en tant que réponse. Ce service peut être exécuté pendant plusieurs secondes."
+        },
         "get_solarbank_schedule": {
             "name": "Demandez l'horaire actuel de solarbank",
             "description": "L'horaire effective de solarbank sera fournie en réponse à la demande de service"

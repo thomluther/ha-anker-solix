@@ -640,6 +640,10 @@
             "name": "Request actual system information",
             "description": "The actual system information will be provided as response to the service request"
         },
+        "export_systems": {
+            "name": "Export anonymized Api information of accessible systems and devices into zipped JSON files",
+            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This service can run multiple seconds."
+        },
         "get_solarbank_schedule": {
             "name": "Request the actual Solarbank schedule",
             "description": "The actual Solarbank schedule will be provided as response to the service request"

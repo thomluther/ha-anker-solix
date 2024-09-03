@@ -640,6 +640,10 @@
             "name": "Abfrage der aktuellen Systeminformationen",
             "description": "Die aktuelle Systeminformation wird als Antwort auf diesen Service geschickt"
         },
+        "export_systems": {
+            "name": "Export von anonymisierten Api Informationen aller zugänglichen Systeme und Geräte als gezippte JSON Dateien",
+            "description": "Die aktuellen Api Antworten deiner Anker Solix Systeme und Geräte werden anonymisiert in JSON Dateien gespeichert. Der gezippte Export Ordner wird als Antwort zurückgegeben. Dieser Service kann mehrere Sekunden dauern."
+        },
         "get_solarbank_schedule": {
             "name": "Abfrage des aktuellen Solarbank Zeitplans",
             "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diesen Service geschickt"

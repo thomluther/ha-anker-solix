@@ -31,7 +31,9 @@ from .const import (
     EXAMPLESFOLDER,
     INTERVALMULT,
     LOGGER,
+    REGISTERED_EXCLUDES,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
+    SERVICE_EXPORT_SYSTEMS,
     SERVICE_GET_SOLARBANK_SCHEDULE,
     SERVICE_GET_SYSTEM_INFO,
     SERVICE_SET_SOLARBANK_SCHEDULE,
@@ -57,6 +59,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up this integration using UI."""
     hass.data.setdefault(DOMAIN, {})
     username = entry.data.get(CONF_USERNAME)
+    excludes = entry.options.get(CONF_EXCLUDE, [])
+    registered_excludes = entry.options.get(REGISTERED_EXCLUDES, [])
     coordinator = AnkerSolixDataUpdateCoordinator(
         hass=hass,
         client=api_client.AnkerSolixApiClient(
@@ -86,13 +90,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Registers update listener to update config entry when options are updated.
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
-    # check again if config shares devices with another config and also remove orphaned devices no longer contained in actual api data or excluded
+    # check again if config shares devices with another config and also remove orphaned devices no longer contained in actual api data
+    # If additional excluded categories are found, the affected devices must also be removed
     # This is run upon reloads or config option changes
     if shared_cfg := await async_check_and_remove_devices(
         hass=hass,
         user_input=entry.data,
         apidata=coordinator.data,
-        excluded=set(entry.options.get(CONF_EXCLUDE, [])),
+        excluded=set(excludes) - set(registered_excludes),
     ):
         # device is already registered for another account, abort configuration
         entry.async_cancel_retry_setup()
@@ -112,6 +117,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create an entry in the hass object with the coordinator
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    # Update registered excludes in config entry to compare changes upon reloads
+    hass.config_entries.async_update_entry(
+        entry=entry,
+        options=entry.options.copy()
+        | {REGISTERED_EXCLUDES: list(excludes)},
+    )
+
     # forward to platform to create entities
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -123,15 +135,15 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     do_reload = True
     if coordinator and coordinator.client:
-        testmode = entry.options.get(TESTMODE,False)
-        testfolder = entry.options.get(TESTFOLDER,"")
+        testmode = entry.options.get(TESTMODE, False)
+        testfolder = entry.options.get(TESTFOLDER, "")
         excluded = entry.options.get(CONF_EXCLUDE) or []
         # Check if option change does not require reload when only timeout or interval was changed
         if (
             testmode == coordinator.client.testmode()
             and (
-                not testmode or
-                os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
+                not testmode
+                or os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
                 == coordinator.client.api.testDir()
             )
             and set(excluded) == set(coordinator.client.exclude_categories)
@@ -164,6 +176,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # unregister services if no config remains
     if not hass.data[DOMAIN]:
         hass.services.async_remove(DOMAIN, SERVICE_GET_SYSTEM_INFO)
+        hass.services.async_remove(DOMAIN, SERVICE_EXPORT_SYSTEMS)
         hass.services.async_remove(DOMAIN, SERVICE_GET_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_CLEAR_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_SET_SOLARBANK_SCHEDULE)

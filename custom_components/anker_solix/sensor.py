@@ -6,16 +6,18 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections.abc import Callable
 from contextlib import suppress
+import logging
 import os
 from random import randrange, choice
 from typing import Any
+
+import urllib.parse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
 import json
 
 from .config_flow import _SCAN_INTERVAL_MIN
-from .solixapi.apitypes import SolixParmType
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -47,10 +49,12 @@ from .const import (
     LOGGER,
     ATTRIBUTION,
     CREATE_ALL_ENTITIES,
+    EXPORTFOLDER,
     TEST_NUMBERVARIANCE,
     LAST_PERIOD,
     LAST_RESET,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
+    SERVICE_EXPORT_SYSTEMS,
     SERVICE_GET_SOLARBANK_SCHEDULE,
     SERVICE_GET_SYSTEM_INFO,
     SERVICE_SET_SOLARBANK_SCHEDULE,
@@ -68,6 +72,7 @@ from .const import (
     CONF_SKIP_INVALID,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
+from .solixapi import export
 from .solixapi.apitypes import (
     ApiCategories,
     SmartmeterStatus,
@@ -75,6 +80,7 @@ from .solixapi.apitypes import (
     SolarbankPowerMode,
     SolixDeviceStatus,
     SolixDeviceType,
+    SolixParmType,
     SolarbankTimeslot,
     Solarbank2Timeslot,
 )
@@ -1190,6 +1196,13 @@ async def async_setup_entry(
         supports_response=SupportsResponse.ONLY,
     )
     platform.async_register_entity_service(
+        name=SERVICE_EXPORT_SYSTEMS,
+        schema=SOLIX_ENTITY_SCHEMA,
+        func=SERVICE_EXPORT_SYSTEMS,
+        required_features=[AnkerSolixEntityFeature.SYSTEM_INFO],
+        supports_response=SupportsResponse.ONLY,
+    )
+    platform.async_register_entity_service(
         name=SERVICE_GET_SOLARBANK_SCHEDULE,
         schema=SOLIX_ENTITY_SCHEMA,
         func=SERVICE_GET_SOLARBANK_SCHEDULE,
@@ -1442,6 +1455,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         )
 
     @callback
+    async def export_systems(self, **kwargs: Any) -> None:
+        """Export the actual api responses for accessible systems and devices into zipped JSON files."""
+        return await self._solix_system_service(
+            service_name=SERVICE_EXPORT_SYSTEMS, **kwargs
+        )
+
+    @callback
     async def get_solarbank_schedule(self, **kwargs: Any) -> None:
         """Get the active solarbank schedule from the api."""
         return await self._solarbank_schedule_service(
@@ -1489,7 +1509,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             SERVICE_GET_SYSTEM_INFO
         ]:
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                f"{self.entity_id} cannot be used for requested service while running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -1510,16 +1530,36 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 )
                 return {"system_info": result}
 
-            else:  # noqa: RET505
-                raise ServiceValidationError(
-                    f"The entity {self.entity_id} does not support the service {service_name}",
-                    translation_domain=DOMAIN,
-                    translation_key="service_not_supported",
-                    translation_placeholders={
-                        "entity": self.entity_id,
-                        "service": service_name,
-                    },
+            if service_name in [SERVICE_EXPORT_SYSTEMS]:
+                LOGGER.debug("%s service will be applied", service_name)
+                exportlogger: logging.Logger = logging.getLogger("anker_solix_export")
+                exportlogger.setLevel(logging.DEBUG)
+                # disable updates via coordinator while using Api client and caches for randomized system export
+                self.coordinator.skip_update = True
+                myexport = export.AnkerSolixApiExport(
+                    client=self.coordinator.client.api,
+                    logger=exportlogger,
                 )
+                wwwroot = os.path.join(self.coordinator.hass.config.config_dir, "www")
+                exportpath: str = os.path.join(wwwroot, "community", DOMAIN, EXPORTFOLDER)
+                if await myexport.export_data(export_path=exportpath):
+                    # convert path to public available url folder and filename
+                    result = urllib.parse.quote(myexport.zipfilename.replace(wwwroot, AnkerSolixPicturePath.LOCALPATH))
+                else:
+                    result = None
+                # re-enable updates via coordinator
+                self.coordinator.skip_update = False
+                return {"export_filename": result}
+
+            raise ServiceValidationError(
+                f"The entity {self.entity_id} does not support the service {service_name}",
+                translation_domain=DOMAIN,
+                translation_key="service_not_supported",
+                translation_placeholders={
+                    "entity": self.entity_id,
+                    "service": service_name,
+                },
+            )
         return None
 
     async def _solarbank_schedule_service(  # noqa: C901
@@ -1580,9 +1620,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         dev_load = kwargs.get(DEVICE_LOAD)
                         if dev_load == cv.ENTITY_MATCH_NONE:
                             dev_load = None
-                        export = kwargs.get(ALLOW_EXPORT)
-                        if export == cv.ENTITY_MATCH_NONE:
-                            export = None
+                        allow_export = kwargs.get(ALLOW_EXPORT)
+                        if allow_export == cv.ENTITY_MATCH_NONE:
+                            allow_export = None
                         prio = kwargs.get(CHARGE_PRIORITY_LIMIT)
                         if prio == cv.ENTITY_MATCH_NONE:
                             prio = None
@@ -1670,7 +1710,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 end_time=end_time,
                                 appliance_load=load,
                                 device_load=dev_load,
-                                allow_export=export,
+                                allow_export=allow_export,
                                 charge_priority_limit=prio,
                             )
                             if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
