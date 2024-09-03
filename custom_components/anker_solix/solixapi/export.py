@@ -277,6 +277,58 @@ class AnkerSolixApiExport:
                     json=payload,
                 ),
             )
+            self._logger.info("Exporting third platform list...")
+            self._logger.debug(
+                "%s %s --> %s",
+                method := "post",
+                endpoint := api.API_ENDPOINTS["third_platform_list"],
+                filename := "third_platform_list.json",
+            )
+            payload = {}
+            await self._export(
+                os.path.join(self.export_path, filename),
+                await self.client.request(
+                    method,
+                    endpoint,
+                    json=payload,
+                ),
+            )
+            self._logger.info("Get token for user account...")
+            self._logger.debug(
+                "%s %s --> %s",
+                method := "post",
+                endpoint := api.API_ENDPOINTS["get_token_by_userid"],
+                filename := "None",
+            )
+            payload = {}
+            token = (
+                (
+                    await self.client.request(
+                        method,
+                        endpoint,
+                        json=payload,
+                    )
+                    or {}
+                )
+                .get("data", {})
+                .get("token","")
+            )
+            self._logger.info("Get Shelly status with token...")
+            self._logger.debug(
+                "%s %s --> %s",
+                method := "post",
+                endpoint := api.API_ENDPOINTS["get_shelly_status"],
+                filename := "shelly_status.json",
+            )
+            payload = {"token": token}
+            await self._export(
+                os.path.join(self.export_path, filename),
+                await self.client.request(
+                    method,
+                    endpoint,
+                    json=payload,
+                ),
+            )
 
             # loop through all found sites
             for siteId, site in self.client.sites.items():
@@ -1071,12 +1123,8 @@ class AnkerSolixApiExport:
                     "Folder %s contains the randomized JSON files. Pls check and update fields that may contain unrecognized personalized data.",
                     self.export_path,
                 )
-                self._logger.info(
-                    "Following trace or site IDs, SNs and MAC addresses have been randomized in files (from -> to):"
-                )
-                self._logger.info(json.dumps(self._randomdata, indent=2))
             else:
-                self._logger.info(
+                self._logger.warning(
                     "Folder %s contains the JSON files with personalized data.",
                     self.export_path,
                 )
@@ -1272,3 +1320,10 @@ class AnkerSolixApiExport:
                 err,
             )
         return
+
+    def get_random_mapping(
+        self,
+    ) -> dict[str, str]:
+        """Get dict of randomized data mapping."""
+
+        return self._randomdata

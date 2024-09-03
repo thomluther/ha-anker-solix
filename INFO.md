@@ -133,12 +133,12 @@ Starting with version 1.2.0, a change in the exclusion list will completely remo
 The integration will setup the entities with unique IDs based on device serials or a combination of serial numbers. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. While the entity history is not lost, it implies that you cannot configure different accounts at the same time when they share a system. Otherwise, it would cause HA setup errors because of non unique entities. Therefore, new integration configurations are validated and not allowed when they share systems or devices with an active configuration.
 Up to release 2.1.0, when you wanted to switch between your main account to the shared account, you had to delete first the active configuration and then create a new configuration with the other account. When the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured recorder interval is over. The default HA recorder history interval is 10 days.
 
-Starting with HA 2024.04, there is a new option to reconfigure an active integration configuration. This reconfiguration capability has been implemented with release 2.1.0 of this integration and allows a simplified direct account reconfiguration from the integration's menu as shown in following example:
+Starting with HA 2024.04, there is a new option to reconfigure an active integration configuration. This reconfiguration capability has been implemented with release 2.1.0 of this integration and allows a simplified, direct account reconfiguration from the integration's menu as shown in following example:
 ![Reconfigure][reconfigure-img]
 
 **Note:**
 
-While changing your active configuration to another account, the same actions and validations will still be performed in background. Switching to another account that shares any system or device with any active configuration except the modified one is not allowed. Once the configuration change is confirmed for the new or same account, the active devices and entities will be removed and recreated to adjust for the manageable entities of that modified account.
+While changing your active configuration to another account, the same actions and validations will be performed in background as via configuration entry deletion and re-creation. Using another account that shares any system or device with any active configuration except the modified one is not allowed. Once the configuration change is confirmed for the new or same account, all devices and entities will be unregistered and therefore removed, and afterwards recreated to adjust for the manageable entities of that modified account. Confirming a reconfiguration to the same account can therefore be used as workaround to clear orphaned entities which may occur, when you recreate or reconfigure your power systems in the Anker app or change alias names for existing devices, since that alias name is used for automated entity_id generation.
 
 
 ## How to create a second Anker Power account
@@ -721,6 +721,15 @@ In order to run the script interactively from the dashboard, you just need to ad
 Starting with version 2.0.0, a new service was added for the system total yield entity in order to query the overall system information from the cloud Api, which contains the data that is presented on the Anker App home page screen. This data is used by the integration to represent most but not all of the entities. It may be helpful to debug what values are actually available on the Api cloud at the time requesting them. Following is an example screenshot showing only the top of the response:
 
 ![Get system info service][get-system-info-service-img]
+
+### Export systems service
+
+Starting with version 2.1.2, a new service was added to simplify a complete, anonymized export of Api information available from the configured account. The Api responses will be saved in JSON files and the folder will be zipped under `www/community/anker_solix/exports`. The service response field `export_filename` will provide the zipped filename url path as response to the service. This allows easy download from your HA instance through your browser.
+
+**Notes:**
+- This service will execute a couple of Api queries and run 10 or more seconds
+- There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
+- The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file
 
 
 ## Showing Your Appreciation
