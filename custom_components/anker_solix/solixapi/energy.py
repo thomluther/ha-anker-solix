@@ -1,9 +1,9 @@
 """Anker Power/Solix Cloud API class energy related methods."""
 
 from datetime import datetime, timedelta
-import os
+from pathlib import Path
 
-from .apitypes import API_ENDPOINTS, SolixDeviceType
+from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType
 
 
 async def energy_daily(  # noqa: C901
@@ -41,10 +41,8 @@ async def energy_daily(  # noqa: C901
         if fromFile:
             resp = (
                 await self._loadFromFile(
-                    os.path.join(
-                        self._testdir,
-                        f"energy_solarbank_{siteId}.json",
-                    )
+                    Path(self._testdir)
+                    / f"{API_FILEPREFIXES['energy_solarbank']}_{siteId}.json"
                 )
             ).get("data", {})
         else:
@@ -132,10 +130,8 @@ async def energy_daily(  # noqa: C901
         if fromFile:
             resp = (
                 await self._loadFromFile(
-                    os.path.join(
-                        self._testdir,
-                        f"energy_home_usage_{siteId}.json",
-                    )
+                    Path(self._testdir)
+                    / f"{API_FILEPREFIXES['energy_home_usage']}_{siteId}.json"
                 )
             ).get("data", {})
         else:
@@ -224,10 +220,8 @@ async def energy_daily(  # noqa: C901
         if fromFile:
             resp = (
                 await self._loadFromFile(
-                    os.path.join(
-                        self._testdir,
-                        f"energy_grid_{siteId}.json",
-                    )
+                    Path(self._testdir)
+                    / f"{API_FILEPREFIXES['energy_grid']}_{siteId}.json"
                 )
             ).get("data", {})
         else:
@@ -277,10 +271,8 @@ async def energy_daily(  # noqa: C901
                 if fromFile:
                     resp = (
                         await self._loadFromFile(
-                            os.path.join(
-                                self._testdir,
-                                f"energy_solar_production_pv{ch}_{siteId}.json",
-                            )
+                            Path(self._testdir)
+                            / f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{siteId}.json"
                         )
                     ).get("data") or {}
                 else:
@@ -314,10 +306,8 @@ async def energy_daily(  # noqa: C901
     if fromFile:
         resp = (
             await self._loadFromFile(
-                os.path.join(
-                    self._testdir,
-                    f"energy_solar_production_{siteId}.json",
-                )
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['energy_solar_production']}_{siteId}.json"
             )
         ).get("data", {})
     else:

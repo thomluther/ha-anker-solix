@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from collections.abc import Callable
 from contextlib import suppress
 import logging
-import os
+from pathlib import Path
 from random import randrange, choice
 from typing import Any
 
@@ -443,7 +443,9 @@ DEVICE_SENSORS = [
         key="tag",
         translation_key="tag",
         json_key="tag",
-        exclude_fn=lambda s, d: not ({d.get("type")} - s and {ApiCategories.device_tag} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s and {ApiCategories.device_tag} - s
+        ),
         check_invalid=True,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
@@ -1274,9 +1276,14 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         self.entity_type = entity_type
         self._attribute_name = description.key
         self._attr_unique_id = (f"{context}_{description.key}").lower()
-        wwwroot = os.path.join(self.coordinator.hass.config.config_dir, "www")
-        if description.picture_path and os.path.isfile(
-            description.picture_path.replace(AnkerSolixPicturePath.LOCALPATH, wwwroot)
+        wwwroot = str(Path(self.coordinator.hass.config.config_dir) / "www")
+        if (
+            description.picture_path
+            and Path(
+                description.picture_path.replace(
+                    AnkerSolixPicturePath.LOCALPATH, wwwroot
+                )
+            ).is_file()
         ):
             self._attr_entity_picture = description.picture_path
         self._attr_extra_state_attributes = None
@@ -1302,10 +1309,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 ) and hasattr(AnkerSolixPicturePath, pn):
                     self._attr_entity_picture = getattr(AnkerSolixPicturePath, pn)
             # disable picture again if path does not exist to allow display of icons alternatively
-            if self._attr_entity_picture and not os.path.isfile(
-                self._attr_entity_picture.replace(
-                    AnkerSolixPicturePath.LOCALPATH, wwwroot
-                )
+            if (
+                self._attr_entity_picture
+                and not Path(
+                    self._attr_entity_picture.replace(
+                        AnkerSolixPicturePath.LOCALPATH, wwwroot
+                    )
+                ).is_file()
             ):
                 self._attr_entity_picture = None
 
@@ -1314,9 +1324,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             data = (coordinator.data.get(self._context_base, {})).get("site_info", {})
             self._attr_device_info = get_AnkerSolixSystemInfo(data, self._context_base)
             # add service attribute for managble sites
-            self._attr_supported_features: AnkerSolixEntityFeature = (
-                description.feature
-            )
+            self._attr_supported_features: AnkerSolixEntityFeature = description.feature
 
         self._native_value = None
         self._assumed_state = False
@@ -1489,9 +1497,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             service_name=SERVICE_UPDATE_SOLARBANK_SCHEDULE, **kwargs
         )
 
-    async def _solix_system_service(
-        self, service_name: str, **kwargs: Any
-    ) -> None:
+    async def _solix_system_service(self, service_name: str, **kwargs: Any) -> None:
         """Execute the defined solarbank schedule service."""
         # Raise alerts to frontend
         if not (self.supported_features & AnkerSolixEntityFeature.SYSTEM_INFO):
@@ -1523,10 +1529,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         ):
             if service_name in [SERVICE_GET_SYSTEM_INFO]:
                 LOGGER.debug("%s service will be applied", service_name)
-                result = (await self.coordinator.client.api.get_scene_info(
-                        siteId=self._context_base,
-                        fromFile=self.coordinator.client.testmode(),
-                    )
+                result = await self.coordinator.client.api.get_scene_info(
+                    siteId=self._context_base,
+                    fromFile=self.coordinator.client.testmode(),
                 )
                 return {"system_info": result}
 
@@ -1540,11 +1545,17 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     client=self.coordinator.client.api,
                     logger=exportlogger,
                 )
-                wwwroot = os.path.join(self.coordinator.hass.config.config_dir, "www")
-                exportpath: str = os.path.join(wwwroot, "community", DOMAIN, EXPORTFOLDER)
+                wwwroot = str(Path(self.coordinator.hass.config.config_dir) / "www")
+                exportpath: str = str(
+                    Path(wwwroot) / "community" / DOMAIN / EXPORTFOLDER
+                )
                 if await myexport.export_data(export_path=exportpath):
                     # convert path to public available url folder and filename
-                    result = urllib.parse.quote(myexport.zipfilename.replace(wwwroot, AnkerSolixPicturePath.LOCALPATH))
+                    result = urllib.parse.quote(
+                        myexport.zipfilename.replace(
+                            wwwroot, AnkerSolixPicturePath.LOCALPATH
+                        )
+                    )
                 else:
                     result = None
                 # re-enable updates via coordinator
@@ -1600,13 +1611,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             data: dict = self.coordinator.data.get(self._context_base)
             generation: int = int(data.get("generation") or 0)
             siteId = data.get("site_id") or ""
-            if (
-                service_name
-                in [
-                    SERVICE_SET_SOLARBANK_SCHEDULE,
-                    SERVICE_UPDATE_SOLARBANK_SCHEDULE,
-                ]
-            ):
+            if service_name in [
+                SERVICE_SET_SOLARBANK_SCHEDULE,
+                SERVICE_UPDATE_SOLARBANK_SCHEDULE,
+            ]:
                 if START_TIME in kwargs and END_TIME in kwargs:
                     if (start_time := kwargs.get(START_TIME)) < (
                         end_time := kwargs.get(END_TIME)
@@ -1687,18 +1695,26 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 weekdays=set(weekdays) if weekdays else None,
                             )
                             if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
-                                result = await self.coordinator.client.api.set_sb2_home_load(
-                                    siteId=siteId,
-                                    deviceSn=self._context_base,
-                                    set_slot=slot,
-                                    test_schedule=data.get("schedule") or {} if self.coordinator.client.testmode() else None
+                                result = (
+                                    await self.coordinator.client.api.set_sb2_home_load(
+                                        siteId=siteId,
+                                        deviceSn=self._context_base,
+                                        set_slot=slot,
+                                        test_schedule=data.get("schedule") or {}
+                                        if self.coordinator.client.testmode()
+                                        else None,
+                                    )
                                 )
                             elif service_name == SERVICE_UPDATE_SOLARBANK_SCHEDULE:
-                                result = await self.coordinator.client.api.set_sb2_home_load(
-                                    siteId=siteId,
-                                    deviceSn=self._context_base,
-                                    insert_slot=slot,
-                                    test_schedule=data.get("schedule") or {} if self.coordinator.client.testmode() else None
+                                result = (
+                                    await self.coordinator.client.api.set_sb2_home_load(
+                                        siteId=siteId,
+                                        deviceSn=self._context_base,
+                                        insert_slot=slot,
+                                        test_schedule=data.get("schedule") or {}
+                                        if self.coordinator.client.testmode()
+                                        else None,
+                                    )
                                 )
                             else:
                                 result = False
@@ -1714,27 +1730,38 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 charge_priority_limit=prio,
                             )
                             if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
-                                result = await self.coordinator.client.api.set_home_load(
-                                    siteId=siteId,
-                                    deviceSn=self._context_base,
-                                    set_slot=slot,
-                                    test_schedule=data.get("schedule") or {} if self.coordinator.client.testmode() else None
+                                result = (
+                                    await self.coordinator.client.api.set_home_load(
+                                        siteId=siteId,
+                                        deviceSn=self._context_base,
+                                        set_slot=slot,
+                                        test_schedule=data.get("schedule") or {}
+                                        if self.coordinator.client.testmode()
+                                        else None,
+                                    )
                                 )
                             elif service_name == SERVICE_UPDATE_SOLARBANK_SCHEDULE:
-                                result = await self.coordinator.client.api.set_home_load(
-                                    siteId=siteId,
-                                    deviceSn=self._context_base,
-                                    insert_slot=slot,
-                                    test_schedule=data.get("schedule") or {} if self.coordinator.client.testmode() else None
+                                result = (
+                                    await self.coordinator.client.api.set_home_load(
+                                        siteId=siteId,
+                                        deviceSn=self._context_base,
+                                        insert_slot=slot,
+                                        test_schedule=data.get("schedule") or {}
+                                        if self.coordinator.client.testmode()
+                                        else None,
+                                    )
                                 )
                             else:
                                 result = False
 
                         # log resulting schedule if testmode returned dict
-                        if isinstance(result,dict) and self.coordinator.client.testmode():
+                        if (
+                            isinstance(result, dict)
+                            and self.coordinator.client.testmode()
+                        ):
                             LOGGER.info(
                                 "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                                json.dumps(result,indent=2),
+                                json.dumps(result, indent=2),
                             )
                         # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                         # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
@@ -1774,7 +1801,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 LOGGER.debug("%s service will be applied", service_name)
                 if generation > 1 and (schedule := data.get("schedule") or {}):
                     # get SB2 schedule
-                    result = (await self.coordinator.client.api.get_device_parm(
+                    result = (
+                        await self.coordinator.client.api.get_device_parm(
                             siteId=siteId,
                             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
                             deviceSn=self._context_base,
@@ -1782,11 +1810,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         )
                     ).get("param_data")
                 else:
-                    result = (await self.coordinator.client.api.get_device_load(
-                        siteId=siteId,
-                        deviceSn=self._context_base,
-                        fromFile=self.coordinator.client.testmode(),
-                    )).get("home_load_data")
+                    result = (
+                        await self.coordinator.client.api.get_device_load(
+                            siteId=siteId,
+                            deviceSn=self._context_base,
+                            fromFile=self.coordinator.client.testmode(),
+                        )
+                    ).get("home_load_data")
                 # trigger coordinator update with api dictionary data
                 await self.coordinator.async_refresh_data_from_apidict()
                 return {"schedule": result}
@@ -1795,7 +1825,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 LOGGER.debug("%s service will be applied", service_name)
                 if generation > 1:
                     # Clear SB2 schedule
-                    if (schedule := data.get("schedule") or {}):
+                    if schedule := data.get("schedule") or {}:
                         weekdays = kwargs.get(WEEK_DAYS)
                         if weekdays == cv.ENTITY_MATCH_NONE:
                             weekdays = None
@@ -1807,13 +1837,18 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 end_time=None,
                                 weekdays=set(weekdays) if weekdays else None,
                             ),
-                            test_schedule=schedule if self.coordinator.client.testmode() else None
+                            test_schedule=schedule
+                            if self.coordinator.client.testmode()
+                            else None,
                         )
                         # log resulting schedule if testmode returned dict
-                        if isinstance(result,dict) and self.coordinator.client.testmode():
+                        if (
+                            isinstance(result, dict)
+                            and self.coordinator.client.testmode()
+                        ):
                             LOGGER.info(
                                 "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                                json.dumps(result,indent=2),
+                                json.dumps(result, indent=2),
                             )
                 else:
                     # clear SB 1 schedule
@@ -1821,7 +1856,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     if self.coordinator.client.testmode():
                         LOGGER.info(
                             "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                            json.dumps(schedule,indent=2),
+                            json.dumps(schedule, indent=2),
                         )
                     else:
                         await self.coordinator.client.api.set_device_parm(

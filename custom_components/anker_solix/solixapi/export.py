@@ -14,7 +14,7 @@ from functools import partial
 import json
 import logging
 import logging.handlers
-import os
+from pathlib import Path
 import queue
 import random
 import shutil
@@ -24,6 +24,7 @@ from typing import Any
 import aiofiles
 
 from . import api, errors
+from .apitypes import API_ENDPOINTS, API_FILEPREFIXES
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -62,19 +63,23 @@ class AnkerSolixApiExport:
 
     async def export_data(  # noqa: C901
         self,
-        export_path: str | None = None,
-        export_folder: str | None = None,
+        export_path: Path | str | None = None,
+        export_folder: Path | str | None = None,
         request_delay: float | None = None,
         randomized: bool = True,
         zipped: bool = True,
     ) -> bool:
         """Run main function to export account data."""
 
-        self.export_path = export_path
-        if not self.export_path:
+        if not export_path:
             # default to exports self.export_path in parent path of api library
-            self.export_path = os.path.join(os.path.dirname(__file__), "..", "exports")
-        self.export_folder = export_folder
+            self.export_path = Path(__file__).parent / ".." / "exports"
+        else:
+            self.export_path = Path(export_path)
+        if not export_folder:
+            self.export_folder = None
+        else:
+            self.export_folder = Path(export_folder)
         self.request_delay = (
             request_delay
             if isinstance(request_delay, int | float)
@@ -90,18 +95,16 @@ class AnkerSolixApiExport:
             if not self.client.nickname:
                 return False
             # avoid filesystem problems with * in user nicknames
-            self.export_folder = self.client.nickname.replace("*", "#")
+            self.export_folder = self.client.nickname.replace("*", "x")
         # complete path and ensure parent self.export_path for export exists
-        self.export_path = os.path.abspath(
-            os.path.join(self.export_path, self.export_folder)
-        )
+        self.export_path : Path = Path.resolve(Path(self.export_path) / self.export_folder)
         try:
             # clear export folder if it exists already
-            if os.path.exists(self.export_path):
+            if self.export_path.exists():
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(None, shutil.rmtree, self.export_path)
                 # shutil.rmtree(self.export_path)
-            os.makedirs(self.export_path, exist_ok=True)
+            Path(self.export_path).mkdir(parents=True, exist_ok=True)
         except OSError as err:
             self._logger.error(
                 "Unable clear or create export folder %s: %s", self.export_path, err
@@ -132,7 +135,7 @@ class AnkerSolixApiExport:
                 None,
                 partial(
                     logging.FileHandler,
-                    filename=os.path.join(self.export_path, "export.log"),
+                    filename=Path(self.export_path) / "export.log",
                 ),
             )
             # create a listener for messages on the queue and log them to the file handler
@@ -169,12 +172,12 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["homepage"],
-                filename := "homepage.json",
+                endpoint := API_ENDPOINTS["homepage"],
+                filename := f"{API_FILEPREFIXES['homepage']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -185,12 +188,12 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["site_list"],
-                filename := "site_list.json",
+                endpoint := API_ENDPOINTS["site_list"],
+                filename := f"{API_FILEPREFIXES['site_list']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -201,12 +204,12 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["bind_devices"],
-                filename := "bind_devices.json",
+                endpoint := API_ENDPOINTS["bind_devices"],
+                filename := f"{API_FILEPREFIXES['bind_devices']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -217,12 +220,12 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["user_devices"],
-                filename := "user_devices.json",
+                endpoint := API_ENDPOINTS["user_devices"],
+                filename := f"{API_FILEPREFIXES['user_devices']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -233,12 +236,12 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["charging_devices"],
-                filename := "charging_devices.json",
+                endpoint := API_ENDPOINTS["charging_devices"],
+                filename := f"{API_FILEPREFIXES['charging_devices']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -249,12 +252,12 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["get_auto_upgrade"],
-                filename := "auto_upgrade.json",
+                endpoint := API_ENDPOINTS["get_auto_upgrade"],
+                filename := f"{API_FILEPREFIXES['get_auto_upgrade']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -265,28 +268,73 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["get_config"],
-                filename := "config.json",
+                endpoint := API_ENDPOINTS["get_config"],
+                filename := f"{API_FILEPREFIXES['get_config']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
                     json=payload,
                 ),
             )
-            self._logger.info("Exporting third platform list...")
+            self._logger.info("Exporting supported sites, devices and accessories...")
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["third_platform_list"],
-                filename := "third_platform_list.json",
+                endpoint := API_ENDPOINTS["site_rules"],
+                filename := f"{API_FILEPREFIXES['site_rules']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
+                await self.client.request(
+                    method,
+                    endpoint,
+                    json=payload,
+                ),
+            )
+            self._logger.debug(
+                "%s %s --> %s",
+                method := "get",
+                endpoint := API_ENDPOINTS["get_product_categories"],
+                filename := f"{API_FILEPREFIXES['get_product_categories']}.json",
+            )
+            payload = {}
+            await self._export(
+                Path(self.export_path) / filename,
+                await self.client.request(
+                    method,
+                    endpoint,
+                    json=payload,
+                ),
+            )
+            self._logger.debug(
+                "%s %s --> %s",
+                method := "get",
+                endpoint := API_ENDPOINTS["get_product_accessories"],
+                filename := f"{API_FILEPREFIXES['get_product_accessories']}.json",
+            )
+            payload = {}
+            await self._export(
+                Path(self.export_path) / filename,
+                await self.client.request(
+                    method,
+                    endpoint,
+                    json=payload,
+                ),
+            )
+            self._logger.debug(
+                "%s %s --> %s",
+                method := "post",
+                endpoint := API_ENDPOINTS["get_third_platforms"],
+                filename := f"{API_FILEPREFIXES['get_third_platforms']}.json",
+            )
+            payload = {}
+            await self._export(
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -297,32 +345,31 @@ class AnkerSolixApiExport:
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["get_token_by_userid"],
-                filename := "None",
+                endpoint := API_ENDPOINTS["get_token_by_userid"],
+                filename := f"{API_FILEPREFIXES['get_token_by_userid']}.json",
             )
             payload = {}
-            token = (
-                (
-                    await self.client.request(
-                        method,
-                        endpoint,
-                        json=payload,
-                    )
-                    or {}
-                )
-                .get("data", {})
-                .get("token","")
+            response = await self.client.request(
+                method,
+                endpoint,
+                json=payload,
             )
+            await self._export(
+                Path(self.export_path) / filename,
+                response,
+            )
+
             self._logger.info("Get Shelly status with token...")
             self._logger.debug(
                 "%s %s --> %s",
                 method := "post",
-                endpoint := api.API_ENDPOINTS["get_shelly_status"],
-                filename := "shelly_status.json",
+                endpoint := API_ENDPOINTS["get_shelly_status"],
+                filename := f"{API_FILEPREFIXES['get_shelly_status']}.json",
             )
-            payload = {"token": token}
+            # use real token for query
+            payload = {"token": (response or {}).get("data", {}).get("token", "")}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -341,12 +388,13 @@ class AnkerSolixApiExport:
                 self._logger.debug(
                     "%s %s --> %s",
                     method := "post",
-                    endpoint := api.API_ENDPOINTS["scene_info"],
-                    filename := f"scene_{self._randomize(siteId,'site_id')}.json",
+                    endpoint := API_ENDPOINTS["scene_info"],
+                    filename
+                    := f"{API_FILEPREFIXES['scene_info']}_{self._randomize(siteId,'site_id')}.json",
                 )
                 payload = {"site_id": siteId}
                 await self._export(
-                    os.path.join(self.export_path, filename),
+                    Path(self.export_path) / filename,
                     await self.client.request(
                         method,
                         endpoint,
@@ -359,9 +407,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["site_detail"],
+                        endpoint := API_ENDPOINTS["site_detail"],
                         filename
-                        := f"site_detail_{self._randomize(siteId,'site_id')}.json",
+                        := f"{API_FILEPREFIXES['site_detail']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     if not admin:
                         self._logger.warning(
@@ -370,7 +418,7 @@ class AnkerSolixApiExport:
                     else:
                         payload = {"site_id": siteId}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -391,9 +439,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["wifi_list"],
+                        endpoint := API_ENDPOINTS["wifi_list"],
                         filename
-                        := f"wifi_list_{self._randomize(siteId,'site_id')}.json",
+                        := f"{API_FILEPREFIXES['wifi_list']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     if not admin:
                         self._logger.warning(
@@ -402,7 +450,7 @@ class AnkerSolixApiExport:
                     else:
                         payload = {"site_id": siteId}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -423,13 +471,13 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_installation"],
+                        endpoint := API_ENDPOINTS["get_installation"],
                         filename
-                        := f"installation_{self._randomize(siteId,'site_id')}.json",
+                        := f"{API_FILEPREFIXES['get_installation']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     payload = {"site_id": siteId}
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -450,8 +498,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_site_price"],
-                        filename := f"price_{self._randomize(siteId,'site_id')}.json",
+                        endpoint := API_ENDPOINTS["get_site_price"],
+                        filename
+                        := f"{API_FILEPREFIXES['get_site_price']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     if not admin:
                         self._logger.warning(
@@ -460,7 +509,7 @@ class AnkerSolixApiExport:
                     else:
                         payload = {"site_id": siteId}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -476,109 +525,49 @@ class AnkerSolixApiExport:
                         type(err),
                         err,
                     )
-                self._logger.info("Exporting device parameter type 4 settings...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := api.API_ENDPOINTS["get_device_parm"],
-                        filename
-                        := f"device_parm_4_{self._randomize(siteId,'site_id')}.json",
+                for parmtype in ["4", "6"]:
+                    self._logger.info(
+                        "Exporting device parameter type %s settings...", parmtype
                     )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
+                    try:
+                        self._logger.debug(
+                            "%s %s --> %s",
+                            method := "post",
+                            endpoint := API_ENDPOINTS["get_device_parm"],
+                            filename
+                            := f"{API_FILEPREFIXES['get_device_parm']}_{parmtype}_{self._randomize(siteId,'site_id')}.json",
                         )
-                    else:
-                        payload = {"site_id": siteId, "param_type": "4"}
-                        await self._export(
-                            os.path.join(self.export_path, filename),
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting device parameter type 6 settings...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := api.API_ENDPOINTS["get_device_parm"],
-                        filename
-                        := f"device_parm_6_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
+                        if not admin:
+                            self._logger.warning(
+                                "Query requires account of site owner: %s", endpoint
+                            )
+                        else:
+                            payload = {"site_id": siteId, "param_type": parmtype}
+                            await self._export(
+                                Path(self.export_path) / filename,
+                                await self.client.request(
+                                    method,
+                                    endpoint,
+                                    json=payload,
+                                ),
+                            )  # works only for site owners
+                    except errors.AnkerSolixError as err:
+                        self._logger.error(
+                            "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
+                            str(method).upper(),
+                            endpoint,
+                            str(payload).replace(siteId, "<siteId>"),
+                            type(err),
+                            err,
                         )
-                    else:
-                        payload = {"site_id": siteId, "param_type": "6"}
-                        await self._export(
-                            os.path.join(self.export_path, filename),
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting OTA update info...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := api.API_ENDPOINTS["get_ota_update"],
-                        filename := "ota_update.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
-                        )
-                    else:
-                        payload = {"device_sn": "", "insert_sn": ""}
-                        await self._export(
-                            os.path.join(self.export_path, filename),
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload),
-                        type(err),
-                        err,
-                    )
                 self._logger.info("Exporting site energy data for solarbank...")
                 try:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["energy_analysis"],
+                        endpoint := API_ENDPOINTS["energy_analysis"],
                         filename
-                        := f"energy_solarbank_{self._randomize(siteId,'site_id')}.json",
+                        := f"{API_FILEPREFIXES['energy_solarbank']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     payload = {
                         "site_id": siteId,
@@ -591,7 +580,7 @@ class AnkerSolixApiExport:
                         "end_time": datetime.today().strftime("%Y-%m-%d"),
                     }
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -612,9 +601,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["energy_analysis"],
+                        endpoint := API_ENDPOINTS["energy_analysis"],
                         filename
-                        := f"energy_solar_production_{self._randomize(siteId,'site_id')}.json",
+                        := f"{API_FILEPREFIXES['energy_solar_production']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     payload = {
                         "site_id": siteId,
@@ -627,7 +616,7 @@ class AnkerSolixApiExport:
                         "end_time": datetime.today().strftime("%Y-%m-%d"),
                     }
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -651,9 +640,9 @@ class AnkerSolixApiExport:
                         self._logger.debug(
                             "%s %s --> %s",
                             method := "post",
-                            endpoint := api.API_ENDPOINTS["energy_analysis"],
+                            endpoint := API_ENDPOINTS["energy_analysis"],
                             filename
-                            := f"energy_solar_production_pv{ch}_{self._randomize(siteId,'site_id')}.json",
+                            := f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{self._randomize(siteId,'site_id')}.json",
                         )
                         payload = {
                             "site_id": siteId,
@@ -680,7 +669,7 @@ class AnkerSolixApiExport:
                             )
                             break
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             data,
                         )  # works also for site members
                     except errors.AnkerSolixError as err:
@@ -702,9 +691,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["energy_analysis"],
+                        endpoint := API_ENDPOINTS["energy_analysis"],
                         filename
-                        := f"energy_home_usage_{self._randomize(siteId,'site_id')}.json",
+                        := f"{API_FILEPREFIXES['energy_home_usage']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     payload = {
                         "site_id": siteId,
@@ -717,7 +706,7 @@ class AnkerSolixApiExport:
                         "end_time": datetime.today().strftime("%Y-%m-%d"),
                     }
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -738,9 +727,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["energy_analysis"],
+                        endpoint := API_ENDPOINTS["energy_analysis"],
                         filename
-                        := f"energy_grid_{self._randomize(siteId,'site_id')}.json",
+                        := f"{API_FILEPREFIXES['energy_grid']}_{self._randomize(siteId,'site_id')}.json",
                     )
                     payload = {
                         "site_id": siteId,
@@ -753,7 +742,7 @@ class AnkerSolixApiExport:
                         "end_time": datetime.today().strftime("%Y-%m-%d"),
                     }
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -787,12 +776,13 @@ class AnkerSolixApiExport:
                         self._logger.debug(
                             "%s %s --> %s",
                             method := "post",
-                            endpoint := api.API_ENDPOINTS["solar_info"],
-                            filename := f"solar_info_{self._randomize(sn,'_sn')}.json",
+                            endpoint := API_ENDPOINTS["solar_info"],
+                            filename
+                            := f"{API_FILEPREFIXES['solar_info']}_{self._randomize(sn,'_sn')}.json",
                         )
                         payload = {"solarbank_sn": sn}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -818,13 +808,13 @@ class AnkerSolixApiExport:
                         self._logger.debug(
                             "%s %s --> %s",
                             method := "post",
-                            endpoint := api.API_ENDPOINTS["compatible_process"],
+                            endpoint := API_ENDPOINTS["compatible_process"],
                             filename
-                            := f"compatible_process_{self._randomize(sn,'_sn')}.json",
+                            := f"{API_FILEPREFIXES['compatible_process']}_{self._randomize(sn,'_sn')}.json",
                         )
                         payload = {"solarbank_sn": sn}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -848,8 +838,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_cutoff"],
-                        filename := f"power_cutoff_{self._randomize(sn,'_sn')}.json",
+                        endpoint := API_ENDPOINTS["get_cutoff"],
+                        filename
+                        := f"{API_FILEPREFIXES['get_cutoff']}_{self._randomize(sn,'_sn')}.json",
                     )
                     if not admin:
                         self._logger.warning(
@@ -858,7 +849,7 @@ class AnkerSolixApiExport:
                     else:
                         payload = {"site_id": siteId, "device_sn": sn}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -881,8 +872,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_device_fittings"],
-                        filename := f"device_fittings_{self._randomize(sn,'_sn')}.json",
+                        endpoint := API_ENDPOINTS["get_device_fittings"],
+                        filename
+                        := f"{API_FILEPREFIXES['get_device_fittings']}_{self._randomize(sn,'_sn')}.json",
                     )
                     if not admin:
                         self._logger.warning(
@@ -891,7 +883,7 @@ class AnkerSolixApiExport:
                     else:
                         payload = {"site_id": siteId, "device_sn": sn}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -914,8 +906,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_device_load"],
-                        filename := f"device_load_{self._randomize(sn,'_sn')}.json",
+                        endpoint := API_ENDPOINTS["get_device_load"],
+                        filename
+                        := f"{API_FILEPREFIXES['get_device_load']}_{self._randomize(sn,'_sn')}.json",
                     )
                     if not admin:
                         self._logger.warning(
@@ -924,7 +917,7 @@ class AnkerSolixApiExport:
                     else:
                         payload = {"site_id": siteId, "device_sn": sn}
                         await self._export(
-                            os.path.join(self.export_path, filename),
+                            Path(self.export_path) / filename,
                             await self.client.request(
                                 method,
                                 endpoint,
@@ -947,12 +940,13 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_ota_update"],
-                        filename := f"ota_update_{self._randomize(sn,'_sn')}.json",
+                        endpoint := API_ENDPOINTS["get_ota_update"],
+                        filename
+                        := f"{API_FILEPREFIXES['get_ota_update']}_{self._randomize(sn,'_sn')}.json",
                     )
                     payload = {"device_sn": sn, "insert_sn": ""}
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -975,13 +969,13 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_upgrade_record"],
+                        endpoint := API_ENDPOINTS["get_upgrade_record"],
                         filename
-                        := f"get_upgrade_record_{self._randomize(sn,'_sn')}.json",
+                        := f"{API_FILEPREFIXES['get_upgrade_record']}_1_{self._randomize(sn,'_sn')}.json",
                     )
                     payload = {"device_sn": sn, "type": 1}
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -1005,15 +999,16 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "%s %s --> %s",
                         method := "post",
-                        endpoint := api.API_ENDPOINTS["get_device_attributes"],
-                        filename := f"device_attrs_{self._randomize(sn,'_sn')}.json",
+                        endpoint := API_ENDPOINTS["get_device_attributes"],
+                        filename
+                        := f"{API_FILEPREFIXES['get_device_attributes']}_{self._randomize(sn,'_sn')}.json",
                     )
                     payload = {
                         "device_sn": sn,
                         "attributes": [],  # Not clear if empty attributes list will list all attributes if there are any
                     }
                     await self._export(
-                        os.path.join(self.export_path, filename),
+                        Path(self.export_path) / filename,
                         await self.client.request(
                             method,
                             endpoint,
@@ -1033,28 +1028,16 @@ class AnkerSolixApiExport:
                     )
 
             self._logger.info("")
-            self._logger.info("Exporting site rules...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := api.API_ENDPOINTS["site_rules"],
-                filename := "site_rules.json",
-            )
-            payload = {}
-            await self._export(
-                os.path.join(self.export_path, filename),
-                await self.client.request(method, endpoint, json=payload),
-            )
             self._logger.info("Exporting message unread status...")
             self._logger.debug(
                 "%s %s --> %s",
                 method := "get",
-                endpoint := api.API_ENDPOINTS["get_message_unread"],
-                filename := "message_unread.json",
+                endpoint := API_ENDPOINTS["get_message_unread"],
+                filename := f"{API_FILEPREFIXES['get_message_unread']}.json",
             )
             payload = {}
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 await self.client.request(
                     method,
                     endpoint,
@@ -1078,20 +1061,20 @@ class AnkerSolixApiExport:
             self._logger.info("Exporting Api sites cache from files...")
             self._logger.debug(
                 "Api sites cache --> %s",
-                filename := "api_sites.json",
+                filename := f"{API_FILEPREFIXES['api_sites']}.json",
             )
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 self.client.sites,
                 skip_randomize=True,
             )
             self._logger.info("Exporting Api devices cache from files...")
             self._logger.debug(
                 "Api devices cache --> %s",
-                filename := "api_devices.json",
+                filename := f"{API_FILEPREFIXES['api_devices']}.json",
             )
             await self._export(
-                os.path.join(self.export_path, filename),
+                Path(self.export_path) / filename,
                 self.client.devices,
                 skip_randomize=True,
             )
@@ -1131,10 +1114,9 @@ class AnkerSolixApiExport:
 
             # Optionally zip the output
             if self.zipped:
-                head_tail = os.path.split(self.export_path)
                 zipname = "_".join(
                     [
-                        os.path.join(head_tail[0], head_tail[1]),
+                        str(self.export_path),
                         datetime.now().strftime("%Y-%m-%d_%H%M"),
                     ]
                 )
@@ -1151,8 +1133,8 @@ class AnkerSolixApiExport:
                             shutil.make_archive,
                             base_name=zipname,
                             format="zip",
-                            root_dir=head_tail[0],
-                            base_dir=head_tail[1],
+                            root_dir=Path(self.export_path).parent,
+                            base_dir=Path(self.export_path).name,
                         ),
                     ),
                 )
@@ -1262,6 +1244,7 @@ class AnkerSolixApiExport:
                     "home_load_data",
                     "param_data",
                     "device_name",
+                    "token",
                 ]
             ) or k in ["sn"]:
                 data[k] = self._randomize(v, k)
@@ -1269,7 +1252,7 @@ class AnkerSolixApiExport:
 
     async def _export(
         self,
-        filename: str,
+        filename: Path | str,
         d: dict | None = None,
         skip_randomize: bool = False,
         randomkeys: bool = False,
@@ -1278,10 +1261,11 @@ class AnkerSolixApiExport:
 
         if not d:
             d = {}
+        filename = str(filename)
         if len(d) == 0:
             self._logger.warning(
                 "WARNING: File %s not saved because JSON is empty",
-                filename.replace(self.export_path, self.export_folder),
+                filename.replace(str(self.export_path), str(self.export_folder)),
             )
             return
         if self.randomized and not skip_randomize:
@@ -1311,12 +1295,12 @@ class AnkerSolixApiExport:
                 await file.write(json.dumps(d, indent=2))
                 self._logger.info(
                     "Saved JSON to file %s",
-                    filename.replace(self.export_path, self.export_folder),
+                    filename.replace(str(self.export_path), str(self.export_folder)),
                 )
         except OSError as err:
             self._logger.error(
                 "ERROR: Failed to save JSON to file %s: %s",
-                filename.replace(self.export_path, self.export_folder),
+                filename.replace(str(self.export_path), str(self.export_folder)),
                 err,
             )
         return

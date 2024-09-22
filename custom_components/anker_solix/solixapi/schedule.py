@@ -4,10 +4,11 @@ import contextlib
 import copy
 from datetime import datetime
 import json
-import os
+from pathlib import Path
 
 from .apitypes import (
     API_ENDPOINTS,
+    API_FILEPREFIXES,
     Solarbank2Timeslot,
     SolarbankPowerMode,
     SolarbankTimeslot,
@@ -36,7 +37,8 @@ async def get_device_load(
     data = {"site_id": siteId, "device_sn": deviceSn}
     if fromFile:
         resp = await self._loadFromFile(
-            os.path.join(self._testdir, f"device_load_{deviceSn}.json")
+            Path(self._testdir)
+            / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
         )
     else:
         resp = await self.request("post", API_ENDPOINTS["get_device_load"], json=data)
@@ -133,12 +135,14 @@ async def get_device_parm(
     data = {"site_id": siteId, "param_type": paramType}
     if fromFile:
         resp = await self._loadFromFile(
-            os.path.join(self._testdir, f"device_parm_{paramType}_{siteId}.json")
+            Path(self._testdir)
+            / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
         )
         # ensure backward filename compatibility without parm type in name
         if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"device_parm_{siteId}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
             )
     else:
         resp = await self.request("post", API_ENDPOINTS["get_device_parm"], json=data)

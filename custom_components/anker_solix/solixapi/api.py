@@ -13,7 +13,7 @@ import contextlib
 from datetime import datetime
 import json
 import logging
-import os
+from pathlib import Path
 import sys
 
 import aiofiles
@@ -27,6 +27,7 @@ from . import poller
 from .apitypes import (
     API_COUNTRIES,
     API_ENDPOINTS,
+    API_FILEPREFIXES,
     API_SERVERS,
     SmartmeterStatus,
     SolarbankDeviceMetrics,
@@ -88,15 +89,16 @@ class AnkerSolixApi:
         self._password: str = password
         self._session: ClientSession = websession
         self._loggedIn: bool = False
-        self._testdir: str = os.path.join(
-            os.path.dirname(__file__), "..", "examples", "example1"
+        self._testdir: str = str(
+            Path(Path(__file__).parent) / ".." / "examples" / "example1"
         )
+
         self._retry_attempt: bool = False  # Flag for retry after any token error
-        os.makedirs(
-            os.path.join(os.path.dirname(__file__), "authcache"), exist_ok=True
+        Path(Path(Path(__file__).parent) / "authcache").mkdir(
+            parents=True, exist_ok=True
         )  # ensure folder for authentication caching exists
-        self._authFile: str = os.path.join(
-            os.path.dirname(__file__), "authcache", f"{email}.json"
+        self._authFile: str = str(
+            Path(Path(__file__).parent) / "authcache" / f"{email}.json"
         )  # filename for authentication cache
         self._authFileTime: float = 0
         # initialize logger for object
@@ -197,8 +199,9 @@ class AnkerSolixApi:
             return datacopy
         return data
 
-    async def _loadFromFile(self, filename: str) -> dict:
+    async def _loadFromFile(self, filename: str | Path) -> dict:
         """Load json data from given file for testing."""
+        filename = str(filename)
         if self.mask_credentials:
             masked_filename = filename.replace(
                 self._email, self.mask_values(self._email)
@@ -206,14 +209,14 @@ class AnkerSolixApi:
         else:
             masked_filename = filename
         try:
-            if os.path.isfile(filename):
+            if Path(filename).is_file():
                 async with aiofiles.open(filename, encoding="utf-8") as file:
                     data = json.loads(await file.read())
                     self._logger.debug("Loaded JSON from file %s:", masked_filename)
                     self._logger.debug(
                         "Data: %s",
                         self.mask_values(
-                            data, "user_id", "auth_token", "email", "geo_key"
+                            data, "user_id", "auth_token", "email", "geo_key", "token"
                         ),
                     )
                     return data
@@ -224,8 +227,9 @@ class AnkerSolixApi:
             self._logger.error(err)
         return {}
 
-    async def _saveToFile(self, filename: str, data: dict | None = None) -> bool:
+    async def _saveToFile(self, filename: str | Path, data: dict | None = None) -> bool:
         """Save json data to given file for testing."""
+        filename = str(filename)
         if self.mask_credentials:
             masked_filename = filename.replace(
                 self._email, self.mask_values(self._email)
@@ -317,6 +321,7 @@ class AnkerSolixApi:
                     ]:
                         device.update({key: bool(value)})
                     elif key in [
+                        # keys with string values
                         "wireless_type",
                         "wifi_signal",
                         "bt_ble_mac",
@@ -329,8 +334,14 @@ class AnkerSolixApi:
                         "err_code",
                     ]:
                         device.update({key: str(value)})
-                    elif key in ["wifi_name"] and value:
-                        # wifi_name can be empty in details if device connected, avoid clearing name
+                    elif (
+                        key
+                        in [
+                            # keys with string values that should only updated if value returned
+                            "wifi_name",
+                        ]
+                        and value
+                    ):
                         device.update({"wifi_name": str(value)})
                     elif key in ["battery_power"] and value:
                         # This is a percentage value for the battery state of charge, not power
@@ -784,7 +795,7 @@ class AnkerSolixApi:
         """Get or set the subfolder for local API test files."""
         if not subfolder or subfolder == self._testdir:
             return self._testdir
-        if not os.path.isdir(subfolder):
+        if not Path(subfolder).is_dir():
             self._logger.error("Specified test folder does not exist: %s", subfolder)
         else:
             self._testdir = subfolder
@@ -852,7 +863,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "site_rules.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['site_rules']}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["site_rules"])
@@ -866,7 +877,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "site_list.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['site_list']}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["site_list"])
@@ -891,7 +902,7 @@ class AnkerSolixApi:
         data = {"site_id": siteId}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"scene_{siteId}.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['scene_info']}_{siteId}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["scene_info"], json=data)
@@ -911,7 +922,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "homepage.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['homepage']}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["homepage"])
@@ -927,7 +938,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "bind_devices.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['bind_devices']}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["bind_devices"])
@@ -957,7 +968,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "user_devices.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['user_devices']}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["user_devices"])
@@ -971,7 +982,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "charging_devices.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['charging_devices']}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["charging_devices"])
@@ -986,7 +997,8 @@ class AnkerSolixApi:
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"solar_info_{solarbankSn}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['solar_info']}_{solarbankSn}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["solar_info"], json=data)
@@ -1009,7 +1021,8 @@ class AnkerSolixApi:
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"compatible_process_{solarbankSn}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['compatible_process']}_{solarbankSn}.json"
             )
         else:
             resp = await self.request(
@@ -1029,7 +1042,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "auto_upgrade.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['get_auto_upgrade']}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["get_auto_upgrade"])
@@ -1104,7 +1117,7 @@ class AnkerSolixApi:
         data = {"site_id": siteId}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"wifi_list_{siteId}.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['wifi_list']}_{siteId}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["wifi_list"], json=data)
@@ -1123,7 +1136,8 @@ class AnkerSolixApi:
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"power_cutoff_{deviceSn}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_cutoff']}_{deviceSn}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["get_cutoff"], json=data)
@@ -1176,7 +1190,8 @@ class AnkerSolixApi:
         data = {"site_id": siteId}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"price_{siteId}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
             )
         else:
             resp = await self.request(
@@ -1254,7 +1269,8 @@ class AnkerSolixApi:
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"device_fittings_{deviceSn}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_device_fittings']}_{deviceSn}.json"
             )
         else:
             resp = await self.request(
@@ -1289,9 +1305,8 @@ class AnkerSolixApi:
         data = {"solar_bank_sn": solarbankSn, "solar_sn": inverterSn}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(
-                    self._testdir, f"ota_info_{solarbankSn or inverterSn}.json"
-                )
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_ota_info']}_{solarbankSn or inverterSn}.json"
             )
         else:
             resp = await self.request("post", API_ENDPOINTS["get_ota_info"], json=data)
@@ -1308,7 +1323,8 @@ class AnkerSolixApi:
         data = {"device_sn": deviceSn, "insert_sn": insertSn}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"ota_update_{deviceSn}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_ota_update']}_{deviceSn}.json"
             )
         else:
             resp = await self.request(
@@ -1335,7 +1351,8 @@ class AnkerSolixApi:
         data = {"type": recordType}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, f"check_upgrade_record_{recordType}.json")
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['check_upgrade_record']}_{recordType}.json"
             )
         else:
             resp = await self.request(
@@ -1373,9 +1390,9 @@ class AnkerSolixApi:
             data = {"type": recordType}
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(
-                    self._testdir,
-                    f"get_upgrade_record_{deviceSn if deviceSn else siteId if siteId else recordType}.json",
+                Path(
+                    self._testdir
+                    / f"{API_FILEPREFIXES['get_upgrade_record']}_{recordType}_{deviceSn if deviceSn else siteId if siteId else recordType}.json"
                 )
             )
         else:
@@ -1392,7 +1409,7 @@ class AnkerSolixApi:
         """
         if fromFile:
             resp = await self._loadFromFile(
-                os.path.join(self._testdir, "message_unread.json")
+                Path(self._testdir) / f"{API_FILEPREFIXES['get_message_unread']}.json"
             )
         else:
             resp = await self.request("get", API_ENDPOINTS["get_message_unread"])

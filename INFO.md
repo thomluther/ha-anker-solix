@@ -724,12 +724,12 @@ Starting with version 2.0.0, a new service was added for the system total yield 
 
 ### Export systems service
 
-Starting with version 2.1.2, a new service was added to simplify a complete, anonymized export of Api information available from the configured account. The Api responses will be saved in JSON files and the folder will be zipped under `www/community/anker_solix/exports`. The service response field `export_filename` will provide the zipped filename url path as response to the service. This allows easy download from your HA instance through your browser.
+Starting with version 2.1.2, a new service was added to simplify an anonymized export of known Api information available for the configured account. The Api responses will be saved in JSON files and the folder will be zipped in your Home Assistant `/configuration` folder under `www/community/anker_solix/exports`. The service response field `export_filename` will provide the zipped filename url path as response to the service. This allows easy download from your HA instance through your browser when navigating to that url path. Optionally you can download the zip file via Add Ons that provide files system access.
 
 **Notes:**
 - This service will execute a couple of Api queries and run 10 or more seconds
 - There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
-- The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file
+- The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file (the `www` filesystem folder is accessible as `/local` in the url navigation path as given in the response).
 
 
 ## Showing Your Appreciation

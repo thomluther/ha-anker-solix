@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-import os
+from pathlib import Path
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -120,9 +120,14 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
 
         self._attribute_name = description.key
         self._attr_unique_id = (f"{context}_{description.key}").lower()
-        wwwroot = os.path.join(self.coordinator.hass.config.config_dir, "www")
-        if description.picture_path and os.path.isfile(
-            description.picture_path.replace(AnkerSolixPicturePath.LOCALPATH, wwwroot)
+        wwwroot = str(Path(self.coordinator.hass.config.config_dir) / "www")
+        if (
+            description.picture_path
+            and Path(
+                description.picture_path.replace(
+                    AnkerSolixPicturePath.LOCALPATH, wwwroot
+                )
+            ).is_file()
         ):
             self._attr_entity_picture = description.picture_path
 

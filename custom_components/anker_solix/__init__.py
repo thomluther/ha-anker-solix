@@ -7,7 +7,7 @@ https://github.com/thomluther/ha-anker-solix
 from __future__ import annotations
 
 from datetime import timedelta
-import os
+from pathlib import Path
 
 from aiohttp import ClientTimeout
 
@@ -78,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # load authentication info and set json test file folder for api
             await coordinator.client.authenticate()
             coordinator.client.api.testDir(
-                os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
+                str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
             )
         # set device detail refresh multiplier
         coordinator.client.deviceintervals(entry.options.get(INTERVALMULT))
@@ -120,8 +120,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Update registered excludes in config entry to compare changes upon reloads
     hass.config_entries.async_update_entry(
         entry=entry,
-        options=entry.options.copy()
-        | {REGISTERED_EXCLUDES: list(excludes)},
+        options=entry.options.copy() | {REGISTERED_EXCLUDES: list(excludes)},
     )
 
     # forward to platform to create entities
@@ -143,7 +142,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
             testmode == coordinator.client.testmode()
             and (
                 not testmode
-                or os.path.join(entry.data.get(EXAMPLESFOLDER, ""), testfolder)
+                or str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
                 == coordinator.client.api.testDir()
             )
             and set(excluded) == set(coordinator.client.exclude_categories)

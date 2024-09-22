@@ -4,7 +4,7 @@ from asyncio import sleep
 import contextlib
 from datetime import datetime
 import json
-import os
+from pathlib import Path
 import time as systime
 
 import aiofiles
@@ -12,7 +12,7 @@ from aiohttp.client_exceptions import ClientError
 from cryptography.hazmat.primitives import serialization
 
 from . import errors
-from .apitypes import API_HEADERS, API_LOGIN, SolixDefaults
+from .apitypes import API_ENDPOINTS, API_HEADERS, API_LOGIN, SolixDefaults
 
 
 def requestDelay(self, delay: float | None = None) -> float:
@@ -61,13 +61,13 @@ async def async_authenticate(self, restart: bool = False) -> bool:
         self._loggedIn = False
         self._authFileTime = 0
         self.nickname = ""
-        if os.path.isfile(self._authFile):
+        if Path(self._authFile).is_file():
             with contextlib.suppress(Exception):
-                os.remove(self._authFile)
+                Path(self._authFile).unlink()
     # First check if cached login response is availble and login params can be filled, otherwise query server for new login tokens
-    if os.path.isfile(self._authFile):
+    if Path(self._authFile).is_file():
         data = await self._loadFromFile(self._authFile)
-        self._authFileTime = os.path.getmtime(self._authFile)
+        self._authFileTime = Path(self._authFile).stat().st_mtime
         self._logger.debug(
             "Cached Login for %s from %s:",
             self.mask_values(self._email),
@@ -118,7 +118,7 @@ async def async_authenticate(self, restart: bool = False) -> bool:
         async with aiofiles.open(self._authFile, "w", encoding="utf-8") as authfile:
             await authfile.write(json.dumps(data, indent=2, skipkeys=True))
             self._logger.debug("Response cached in file: %s", self._authFile)
-            self._authFileTime = os.path.getmtime(self._authFile)
+            self._authFileTime = Path(self._authFile).stat().st_mtime
 
     # Update the login params
     self._login_response = {}
@@ -163,8 +163,8 @@ async def request(
     if endpoint != API_LOGIN and (
         not self._loggedIn
         or (
-            os.path.isfile(self._authFile)
-            and self._authFileTime != os.path.getmtime(self._authFile)
+            Path(self._authFile).is_file()
+            and self._authFileTime != Path(self._authFile).stat().st_mtime
         )
     ):
         await self.async_authenticate()
@@ -205,10 +205,16 @@ async def request(
         "Request Headers: %s",
         self.mask_values(mergedHeaders, "x-auth-token", "gtoken"),
     )
-    if endpoint == API_LOGIN:
+    if endpoint in [
+        API_LOGIN,
+        API_ENDPOINTS["get_token_by_userid"],
+        API_ENDPOINTS["get_shelly_status"],
+    ]:
         self._logger.debug(
             "Request Body: %s",
-            self.mask_values(json, "user_id", "auth_token", "email", "geo_key"),
+            self.mask_values(
+                json, "user_id", "auth_token", "email", "geo_key", "token"
+            ),
         )
     else:
         self._logger.debug("Request Body: %s", json)

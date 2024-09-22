@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -72,11 +72,9 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self.client: api_client.AnkerSolixApiClient = None
         self.testmode: bool = False
         self.testfolder: str = None
-        self.examplesfolder: str = os.path.join(
-            os.path.dirname(__file__), EXAMPLESFOLDER
-        )
+        self.examplesfolder: str = str(Path(__file__).parent / EXAMPLESFOLDER)
         # ensure folder for example json folders exists
-        os.makedirs(self.examplesfolder, exist_ok=True)
+        Path(self.examplesfolder).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     @callback
@@ -181,7 +179,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     if testmode and testfolder:
                         # set json test file folder for api to be validated
                         client.api.testDir(
-                            os.path.join(self._data.get(EXAMPLESFOLDER, ""), testfolder)
+                            str(Path(self._data.get(EXAMPLESFOLDER, "")) / testfolder)
                         )
                     # get first site data for account and verify nothing is shared with existing configuration
                     await client.api.update_sites(fromFile=testmode and testfolder)
@@ -338,7 +336,9 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input:
             if user_input.get(TESTFOLDER) or not user_input.get(TESTMODE):
                 # merge new options from user form with existing options in config entry
-                return self.async_create_entry(title="", data=existing_options | user_input)
+                return self.async_create_entry(
+                    title="", data=existing_options | user_input
+                )
             # Test mode enabled but no existing folder selected
             errors[TESTFOLDER] = "folder_invalid"
 

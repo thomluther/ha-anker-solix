@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+from functools import partial
 import os
+from pathlib import Path
 import socket
 
 import aiohttp
@@ -37,7 +39,7 @@ API_CATEGORIES: list = [
     SolixDeviceType.SOLARBANK.value,
     SolixDeviceType.SMARTMETER.value,
     SolixDeviceType.SMARTPLUG.value,
-    #SolixDeviceType.POWERCOOLER.value,
+    # SolixDeviceType.POWERCOOLER.value,
     ApiCategories.solarbank_energy,
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
@@ -49,15 +51,20 @@ API_CATEGORIES: list = [
     ApiCategories.device_tag,
     ApiCategories.site_price,
 ]
-DEFAULT_EXCLUDE_CATEGORIES: list = [ApiCategories.solarbank_energy,ApiCategories.smartmeter_energy,ApiCategories.solar_energy,ApiCategories.smartplug_energy,]
+DEFAULT_EXCLUDE_CATEGORIES: list = [
+    ApiCategories.solarbank_energy,
+    ApiCategories.smartmeter_energy,
+    ApiCategories.solar_energy,
+    ApiCategories.smartplug_energy,
+]
 
 
 async def json_example_folders() -> list:
     """Get actual list of json example folders."""
-    examplesfolder: str = os.path.join(os.path.dirname(__file__), EXAMPLESFOLDER)
-    loop = asyncio.get_running_loop()
-    contentlist = await loop.run_in_executor(None, os.scandir, examplesfolder)
-    if os.path.isdir(examplesfolder):
+    examplesfolder: Path = Path(__file__).parent / EXAMPLESFOLDER
+    if examplesfolder.is_dir():
+        loop = asyncio.get_running_loop()
+        contentlist = await loop.run_in_executor(None, os.scandir, examplesfolder)
         return [f.name for f in contentlist if f.is_dir()]
     return []
 
@@ -197,7 +204,7 @@ class AnkerSolixApiClient:
                         # Fetch energy if not excluded via options
                         await self.api.update_device_energy(
                             fromFile=self._testmode,
-                            exclude=set(self.exclude_categories)
+                            exclude=set(self.exclude_categories),
                         )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
@@ -237,7 +244,7 @@ class AnkerSolixApiClient:
                         # Fetch energy if not excluded via options
                         await self.api.update_device_energy(
                             fromFile=self._testmode,
-                            exclude=set(self.exclude_categories)
+                            exclude=set(self.exclude_categories),
                         )
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()

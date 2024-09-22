@@ -133,9 +133,10 @@ API_ENDPOINTS = {
     "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? NOT IMPLEMENTED YET
     "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
     "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
-    "third_platform_list": "power_service/v1/app/third/platform/list",  # list third party devices?
-    "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
+    "set_installation": "power_service/v1/app/compatible/set_installation",  # not explored yet
+    "get_third_platforms": "power_service/v1/app/third/platform/list",  # list supported third party device models
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
+    "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -264,6 +265,48 @@ NOTES: Parallel Api instances should use different user accounts. They may work 
 the cached JSON file. Other instances should recognize an update of the cached JSON file and will refresh their login credentials in the instance for the actual token and gtoken without new login request.
 """
 
+# Following are the JSON filename prefixes for exported endpoint names as defined previously
+API_FILEPREFIXES = {
+    "homepage": "homepage",
+    "site_list": "site_list",
+    "bind_devices": "bind_devices",
+    "user_devices": "user_devices",
+    "charging_devices": "charging_devices",
+    "get_auto_upgrade": "auto_upgrade",
+    "get_config": "config",
+    "site_rules": "list_site_rules",
+    "get_product_categories": "list_products",
+    "get_product_accessories": "list_accessories",
+    "get_third_platforms": "list_third_platforms",
+    "get_token_by_userid": "get_token",
+    "get_shelly_status": "shelly_status",
+    "scene_info": "scene",
+    "site_detail": "site_detail",
+    "wifi_list": "wifi_list",
+    "get_installation": "installation",
+    "get_site_price": "price",
+    "get_device_parm": "device_parm",
+    "energy_solarbank": "energy_solarbank",
+    "energy_solar_production": "energy_solar_production",
+    "energy_solar_production_pv": "energy_solar_production_pv",
+    "energy_home_usage": "energy_home_usage",
+    "energy_grid": "energy_grid",
+    "solar_info": "solar_info",
+    "compatible_process": "compatible_process",
+    "get_cutoff": "power_cutoff",
+    "get_device_fittings": "device_fittings",
+    "get_device_load": "device_load",
+    "get_ota_update": "ota_update",
+    "get_ota_info": "ota_info",
+    "get_upgrade_record": "upgrade_record",
+    "check_upgrade_record": "check_upgrade_record",
+    "get_device_attributes": "device_attrs",
+    "get_message_unread": "message_unread",
+    "api_sites": "api_sites",
+    "api_devices": "api_devices",
+}
+
+
 LOGIN_RESPONSE: dict = {
     "user_id": str,
     "email": str,
@@ -350,7 +393,11 @@ class SolixDeviceCapacity:
     A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
+    A1723: int = 230  # SOLIX C200 Portable Power Station
+    A1725: int = 230  # SOLIX C200 Portable Power Station
     A1726: int = 288  # SOLIX C300 DC Portable Power Station
+    A1727: int = 230  # SOLIX C200 DC Portable Power Station
+    A1728: int = 288  # SOLIX C300 X Portable Power Station
     A1751: int = 512  # Anker PowerHouse 535 Portable Power Station
     A1753: int = 768  # SOLIX C800 Portable Power Station
     A1754: int = 768  # SOLIX C800 Plus Portable Power Station
@@ -392,6 +439,8 @@ class SolixDeviceCategory:
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
     # Smart Meter
     A17X7: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter
+    SHEM3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Smart Meter
+    SHEMP3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Pro Smart Meter
     # Smart Plug
     A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug
     # Portable Power Stations (PPS)
@@ -399,7 +448,11 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 521 Portable Power Station
     A1722: str = SolixDeviceType.PPS.value  # SOLIX C300 Portable Power Station
+    A1723: str = SolixDeviceType.PPS.value  # SOLIX C200 Portable Power Station
+    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200 Portable Power Station
     A1726: str = SolixDeviceType.PPS.value  # SOLIX C300 DC Portable Power Station
+    A1727: str = SolixDeviceType.PPS.value  # SOLIX C200 DC Portable Power Station
+    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X Portable Power Station
     A1751: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 535 Portable Power Station
