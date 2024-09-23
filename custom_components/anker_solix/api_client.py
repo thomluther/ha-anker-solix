@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from functools import partial
 import os
 from pathlib import Path
 import socket
