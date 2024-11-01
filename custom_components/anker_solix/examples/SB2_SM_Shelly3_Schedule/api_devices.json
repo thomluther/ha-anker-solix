@@ -1,0 +1,119 @@
+{
+  "65I557AHWTFILC10": {
+    "device_sn": "65I557AHWTFILC10",
+    "type": "solarbank",
+    "site_id": "2cc387cb-2aba-aa1c-d591-dfd5d5c95d6f",
+    "is_admin": true,
+    "device_pn": "A17C1",
+    "generation": 2,
+    "battery_soc": "27",
+    "battery_capacity": "4800",
+    "battery_energy": "1296",
+    "charging_power": "-378",
+    "power_unit": "W",
+    "charging_status": "2",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "378",
+    "sub_package_num": 2,
+    "power_cutoff": 10,
+    "alias": "Solarbank 2 E1600 Pro",
+    "set_output_power": "0",
+    "set_system_output_power": "0",
+    "data_valid": true,
+    "solarbank_count": 1,
+    "solar_power_1": "0",
+    "solar_power_2": "0",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "to_home_load": "381",
+    "bt_ble_mac": "5DB9AF4B258B",
+    "name": "Solarbank 2 E1600 Pro",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.5.16",
+    "tag": "",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "86",
+    "rssi": "-55",
+    "offline": false,
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "schedule": {
+      "mode_type": 1,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 0
+            }
+          ]
+        }
+      ],
+      "blend_plan": null,
+      "default_home_load": 200,
+      "max_load": 800,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_system_output_power": 0,
+    "preset_usage_mode": 1
+  },
+  "R47PK6JJ33VBGR": {
+    "device_sn": "65I557AHWTFILC10",
+    "type": "smartmeter",
+    "site_id": "2cc387cb-2aba-aa1c-d591-dfd5d5c95d6f",
+    "is_admin": true,
+    "device_pn": "SHEM3",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "alias": "Shelly 3EM Stromz\u00e4hler",
+    "data_valid": true,
+    "photovoltaic_to_grid_power": "8",
+    "grid_to_home_power": "0",
+    "grid_status": "0",
+    "grid_status_desc": "ok",
+    "bt_ble_mac": "",
+    "name": "Shelly 3EM Stromz\u00e4hler",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "tag": "",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "86",
+    "rssi": "-55",
+    "offline": false
+  }
+}

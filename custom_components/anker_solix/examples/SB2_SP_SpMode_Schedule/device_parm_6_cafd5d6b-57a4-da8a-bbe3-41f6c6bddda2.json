@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"mode_type\":2,\"custom_rate_plan\":[{\"index\":0,\"week\":[0,1,2,3,4,5,6],\"ranges\":[{\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":50}]}],\"blend_plan\":[{\"index\":0,\"week\":[0,1,2,3,4,5,6],\"ranges\":[{\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":20}]}],\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"
+  },
+  "trace_id": "bd576fdeeaec51a44882ebe2d4767fb7"
+}

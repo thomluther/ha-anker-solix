@@ -182,7 +182,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             str(Path(self._data.get(EXAMPLESFOLDER, "")) / testfolder)
                         )
                     # get first site data for account and verify nothing is shared with existing configuration
-                    await client.api.update_sites(fromFile=testmode and testfolder)
+                    await client.api.update_sites(fromFile=(testfolder and testmode))
                     if cfg_entry := await async_check_and_remove_devices(
                         hass=self.hass,
                         user_input=user_input,
@@ -206,11 +206,11 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         return self.async_update_reload_and_abort(
                             entry=config_entry,
                             unique_id=account_user,
-                            title=self.client.api.nickname
+                            title=self.client.api.apisession.nickname
                             if self.client and self.client.api
                             else account_user,
                             data=self._data,
-                            options=config_entry.options,
+                            # options=config_entry.options.copy(),
                             reason="reconfig_successful",
                         )
 
@@ -251,7 +251,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._options = user_options
             if self._options.get(TESTFOLDER) or not self._options.get(TESTMODE):
                 return self.async_create_entry(
-                    title=self.client.api.nickname
+                    title=self.client.api.apisession.nickname
                     if self.client and self.client.api
                     else self._data.get(CONF_USERNAME),
                     data=self._data,
@@ -481,6 +481,11 @@ async def async_check_and_remove_devices(
             ApiCategories.solarbank_solar_info,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SOLARBANK.value}
+        # Subcategories for Smart Plugs only
+        if {
+            ApiCategories.smartplug_energy,
+        } & excluded:
+            excluded = excluded | {SolixDeviceType.SMARTPLUG.value}
         # Subcategories for all managed Devices
         if {
             ApiCategories.device_auto_upgrade,

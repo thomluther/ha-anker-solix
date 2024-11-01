@@ -1,0 +1,100 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "IU47YZ0USSGF2K2A",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v0.0.2.7",
+        "children": null
+      },
+      {
+        "device_sn": "MU1JPN69C3CB0VVV",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v0.0.2.7",
+        "children": null
+      },
+      {
+        "device_sn": "81QCP7Q5D1258SXT",
+        "need_update": false,
+        "upgrade_type": 2,
+        "lastPackage": {
+          "product_code": "A17C1",
+          "product_component": "A17C1",
+          "version": "v1.0.5.8",
+          "is_forced": false,
+          "md5": "e8117fe5a9d7dad140e9d19df8b3cb82",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/08/08/iot-admin/qhq75yTBQUoGBy9C/A17C1-A17C3_EUOTA_V1.0.5.8_20240727.bin",
+          "size": 691200
+        },
+        "change_log": "",
+        "current_version": "v1.0.5.8",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A17C1_mcu",
+            "rom_version_name": "v1.0.5.8",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/08/08/iot-admin/qhq75yTBQUoGBy9C/A17C1-A17C3_EUOTA_V1.0.5.8_20240727.bin",
+              "file_size": 691200,
+              "file_md5": "e8117fe5a9d7dad140e9d19df8b3cb82"
+            },
+            "change_log": "",
+            "sub_current_version": ""
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C1_100Ah",
+            "rom_version_name": "v0.1.8.9",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/08/08/iot-admin/rMt73e2OqFh4uW1t/A17C1-A17C3_EUOTA_V0.1.8.9_20240727.bin",
+              "file_size": 691200,
+              "file_md5": "e8117fe5a9d7dad140e9d19df8b3cb82"
+            },
+            "change_log": "",
+            "sub_current_version": ""
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C1_esp32",
+            "rom_version_name": "v0.1.3.6",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/08/08/iot-admin/CkQmZnFwD8VgflIy/A17C1-A17C3_EUOTAWIFI_V0.1.3.6_20240716.bin",
+              "file_size": 1242224,
+              "file_md5": "599fbb0a0dd3ffa0866995d09a4be5f5"
+            },
+            "change_log": "",
+            "sub_current_version": ""
+          }
+        ]
+      }
+    ]
+  },
+  "trace_id": "fd4d3b666ea7b9dd8a7baedbbba9191f"
+}

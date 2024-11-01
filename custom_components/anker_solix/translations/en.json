@@ -22,6 +22,12 @@
                 "smartplug": "Smart plugs"
             }
         },
+        "plan": {
+            "options": {
+                "custom_rate_plan": "Custom plan",
+                "blend_plan": "Blend plan"
+            }
+        },
         "weekday": {
             "options": {
                 "sun": "Sunday",
@@ -147,6 +153,9 @@
                     "wifi_signal": {
                         "name": "Wifi signal"
                     },
+                    "rssi": {
+                        "name": "Wifi rssi"
+                    },
                     "wireless_type": {
                         "name": "Wifi type"
                     }
@@ -157,6 +166,11 @@
                 "state": {
                     "on": "Available",
                     "off": "Current"
+                },
+                "state_attributes": {
+                    "ota_version": {
+                        "name": "OTA version"
+                    }
                 }
             },
             "site_admin": {
@@ -371,7 +385,7 @@
             "smartmeter_list": {
                 "name": "Smart meters"
             },
-            "smart_plug_list": {
+            "smartplug_list": {
                 "name": "Smart plugs"
             },
             "solarbank_charging_power": {
@@ -397,6 +411,12 @@
             },
             "pps_state_of_charge": {
                 "name": "PPS state of charge"
+            },
+            "smart_plugs_power": {
+                "name": "Smart plugs power"
+            },
+            "other_loads_power": {
+                "name": "Other load power"
             },
             "total_co2_saving": {
                 "name": "CO₂ savings"
@@ -430,6 +450,14 @@
             },
             "photovoltaic_to_grid_power": {
                 "name": "Grid export"
+            },
+            "energy_today": {
+                "name": "Daily energy",
+                "state_attributes": {
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
             },
             "daily_discharge_energy": {
                 "name": "Daily discharge",
@@ -652,9 +680,13 @@
             "name": "Clear the Solarbank schedule",
             "description": "The Solarbank schedule will be cleared",
             "fields": {
+                "plan": {
+                    "name": "Plan",
+                    "description": "Select plan to be modified, plan for active usage mode is the default (ignored for Solarbank 1)"
+                },
                 "week_days": {
                     "name": "Weekdays",
-                    "description": "Selected weekdays to be removed from schedule (ignored for Solarbank 1)"
+                    "description": "Select weekdays to be removed from schedule (ignored for Solarbank 1)"
                 }
             }
     },
@@ -669,6 +701,10 @@
                 "end_time": {
                     "name": "End time",
                     "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "plan": {
+                    "name": "Plan",
+                    "description": "Select plan to be modified, plan for active usage mode is the default (ignored for Solarbank 1)"
                 },
                 "week_days": {
                     "name": "Weekdays",
@@ -703,6 +739,10 @@
                 "end_time": {
                     "name": "End time",
                     "description": "End time of the interval (seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "plan": {
+                    "name": "Plan",
+                    "description": "Select plan to be modified, plan for active usage mode is the default (ignored for Solarbank 1)"
                 },
                 "week_days": {
                     "name": "Weekdays",

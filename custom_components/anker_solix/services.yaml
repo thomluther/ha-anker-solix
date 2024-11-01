@@ -37,6 +37,18 @@ clear_solarbank_schedule:
       supported_features:
         - calendar.CalendarEntityFeature.CREATE_EVENT
   fields:
+    plan:
+      required: false
+      example:
+        - blend_plan
+      selector:
+        select:
+          mode: list
+          multiple: false
+          translation_key: plan
+          options:
+            - custom_rate_plan
+            - blend_plan
     week_days:
       required: false
       example:
@@ -76,6 +88,18 @@ set_solarbank_schedule:
       default: "23:59:00"
       selector:
         time:
+    plan:
+      required: false
+      example:
+        - blend_plan
+      selector:
+        select:
+          mode: list
+          multiple: false
+          translation_key: plan
+          options:
+            - custom_rate_plan
+            - blend_plan
     week_days:
       required: false
       example:
@@ -148,6 +172,18 @@ update_solarbank_schedule:
       default: "23:59:00"
       selector:
         time:
+    plan:
+      required: false
+      example:
+        - blend_plan
+      selector:
+        select:
+          mode: list
+          multiple: false
+          translation_key: plan
+          options:
+            - custom_rate_plan
+            - blend_plan
     week_days:
       required: false
       example:

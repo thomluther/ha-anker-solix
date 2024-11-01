@@ -269,7 +269,10 @@ max: 3
 
 Version 2.1.0 of the integration fully supports switching between `Smart Meter` (AI) or `Manual` (custom) home load usage modes when a smart meter is configured in the system. Otherwise only `Manual` usage mode is supported. Future versions may also support a new `Smart Plug` usage mode once smart plugs are supported and configured in your Anker power system. Furthermore the output preset can be adjusted directly, which will result in changes to the manual schedule applied to the solarbank. A preset change is only applied to the current schedule time interval and if none exists it will be created. Furthermore all schedule services now support modifications of any schedule intervals and weekdays.
 
-### Care must be taken when modifying Solarbank home load settings
+Version 2.2.0 added support for the smart plug usage mode. When this mode is active, another blend plan will be used to customize additional base load that should be added to the measured smart plug total power. The number entity that changes the output preset will therefore modify the actual time slot in the blend plan when the smart plug usage mode is active. Otherwise it will modify the actual time slot of the customer rate plan. The added system entity for other load power will reflect the actual extra power added based on the blend plan settings when smart plug usage mode is active. The system output preset sensor will reflect only the current settings from the custom rate plan, however they will not be applicable during smart plug usage mode.
+
+
+### Care must be taken when modifying Solarbank 1 home load settings
 
 **Attention:**
 
@@ -318,8 +321,10 @@ If you are interested building your own automation for using the Solarbank 1 as 
 
 ### Home load automation considerations for Solarbank 2
 
-For Solarbank 2 systems with a smart meter, you can automate the switch of the home load usage mode between `Smart Meter` and `Manual` if you may have the need to change this in your setup. The Anker mobile app actually does not support scheduled switches of the home load usage mode.
-Furthermore you can automate the manual appliance output preset, however this will only be applied when the `Manual` usage mode is active. The integration has built-in the same cool down of 30 seconds for subsequent increases of the output preset in order to limit the number of Api requests and schedule changes pushed by HA automation.
+For Solarbank 2 systems with a smart meter, you can automate the switch of the home load usage mode between `Smart Meter`, `Manual` and `Smart plugs` if you may have the need to change this in your setup. The Anker mobile app actually does not support scheduled switches of the home load usage mode.
+Furthermore you can automate the manual appliance output preset, however this will only be applied when the `Manual` usage mode is active.
+The same is possible with the additional base power that should be added to smart plug power while `Smart plug` usage mode is active.
+The integration has built-in the same cool down of 30 seconds for subsequent increases of the output preset in order to limit the number of Api requests and schedule changes pushed by HA automation.
 
 ---
 **At this point be warned again:**
@@ -336,7 +341,8 @@ Following 3 methods are implemented:
 
 Any change in those entities is immediately applied to either the current time slot in the existing schedule, or to the general schedule structure. Please see the Solarbank dashboard screenshots above for examples of the entity representation. While the schedule is shared for the appliance, each Solarbank 1 in a dual Solarbank setup will be presented with those entities. A change in the device load preset will however enable advanced preset mode and only change the corresponding solarbank output. However, it will also result in a change of the appliance home load preset accordingly.
 
-Solarbank 2 schedule intervals have less time interval settings and can only define the appliance output power. However, different Solarbank 2 schedules can be defined for various weekdays. One common setting for all schedules is the usage mode. If a smart meter is configured in your power system, you can set the usage mode to Smart Meter and the Solarbank 2 will automatically adjust the appliance output to your house demand measured by the smart meter. So while you can still define schedules via the Anker mobile app, they will be applied ONLY if the solarbank lost connection to the device that is used to provide automated power demand such as the smart meter. For any gap in the defined schedule, the default output of 200 W will be applied.
+Solarbank 2 schedules have two different plans which are of the same format. The plan format has less time interval settings and can only define the appliance output power. However, different Solarbank 2 time schedules can be defined for various weekdays in each plan. One common setting for all schedules is the usage mode. If a smart meter or smart plugs are configured in your power system, you can set the usage mode to Smart Meter or Smart plugs and the Solarbank 2 will automatically adjust the appliance output to your house or smart plug demand as measured by the devices. So while you can still define a custom output schedule via the Anker mobile app, it will be applied ONLY if the solarbank lost connection to the device that is used to provide automated power demand such as the smart meter. For any gap in the defined custom plan, the default output of 200 W will be applied.
+For smart plug usage mode the blend plan schedules will be used to add base power to smart plug measured power.
 
 **A word of caution:**
 
@@ -360,7 +366,7 @@ They are useful to apply manual or automated changes for times that are beyond t
 
   - **Clear Solarbank schedule:**
 
-    Clear all defined solarbank schedule intervals. The solarbank will have no longer a schedule definition and use the default output preset all day (200 W). For solarbank 2, you can optionally clear the defined intervals only for the specified weekdays.
+    Clear all defined solarbank schedule intervals. The solarbank will have no longer a schedule definition and use the default output preset all day (200 W). For solarbank 2, you can optionally clear the defined intervals only for the specified weekdays of the active or specified plan.
 
 You can specify the solarbank device id or the entity ID of the solarbank output preset sensor as target for those services. The service UI in HA developer tools will filter the devices and entities that support the solarbank schedule services. I recommend using the entity ID as target when using the service in automation since the device ID is an internal registry value which is difficult to map to a context. In general, most of the solarbank schedule changes should be done by the update service since the Api library has built in simplifications for time interval changes. The update service follows the insert methodology for the specified interval using following rules:
   - Adjacent slots are automatically adjusted with their start/end times
@@ -389,6 +395,11 @@ For Solarbank 2 systems, following weekday rules will be applied:
   - Any existing plan will be curated to avoid that same weekday is defined in different plans
     - Empty plans will be removed from the schedule
 
+For Solarbank 2 systems, following plan rules will be applied:
+  - When no plan is provided, the plan used by the active usage mode will be used.
+  - When a plan is selected, the selected plan will be modified.
+    - This allows modification of a plan that is currently not in use
+
 For dual Solarbank 1 systems, following load preset rules will be applied:
   - If only appliance load preset provided, the normal preset mode will be used which applies a 50% share to both solarbanks
   - If only device load preset provided, the advanced power mode will be used if supported by existing schedule structure. The appliance load preset will be adjusted accordingly, but the other solarbank device preset will not be changed. It will fall back to normal appliance load usage if advanced power mode not supported by existing schedule structure.
@@ -398,7 +409,7 @@ For dual Solarbank 1 systems, following load preset rules will be applied:
 
 Note:
 
-Usage of advanced preset mode is determined by existing schedule structure. When no schedule is defined and the set schedule service is used with a device preset requiring the advanced power preset mode, but the solarbanks are not on required firmware level to accept the new schedule structure, the service call may fail with an Api request error.
+Usage of Solarbank 1 advanced preset mode is determined by existing schedule structure. When no schedule is defined and the set schedule service is used with a device preset requiring the advanced power preset mode, but both solarbank 1 are not on required firmware level to accept the new schedule structure, the service call may fail with an Api request error.
 
 #### 3. **Interactive solarbank schedule modification via a parameterized script that executes a schedule service with provided parameters**
 
@@ -418,7 +429,7 @@ Following are screenshots showing the schedule service UI panel (identical for S
 ![Get schedule service][request-schedule-img]
 
 
-While not the full entity ranges supported by the integration can be applied to the device, some may provide enhanced capabilities compared to the Anker App. Following are important notes and limitations for schedule modifications via the cloud Api:
+While not the full value ranges supported by the integration can be applied to the device, some may provide enhanced capabilities compared to the Anker App. Following are important notes and limitations for schedule modifications via the cloud Api:
 
   - Time slots can be defined in minute granularity and what I have seen, they are also applied (don't take my word for given)
   - The end time of 24:00 must be provided as 23:59 since the datetime range does not know hour 24. Any seconds that are specified are ignored
@@ -431,7 +442,7 @@ While not the full entity ranges supported by the integration can be applied to 
 
 ### Markdown card for Solarbank 1 schedules
 
-Following markdown card code can be used to display the solarbank 1 schedule in the UI frontend. Just replace the entity with your sensor entity representing solarbank effective output preset. It is the sensor that has the schedule attribute.
+Following markdown card code can be used to display the solarbank 1 schedule in the UI frontend. The active interval will be highlighted. Just replace the entity with your sensor entity representing solarbank effective output preset. It is the sensor that has the schedule attribute.
 
 ![markdown-card][schedule-markdown-img]
 
@@ -473,7 +484,11 @@ content: |
 
 ### Markdown card for Solarbank 2 schedules
 
-Following markdown card code can be used to display the solarbank 2 schedule in the UI frontend. Just replace the entities at the top with your sensor entities representing the solarbank output preset and usage mode.
+Following markdown card code can be used to display the solarbank 2 schedule in the UI frontend (including custom_rate_plan and blend_plan if defined). The active interval in the active plan will be highlighted. Just replace the entities at the top with your sensor entities representing the solarbank output preset and usage mode.
+
+**Attention:**
+The markdown card is very sensitive for proper formatting of printed characters. Markdown tables may not be correctly formatted if indents are wrong caused by indents of the template code.
+
 
 ![markdown-card][schedule-2-markdown-img]
 
@@ -485,30 +500,36 @@ Following markdown card code can be used to display the solarbank 2 schedule in 
 ```
 type: markdown
 content: |
-  {% set entity = 'sensor.solarbank_2_e1600_pro_home_preset' %}
-  {% set mode = states('select.solarbank_2_e1600_pro_usage_mode') %}
+  {% set entity = 'sensor.solarbank_2_e1600_pro_einspeisevorgabe' %}
+  {% set mode = states('select.solarbank_2_e1600_pro_benutzermodus') %}
+  {% set schedule = state_attr(entity,'schedule')|default({}) %}
   {% set plan = ((state_attr(entity,'schedule')).custom_rate_plan|default([]))|list %}
   {% set isnow = now().replace(second=0,microsecond=0) %}
-  ### Solarbank 2 Schedule (Usage Mode: {{mode|capitalize}})
-  {% if plan %}
-    {%- set week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] -%}
-    {{ "%s | %s | %s | %s | %s"|format('ID', 'Start', 'End', 'Output', 'Weekdays') }}
+
+  ### SB2 Schedule (Usage Mode: {{mode|capitalize}})
+  {% for plan_name,plan in schedule.items() %}
+    {% if plan_name in ['custom_rate_plan','blend_plan'] %}
+      {%- set week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] -%}
+      {%- set active = (mode=='smartplugs' and plan_name=='blend_plan') or (mode!='smartplugs' and plan_name!='blend_plan')-%}
+    {{ "%s | %s | %s | %s | %s"|format('ID', 'Start', 'End', 'Preset', 'Weekdays ('+plan_name+')') }}
     {{ ":---:|:---:|:---:|---:|:---" }}
-  {% else %}
+      {%- for idx in plan -%}
+        {%- set index = idx.index|default('--') -%}
+        {%- for slot in idx.ranges|default([]) -%}
+          {%- set ns = namespace(days=[]) -%}
+          {%- for day in idx.week|default([]) -%}
+            {%- set ns.days = ns.days + [week[day]] -%}
+          {%- endfor -%}
+          {%- set bs = '_**' if strptime(slot.start_time,"%H:%M").time() <= isnow.time() < strptime(slot.end_time.replace('24:00','23:59'),"%H:%M").time() and int(isnow.strftime("%w")) in idx.week|default([]) and active else '' -%}
+          {%- set be = '**_' if bs else '' %}
+    {{ "%s | %s | %s | %s | %s"|format(bs~index~be, bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.power~" W"~be, bs~','.join(ns.days)~be) }}
+        {%- endfor -%}
+      {%- endfor -%}
+    {% endif %}
+  {% endfor %}
+  {% if not plan %}
     {{ "No schedule available"}}
-  {%- endif -%}
-  {%- for idx in plan -%}
-    {%- set index = idx.index|default('--') -%}
-    {%- for slot in idx.ranges|default([]) -%}
-      {%- set ns = namespace(days=[]) -%}
-      {%- for day in idx.week|default([]) -%}
-        {%- set ns.days = ns.days + [week[day]] -%}
-      {%- endfor %}
-      {%- set bs = '_**' if strptime(slot.start_time,"%H:%M").time() <= isnow.time() < strptime(slot.end_time.replace('24:00','23:59'),"%H:%M").time() and int(isnow.strftime("%w")) in idx.week|default([]) else '' -%}
-      {%- set be = '**_' if bs else '' -%}
-      {{ "%s | %s | %s | %s | %s"|format(bs~index~be, bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.power~" W"~be, bs~','.join(ns.days)~be) }}
-    {% endfor -%}
-  {% endfor -%}
+  {% endif %}
 ```
 </details>
 
@@ -516,7 +537,8 @@ content: |
 - Shared accounts have no access to the schedule
 - Solarbank 2 has less settings per time slot than Solarbank 1, making it easier to adjust
 - Solarbank 2 schedules can be created for individual weekdays. Each group of weekdays has its own plan ID. A weekday can only be configured into one plan ID
-- The defined schedule is only used when the usage mode is set to `Manual` (custom usage)
+- The defined custom_rate_plan is only used when the usage mode is set to `manual` (custom usage) or `smartmeter` for the case of smart meter communication loss
+- The defined blend_plan is only used when the usage mode is set to `smartplugs`
 
 
 ## Script to manually modify appliance schedule for your solarbank
@@ -660,6 +682,18 @@ fields:
     default: "23:59:00"
     selector:
       time: null
+  plan:
+    name: Plan
+    description: Plan to be modified (active plan is default)
+    required: false
+    selector:
+      select:
+        mode: list
+        multiple: false
+        translation_key: plan
+        options:
+          - custom_rate_plan
+          - blend_plan
   week_days:
     name: Weekdays
     description: Weekdays for interval
@@ -698,6 +732,8 @@ sequence:
         {{start_time}}
       end_time: |
         {{end_time}}
+      plan: |
+        {{plan|default(None)}}
       week_days: |
         {{week_days|default(None)}}
       appliance_load: |

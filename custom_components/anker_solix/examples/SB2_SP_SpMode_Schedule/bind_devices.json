@@ -1,0 +1,87 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "IU47YZ0USSGF2K2A",
+        "product_code": "A17X8",
+        "bt_ble_id": "CBAFF1D0EB0D56425AAE4CF7FDCC75CE",
+        "bt_ble_mac": "02E88FC10BBB",
+        "device_name": "Smart Plug",
+        "alias_name": "Flex Plug",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png",
+        "link_time": 1729369733,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v0.0.2.7",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "Garage",
+        "tag_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/06/17/iot-admin/z3BsKvteQr9Fn0Mg/icl_A17X8_location_Garage.png",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-69"
+      },
+      {
+        "device_sn": "MU1JPN69C3CB0VVV",
+        "product_code": "A17X8",
+        "bt_ble_id": "B7F9ECC7EACF0D8C30C6C88FB4A63BF7",
+        "bt_ble_mac": "7CFFE747BB52",
+        "device_name": "Smart Plug",
+        "alias_name": "SP Basement",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png",
+        "link_time": 1729359982,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v0.0.2.7",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "Dining Room",
+        "tag_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/06/17/iot-admin/Te3LpcS7jXZhS924/icl_A17X8_location_Dining%20Room.png",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-56"
+      },
+      {
+        "device_sn": "81QCP7Q5D1258SXT",
+        "product_code": "A17C1",
+        "bt_ble_id": "3A6FB97E9AEEB53ACCA3CB254162BB41",
+        "bt_ble_mac": "AAEBDFFF465E",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "alias_name": "Solarbank 2 E1600 Pro",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "link_time": 1720869889,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.0.5.8",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": ""
+      }
+    ]
+  },
+  "trace_id": "6a4cd7a2cab9a317b97ebf6ceddaaa99"
+}

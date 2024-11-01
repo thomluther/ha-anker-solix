@@ -1,0 +1,33 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "65I557AHWTFILC10",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2024-10-23 14:18:51",
+        "upgrade_version": "v1.0.5.16",
+        "pre_version": "v1.0.5.8",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "65I557AHWTFILC10",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      },
+      {
+        "upgrade_time": "2024-09-07 15:05:23",
+        "upgrade_version": "v1.0.5.8",
+        "pre_version": "v1.0.5.5",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "65I557AHWTFILC10",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "f645effdfdcacca63a7b0f84cfff64f0"
+}

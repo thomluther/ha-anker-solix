@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "IU47YZ0USSGF2K2A",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2024-10-19 23:02:53",
+        "upgrade_version": "v0.0.2.7",
+        "pre_version": "v0.0.2.2",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "IU47YZ0USSGF2K2A",
+        "device_name": "Smart Plug",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "dc5abe149f2ab6cad60cc83f3b2ace0f"
+}

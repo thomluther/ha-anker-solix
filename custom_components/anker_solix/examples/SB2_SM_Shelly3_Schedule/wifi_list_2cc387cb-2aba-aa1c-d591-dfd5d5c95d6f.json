@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "86",
+        "device_sn": "65I557AHWTFILC10",
+        "rssi": "-55",
+        "offline": false
+      }
+    ]
+  },
+  "trace_id": "ed3d4fccd0e43da1ac19a3daab0e7672"
+}

@@ -166,11 +166,11 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 < self.coordinator.client.min_device_refresh
             ):
                 raise ServiceValidationError(
-                    f"Devices for {self.coordinator.client.api.nickname} cannot be updated within less than {self.coordinator.client.min_device_refresh} seconds",
+                    f"Devices for {self.coordinator.client.api.apisession.nickname} cannot be updated within less than {self.coordinator.client.min_device_refresh} seconds",
                     translation_domain=DOMAIN,
                     translation_key="device_refresh",
                     translation_placeholders={
-                        "coordinator": self.coordinator.client.api.nickname,
+                        "coordinator": self.coordinator.client.api.apisession.nickname,
                         "min_dev_refresh": str(
                             self.coordinator.client.min_device_refresh
                         ),

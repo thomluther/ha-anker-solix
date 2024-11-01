@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": false,
+    "device_list": [
+      {
+        "device_sn": "IU47YZ0USSGF2K2A",
+        "device_name": "Smart Plug",
+        "auto_upgrade": false,
+        "alias_name": "Flex Plug",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png"
+      },
+      {
+        "device_sn": "MU1JPN69C3CB0VVV",
+        "device_name": "Smart Plug",
+        "auto_upgrade": false,
+        "alias_name": "SP Basement",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png"
+      }
+    ]
+  },
+  "trace_id": "24d4fb94e5ccaf56e3a8ddcfef96a59d"
+}

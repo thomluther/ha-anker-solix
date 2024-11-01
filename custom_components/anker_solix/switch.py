@@ -19,6 +19,7 @@ from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
     AnkerSolixEntityType,
+    get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
@@ -53,6 +54,7 @@ DEVICE_SWITCHES = [
     ),
 ]
 
+
 SITE_SWITCHES = [
     AnkerSolixSwitchDescription(
         key="allow_refresh",
@@ -62,6 +64,10 @@ SITE_SWITCHES = [
         force_creation=True,
         value_fn=lambda d, _: len(d) > 0,
     ),
+]
+
+
+ACCOUNT_SWITCHES = [
 ]
 
 
@@ -79,7 +85,11 @@ async def async_setup_entry(
         # create sensor type based on type of entry in coordinator data, which consolidates the api.sites and api.devices dictionaries
         # the coordinator.data dict key is either a site_id or device_sn and used as context for the sensor to lookup its data
         for context, data in coordinator.data.items():
-            if data.get("type") == SolixDeviceType.SYSTEM.value:
+            if (dev_type:= data.get("type")) == SolixDeviceType.ACCOUNT.value:
+                # Unique key for account entry in data
+                entity_type = AnkerSolixEntityType.ACCOUNT
+                entity_list = ACCOUNT_SWITCHES
+            elif dev_type == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SWITCHES
@@ -142,6 +152,9 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
             self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
+        elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
+            # get the account context from coordinator client session
+            self._attr_device_info = get_AnkerSolixAccountInfo(coordinator)
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})

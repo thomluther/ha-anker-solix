@@ -13,7 +13,12 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE, PERCENTAGE, EntityCategory
+from homeassistant.const import (
+    CONF_EXCLUDE,
+    PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -52,20 +57,23 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d: {
             "wifi_ssid": d.get("wifi_name"),
             "wifi_signal": " ".join([d.get("wifi_signal") or "--", PERCENTAGE]),
+            "rssi": " ".join([d.get("rssi") or "--", SIGNAL_STRENGTH_DECIBELS_MILLIWATT]),
             "bt_mac": d.get("bt_ble_mac"),
             "wireless_type": d.get("wireless_type"),
         },
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
-    # OTA update field not reliable, disabled until understood how this can be utilized
-    # AnkerSolixBinarySensorDescription(
-    #     key="ota_update",
-    #     translation_key="ota_update",
-    #     json_key="is_ota_update",
-    #     entity_category=EntityCategory.DIAGNOSTIC,
-    #     device_class=BinarySensorDeviceClass.UPDATE,
-    #     exclude_fn=lambda s, d: not ({d.get("type")} - s),
-    # ),
+    AnkerSolixBinarySensorDescription(
+        key="ota_update",
+        translation_key="ota_update",
+        json_key="is_ota_update",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=BinarySensorDeviceClass.UPDATE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        attrib_fn=lambda d: {
+            "ota_version": d.get("ota_version") or "unknown",
+        },
+    ),
 ]
 
 SITE_SENSORS = [
@@ -143,6 +151,7 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "wireless_type",
             "bt_mac",
             "site_admin",
+            "rssi",
         }
     )
 

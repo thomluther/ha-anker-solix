@@ -22,6 +22,12 @@
                 "smartplug": "Smarte Steckdosen"
             }
         },
+        "plan": {
+            "options": {
+                "custom_rate_plan": "Manueller Plan",
+                "blend_plan": "Mischungsplan"
+            }
+        },
         "weekday": {
             "options": {
                 "sun": "Sonntag",
@@ -147,6 +153,9 @@
                     "wifi_signal": {
                         "name": "Wifi Signal"
                     },
+                    "rssi": {
+                        "name": "Wifi Rssi"
+                    },
                     "wireless_type": {
                         "name": "Wifi Typ"
                     }
@@ -157,6 +166,11 @@
                 "state": {
                     "on": "Verfügbar",
                     "off": "Aktuell"
+                },
+                "state_attributes": {
+                    "ota_version": {
+                        "name": "OTA Version"
+                    }
                 }
             },
             "site_admin": {
@@ -371,7 +385,7 @@
             "smartmeter_list": {
                 "name": "Smart Meter"
             },
-            "smart_plug_list": {
+            "smartplug_list": {
                 "name": "Smarte Steckdosen"
             },
             "solarbank_charging_power": {
@@ -397,6 +411,12 @@
             },
             "pps_state_of_charge": {
                 "name": "PPS Ladestand"
+            },
+            "smart_plugs_power": {
+                "name": "Smarte Steckdosenleistung"
+            },
+            "other_loads_power": {
+                "name": "Andere Verbraucherleistung"
             },
             "total_co2_saving": {
                 "name": "CO₂ Einsparung"
@@ -430,6 +450,14 @@
             },
             "photovoltaic_to_grid_power": {
                 "name": "Netzeinspeisung"
+            },
+            "energy_today": {
+                "name": "Tägliche Energie",
+                "state_attributes": {
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
             },
             "daily_discharge_energy": {
                 "name": "Tägliche Entladung",
@@ -652,9 +680,13 @@
             "name": "Löschen des Solarbank Zeitplans",
             "description": "Der aktuelle Zeitplan der Solarbank wird gelöscht",
             "fields": {
+                "plan": {
+                    "name": "Plan",
+                    "description": "Wähle den zu bearbeitenden Plan, standardmäßig wird der Plan für den aktiven Benutzermodus gewählt (ignoriert für Solarbank 1)"
+                },
                 "week_days": {
                     "name": "Wochentage",
-                    "description": "Ausgewählte Wochentage die vom Zeitplan gelöscht werden (ignoriert für Solarbank 1)"
+                    "description": "Wähle Wochentage die vom Zeitplan gelöscht werden (ignoriert für Solarbank 1)"
                 }
             }
         },
@@ -670,7 +702,11 @@
                     "name": "Endzeit",
                     "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für 24:00 muss 23:59 eingegeben werden."
                 },
-                "week_days": {
+                "plan": {
+                    "name": "Plan",
+                    "description": "Wähle den zu bearbeitenden Plan, standardmäßig wird der Plan für den aktiven Benutzermodus gewählt (ignoriert für Solarbank 1)"
+                },
+                    "week_days": {
                     "name": "Wochentage",
                     "description": "Wochentage für das definierte Zeitintervall (ignoriert für Solarbank 1)"
                 },
@@ -704,7 +740,11 @@
                     "name": "Endzeit",
                     "description": "Endzeit des Intervalls (Sekunden werden ignoriert). Für 24:00 muss 23:59 eingegeben werden."
                 },
-                "week_days": {
+                "plan": {
+                    "name": "Plan",
+                    "description": "Wähle den zu bearbeitenden Plan, standardmäßig wird der Plan für den aktiven Benutzermodus gewählt (ignoriert für Solarbank 1)"
+                },
+                    "week_days": {
                     "name": "Wochentage",
                     "description": "Wochentage für das definierte Zeitintervall (ignoriert für Solarbank 1)"
                 },

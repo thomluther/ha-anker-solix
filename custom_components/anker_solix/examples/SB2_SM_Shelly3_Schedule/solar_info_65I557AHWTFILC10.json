@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "brand_id": "8bd6d6f5-2485-4995-80ee-97e4eca9eff9",
+    "solar_brand": "Others",
+    "solar_model": "Others",
+    "solar_sn": "",
+    "solar_model_name": "Others"
+  },
+  "trace_id": "6ae0694f9ab4d7eb9fb6d22f5645aae4"
+}

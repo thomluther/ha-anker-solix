@@ -1,6 +1,8 @@
-"""Helper modules for the Anker Power/Solix Cloud API."""
+"""Helper modules and classes for the Anker Power/Solix Cloud API."""
 
 from datetime import datetime, timedelta
+
+from cryptography.hazmat.primitives import hashes
 
 
 class RequestCounter:
@@ -34,6 +36,20 @@ class RequestCounter:
         return len([x for x in self.elements if x > last_time])
 
     def last_hour(self) -> int:
-        """Get number of timestamps for last minute."""
+        """Get number of timestamps for last hour."""
         last_time = datetime.now() - timedelta(hours=1)
         return len([x for x in self.elements if x > last_time])
+
+
+def md5(text: str) -> str:
+    """Return MD5 hash in hex for given string."""
+    h = hashes.Hash(hashes.MD5())
+    h.update(text.encode("utf-8"))
+    return h.finalize().hex()
+
+
+def getTimezoneGMTString() -> str:
+    """Construct timezone GMT string with offset, e.g. GMT+01:00."""
+    tzo = datetime.now().astimezone().strftime("%z")
+    return f"GMT{tzo[:3]}:{tzo[3:5]}"
+

@@ -68,6 +68,7 @@ from .const import (
     APPLIANCE_LOAD,
     DEVICE_LOAD,
     CHARGE_PRIORITY_LIMIT,
+    PLAN,
     WEEK_DAYS,
     CONF_SKIP_INVALID,
 )
@@ -265,10 +266,26 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
+        key="energy_today",
+        translation_key="energy_today",
+        json_key="energy_today",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: d.get(jk),
+        attrib_fn=lambda d, _: {"last_period": d.get("energy_last_period")},
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and {ApiCategories.smartplug_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
         # Resulting Output preset per device
         # This may also present 0 W if the allow discharge switch is disabled, even if the W preset value remains and the minimum bypass per defined inverter will be used
         # This is confusing in the App and the Api, since there may be the minimum bypass W applied even if 0 W is shown.
         # 0 W is only applied truly if the 0 W Switch is installed for non Anker inverters, or if MI80 is used which supports the 0 W setting natively
+        # NOTE: The Api does not reflect active blend plan output power in this field, only the custom plan preset or the default setting without customer plan
         key="set_output_power",
         translation_key="set_output_power",
         json_key="set_output_power",
@@ -443,6 +460,8 @@ DEVICE_SENSORS = [
         key="tag",
         translation_key="tag",
         json_key="tag",
+        # This value my be empty for devices not supporting tags
+        value_fn=lambda d, jk, _: d.get(jk) or None,
         exclude_fn=lambda s, d: not (
             {d.get("type")} - s and {ApiCategories.device_tag} - s
         ),
@@ -516,8 +535,8 @@ SITE_SENSORS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTMETER.value} - s),
     ),
     AnkerSolixSensorDescription(
-        key="smart_plug_list",
-        translation_key="smart_plug_list",
+        key="smartplug_list",
+        translation_key="smartplug_list",
         json_key="smartplug_list",
         # entity_registry_enabled_default=False,
         picture_path=AnkerSolixPicturePath.SMARTPLUG,
@@ -640,6 +659,33 @@ SITE_SENSORS = [
         # exclude sensor if unused artifacts in structure
         exclude_fn=lambda s, d: not ({SolixDeviceType.PPS.value} - s)
         or not list((d.get("pps_info") or {}).get("pps_list") or []),
+    ),
+    AnkerSolixSensorDescription(
+        # Summary of all smartplug output power on site
+        key="smart_plugs_power",
+        translation_key="smart_plugs_power",
+        json_key="total_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d, jk, _: (d.get("smart_plug_info") or {}).get(jk),
+        suggested_display_precision=0,
+        # exclude sensor if unused artifacts in structure
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SMARTPLUG.value} - s),
+    ),
+    AnkerSolixSensorDescription(
+        # Other smart plug load given by blend plan
+        key="other_loads_power",
+        translation_key="other_loads_power",
+        json_key="other_loads_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d, jk, _: d.get(jk),
+        suggested_display_precision=0,
+        # exclude sensor of main site structure when no smart plugs installed since this should only be used for blend plan in smart plug mode
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SMARTPLUG.value} - s)
+        or not list((d.get("smart_plug_info") or {}).get("smartplug_list") or []),
     ),
     AnkerSolixSensorDescription(
         key="total_co2_saving",
@@ -979,8 +1025,8 @@ SITE_SENSORS = [
             ).get("home_usage"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SMARTMETER.value} - s
-            and {ApiCategories.solarbank_energy, ApiCategories.smartmeter_energy} - s
+            {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} - s
+            and {ApiCategories.solarbank_energy, ApiCategories.smartmeter_energy, ApiCategories.smartplug_energy} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1455,49 +1501,43 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         # Mark sensor availability based on a sensore value
         self._attr_available = self._native_value is not None
 
-    @callback
-    async def get_system_info(self, **kwargs: Any) -> None:
+    async def get_system_info(self, **kwargs: Any) -> dict | None:
         """Get the actual system info from the api."""
         return await self._solix_system_service(
             service_name=SERVICE_GET_SYSTEM_INFO, **kwargs
         )
 
-    @callback
-    async def export_systems(self, **kwargs: Any) -> None:
+    async def export_systems(self, **kwargs: Any) -> dict | None:
         """Export the actual api responses for accessible systems and devices into zipped JSON files."""
         return await self._solix_system_service(
             service_name=SERVICE_EXPORT_SYSTEMS, **kwargs
         )
 
-    @callback
-    async def get_solarbank_schedule(self, **kwargs: Any) -> None:
+    async def get_solarbank_schedule(self, **kwargs: Any) -> dict | None:
         """Get the active solarbank schedule from the api."""
         return await self._solarbank_schedule_service(
             service_name=SERVICE_GET_SOLARBANK_SCHEDULE, **kwargs
         )
 
-    @callback
     async def clear_solarbank_schedule(self, **kwargs: Any) -> None:
         """Clear the active solarbank schedule."""
-        return await self._solarbank_schedule_service(
+        await self._solarbank_schedule_service(
             service_name=SERVICE_CLEAR_SOLARBANK_SCHEDULE, **kwargs
         )
 
-    @callback
     async def set_solarbank_schedule(self, **kwargs: Any) -> None:
         """Set the defined solarbank schedule slot."""
-        return await self._solarbank_schedule_service(
+        await self._solarbank_schedule_service(
             service_name=SERVICE_SET_SOLARBANK_SCHEDULE, **kwargs
         )
 
-    @callback
     async def update_solarbank_schedule(self, **kwargs: Any) -> None:
         """Update the defined solarbank schedule."""
-        return await self._solarbank_schedule_service(
+        await self._solarbank_schedule_service(
             service_name=SERVICE_UPDATE_SOLARBANK_SCHEDULE, **kwargs
         )
 
-    async def _solix_system_service(self, service_name: str, **kwargs: Any) -> None:
+    async def _solix_system_service(self, service_name: str, **kwargs: Any) -> dict | None:
         """Execute the defined solarbank schedule service."""
         # Raise alerts to frontend
         if not (self.supported_features & AnkerSolixEntityFeature.SYSTEM_INFO):
@@ -1575,7 +1615,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
 
     async def _solarbank_schedule_service(  # noqa: C901
         self, service_name: str, **kwargs: Any
-    ) -> None:
+    ) -> dict | None:
         """Execute the defined solarbank schedule service."""
         # Raise alerts to frontend
         if not (self.supported_features & AnkerSolixEntityFeature.SOLARBANK_SCHEDULE):
@@ -1619,6 +1659,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     if (start_time := kwargs.get(START_TIME)) < (
                         end_time := kwargs.get(END_TIME)
                     ):
+                        plan = kwargs.get(PLAN)
+                        if plan in [cv.ENTITY_MATCH_NONE]:
+                            plan = None
                         weekdays = kwargs.get(WEEK_DAYS)
                         if weekdays == cv.ENTITY_MATCH_NONE:
                             weekdays = None
@@ -1700,6 +1743,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         siteId=siteId,
                                         deviceSn=self._context_base,
                                         set_slot=slot,
+                                        plan_name=plan,
                                         test_schedule=data.get("schedule") or {}
                                         if self.coordinator.client.testmode()
                                         else None,
@@ -1711,6 +1755,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         siteId=siteId,
                                         deviceSn=self._context_base,
                                         insert_slot=slot,
+                                        plan_name=plan,
                                         test_schedule=data.get("schedule") or {}
                                         if self.coordinator.client.testmode()
                                         else None,
@@ -1826,12 +1871,16 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 if generation > 1:
                     # Clear SB2 schedule
                     if schedule := data.get("schedule") or {}:
+                        plan = kwargs.get(PLAN)
+                        if plan in [cv.ENTITY_MATCH_NONE]:
+                            plan = None
                         weekdays = kwargs.get(WEEK_DAYS)
                         if weekdays == cv.ENTITY_MATCH_NONE:
                             weekdays = None
                         result = await self.coordinator.client.api.set_sb2_home_load(
                             siteId=siteId,
                             deviceSn=self._context_base,
+                            plan_name=plan,
                             set_slot=Solarbank2Timeslot(
                                 start_time=None,
                                 end_time=None,

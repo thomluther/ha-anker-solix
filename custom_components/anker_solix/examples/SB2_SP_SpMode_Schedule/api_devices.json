@@ -1,0 +1,166 @@
+{
+  "81QCP7Q5D1258SXT": {
+    "device_sn": "81QCP7Q5D1258SXT",
+    "type": "solarbank",
+    "site_id": "cafd5d6b-57a4-da8a-bbe3-41f6c6bddda2",
+    "is_admin": true,
+    "device_pn": "A17C1",
+    "generation": 2,
+    "battery_soc": "39",
+    "battery_capacity": "1600",
+    "battery_energy": "624",
+    "charging_power": "-279",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "detection",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "279",
+    "sub_package_num": 0,
+    "power_cutoff": 10,
+    "alias": "Solarbank 2 E1600 Pro",
+    "set_output_power": "50",
+    "set_system_output_power": "50",
+    "data_valid": true,
+    "solarbank_count": 1,
+    "solar_power_1": "0",
+    "solar_power_2": "0",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "to_home_load": "279",
+    "bt_ble_mac": "AAEBDFFF465E",
+    "name": "Solarbank 2 E1600 Pro",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.5.8",
+    "tag": "",
+    "rssi": "",
+    "is_ota_update": false,
+    "ota_version": "v1.0.5.8",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "72",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "schedule": {
+      "mode_type": 2,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 50
+            }
+          ]
+        }
+      ],
+      "blend_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 20
+            }
+          ]
+        }
+      ],
+      "default_home_load": 200,
+      "max_load": 800,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_system_output_power": 50,
+    "preset_usage_mode": 2
+  },
+  "MU1JPN69C3CB0VVV": {
+    "device_sn": "MU1JPN69C3CB0VVV",
+    "type": "smartplug",
+    "site_id": "cafd5d6b-57a4-da8a-bbe3-41f6c6bddda2",
+    "is_admin": true,
+    "device_pn": "A17X8",
+    "current_power": "82",
+    "tag": "Dining Room",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "err_code": "0",
+    "alias": "SP Basement",
+    "bt_ble_mac": "7CFFE747BB52",
+    "name": "Smart Plug",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.2.7",
+    "rssi": "-56",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v0.0.2.7",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100"
+  },
+  "IU47YZ0USSGF2K2A": {
+    "device_sn": "IU47YZ0USSGF2K2A",
+    "type": "smartplug",
+    "site_id": "cafd5d6b-57a4-da8a-bbe3-41f6c6bddda2",
+    "is_admin": true,
+    "device_pn": "A17X8",
+    "current_power": "178",
+    "tag": "Garage",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "err_code": "0",
+    "alias": "Flex Plug",
+    "bt_ble_mac": "02E88FC10BBB",
+    "name": "Smart Plug",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.2.7",
+    "rssi": "-69",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v0.0.2.7",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "86.66666666666667"
+  }
+}

@@ -95,7 +95,7 @@ API_COUNTRIES = {
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
-"""Following are the Anker Power/Solix Cloud API endpoints known so far"""
+"""Following are the Anker Power/Solix Cloud API power_service endpoints known so far. Some are common, others are mainly for balcony power systems"""
 API_ENDPOINTS = {
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
@@ -114,6 +114,7 @@ API_ENDPOINTS = {
     "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version, works only for owner account
     "get_device_load": "power_service/v1/app/device/get_device_home_load",  # Get defined device schedule (same data as provided with device param query)
     "set_device_load": "power_service/v1/app/device/set_device_home_load",  # Set defined device schedule, Accepts the new schedule, but does NOT change it? Maybe future use for schedules per device
+    "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_ota_info": "power_service/v1/app/compatible/get_ota_info",  # Get OTA status for solarbank and/or inverter serials
     "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Get info of available OTA update
     "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar inverter definition for solarbanks, works only with owner account
@@ -137,6 +138,40 @@ API_ENDPOINTS = {
     "get_third_platforms": "power_service/v1/app/third/platform/list",  # list supported third party device models
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
+}
+
+"""Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
+API_CHARGING_ENDPOINTS = {
+    "get_error_info": "charging_energy_service/get_error_infos",  # No input param needed, show errors for account?
+    "get_system_running_info": "charging_energy_service/get_system_running_info",  # Cumulative Home/System Energy Savings since Home creation date
+    "energy_statistics": "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel, # source type [solar hes grid home pps]
+    "get_rom_versions": "charging_energy_service/get_rom_versions",  # Check for firmware update and download available packages, needs owner account
+    "get_device_info": "charging_energy_service/get_device_infos",  # Wifi and MAC infos for provided devices, needs owner account
+    "get_wifi_info": "charging_energy_service/get_wifi_info",  # Displays WiFi network connected to Home Power Panel, needs owner account
+    "get_installation_inspection": "charging_energy_service/get_installation_inspection",  # appears to say which page last viewed on App, needs owner account
+    "get_utility_rate_plan": "charging_energy_service/get_utility_rate_plan",  # needs owner account
+    "report_device_data": "charging_energy_service/report_device_data",  # ctrol [0 1], works but data is null (may need owner account?)
+    "get_configs": "charging_energy_service/get_configs",  # needs owner account
+    "get_sns": "charging_energy_service/get_sns",  # Displays Serial Numbers of attached PPS in Home, needs owner account
+    "get_monetary_units": "charging_energy_service/get_world_monetary_unit",  # monetary unit list for system, needs owner account
+}
+
+"""Following are the Anker Power/Solix Cloud API charging_hes_svc endpoints known so far. They are used for Home Energy Systems like X1."""
+API_HES_SVC_ENDPOINTS = {
+    "get_product_info": "charging_hes_svc/get_device_product_info",  # List of Anker HES devices, works with shared account
+    "get_heat_pump_plan": "charging_hes_svc/get_heat_pump_plan_json",  # heat pump plan, works with shared account
+    "get_electric_plan_list": "charging_hes_svc/get_electric_utility_and_electric_plan_list",  # Energy plan if available for country & state combination, works with shared account
+    "get_system_running_info": "charging_hes_svc/get_system_running_info",  # system runtime info, works with shared account
+    "energy_statistics": "charging_hes_svc/get_energy_statistics",  # Energy stats for HES, # source type [solar hes grid home]
+    "get_monetary_units": "charging_hes_svc/get_world_monetary_unit",  # monetary unit list for system, works with shared account
+    "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account
+    "get_wifi_info": "charging_hes_svc/get_wifi_info",  # get device wifi info, works with shared account
+    "get_installer_info": "charging_hes_svc/get_installer_info", # no shared account access, needs HES site?
+    "get_system_running_time": "charging_hes_svc/get_system_running_time", # no shared account access, needs HES site?
+    "get_mi_layout": "charging_hes_svc/get_mi_layout", # no shared account access, needs HES site?
+    "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips", # no shared account access, needs HES site?
+    "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info", # no shared account access, needs HES site?
+    "report_device_data": "charging_hes_svc/report_device_data", # no shared account access, needs HES site and installer system?
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -185,28 +220,16 @@ API_ENDPOINTS = {
     'app/devicerelation/un_relate_and_unbind_device',
     'app/devicerelation/relate_device',
     'app/push/clear_count',
-    'app/ota/batch/check_update',
 
 PPS and Power Panel related:
-    "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel
-    "charging_energy_service/get_system_running_info", # Cumulative Home/System Energy Savings since Home creation date
-    "charging_energy_service/get_device_infos", # Home Panel Info
-    "charging_energy_service/get_rom_versions”, # Check for firmware update and download available packages
-    "charging_energy_service/get_error_infos", # Unknown at this time
-    "charging_energy_service/get_wifi_info", # Displays WiFi network connected to Home Power Panel
-    "charging_energy_service/get_installation_inspection", # Unknown at this time - appears to say which page last viewed on App
     "charging_energy_service/sync_installation_inspection", #Unknown at this time
-    "charging_energy_service/get_utility_rate_plan",
-    "charging_energy_service/report_device_data",
+    "charging_energy_service/sync_config",
     "charging_energy_service/restart_peak_session",
     "charging_energy_service/preprocess_utility_rate_plan",
     "charging_energy_service/ack_utility_rate_plan",
-    "charging_energy_service/get_configs",
     "charging_energy_service/adjust_station_price_unit",
-    "charging_energy_service/sync_config",
-    "charging_energy_service/get_sns", # Displays Serial Numbers of attached PPS in Home
-    "charging_energy_service/get_world_monetary_unit",
 
+Home Energy System related (X1):
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -217,30 +240,17 @@ PPS and Power Panel related:
     "charging_hes_svc/get_auto_disaster_prepare_status",
     "charging_hes_svc/get_auto_disaster_prepare_detail",
     "charging_hes_svc/get_back_up_history",
-    "charging_hes_svc/get_conn_net_tips",
     "charging_hes_svc/get_current_disaster_prepare_details",
     "charging_hes_svc/get_device_command",
     "charging_hes_svc/get_device_pn_info",
     "charging_hes_svc/get_device_card_list",
     "charging_hes_svc/get_device_card_details",
-    "charging_hes_svc/get_device_product_info", # List of Anker power devices
-    "charging_hes_svc/get_energy_statistics",
-    "charging_hes_svc/get_electric_utility_and_electric_plan_list",
     "charging_hes_svc/get_external_device_config",
-    "charging_hes_svc/get_heat_pump_plan_json",
-    "charging_hes_svc/get_hes_dev_info",
-    "charging_hes_svc/get_installer_info",
-    "charging_hes_svc/get_install_info",
-    "charging_hes_svc/get_mi_layout",
     "charging_hes_svc/get_site_mi_list",
     "charging_hes_svc/get_station_config_and_status",
-    "charging_hes_svc/get_system_running_info",
-    "charging_hes_svc/get_system_running_time",
     "charging_hes_svc/get_system_profit_detail",
     "charging_hes_svc/get_tou_price_plan_detail",
     "charging_hes_svc/get_user_fault_info",
-    "charging_hes_svc/get_wifi_info", # ssid and rssi for a device
-    "charging_hes_svc/get_world_monetary_unit",
     "charging_hes_svc/update_hes_utility_rate_plan",
     "charging_hes_svc/user_event_alarm",
     "charging_hes_svc/update_wifi_config",
@@ -248,7 +258,6 @@ PPS and Power Panel related:
     "charging_hes_svc/quit_auto_disaster_prepare",
     "charging_hes_svc/remove_user_fault_info",
     "charging_hes_svc/restart_peak_session",
-    "charging_hes_svc/report_device_data",
     "charging_hes_svc/start",
     "charging_hes_svc/sync_back_up_history",
 
@@ -267,6 +276,7 @@ the cached JSON file. Other instances should recognize an update of the cached J
 
 # Following are the JSON filename prefixes for exported endpoint names as defined previously
 API_FILEPREFIXES = {
+    # power_service endpoint file prefixes
     "homepage": "homepage",
     "site_list": "site_list",
     "bind_devices": "bind_devices",
@@ -275,6 +285,9 @@ API_FILEPREFIXES = {
     "get_auto_upgrade": "auto_upgrade",
     "get_config": "config",
     "site_rules": "list_site_rules",
+    "get_installation": "installation",
+    "get_site_price": "price",
+    "get_device_parm": "device_parm",
     "get_product_categories": "list_products",
     "get_product_accessories": "list_accessories",
     "get_third_platforms": "list_third_platforms",
@@ -283,9 +296,6 @@ API_FILEPREFIXES = {
     "scene_info": "scene",
     "site_detail": "site_detail",
     "wifi_list": "wifi_list",
-    "get_installation": "installation",
-    "get_site_price": "price",
-    "get_device_parm": "device_parm",
     "energy_solarbank": "energy_solarbank",
     "energy_solar_production": "energy_solar_production",
     "energy_solar_production_pv": "energy_solar_production_pv",
@@ -296,14 +306,52 @@ API_FILEPREFIXES = {
     "get_cutoff": "power_cutoff",
     "get_device_fittings": "device_fittings",
     "get_device_load": "device_load",
+    "get_ota_batch": "ota_batch",
     "get_ota_update": "ota_update",
     "get_ota_info": "ota_info",
     "get_upgrade_record": "upgrade_record",
     "check_upgrade_record": "check_upgrade_record",
     "get_device_attributes": "device_attrs",
     "get_message_unread": "message_unread",
+    "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
+    # charging_energy_service endpoint file prefixes
+    "charging_get_error_info": "charging_error_info",
+    "charging_get_system_running_info": "charging_system_running_info",
+    "charging_energy_solar": "charging_energy_solar",
+    "charging_energy_hes": "charging_energy_hes",
+    "charging_energy_pps": "charging_energy_pps",
+    "charging_energy_home": "charging_energy_home",
+    "charging_energy_grid": "charging_energy_grid",
+    "charging_get_rom_versions": "charging_rom_versions",
+    "charging_get_device_info": "charging_device_info",
+    "charging_get_wifi_info": "charging_wifi_info",
+    "charging_get_installation_inspection": "charging_installation_inspection",
+    "charging_get_utility_rate_plan": "charging_utility_rate_plan",
+    "charging_report_device_data": "charging_report_device_data",
+    "charging_get_configs": "charging_configs",
+    "charging_get_sns": "charging_sns",
+    "charging_get_monetary_units": "charging_monetary_units",
+    # charging_energy_service endpoint file prefixes
+    "hes_get_product_info": "hes_product_info",
+    "hes_get_heat_pump_plan": "hes_heat_pump_plan",
+    "hes_get_electric_plan_list": "hes_electric_plan",
+    "hes_get_system_running_info": "hes_system_running_info",
+    "hes_energy_solar": "hes_energy_solar",
+    "hes_energy_hes": "hes_energy_hes",
+    "hes_energy_pps": "hes_energy_pps",
+    "hes_energy_home": "hes_energy_home",
+    "hes_energy_grid": "hes_energy_grid",
+    "hes_get_monetary_units": "hes_monetary_units",
+    "hes_get_install_info": "hes_install_info",
+    "hes_get_wifi_info": "hes_wifi_info",
+    "hes_get_installer_info": "hes_installer_info",
+    "hes_get_system_running_time": "hes_system_running_time",
+    "hes_get_mi_layout": "hes_mi_layout",
+    "hes_get_conn_net_tips": "hes_conn_net_tips",
+    "hes_get_hes_dev_info": "hes_dev_info",
+    "hes_report_device_data": "hes_report_device_data",
 }
 
 
@@ -334,6 +382,7 @@ LOGIN_RESPONSE: dict = {
 class SolixDeviceType(Enum):
     """Enumeration for Anker Solix device types."""
 
+    ACCOUNT = "account"
     SYSTEM = "system"
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
@@ -363,8 +412,27 @@ class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank Power Usage modes."""
 
     smartmeter = 1
-    smartplugs = 2  # TODO to be validated if correct mode for smart plugs
+    smartplugs = 2
     manual = 3
+
+@dataclass(frozen=True)
+class SolarbankRatePlan:
+    """Dataclass for Anker Solix Solarbank rate plan types."""
+
+    # rate plan per usage mode
+    smartmeter: str = "custom_rate_plan" # used for default output setting on connection loss
+    smartplugs: str = "blend_plan"
+    manual: str = "custom_rate_plan"
+
+
+@dataclass(frozen=True)
+class ApiEndpointServices:
+    """Dataclass to specify supported Api endpoint services. Each service type should be implemented with dedicated Api class."""
+
+    # Note: The service endpoints may not be supported on every cloud server. It may depend on supported Anker products per geo
+    power: str = "power_service"
+    charging: str = "charging_energy_service"
+    hes_svc: str = "charging_hes_svc"
 
 
 @dataclass(frozen=True)
@@ -478,9 +546,13 @@ class SolixDeviceCategory:
         SolixDeviceType.POWERPANEL.value
     )  # SOLIX Home Power Panel for SOLIX F3800
     # Home Energy System (HES)
-    A5102: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 1P
-    A5103: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 3P
+    A5101: str = SolixDeviceType.HES.value  # SOLIX X1 P6K US
+    A5102: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 1P H(3.68~6)K
+    A5103: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 3P H(5~12)K
+    A5150: str = SolixDeviceType.HES.value  # SOLIX X1 Microinverter
     A5220: str = SolixDeviceType.HES.value  # SOLIX X1 Battery module
+    A5341: str = SolixDeviceType.HES.value  # SOLIX X1 Backup Controller
+    A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
     # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40

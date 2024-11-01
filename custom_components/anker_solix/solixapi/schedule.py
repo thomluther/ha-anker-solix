@@ -2,6 +2,7 @@
 
 import contextlib
 import copy
+from dataclasses import fields
 from datetime import datetime
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     Solarbank2Timeslot,
     SolarbankPowerMode,
+    SolarbankRatePlan,
     SolarbankTimeslot,
     SolarbankUsageMode,
     SolixDefaults,
@@ -19,9 +21,9 @@ from .apitypes import (
 
 
 async def get_device_load(
-    self, siteId: str, deviceSn: str, fromFile: bool = False
+    self, siteId: str, deviceSn: str, fromFile: bool = False, testSchedule: dict | None = None
 ) -> dict:
-    r"""Get device load settings.
+    r"""Get device load settings. This provides only SB1 schedule structure, not useful for SB2.
 
     Example data:
     {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c",
@@ -34,22 +36,31 @@ async def get_device_load(
     Attention: This method and endpoint actually returns only solarbank 1 schedule structure, which is invalid for different Solarbank 2 structures.
     While it also returns the applied home load settings, it cannot be used for Solarbank 2 due to wrong schedule data.
     """
-    data = {"site_id": siteId, "device_sn": deviceSn}
-    if fromFile:
-        resp = await self._loadFromFile(
-            Path(self._testdir)
-            / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
-        )
+    if not isinstance(testSchedule,dict):
+        testSchedule = None
+    if testSchedule is None:
+        data = {"site_id": siteId, "device_sn": deviceSn}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_device_load"], json=data
+            )
+        # The home_load_data is provided as string instead of object...Convert into object for proper handling
+        # It must be converted back to a string when passing this as input to set home load
+        string_data = (resp.get("data") or {}).get("home_load_data") or {}
+        if isinstance(string_data, str):
+            resp["data"].update({"home_load_data": json.loads(string_data)})
+        data = resp.get("data") or {}
+        # update schedule also for all device serials found in schedule
+        schedule = data.get("home_load_data") or {}
     else:
-        resp = await self.request("post", API_ENDPOINTS["get_device_load"], json=data)
-    # The home_load_data is provided as string instead of object...Convert into object for proper handling
-    # It must be converted back to a string when passing this as input to set home load
-    string_data = (resp.get("data") or {}).get("home_load_data") or {}
-    if isinstance(string_data, str):
-        resp["data"].update({"home_load_data": json.loads(string_data)})
-    data = resp.get("data") or {}
-    # update schedule also for all device serials found in schedule
-    schedule = data.get("home_load_data") or {}
+        # For testing purpose only, use test schedule to update dependent fields in device cache
+        schedule = testSchedule
+        data = {}
     dev_serials = []
     for slot in schedule.get("ranges") or []:
         for dev in slot.get("device_power_loads") or []:
@@ -76,7 +87,7 @@ async def set_device_load(
     deviceSn: str,
     loadData: dict,
 ) -> bool:
-    """Set device home load (e.g. solarbank schedule).
+    """Set device home load. This supports only SB1 schedule structure, but does not apply them. The set_device_parm method must be used instead.
 
     Example input for system with single solarbank:
     {'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'device_sn': '9JVB42LJK8J0P5RY',
@@ -100,7 +111,9 @@ async def set_device_load(
     }
     # Make the Api call and check for return code
     code = (
-        await self.request("post", API_ENDPOINTS["set_device_load"], json=data)
+        await self.apisession.request(
+            "post", API_ENDPOINTS["set_device_load"], json=data
+        )
     ).get("code")
     if not isinstance(code, int) or int(code) != 0:
         return False
@@ -115,9 +128,11 @@ async def get_device_parm(
     paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
     deviceSn: str | None = None,
     fromFile: bool = False,
+    testSchedule: dict | None = None,
 ) -> dict:
-    r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId listed in the homepage info site_list. The paramType is always 4, but can be modified if necessary.
+    r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId responded in the site_list query.
 
+    Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, but can be modified if necessary.
     Example data for provided site_id with param_type 4 for SB1:
     {"param_data": "{\"ranges\":[
         {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
@@ -130,32 +145,44 @@ async def get_device_parm(
             {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":110}]},
         {\"index\":1,\"week\":[1,2,3,4,5],\"ranges\":[
             {\"start_time\":\"00:00\",\"end_time\":\"08:00\",\"power\":90},{\"start_time\":\"08:00\",\"end_time\":\"22:00\",\"power\":120},{\"start_time\":\"22:00\",\"end_time\":\"24:00\",\"power\":90}]}],
-    \"blend_plan\":null,\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
+    \"blend_plan\":[
+        {\"index\":0,\"week\":[0,1,2,3,4,5,6],\"ranges\":[
+            {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":20}]}],
+    \"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
     """
-    data = {"site_id": siteId, "param_type": paramType}
-    if fromFile:
-        resp = await self._loadFromFile(
-            Path(self._testdir)
-            / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
-        )
-        # ensure backward filename compatibility without parm type in name
-        if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
-            resp = await self._loadFromFile(
+    if not isinstance(testSchedule,dict):
+        testSchedule = None
+    if testSchedule is None:
+        data = {"site_id": siteId, "param_type": paramType}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
-                / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
+                / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
             )
-    else:
-        resp = await self.request("post", API_ENDPOINTS["get_device_parm"], json=data)
-    # The home_load_data is provided as string instead of object...Convert into object for proper handling
-    # It must be converted back to a string when passing this as input to set home load
-    string_data = (resp.get("data", {})).get("param_data", {})
-    if isinstance(string_data, str):
-        resp["data"].update({"param_data": json.loads(string_data)})
+            # ensure backward filename compatibility without parm type in name
+            if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
+                resp = await self.apisession.loadFromFile(
+                    Path(self._testdir)
+                    / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_device_parm"], json=data
+            )
+        # The home_load_data is provided as string instead of object...Convert into object for proper handling
+        # It must be converted back to a string when passing this as input to set home load
+        string_data = (resp.get("data", {})).get("param_data", {})
+        if isinstance(string_data, str):
+            resp["data"].update({"param_data": json.loads(string_data)})
 
-    # update api device dict with latest data if optional device SN was provided, e.g. when called by set_device_parm for device details update
-    data = resp.get("data") or {}
-    # update schedule also for other device serials found in Solarbank 1 schedules
-    schedule = data.get("param_data") or {}
+        # update api device dict with latest data if optional device SN was provided, e.g. when called by set_device_parm for device details update
+        data = resp.get("data") or {}
+        # update schedule also for other device serials found in Solarbank 1 schedules
+        schedule = data.get("param_data") or {}
+    else:
+        # For testing purpose only, use test schedule to update dependent fields in device cache
+        schedule = testSchedule
+        data = {}
     dev_serials = []
     for slot in schedule.get("ranges") or []:
         for dev in slot.get("device_power_loads") or []:
@@ -210,7 +237,9 @@ async def set_device_parm(
         "param_data": json.dumps(paramData),  # Must be string type
     }
     code = (
-        await self.request("post", API_ENDPOINTS["set_device_parm"], json=data)
+        await self.apisession.request(
+            "post", API_ENDPOINTS["set_device_parm"], json=data
+        )
     ).get("code")
     if not isinstance(code, int) or int(code) != 0:
         return False
@@ -1013,13 +1042,15 @@ async def set_home_load(  # noqa: C901
         if appliance_name:
             (slot.get("appliance_loads") or [{}])[0].update({"name": appliance_name})
         new_ranges.append(slot)
-    self._logger.debug(
-        "Ranges to apply: %s",
-        new_ranges,
-    )
     schedule.update({"ranges": new_ranges})
+    self._logger.debug("Schedule to apply: %s", schedule)
     # return resulting schedule for test purposes without Api call
     if test_count is not None or test_schedule is not None:
+        await self.get_device_parm(
+            siteId=siteId,
+            testSchedule=schedule,
+            deviceSn=deviceSn,
+        )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
     # NOTE: set_device_load does not seem to be usable yet for changing the home load, or is only usable in dual bank setups for changing the appliance load share as well?
@@ -1036,6 +1067,7 @@ async def set_sb2_home_load(  # noqa: C901
     deviceSn: str,
     preset: int | None = None,
     usage_mode: int | None = None,
+    plan_name: str | None = None,
     set_slot: Solarbank2Timeslot | None = None,
     insert_slot: Solarbank2Timeslot | None = None,
     test_schedule: dict | None = None,  # used only for testing instead of real schedule
@@ -1050,18 +1082,23 @@ async def set_sb2_home_load(  # noqa: C901
     Weekday rate plans can be separated and merged depending on provided weekdays in the Solarbank2Timeslot object.
     When set_slot provides a Solarbank2Timeslot object with missing start or end time, it will be used to delete the rate plans the provided weekdays or delete all
     if no weekdays are provided.
+    If rate_plan is specified, the changes will be applied to the given plan, otherwise the active plan according to active or provided usage mode will be modified.
+    custom_rate_plan: Used for the Manual usage mode
+    blend_plan: Used for the Smart Plug usage mode
 
     Example schedule for Solarbank 2 as provided via Api:
     Example data for provided site_id with param_type 6 for SB2:
     "schedule": {
-        "mode_type": 3,"custom_rate_plan": [
+        "mode_type": 3,
+        "custom_rate_plan": [
             {"index": 0,"week": [0,6],"ranges": [
                 {"start_time": "00:00","end_time": "24:00","power": 110}]},
             {"index": 1,"week": [1,2,3,4,5],"ranges": [
                 {"start_time": "00:00","end_time": "08:00","power": 100},
                 {"start_time": "08:00","end_time": "22:00","power": 120},
                 {"start_time": "22:00","end_time": "24:00","power": 90}]}],
-        "blend_plan": null,"default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
+        "blend_plan": null,
+        "default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
     """
     # fast quit if nothing to change
     preset = (
@@ -1069,7 +1106,7 @@ async def set_sb2_home_load(  # noqa: C901
         if str(preset).isdigit() or isinstance(preset, int | float)
         else None
     )
-    # Allow automatic mode only when smartmeter available in site
+    # Allow automatic modes only when smart meter or smart plugs available in site
     usage_mode = (
         usage_mode
         if isinstance(usage_mode, int)
@@ -1085,7 +1122,7 @@ async def set_sb2_home_load(  # noqa: C901
         and not (
             usage_mode == SolarbankUsageMode.smartplugs.value
             and len(
-                ((self.sites.get(siteId) or {}).get("smartplug_info") or {}).get(
+                ((self.sites.get(siteId) or {}).get("smart_plug_info") or {}).get(
                     "smartplug_list"
                 )
                 or []
@@ -1140,11 +1177,38 @@ async def set_sb2_home_load(  # noqa: C901
     # set flag for plan deletion when set slot provided but any time field missing
     delete_plan: bool = set_slot and (not set_slot.start_time or not set_slot.end_time)
 
-    # update the usage mode in the overall schedule object
+    # update the usage mode in the overall schedule object or set it to the one used in the schedule
     if usage_mode is not None:
         schedule.update({"mode_type": usage_mode})
+    else:
+        usage_mode = schedule.get("mode_type")
 
-    rate_plan = schedule.get("custom_rate_plan") or []
+    # get validated rate plan name from optional plan_name parameter or use plan name for given/active user mode, default to custom rate plan name
+    rate_plan_name = next(
+        iter(
+            [
+                field.default
+                for field in fields(SolarbankRatePlan)
+                if field.default == plan_name
+            ]
+        ),
+        # default name if plan_name not provided or invalid
+        getattr(
+            SolarbankRatePlan,
+            next(
+                iter(
+                    [
+                        item.name
+                        for item in SolarbankUsageMode
+                        if item.value == usage_mode
+                    ]
+                ),
+                SolarbankUsageMode.manual.name,
+            ),
+            SolarbankRatePlan.manual,
+        ),
+    )
+    rate_plan = schedule.get(rate_plan_name) or []
     new_rate_plan = []
 
     # identify week days to be used, default to todays weekday or all
@@ -1528,13 +1592,16 @@ async def set_sb2_home_load(  # noqa: C901
                 "ranges": new_ranges,
             }
         ]
-    self._logger.info(
-        "Rate plan to apply: %s",
-        new_rate_plan,
-    )
-    schedule.update({"custom_rate_plan": new_rate_plan})
+    schedule.update({rate_plan_name: new_rate_plan})
+    self._logger.debug("Schedule to apply: %s", schedule)
     # return resulting schedule for test purposes without Api call
     if test_schedule is not None:
+        await self.get_device_parm(
+            siteId=siteId,
+            paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+            testSchedule=schedule,
+            deviceSn=deviceSn,
+        )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
     return await self.set_device_parm(

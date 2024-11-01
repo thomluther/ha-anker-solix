@@ -22,11 +22,19 @@ import string
 from typing import Any
 
 import aiofiles
+from aiohttp.client_exceptions import ClientError
 
 from . import api, errors
-from .apitypes import API_ENDPOINTS, API_FILEPREFIXES
+from .apitypes import (
+    API_CHARGING_ENDPOINTS,
+    API_ENDPOINTS,
+    API_FILEPREFIXES,
+    API_HES_SVC_ENDPOINTS,
+    ApiEndpointServices,
+)
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
+VERSION: str = "2.2.0.0"
 
 
 class AnkerSolixApiExport:
@@ -34,14 +42,21 @@ class AnkerSolixApiExport:
 
     def __init__(
         self,
-        client: api.AnkerSolixApi,
+        client: api.AnkerSolixApi | api.AnkerSolixClientSession,
         logger: logging.Logger | None = None,
     ) -> None:
         """Initialize."""
 
-        self.client: api.AnkerSolixApi = client
+        # get the api client session from passed object
+        if isinstance(client, api.AnkerSolixApi):
+            self.client = client.apisession
+        else:
+            self.client = client
+        # create new api instance with client session
+        self.api_power = api.AnkerSolixApi(apisession=self.client)
         self.export_path: str | None = None
         self.export_folder: str | None = None
+        self.export_services: set | None = None
         self.randomized: bool = True
         self.zipped: bool = True
         self.zipfilename: str | None = None
@@ -54,17 +69,12 @@ class AnkerSolixApiExport:
         else:
             self._logger = _LOGGER
             self._logger.setLevel(logging.DEBUG)
-        # Add console to logger if no handler available
-        # if not self._logger.hasHandlers():
-        #     # create console handler and set level to info
-        #     ch = logging.StreamHandler()
-        #     ch.setLevel(logging.INFO)
-        #     self._logger.addHandler(ch)
 
     async def export_data(  # noqa: C901
         self,
         export_path: Path | str | None = None,
         export_folder: Path | str | None = None,
+        export_services: set | None = None,
         request_delay: float | None = None,
         randomized: bool = True,
         zipped: bool = True,
@@ -80,6 +90,12 @@ class AnkerSolixApiExport:
             self.export_folder = None
         else:
             self.export_folder = Path(export_folder)
+        if export_services and isinstance(export_services, set):
+            self.export_services = export_services
+        else:
+            # use empty set to export only endpoint services depending on discovered site types
+            self.export_services: set = set()
+            # self.export_services: set = set(asdict(ApiEndpointServices()).values())
         self.request_delay = (
             request_delay
             if isinstance(request_delay, int | float)
@@ -97,7 +113,9 @@ class AnkerSolixApiExport:
             # avoid filesystem problems with * in user nicknames
             self.export_folder = self.client.nickname.replace("*", "x")
         # complete path and ensure parent self.export_path for export exists
-        self.export_path : Path = Path.resolve(Path(self.export_path) / self.export_folder)
+        self.export_path: Path = Path.resolve(
+            Path(self.export_path) / self.export_folder
+        )
         try:
             # clear export folder if it exists already
             if self.export_path.exists():
@@ -143,6 +161,12 @@ class AnkerSolixApiExport:
             # start the listener
             listener.start()
 
+            self._logger.info(
+                "Using AnkerSolixApiExport version: %s, Date: %s",
+                VERSION,
+                datetime.now().strftime("%Y-%m-%d"),
+            )
+
             # save existing api delay and adjust request delay for export
             if (old_delay := self.client.requestDelay()) != self.request_delay:
                 self.client.requestDelay(self.request_delay)
@@ -152,941 +176,43 @@ class AnkerSolixApiExport:
                     self.request_delay,
                 )
 
-            # first update Api chaches if still empty
-            if not (self.client.sites and self.client.devices):
-                self._logger.info("")
-                self._logger.info("Querying site information...")
-                await self.client.update_sites()
-                # Run bind devices to get also standalone devices for data export
-                self._logger.info("Querying bind devices information...")
-                await self.client.get_bind_devices()
-            self._logger.info(
-                "Found %s accessible systems (sites) and %s devices.",
-                len(self.client.sites),
-                len(self.client.devices),
-            )
+            # Export power_service endpoint data
+            if {
+                ApiEndpointServices.power
+            } & self.export_services or not self.export_services:
+                await self.export_power_service_data()
 
-            # Query API using direct endpoints to save full response of each query in json files
+            # Export charging_energy_service endpoint data
+            if {
+                ApiEndpointServices.charging
+            } & self.export_services or not self.export_services:
+                await self.export_charging_energy_service_data()
+
+            # Export charging_hes_svc endpoint data
+            if {
+                ApiEndpointServices.hes_svc
+            } & self.export_services or not self.export_services:
+                await self.export_charging_hes_svc_data()
+
+            # Always export account dictionary
             self._logger.info("")
-            self._logger.info("Exporting homepage...")
+            self._logger.info("Exporting Api account cache...")
             self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["homepage"],
-                filename := f"{API_FILEPREFIXES['homepage']}.json",
+                "Api account cache --> %s",
+                filename := f"{API_FILEPREFIXES['api_account']}.json",
             )
-            payload = {}
+            # update account dictionary with number of requests during export
+            self.api_power._update_account()  # noqa: SLF001
+            # Randomizing dictionary for account data
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-            self._logger.info("Exporting site list...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["site_list"],
-                filename := f"{API_FILEPREFIXES['site_list']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-            self._logger.info("Exporting bind devices...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["bind_devices"],
-                filename := f"{API_FILEPREFIXES['bind_devices']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )  # shows only owner devices
-            self._logger.info("Exporting user devices...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["user_devices"],
-                filename := f"{API_FILEPREFIXES['user_devices']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )  # shows only owner devices
-            self._logger.info("Exporting charging devices...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["charging_devices"],
-                filename := f"{API_FILEPREFIXES['charging_devices']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )  # shows only owner devices
-            self._logger.info("Exporting auto upgrade settings...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["get_auto_upgrade"],
-                filename := f"{API_FILEPREFIXES['get_auto_upgrade']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )  # shows only owner devices
-            self._logger.info("Exporting config...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["get_config"],
-                filename := f"{API_FILEPREFIXES['get_config']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-            self._logger.info("Exporting supported sites, devices and accessories...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["site_rules"],
-                filename := f"{API_FILEPREFIXES['site_rules']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "get",
-                endpoint := API_ENDPOINTS["get_product_categories"],
-                filename := f"{API_FILEPREFIXES['get_product_categories']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "get",
-                endpoint := API_ENDPOINTS["get_product_accessories"],
-                filename := f"{API_FILEPREFIXES['get_product_accessories']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["get_third_platforms"],
-                filename := f"{API_FILEPREFIXES['get_third_platforms']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-            self._logger.info("Get token for user account...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["get_token_by_userid"],
-                filename := f"{API_FILEPREFIXES['get_token_by_userid']}.json",
-            )
-            payload = {}
-            response = await self.client.request(
-                method,
-                endpoint,
-                json=payload,
-            )
-            await self._export(
-                Path(self.export_path) / filename,
-                response,
+                self.api_power.account,
             )
 
-            self._logger.info("Get Shelly status with token...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "post",
-                endpoint := API_ENDPOINTS["get_shelly_status"],
-                filename := f"{API_FILEPREFIXES['get_shelly_status']}.json",
-            )
-            # use real token for query
-            payload = {"token": (response or {}).get("data", {}).get("token", "")}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
+            # Print stats
+            self._logger.info("Api Request stats: %s", self.client.request_count)
 
-            # loop through all found sites
-            for siteId, site in self.client.sites.items():
-                self._logger.info("")
-                self._logger.info(
-                    "Exporting site specific data for site %s...",
-                    self._randomize(siteId, "site_id"),
-                )
-                self._logger.info("Exporting scene info...")
-                self._logger.debug(
-                    "%s %s --> %s",
-                    method := "post",
-                    endpoint := API_ENDPOINTS["scene_info"],
-                    filename
-                    := f"{API_FILEPREFIXES['scene_info']}_{self._randomize(siteId,'site_id')}.json",
-                )
-                payload = {"site_id": siteId}
-                await self._export(
-                    Path(self.export_path) / filename,
-                    await self.client.request(
-                        method,
-                        endpoint,
-                        json=payload,
-                    ),
-                )
-                self._logger.info("Exporting site detail...")
-                admin = site.get("site_admin")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["site_detail"],
-                        filename
-                        := f"{API_FILEPREFIXES['site_detail']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
-                        )
-                    else:
-                        payload = {"site_id": siteId}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting wifi list...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["wifi_list"],
-                        filename
-                        := f"{API_FILEPREFIXES['wifi_list']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
-                        )
-                    else:
-                        payload = {"site_id": siteId}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting installation...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_installation"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_installation']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    payload = {"site_id": siteId}
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting site price...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_site_price"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_site_price']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
-                        )
-                    else:
-                        payload = {"site_id": siteId}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                for parmtype in ["4", "6"]:
-                    self._logger.info(
-                        "Exporting device parameter type %s settings...", parmtype
-                    )
-                    try:
-                        self._logger.debug(
-                            "%s %s --> %s",
-                            method := "post",
-                            endpoint := API_ENDPOINTS["get_device_parm"],
-                            filename
-                            := f"{API_FILEPREFIXES['get_device_parm']}_{parmtype}_{self._randomize(siteId,'site_id')}.json",
-                        )
-                        if not admin:
-                            self._logger.warning(
-                                "Query requires account of site owner: %s", endpoint
-                            )
-                        else:
-                            payload = {"site_id": siteId, "param_type": parmtype}
-                            await self._export(
-                                Path(self.export_path) / filename,
-                                await self.client.request(
-                                    method,
-                                    endpoint,
-                                    json=payload,
-                                ),
-                            )  # works only for site owners
-                    except errors.AnkerSolixError as err:
-                        self._logger.error(
-                            "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                            str(method).upper(),
-                            endpoint,
-                            str(payload).replace(siteId, "<siteId>"),
-                            type(err),
-                            err,
-                        )
-                self._logger.info("Exporting site energy data for solarbank...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["energy_analysis"],
-                        filename
-                        := f"{API_FILEPREFIXES['energy_solarbank']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    payload = {
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "solarbank",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    }
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )  # works also for site members
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting site energy data for solar_production...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["energy_analysis"],
-                        filename
-                        := f"{API_FILEPREFIXES['energy_solar_production']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    payload = {
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "solar_production",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    }
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )  # works also for site members
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                for ch in range(1, 5):
-                    self._logger.info(
-                        "Exporting site energy data for solar_production PV%s...", ch
-                    )
-                    try:
-                        self._logger.debug(
-                            "%s %s --> %s",
-                            method := "post",
-                            endpoint := API_ENDPOINTS["energy_analysis"],
-                            filename
-                            := f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{self._randomize(siteId,'site_id')}.json",
-                        )
-                        payload = {
-                            "site_id": siteId,
-                            "device_sn": "",
-                            "type": "week",
-                            "device_type": f"solar_production_pv{ch}",
-                            "start_time": (
-                                datetime.today() - timedelta(days=1)
-                            ).strftime("%Y-%m-%d"),
-                            "end_time": datetime.today().strftime("%Y-%m-%d"),
-                        }
-                        data = (
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            )
-                            or {}
-                        )
-                        if not data or not data.get("data"):
-                            self._logger.warning(
-                                "No solar production energy available for PV%s, skipping remaining PV channel export...",
-                                ch,
-                            )
-                            break
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            data,
-                        )  # works also for site members
-                    except errors.AnkerSolixError as err:
-                        self._logger.error(
-                            "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                            str(method).upper(),
-                            endpoint,
-                            str(payload).replace(siteId, "<siteId>"),
-                            type(err),
-                            err,
-                        )
-                        self._logger.warning(
-                            "No solar production energy available for PV%s, skipping PV channel export...",
-                            ch,
-                        )
-                        break
-                self._logger.info("Exporting site energy data for home_usage...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["energy_analysis"],
-                        filename
-                        := f"{API_FILEPREFIXES['energy_home_usage']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    payload = {
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "home_usage",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    }
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )  # works also for site members
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting site energy data for grid...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["energy_analysis"],
-                        filename
-                        := f"{API_FILEPREFIXES['energy_grid']}_{self._randomize(siteId,'site_id')}.json",
-                    )
-                    payload = {
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "grid",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    }
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )  # works also for site members
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload).replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-
-            # loop through all devices
-            for sn, device in self.client.devices.items():
-                self._logger.info("")
-                self._logger.info(
-                    "Exporting device specific data for device %s SN %s...",
-                    device.get("name", ""),
-                    self._randomize(sn, "_sn"),
-                )
-                siteId = device.get("site_id", "")
-                admin = device.get("is_admin")
-
-                if device.get("type") == api.SolixDeviceType.SOLARBANK.value:
-                    self._logger.info("Exporting solar info settings for solarbank...")
-                    try:
-                        self._logger.debug(
-                            "%s %s --> %s",
-                            method := "post",
-                            endpoint := API_ENDPOINTS["solar_info"],
-                            filename
-                            := f"{API_FILEPREFIXES['solar_info']}_{self._randomize(sn,'_sn')}.json",
-                        )
-                        payload = {"solarbank_sn": sn}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )
-                    except errors.AnkerSolixError as err:
-                        self._logger.error(
-                            "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                            str(method).upper(),
-                            endpoint,
-                            str(payload)
-                            .replace(sn, "<deviceSn>")
-                            .replace(siteId, "<siteId>"),
-                            type(err),
-                            err,
-                        )
-
-                    self._logger.info(
-                        "Exporting compatible process info for solarbank..."
-                    )
-                    try:
-                        self._logger.debug(
-                            "%s %s --> %s",
-                            method := "post",
-                            endpoint := API_ENDPOINTS["compatible_process"],
-                            filename
-                            := f"{API_FILEPREFIXES['compatible_process']}_{self._randomize(sn,'_sn')}.json",
-                        )
-                        payload = {"solarbank_sn": sn}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )
-                    except errors.AnkerSolixError as err:
-                        self._logger.error(
-                            "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                            str(method).upper(),
-                            endpoint,
-                            str(payload)
-                            .replace(sn, "<deviceSn>")
-                            .replace(siteId, "<siteId>"),
-                            type(err),
-                            err,
-                        )
-
-                self._logger.info("Exporting power cutoff settings...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_cutoff"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_cutoff']}_{self._randomize(sn,'_sn')}.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
-                        )
-                    else:
-                        payload = {"site_id": siteId, "device_sn": sn}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload)
-                        .replace(sn, "<deviceSn>")
-                        .replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting fittings...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_device_fittings"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_device_fittings']}_{self._randomize(sn,'_sn')}.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
-                        )
-                    else:
-                        payload = {"site_id": siteId, "device_sn": sn}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload)
-                        .replace(sn, "<deviceSn>")
-                        .replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting load...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_device_load"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_device_load']}_{self._randomize(sn,'_sn')}.json",
-                    )
-                    if not admin:
-                        self._logger.warning(
-                            "Query requires account of site owner: %s", endpoint
-                        )
-                    else:
-                        payload = {"site_id": siteId, "device_sn": sn}
-                        await self._export(
-                            Path(self.export_path) / filename,
-                            await self.client.request(
-                                method,
-                                endpoint,
-                                json=payload,
-                            ),
-                        )  # works only for site owners
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload)
-                        .replace(sn, "<deviceSn>")
-                        .replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting OTA update info for device...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_ota_update"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_ota_update']}_{self._randomize(sn,'_sn')}.json",
-                    )
-                    payload = {"device_sn": sn, "insert_sn": ""}
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload)
-                        .replace(sn, "<deviceSn>")
-                        .replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-                self._logger.info("Exporting upgrade record for device...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_upgrade_record"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_upgrade_record']}_1_{self._randomize(sn,'_sn')}.json",
-                    )
-                    payload = {"device_sn": sn, "type": 1}
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload)
-                        .replace(sn, "<deviceSn>")
-                        .replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-
-                self._logger.info("Exporting device attributes...")
-                try:
-                    self._logger.debug(
-                        "%s %s --> %s",
-                        method := "post",
-                        endpoint := API_ENDPOINTS["get_device_attributes"],
-                        filename
-                        := f"{API_FILEPREFIXES['get_device_attributes']}_{self._randomize(sn,'_sn')}.json",
-                    )
-                    payload = {
-                        "device_sn": sn,
-                        "attributes": [],  # Not clear if empty attributes list will list all attributes if there are any
-                    }
-                    await self._export(
-                        Path(self.export_path) / filename,
-                        await self.client.request(
-                            method,
-                            endpoint,
-                            json=payload,
-                        ),
-                    )
-                except errors.AnkerSolixError as err:
-                    self._logger.error(
-                        "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
-                        str(method).upper(),
-                        endpoint,
-                        str(payload)
-                        .replace(sn, "<deviceSn>")
-                        .replace(siteId, "<siteId>"),
-                        type(err),
-                        err,
-                    )
-
-            self._logger.info("")
-            self._logger.info("Exporting message unread status...")
-            self._logger.debug(
-                "%s %s --> %s",
-                method := "get",
-                endpoint := API_ENDPOINTS["get_message_unread"],
-                filename := f"{API_FILEPREFIXES['get_message_unread']}.json",
-            )
-            payload = {}
-            await self._export(
-                Path(self.export_path) / filename,
-                await self.client.request(
-                    method,
-                    endpoint,
-                    json=payload,
-                ),
-            )
-
-            # update the api dictionaries from exported files to use randomized input data
-            # this is more efficient and allows validation of randomized data in export files
-            # save real client cache data first
-            old_sites = deepcopy(self.client.sites)
-            old_devices = deepcopy(self.client.devices)
-            self.client.testDir(self.export_path)
-            self._logger.debug("Saved original client cache and testfolder.")
-            await self.client.update_sites(fromFile=True)
-            await self.client.update_site_details(fromFile=True)
-            await self.client.update_device_details(fromFile=True)
-            await self.client.update_device_energy(fromFile=True)
-            # avoid randomizing dictionary export twice when imported from randomized files already
-            self._logger.info("")
-            self._logger.info("Exporting Api sites cache from files...")
-            self._logger.debug(
-                "Api sites cache --> %s",
-                filename := f"{API_FILEPREFIXES['api_sites']}.json",
-            )
-            await self._export(
-                Path(self.export_path) / filename,
-                self.client.sites,
-                skip_randomize=True,
-            )
-            self._logger.info("Exporting Api devices cache from files...")
-            self._logger.debug(
-                "Api devices cache --> %s",
-                filename := f"{API_FILEPREFIXES['api_devices']}.json",
-            )
-            await self._export(
-                Path(self.export_path) / filename,
-                self.client.devices,
-                skip_randomize=True,
-            )
-            # restore real client cache data
-            # skip restore of default test dir since it may not exist
-            # self.client.testDir(old_testdir)
-            self.client.sites = old_sites
-            self.client.devices = old_devices
-            self._logger.debug(
-                "Restored original sites and devices caches for api client.",
-            )
-            # restore old api delay
+            # restore old api session delay
             if old_delay != self.request_delay:
                 self.client.requestDelay(old_delay)
                 self._logger.debug(
@@ -1151,6 +277,979 @@ class AnkerSolixApiExport:
             listener.stop()
             return True
 
+    async def export_power_service_data(self) -> bool:  # noqa: C901
+        """Run functions to export power_service endpoint data."""
+
+        self._logger.info("")
+        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.power)
+        # first update Api caches if still empty
+        if not (self.api_power.sites | self.api_power.devices):
+            self._logger.info("Querying site information...")
+            await self.api_power.update_sites()
+            # Run bind devices to get also standalone devices for data export
+            self._logger.info("Querying bind devices information...")
+            await self.api_power.get_bind_devices()
+        self._logger.info(
+            "Found %s accessible systems (sites) and %s devices.",
+            len(self.api_power.sites),
+            len(self.api_power.devices),
+        )
+
+        # Query API using direct endpoints to save full response of each query in json files
+        try:
+            self._logger.info("")
+            self._logger.info("Exporting homepage...")
+            await self.query(
+                endpoint=API_ENDPOINTS["homepage"],
+                filename=f"{API_FILEPREFIXES['homepage']}.json",
+            )
+            self._logger.info("Exporting site list...")
+            await self.query(
+                endpoint=API_ENDPOINTS["site_list"],
+                filename=f"{API_FILEPREFIXES['site_list']}.json",
+            )
+            self._logger.info("Exporting bind devices...")
+            # shows only owner devices
+            await self.query(
+                endpoint=API_ENDPOINTS["bind_devices"],
+                filename=f"{API_FILEPREFIXES['bind_devices']}.json",
+            )
+            self._logger.info("Exporting user devices...")
+            # shows only owner devices
+            await self.query(
+                endpoint=API_ENDPOINTS["user_devices"],
+                filename=f"{API_FILEPREFIXES['user_devices']}.json",
+            )
+            self._logger.info("Exporting charging devices...")
+            # shows only owner devices
+            await self.query(
+                endpoint=API_ENDPOINTS["charging_devices"],
+                filename=f"{API_FILEPREFIXES['charging_devices']}.json",
+            )
+            self._logger.info("Exporting auto upgrade settings...")
+            # shows only owner devices
+            await self.query(
+                endpoint=API_ENDPOINTS["get_auto_upgrade"],
+                filename=f"{API_FILEPREFIXES['get_auto_upgrade']}.json",
+            )
+            # Single OTA batch query for all devices, provides responses for owning devices only
+            self._logger.info("Exporting OTA batch info for all devices...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_ota_batch"],
+                filename=f"{API_FILEPREFIXES['get_ota_batch']}.json",
+                payload={
+                    "device_list": [
+                        {"device_sn": serial, "version": ""}
+                        for serial in self.api_power.devices
+                    ]
+                },
+                replace=[
+                    (serial, f"<deviceSn{idx+1}>")
+                    for idx, serial in enumerate(self.api_power.devices.keys())
+                ],
+            )
+            self._logger.info("Exporting config...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_config"],
+                filename=f"{API_FILEPREFIXES['get_config']}.json",
+            )
+            self._logger.info("Exporting supported sites, devices and accessories...")
+            await self.query(
+                endpoint=API_ENDPOINTS["site_rules"],
+                filename=f"{API_FILEPREFIXES['site_rules']}.json",
+            )
+            await self.query(
+                method="get",
+                endpoint=API_ENDPOINTS["get_product_categories"],
+                filename=f"{API_FILEPREFIXES['get_product_categories']}.json",
+            )
+            await self.query(
+                method="get",
+                endpoint=API_ENDPOINTS["get_product_accessories"],
+                filename=f"{API_FILEPREFIXES['get_product_accessories']}.json",
+            )
+            await self.query(
+                endpoint=API_ENDPOINTS["get_third_platforms"],
+                filename=f"{API_FILEPREFIXES['get_third_platforms']}.json",
+            )
+            self._logger.info("Get token for user account...")
+            response = await self.query(
+                endpoint=API_ENDPOINTS["get_token_by_userid"],
+                filename=f"{API_FILEPREFIXES['get_token_by_userid']}.json",
+            )
+            self._logger.info("Get Shelly status with token...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_shelly_status"],
+                filename=f"{API_FILEPREFIXES['get_shelly_status']}.json",
+                # use real token from previous response for query
+                payload={"token": (response or {}).get("data", {}).get("token", "")},
+            )
+
+            # loop through all found sites
+            for siteId, site in self.api_power.sites.items():
+                self._logger.info("")
+                self._logger.info(
+                    "Exporting site specific data for site %s...",
+                    self._randomize(siteId, "site_id"),
+                )
+                admin = site.get("site_admin")
+                self._logger.info("Exporting scene info...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["scene_info"],
+                    filename=f"{API_FILEPREFIXES['scene_info']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting site detail...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["site_detail"],
+                    filename=f"{API_FILEPREFIXES['site_detail']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting wifi list...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["wifi_list"],
+                    filename=f"{API_FILEPREFIXES['wifi_list']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting installation...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_installation"],
+                    filename=f"{API_FILEPREFIXES['get_installation']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting site price...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_site_price"],
+                    filename=f"{API_FILEPREFIXES['get_site_price']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+
+                for parmtype in ["4", "6"]:
+                    self._logger.info(
+                        "Exporting device parameter type %s settings...", parmtype
+                    )
+                    # works only for site owners
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_parm"],
+                        filename=f"{API_FILEPREFIXES['get_device_parm']}_{parmtype}_{self._randomize(siteId,'site_id')}.json",
+                        payload={"site_id": siteId, "param_type": parmtype},
+                        replace=[(siteId, "<siteId>")],
+                        admin=admin,
+                    )
+
+                self._logger.info("Exporting site energy data for solarbank...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["energy_analysis"],
+                    filename=f"{API_FILEPREFIXES['energy_solarbank']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={
+                        "site_id": siteId,
+                        "device_sn": "",
+                        "type": "week",
+                        "device_type": "solarbank",
+                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end_time": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting site energy data for solar_production...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["energy_analysis"],
+                    filename=f"{API_FILEPREFIXES['energy_solar_production']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={
+                        "site_id": siteId,
+                        "device_sn": "",
+                        "type": "week",
+                        "device_type": "solar_production",
+                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end_time": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                for ch in range(1, 5):
+                    self._logger.info(
+                        "Exporting site energy data for solar_production PV%s...", ch
+                    )
+                    response = await self.query(
+                        endpoint=API_ENDPOINTS["energy_analysis"],
+                        filename=f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{self._randomize(siteId,'site_id')}.json",
+                        payload={
+                            "site_id": siteId,
+                            "device_sn": "",
+                            "type": "week",
+                            "device_type": f"solar_production_pv{ch}",
+                            "start_time": (
+                                datetime.today() - timedelta(days=1)
+                            ).strftime("%Y-%m-%d"),
+                            "end_time": datetime.today().strftime("%Y-%m-%d"),
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
+                    if not isinstance(response, dict) or not response.get("data"):
+                        self._logger.warning(
+                            "No solar production energy available for PV%s, skipping remaining PV channel export...",
+                            ch,
+                        )
+                        break
+                self._logger.info("Exporting site energy data for home_usage...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["energy_analysis"],
+                    filename=f"{API_FILEPREFIXES['energy_home_usage']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={
+                        "site_id": siteId,
+                        "device_sn": "",
+                        "type": "week",
+                        "device_type": "home_usage",
+                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end_time": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting site energy data for grid...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["energy_analysis"],
+                    filename=f"{API_FILEPREFIXES['energy_grid']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={
+                        "site_id": siteId,
+                        "device_sn": "",
+                        "type": "week",
+                        "device_type": "grid",
+                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end_time": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+
+            # loop through all devices for other queries
+            for sn, device in self.api_power.devices.items():
+                self._logger.info("")
+                self._logger.info(
+                    "Exporting device specific data for device %s SN %s...",
+                    device.get("name", ""),
+                    self._randomize(sn, "_sn"),
+                )
+                siteId = device.get("site_id", "")
+                admin = device.get("is_admin")
+
+                if device.get("type") == api.SolixDeviceType.SOLARBANK.value:
+                    self._logger.info("Exporting solar info settings for solarbank...")
+                    await self.query(
+                        endpoint=API_ENDPOINTS["solar_info"],
+                        filename=f"{API_FILEPREFIXES['solar_info']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"solarbank_sn": sn},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                    )
+                    self._logger.info(
+                        "Exporting compatible process info for solarbank..."
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["compatible_process"],
+                        filename=f"{API_FILEPREFIXES['compatible_process']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"solarbank_sn": sn},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                    )
+
+                self._logger.info("Exporting power cutoff settings...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_cutoff"],
+                    filename=f"{API_FILEPREFIXES['get_cutoff']}_{self._randomize(sn,'_sn')}.json",
+                    payload={"site_id": siteId, "device_sn": sn},
+                    replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting fittings...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_fittings"],
+                    filename=f"{API_FILEPREFIXES['get_device_fittings']}_{self._randomize(sn,'_sn')}.json",
+                    payload={"site_id": siteId, "device_sn": sn},
+                    replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting load...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_load"],
+                    filename=f"{API_FILEPREFIXES['get_device_load']}_{self._randomize(sn,'_sn')}.json",
+                    payload={"site_id": siteId, "device_sn": sn},
+                    replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                    admin=admin,
+                )
+                # This query does not work for most devices, device firmware data is covered with a single ota_batch query
+                # self._logger.info("Exporting OTA update info for device...")
+                # await self.query(
+                #     endpoint=API_ENDPOINTS["get_ota_update"],
+                #     filename=f"{API_FILEPREFIXES['get_ota_update']}_{self._randomize(sn,'_sn')}.json",
+                #     payload={"device_sn": sn, "insert_sn": ""},
+                #     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                #     admin=admin,
+                # )
+                self._logger.info("Exporting upgrade record for device...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_upgrade_record"],
+                    filename=f"{API_FILEPREFIXES['get_upgrade_record']}_1_{self._randomize(sn,'_sn')}.json",
+                    payload={"device_sn": sn, "type": 1},
+                    replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                )
+                self._logger.info("Exporting device attributes...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_attributes"],
+                    filename=f"{API_FILEPREFIXES['get_device_attributes']}_{self._randomize(sn,'_sn')}.json",
+                    # TODO: Empty attributes list will not list any attributes, possible attributes and devices are unknown yet
+                    payload={"device_sn": sn, "attributes": []},
+                    replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                )
+
+            self._logger.info("")
+            self._logger.info("Exporting message unread status...")
+            await self.query(
+                method="get",
+                endpoint=API_ENDPOINTS["get_message_unread"],
+                filename=f"{API_FILEPREFIXES['get_message_unread']}.json",
+            )
+
+            # update api dictionaries from exported files to use randomized input data
+            # this is more efficient and allows validation of randomized data in export files
+            # save real api cache data first
+            old_account = deepcopy(self.api_power.account)
+            old_sites = deepcopy(self.api_power.sites)
+            old_devices = deepcopy(self.api_power.devices)
+            old_testdir = self.api_power.testDir()
+            self.api_power.testDir(self.export_path)
+            self._logger.debug("Saved original testfolder.")
+            await self.api_power.update_sites(fromFile=True)
+            await self.api_power.update_site_details(fromFile=True)
+            await self.api_power.update_device_details(fromFile=True)
+            await self.api_power.update_device_energy(fromFile=True)
+            self._logger.info("")
+            self._logger.info("Exporting Api sites cache from files...")
+            self._logger.debug(
+                "Api sites cache --> %s",
+                filename := f"{API_FILEPREFIXES['api_sites']}.json",
+            )
+            # avoid randomizing dictionary export twice when imported from randomized files already
+            await self._export(
+                Path(self.export_path) / filename,
+                self.api_power.sites,
+                skip_randomize=True,
+            )
+            self._logger.info("Exporting Api devices cache from files...")
+            self._logger.debug(
+                "Api devices cache --> %s",
+                filename := f"{API_FILEPREFIXES['api_devices']}.json",
+            )
+            # avoid randomizing dictionary export twice when imported from randomized files already
+            await self._export(
+                Path(self.export_path) / filename,
+                self.api_power.devices,
+                skip_randomize=True,
+            )
+            # restore real client cache data for re-use of sites and devices in other Api services
+            self.api_power.account = old_account
+            self.api_power.sites = old_sites
+            self.api_power.devices = old_devices
+            # skip restore of default test dir in client session since it may not exist
+            if Path(old_testdir).is_dir() and old_testdir != self.export_path:
+                self.api_power.testDir(old_testdir)
+                self._logger.debug(
+                    "Restored original test folder for api client session.",
+                )
+
+        except (errors.AnkerSolixError, ClientError) as err:
+            self._logger.error("%s: %s", type(err), err)
+            self._logger.warning(
+                "Skipping remaining %s endpoint data queries.",
+                ApiEndpointServices.power,
+            )
+            return False
+
+        return True
+
+    async def export_charging_energy_service_data(self) -> bool:  # noqa: C901
+        """Run functions to export charging_energy_service endpoint data."""
+
+        self._logger.info("")
+        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.charging)
+
+        # reuse sites and devices from previous api_power query or refresh
+        if self.export_services and not self.export_services & {
+            ApiEndpointServices.power
+        }:
+            self._logger.info("Querying site information...")
+            await self.api_power.update_sites()
+            # Run bind devices to get also standalone devices for data export
+            self._logger.info("Querying bind devices information...")
+            await self.api_power.get_bind_devices()
+        self._logger.info(
+            "Found %s accessible systems (sites) and %s devices.",
+            len(self.api_power.sites),
+            len(self.api_power.devices),
+        )
+
+        try:
+            # Query API using direct endpoints to save full response of each query in json files
+            # Use simple first query without parms to check if service endpoints usable
+            self._logger.info("Exporting Charging error info...")
+            await self.query(
+                endpoint=API_CHARGING_ENDPOINTS["get_error_info"],
+                filename=f"{API_FILEPREFIXES['charging_get_error_info']}.json",
+                catch=False,
+            )
+
+            has_charging = False
+            # loop through all found sites
+            for siteId, site in self.api_power.sites.items():
+                admin = site.get("site_admin")
+                self._logger.info("")
+                self._logger.info(
+                    "Exporting Charging specific data for site %s...",
+                    self._randomize(siteId, "site_id"),
+                )
+
+                self._logger.info("Exporting Charging system running info...")
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_system_running_info"],
+                    filename=f"{API_FILEPREFIXES['charging_get_system_running_info']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    randomkeys=True,
+                )
+                # check if valid HES data available for site and skip if not enforced
+                if not (
+                    is_charging := len(site.get("powerpanel_list") or []) > 0
+                ) and not self.export_services & {ApiEndpointServices.charging}:
+                    self._logger.info(
+                        "No system for %s endpoint data found, skipping remaining site queries...",
+                        ApiEndpointServices.charging,
+                    )
+                    continue
+
+                if is_charging:
+                    has_charging = True
+
+                # get various daily energies since yesterday
+                self._logger.info("Exporting Charging site energy data for solar...")
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_solar']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "solar",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info(
+                    "Exporting Charging site energy data for home energy systems..."
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_hes']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "hes",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info(
+                    "Exporting Charging site energy data for portable power stations..."
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_pps']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "pps",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info(
+                    "Exporting Charging site energy data for home usage..."
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_home']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "home",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting Charging site energy data for grid...")
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_grid']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "grid",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting Charging site wifi info...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_wifi_info"],
+                    filename=f"{API_FILEPREFIXES['charging_get_wifi_info']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting Charging site monetary units...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_monetary_units"],
+                    filename=f"{API_FILEPREFIXES['charging_get_monetary_units']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting Charging site installation inspection...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_installation_inspection"],
+                    filename=f"{API_FILEPREFIXES['charging_get_installation_inspection']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting Charging site utility rate plan...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_utility_rate_plan"],
+                    filename=f"{API_FILEPREFIXES['charging_get_utility_rate_plan']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting Charging site configs...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_configs"],
+                    filename=f"{API_FILEPREFIXES['charging_get_configs']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting Charging site device data report...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_sns"],
+                    filename=f"{API_FILEPREFIXES['charging_get_sns']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                # check all control options
+                for ctrol in [0, 1]:
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["report_device_data"],
+                        filename=f"{API_FILEPREFIXES['charging_report_device_data']}_{ctrol}_{self._randomize(siteId, "site_id")}.json",
+                        payload={"siteIds": [siteId], "ctrol": ctrol, "duration": 300},
+                        replace=[(siteId, "<siteId>")],
+                    )
+
+            # skip device queries if no hes system found and hes not enforced
+            if not has_charging and not self.export_services & {
+                ApiEndpointServices.charging
+            }:
+                self._logger.info(
+                    "No system for %s endpoint data found, skipping device queries...",
+                    ApiEndpointServices.charging,
+                )
+                return True
+
+            # loop through all devices
+            for sn, device in self.api_power.devices.items():
+                self._logger.info("")
+                self._logger.info(
+                    "Exporting Charging specific data for device %s SN %s...",
+                    device.get("name", ""),
+                    self._randomize(sn, "_sn"),
+                )
+                siteId = device.get("site_id", "")
+                admin = device.get("is_admin")
+
+                # run only for main power panel devices for site owner
+                if device.get("type") == api.SolixDeviceType.POWERPANEL.value:
+                    self._logger.info(
+                        "Exporting %s attached serial numbers...",
+                        api.SolixDeviceType.POWERPANEL.value,
+                    )
+                    # works only for site owners
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_sns"],
+                        filename=f"{API_FILEPREFIXES['charging_get_sns']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"main_sn": sn},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                        admin=admin,
+                    )
+                    self._logger.info(
+                        "Exporting %s rom versions...",
+                        api.SolixDeviceType.POWERPANEL.value,
+                    )
+                    # works only for site owners
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_rom_versions"],
+                        filename=f"{API_FILEPREFIXES['charging_get_rom_versions']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"main_sn": sn},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                        admin=admin,
+                    )
+                    self._logger.info(
+                        "Exporting %s device info...",
+                        api.SolixDeviceType.POWERPANEL.value,
+                    )
+                    # works only for site owners
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_device_info"],
+                        filename=f"{API_FILEPREFIXES['charging_get_device_info']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"siteId": siteId, "sns": [sn]},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                        admin=admin,
+                    )
+                    self._logger.info(
+                        "Exporting %s installation inspection...",
+                        api.SolixDeviceType.POWERPANEL.value,
+                    )
+                    # works only for site owners
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_installation_inspection"],
+                        filename=f"{API_FILEPREFIXES['charging_get_installation_inspection']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"sn": sn},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                        admin=admin,
+                    )
+                    self._logger.info(
+                        "Exporting %s configs...", api.SolixDeviceType.POWERPANEL.value
+                    )
+                    # works only for site owners
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_configs"],
+                        filename=f"{API_FILEPREFIXES['charging_get_configs']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"siteId": siteId, "sn": sn, "param_types": [1, 2, 3]},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                        admin=admin,
+                    )
+
+        except (errors.AnkerSolixError, ClientError) as err:
+            self._logger.error(
+                "%s: %s",
+                type(err),
+                err,
+            )
+            self._logger.warning(
+                "Skipping remaining %s endpoint data queries.",
+                ApiEndpointServices.charging,
+            )
+            return False
+
+        return True
+
+    async def export_charging_hes_svc_data(self) -> bool:  # noqa: C901
+        """Run functions to export charging_hes_svc endpoint data."""
+
+        self._logger.info("")
+        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.hes_svc)
+
+        # reuse sites and devices from previous api_power query or refresh
+        if self.export_services and not self.export_services & {
+            ApiEndpointServices.power
+        }:
+            self._logger.info("Querying site information...")
+            await self.api_power.update_sites()
+            # Run bind devices to get also standalone devices for data export
+            self._logger.info("Querying bind devices information...")
+            await self.api_power.get_bind_devices()
+        self._logger.info(
+            "Found %s accessible systems (sites) and %s devices.",
+            len(self.api_power.sites),
+            len(self.api_power.devices),
+        )
+
+        try:
+            # Query API using direct endpoints to save full response of each query in json files
+            # Use simple first query without parms to check if service endpoints usable
+            self._logger.info("Exporting HES product info...")
+            await self.query(
+                endpoint=API_HES_SVC_ENDPOINTS["get_product_info"],
+                filename=f"{API_FILEPREFIXES['hes_get_product_info']}.json",
+                catch=False,
+            )
+
+            # loop through all found sites and check if hes site types available
+            has_hes = False
+            for siteId, site in self.api_power.sites.items():
+                admin = site.get("site_admin")
+                self._logger.info("")
+                self._logger.info(
+                    "Exporting HES specific data for site %s...",
+                    self._randomize(siteId, "site_id"),
+                )
+
+                self._logger.info("Exporting HES system running info...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_system_running_info"],
+                    filename=f"{API_FILEPREFIXES['hes_get_system_running_info']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
+                # check if valid HES data available for site and skip if not enforced
+                if not (
+                    is_hes := isinstance(response, dict)
+                    and ((response.get("data") or {}).get("mainSn") or None)
+                ) and not self.export_services & {ApiEndpointServices.hes_svc}:
+                    self._logger.info(
+                        "No system for %s endpoint data found, skipping remaining site queries...",
+                        ApiEndpointServices.hes_svc,
+                    )
+                    continue
+
+                if is_hes:
+                    has_hes = True
+                self._logger.info("Exporting HES monetary units...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_monetary_units"],
+                    filename=f"{API_FILEPREFIXES['hes_get_monetary_units']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting HES install info...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_install_info"],
+                    filename=f"{API_FILEPREFIXES['hes_get_install_info']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
+
+                # get various daily energies since yesterday
+                self._logger.info("Exporting HES site energy data for solar...")
+                await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['hes_energy_solar']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "solar",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info(
+                    "Exporting HES site energy data for home energy systems..."
+                )
+                await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['hes_energy_hes']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "hes",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting HES site energy data for home usage...")
+                await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['hes_energy_home']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "home",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting HES site energy data for grid...")
+                await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['hes_energy_grid']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "grid",
+                        "dateType": "week",
+                        "start": (datetime.today() - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+
+                # Export site infos requiring owner accounts
+                self._logger.info("Exporting HES installer info...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_installer_info"],
+                    filename=f"{API_FILEPREFIXES['hes_get_installer_info']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteIds": [siteId], "siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting HES system running time...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_system_running_time"],
+                    filename=f"{API_FILEPREFIXES['hes_get_system_running_time']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting HES MI layout...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_mi_layout"],
+                    filename=f"{API_FILEPREFIXES['hes_get_mi_layout']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting HES connection net tips...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_conn_net_tips"],
+                    filename=f"{API_FILEPREFIXES['hes_get_conn_net_tips']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting HES device info...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_hes_dev_info"],
+                    filename=f"{API_FILEPREFIXES['hes_get_hes_dev_info']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting HES device info...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["report_device_data"],
+                    filename=f"{API_FILEPREFIXES['hes_report_device_data']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"siteIds": [siteId]},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+
+            # skip remaining queries if no hes system found and hes not enforced
+            if not has_hes and not self.export_services & {ApiEndpointServices.hes_svc}:
+                self._logger.info(
+                    "No system for %s endpoint data found, skipping remaining queries...",
+                    ApiEndpointServices.hes_svc,
+                )
+                return True
+
+            self._logger.info("Exporting HES heat pump plan...")
+            await self.query(
+                endpoint=API_HES_SVC_ENDPOINTS["get_heat_pump_plan"],
+                filename=f"{API_FILEPREFIXES['hes_get_heat_pump_plan']}.json",
+            )
+            # TODO: Export electrical plan as example once a valid country and state was found
+            country = "de"
+            state_code = "nw"
+            self._logger.info(
+                "Exporting HES electric utility and plan list (exemplary for country '%s' and state '%s')...",
+                country,
+                state_code,
+            )
+            await self.query(
+                endpoint=API_HES_SVC_ENDPOINTS["get_electric_plan_list"],
+                filename=f"{API_FILEPREFIXES['hes_get_electric_plan_list']}_{country}_{state_code}.json",
+                payload={"country": country, "state_code": state_code},
+            )
+
+            # loop through all devices
+            for sn, device in self.api_power.devices.items():
+                self._logger.info("")
+                self._logger.info(
+                    "Exporting HES specific data for device %s SN %s...",
+                    device.get("name", ""),
+                    self._randomize(sn, "_sn"),
+                )
+                siteId = device.get("site_id", "")
+                admin = device.get("is_admin")
+
+                # run only for hes devices for site owner
+                if device.get("type") == api.SolixDeviceType.HES.value:
+                    self._logger.info("Exporting HES device wifi info...")
+                    await self.query(
+                        endpoint=API_HES_SVC_ENDPOINTS["get_wifi_info"],
+                        filename=f"{API_FILEPREFIXES['hes_get_wifi_info']}_{self._randomize(sn,'_sn')}.json",
+                        payload={"sn": sn},
+                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                    )
+
+        except (errors.AnkerSolixError, ClientError) as err:
+            self._logger.error(
+                "%s: %s",
+                type(err),
+                err,
+            )
+            self._logger.warning(
+                "Skipping remaining %s endpoint data queries.",
+                ApiEndpointServices.hes_svc,
+            )
+            return False
+
+        return True
+
     def _randomize(self, val: str, key: str = "") -> str:
         """Randomize a given string while maintaining its format if format is known for given key name.
 
@@ -1163,7 +1262,7 @@ class AnkerSolixApiExport:
         randomstr = self._randomdata.get(val, "")
         # generate new random string
         if not randomstr and val and key not in ["device_name"]:
-            if "_sn" in key or key in ["sn"]:
+            if "_sn" in key or "mainSn" in key or key in ["sn"]:
                 randomstr = "".join(
                     random.choices(string.ascii_uppercase + string.digits, k=len(val))
                 )
@@ -1201,9 +1300,12 @@ class AnkerSolixApiExport:
                         randomstr = "".join(
                             random.choices(string.hexdigits.lower(), k=len(part))
                         )
-            elif "wifi_name" in key:
+            elif "wifi_name" in key or "ssid" in key:
                 idx = sum(1 for s in self._randomdata.values() if "wifi-network-" in s)
                 randomstr = f"wifi-network-{idx+1}"
+            elif "email" in key:
+                idx = sum(1 for s in self._randomdata.values() if "anonymous-" in s)
+                randomstr = f"anonymous-{idx+1}@domain.com"
             elif key in ["home_load_data", "param_data"]:
                 # these keys may contain schedule dict encoded as string, ensure contained serials are replaced in string
                 # replace all mappings from self._randomdata, but skip trace ids
@@ -1237,14 +1339,17 @@ class AnkerSolixApiExport:
                 x in k
                 for x in [
                     "_sn",
+                    "mainSn",
                     "site_id",
                     "trace_id",
                     "bt_ble_",
                     "wifi_name",
+                    "ssid",
                     "home_load_data",
                     "param_data",
                     "device_name",
                     "token",
+                    "email",
                 ]
             ) or k in ["sn"]:
                 data[k] = self._randomize(v, k)
@@ -1272,19 +1377,20 @@ class AnkerSolixApiExport:
             d = self._check_keys(d)
             # Randomize also the (nested) keys for dictionary export if required
             if randomkeys:
-                d_copy = d.copy()
+                d_copy = deepcopy(d)
                 for key, val in d.items():
                     # check first nested keys in dict values
-                    for nested_key, nested_val in dict(val).items():
-                        if isinstance(nested_val, dict):
-                            for k in [
-                                text for text in nested_val if isinstance(text, str)
-                            ]:
-                                # check nested dict keys
-                                if k in self._randomdata:
-                                    d_copy[key][nested_key][self._randomdata[k]] = (
-                                        d_copy[key][nested_key].pop(k)
-                                    )
+                    if isinstance(val, dict):
+                        for nested_key, nested_val in dict(val).items():
+                            if isinstance(nested_val, dict):
+                                for k in [
+                                    text for text in nested_val if isinstance(text, str)
+                                ]:
+                                    # check nested dict keys
+                                    if k in self._randomdata:
+                                        d_copy[key][nested_key][self._randomdata[k]] = (
+                                            d_copy[key][nested_key].pop(k)
+                                        )
                     # check root keys
                     if key in self._randomdata:
                         d_copy[self._randomdata[key]] = d_copy.pop(key)
@@ -1311,3 +1417,49 @@ class AnkerSolixApiExport:
         """Get dict of randomized data mapping."""
 
         return self._randomdata
+
+    async def query(
+        self,
+        method: str = "post",
+        endpoint: str = "",
+        filename: str = "",
+        payload: dict[str, any] | None = None,
+        admin: bool = True,
+        catch: bool = True,
+        randomkeys: bool = False,
+        replace: list[(str, str)] | None = None,
+    ) -> dict[str, any] | None:
+        """Run the query and catch exception if required."""
+
+        response = None
+        if not payload:
+            payload = {}
+        if not replace:
+            replace = []
+        try:
+            self._logger.debug("%s %s --> %s", method, endpoint, filename)
+            if not admin:
+                self._logger.warning(
+                    "Query requires account of site owner: %s", endpoint
+                )
+            else:
+                # return real response data without randomization if needed
+                response = await self.client.request(method, endpoint, json=payload)
+                await self._export(
+                    Path(self.export_path) / filename, response, randomkeys=randomkeys
+                )
+        except errors.AnkerSolixError as err:
+            if catch:
+                for secret, public in replace:
+                    payload = (str(payload).replace(secret, public),)
+                self._logger.error(
+                    "Method: %s, Endpoint: %s, Payload: %s\n%s: %s",
+                    str(method).upper(),
+                    endpoint,
+                    str(payload),
+                    type(err),
+                    err,
+                )
+            else:
+                raise
+        return response

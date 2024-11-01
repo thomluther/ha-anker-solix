@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "installLocation": "",
+    "installEnv": ""
+  },
+  "trace_id": "bd3dd84a632d783f1c70a43c5faf9f2d"
+}

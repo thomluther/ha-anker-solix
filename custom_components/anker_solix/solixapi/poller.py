@@ -6,10 +6,13 @@ from asyncio import sleep
 import contextlib
 from datetime import datetime, timedelta
 
+from .apibase import AnkerSolixBaseApi
 from .apitypes import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
 
 
-async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -> dict:  # noqa: C901
+async def poll_sites(  # noqa: C901
+    api: AnkerSolixBaseApi, siteId: str | None = None, fromFile: bool = False
+) -> dict:
     """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
     Example data:
@@ -46,6 +49,7 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
         api._logger.debug("Getting site list")
         sites = await api.get_site_list(fromFile=fromFile)
         api._site_devices = set()
+
     for site in sites.get("site_list", []):
         if myid := site.get("site_id"):
             # Update site info
@@ -161,9 +165,8 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                         "solar_power_4": sb_info.get("solar_power_4"),
                         "ac_power": sb_info.get("ac_power"),
                         "to_home_load": sb_info.get("to_home_load"),
-                        "home_load_power": mysite.get(
-                            "home_load_power"
-                        ),  # only passed to device for proper SB2 charge status update
+                        # only passed to device for proper SB2 charge status update
+                        "home_load_power": mysite.get("home_load_power"),
                     },
                     devType=SolixDeviceType.SOLARBANK.value,
                     siteId=myid,
@@ -294,23 +297,25 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
 
     # Write back the updated sites
     api.sites = new_sites
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.sites
 
 
-async def update_site_details(
-    api, fromFile: bool = False, exclude: set | None = None
+async def poll_site_details(
+    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
-    """Get the latest updates for additional site related details updated less frequently.
+    """Get the latest updates for additional account or site related details updated less frequently.
 
     Most of theses requests return data only when user has admin rights for sites owning the devices.
     To limit API requests, this update site details method should be called less frequently than update site method,
-    and it updates just the nested site_details dictionary in the sites dictionary.
+    and it updates just the nested site_details dictionary in the sites dictionary as well as the account dictionary
     """
     # define excluded categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
     api._logger.debug("Updating Sites Details")
-    # Fetch unread account messages once and put in site details for all sites
+    # Fetch unread account messages once and put in site details for all sites as well as into account dictionary
     api._logger.debug("Getting unread messages indicator")
     await api.get_message_unread(fromFile=fromFile)
     for site_id, site in api.sites.items():
@@ -320,11 +325,13 @@ async def update_site_details(
             if {ApiCategories.site_price} - exclude:
                 api._logger.debug("Getting price and CO2 settings for site")
                 await api.get_site_price(siteId=site_id, fromFile=fromFile)
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.sites
 
 
-async def update_device_details(
-    api, fromFile: bool = False, exclude: set | None = None
+async def poll_device_details(
+    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional device info updated less frequently.
 
@@ -342,8 +349,11 @@ async def update_device_details(
     await api.get_bind_devices(fromFile=fromFile)
     # Get the setting for effective automated FW upgrades
     if {ApiCategories.device_auto_upgrade} - exclude:
-        api._logger.debug("Getting OTA settings")
+        api._logger.debug("Getting OTA update settings")
         await api.get_auto_upgrade(fromFile=fromFile)
+        # Get the OTA batch info for firmware updates of owning devices
+        api._logger.debug("Getting OTA update info for devices")
+        await api.get_ota_batch(fromFile=fromFile)
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():
@@ -358,7 +368,7 @@ async def update_device_details(
                 site_wifi[site_id] = (
                     await api.get_wifi_list(siteId=site_id, fromFile=fromFile)
                 ).get("wifi_info_list") or []
-            # Map Wifi to usage of device
+            # Map Wifi to usage of device if device_sn not part yet of wifi_list item
             wifi_list = site_wifi.get(site_id, [{}])
             # Ensure to update wifi index if not provided for device in scene_info, but device has wifi online and only single wifi exists in list
             if (
@@ -368,13 +378,14 @@ async def update_device_details(
             ):
                 wifi_index = "1"
                 api._update_dev({"device_sn": sn, "wireless_type": wifi_index})
-            if wifi_index:
+            # check if device_sn found in wifi_list, then it was updated already in the wifi list query, otherwise use old index method for update
+            if wifi_index and not [sn for d in wifi_list if d.get("device_sn") == sn]:
                 if str(wifi_index).isdigit():
                     wifi_index = int(wifi_index)
                 else:
                     wifi_index = 0
                 if 0 < wifi_index <= len(wifi_list):
-                    device.update(wifi_list[wifi_index - 1])
+                    api._update_dev({"device_sn": sn} | dict(wifi_list[wifi_index - 1]))
 
             # Fetch device type specific details, if device type not excluded
 
@@ -420,11 +431,13 @@ async def update_device_details(
 
         # TODO(#0): Fetch other details of specific device types as known and relevant
 
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.devices
 
 
-async def update_device_energy(
-    api, fromFile: bool = False, exclude: set | None = None
+async def poll_device_energy(
+    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the site energy statistics for given device types from today and yesterday.
 
@@ -440,7 +453,7 @@ async def update_device_energy(
     for site_id, site in api.sites.items():
         # build device types set for daily energy query, depending on device types found for site
         # solarinfo will always be queried by daily energy and required for general site statistics
-        # However, daily energy should not be queried for solarbank or smartmeter devices when they or their energy category is explicitly excluded
+        # However, daily energy should not be queried for solarbank, smartmeter or smart plug devices when they or their energy category is explicitly excluded
         if (
             (dev_list := site.get("solar_list") or [])
             and isinstance(dev_list, list)
@@ -459,6 +472,17 @@ async def update_device_energy(
             ):
                 query_types |= {SolixDeviceType.SMARTMETER.value}
                 query_sn = sn
+        if plug_list := (site.get("smart_plug_info") or {}).get("smartplug_list") or []:
+            query_types -= {SolixDeviceType.INVERTER.value}
+            if not (
+                {
+                    SolixDeviceType.SMARTPLUG.value,
+                    ApiCategories.smartplug_energy,
+                }
+                & exclude
+            ):
+                query_types |= {SolixDeviceType.SMARTPLUG.value}
+                query_sn = plug_list[0].get("device_sn") or ""
         if (
             (dev_list := (site.get("solarbank_info") or {}).get("solarbank_list") or [])
             and isinstance(dev_list, list)
@@ -528,4 +552,22 @@ async def update_device_energy(
             # save energy stats with sites dictionary
             site["energy_details"] = energy
             api.sites[site_id] = site
+            # Add individual smart plug energy per serial also to smart plug device cache
+            for plug in (energy.get("today") or {}).get("smartplug_list") or []:
+                api._update_dev(
+                    {
+                        "device_sn": plug.get("device_sn"),
+                        "energy_today": plug.get("energy"),
+                    }
+                )
+            for plug in (energy.get("last_period") or {}).get("smartplug_list") or []:
+                api._update_dev(
+                    {
+                        "device_sn": plug.get("device_sn"),
+                        "energy_last_period": plug.get("energy"),
+                    }
+                )
+
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.sites

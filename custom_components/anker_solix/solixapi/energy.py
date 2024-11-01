@@ -40,7 +40,7 @@ async def energy_daily(  # noqa: C901
     if SolixDeviceType.SOLARBANK.value in devTypes:
         if fromFile:
             resp = (
-                await self._loadFromFile(
+                await self.apisession.loadFromFile(
                     Path(self._testdir)
                     / f"{API_FILEPREFIXES['energy_solarbank']}_{siteId}.json"
                 )
@@ -126,10 +126,10 @@ async def energy_daily(  # noqa: C901
     if (
         SolixDeviceType.SOLARBANK.value in devTypes
         and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
-    ) or ({SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG} & devTypes):
+    ) or ({SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} & devTypes):
         if fromFile:
             resp = (
-                await self._loadFromFile(
+                await self.apisession.loadFromFile(
                     Path(self._testdir)
                     / f"{API_FILEPREFIXES['energy_home_usage']}_{siteId}.json"
                 )
@@ -178,6 +178,25 @@ async def energy_daily(  # noqa: C901
                         or None,
                     }
                 )
+                # Add Smart Plug details if available
+                if (
+                    plug_list := (resp.get("smart_plug_info") or {}).get(
+                        "smartplug_list"
+                    )
+                    or []
+                ):
+                    entry.update(
+                        {
+                            "smartplug_list": [
+                                {
+                                    "device_sn": plug.get("device_sn"),
+                                    "alias": plug.get("device_name"),
+                                    "energy": plug.get("total_power"),
+                                }
+                                for plug in plug_list
+                            ]
+                        }
+                    )
                 table.update({daystr: entry})
             else:
                 if fromFile:
@@ -210,6 +229,25 @@ async def energy_daily(  # noqa: C901
                             or None,
                         }
                     )
+                    # Add Smart Plug details if available
+                    if (
+                        plug_list := (resp.get("smart_plug_info") or {}).get(
+                            "smartplug_list"
+                        )
+                        or []
+                    ):
+                        entry.update(
+                            {
+                                "smartplug_list": [
+                                    {
+                                        "device_sn": plug.get("device_sn"),
+                                        "alias": plug.get("device_name"),
+                                        "energy": plug.get("total_power"),
+                                    }
+                                    for plug in plug_list
+                                ]
+                            }
+                        )
                     table.update({daystr: entry})
 
     # Add grid stats from smart reader only if solarbank not requested, otherwise grid data available in solarbank and solar responses
@@ -219,7 +257,7 @@ async def energy_daily(  # noqa: C901
     ):
         if fromFile:
             resp = (
-                await self._loadFromFile(
+                await self.apisession.loadFromFile(
                     Path(self._testdir)
                     / f"{API_FILEPREFIXES['energy_grid']}_{siteId}.json"
                 )
@@ -270,7 +308,7 @@ async def energy_daily(  # noqa: C901
             if (self.devices.get(deviceSn) or {}).get(f"solar_power_{ch}") or "":
                 if fromFile:
                     resp = (
-                        await self._loadFromFile(
+                        await self.apisession.loadFromFile(
                             Path(self._testdir)
                             / f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{siteId}.json"
                         )
@@ -305,7 +343,7 @@ async def energy_daily(  # noqa: C901
     # Always Add solar production which contains percentages
     if fromFile:
         resp = (
-            await self._loadFromFile(
+            await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['energy_solar_production']}_{siteId}.json"
             )
@@ -403,8 +441,7 @@ async def energy_analysis(
     rangeType: "day" | "week" | "year"
     startTime: optional start Date and time
     endTime: optional end Date and time
-    devType: "solar_production" | "solarbank" | "home_usage" | "grid"
-    Example Data for solar_production:
+    devType: "solar_production" | "solar_production_pv[1-4]" | "solarbank" | "home_usage" | "grid"Example Data for solar_production:
     {'power': [{'time': '2023-10-01', 'value': '3.67'}, {'time': '2023-10-02', 'value': '3.29'}, {'time': '2023-10-03', 'value': '0.55'}],
     'charge_trend': None, 'charge_level': [], 'power_unit': 'wh', 'charge_total': '3.67', 'charge_unit': 'kwh', 'discharge_total': '3.11', 'discharge_unit': 'kwh',
     'charging_pre': '0.49', 'electricity_pre': '0.51', 'others_pre': '0',
@@ -438,7 +475,9 @@ async def energy_analysis(
         else "solar_production",
         "end_time": endDay.strftime("%Y-%m-%d") if endDay else "",
     }
-    resp = await self.request("post", API_ENDPOINTS["energy_analysis"], json=data)
+    resp = await self.apisession.request(
+        "post", API_ENDPOINTS["energy_analysis"], json=data
+    )
     return resp.get("data") or {}
 
 
@@ -451,5 +490,7 @@ async def home_load_chart(self, siteId: str, deviceSn: str | None = None) -> dic
     data = {"site_id": siteId}
     if deviceSn:
         data.update({"device_sn": deviceSn})
-    resp = await self.request("post", API_ENDPOINTS["home_load_chart"], json=data)
+    resp = await self.apisession.request(
+        "post", API_ENDPOINTS["home_load_chart"], json=data
+    )
     return resp.get("data") or {}

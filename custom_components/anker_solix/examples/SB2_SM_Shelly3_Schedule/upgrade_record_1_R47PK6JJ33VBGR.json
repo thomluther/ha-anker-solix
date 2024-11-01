@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "R47PK6JJ33VBGR",
+    "site_id": "",
+    "upgrade_record_list": []
+  },
+  "trace_id": "6382bd7d4dacac5bdab03bce4f4deb74"
+}

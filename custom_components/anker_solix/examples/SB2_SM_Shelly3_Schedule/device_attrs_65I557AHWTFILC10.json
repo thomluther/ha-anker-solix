@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "65I557AHWTFILC10",
+    "attributes": {}
+  },
+  "trace_id": "a2e9ca695b9af97eb12b8ae3c428371d"
+}

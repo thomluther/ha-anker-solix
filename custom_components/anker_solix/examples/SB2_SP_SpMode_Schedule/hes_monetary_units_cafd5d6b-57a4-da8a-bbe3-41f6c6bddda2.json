@@ -1,0 +1,21 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "priceUnits": [
+      {
+        "priceUnit": "$",
+        "isDefault": false
+      },
+      {
+        "priceUnit": "\u20ac",
+        "isDefault": true
+      },
+      {
+        "priceUnit": "\u00a3",
+        "isDefault": false
+      }
+    ]
+  },
+  "trace_id": "a1151aa24d5fa9d68d80c167daddc5a4"
+}

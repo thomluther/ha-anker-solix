@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "index": 0,
+        "name": "Shelly",
+        "content": "Shelly\u662f\u4e00\u5bb6\u4e13\u6ce8\u4e8e\u667a\u80fd\u5bb6\u5c45\u8bbe\u5907\u7684\u516c\u53f8\uff0c\u63d0\u4f9b\u9ad8\u6027\u80fd\u3001\u6613\u7528\u7684\u667a\u80fd\u5f00\u5173\u3001\u63d2\u5ea7\u3001\u4f20\u611f\u5668\u548c\u63a7\u5236\u5668\uff0c\u517c\u5bb9\u5176\u4ed6\u667a\u80fd\u5bb6\u5c45\u7cfb\u7edf\uff0c\u63d0\u5347\u7528\u6237\u4f53\u9a8c\u3002",
+        "logo": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/08/29/iot-admin/isCjeqQviU5L4O7D/20240829-102526.jpg",
+        "tag": "shelly",
+        "url": "https://my.shelly.cloud/integrator.html",
+        "callback_url": "https://ankerpower-api-eu.anker.com/cloud/powerservice/shelly_callback",
+        "tag_code": "ITG_AIN2",
+        "products": [
+          {
+            "name": "3EM",
+            "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/08/29/iot-admin/5lyJ9NmYG5pD7NIA/3em.png",
+            "index": 0,
+            "product_code": "SHEM3",
+            "net_img_url": "",
+            "net_guideline": "",
+            "p_codes": null
+          },
+          {
+            "name": "Pro 3EM",
+            "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+            "index": 0,
+            "product_code": "SHEMP3",
+            "net_img_url": "",
+            "net_guideline": "",
+            "p_codes": null
+          }
+        ],
+        "countries": "DE,AT,FR,IT"
+      }
+    ]
+  },
+  "trace_id": "b62debf55b3bd8b8df1397bf0baa982b"
+}

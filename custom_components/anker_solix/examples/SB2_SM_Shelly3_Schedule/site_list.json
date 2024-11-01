@@ -1,0 +1,32 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "2cc387cb-2aba-aa1c-d591-dfd5d5c95d6f",
+        "site_name": "Anker Solix 2 Pro",
+        "site_img": "",
+        "device_type_list": [
+          6,
+          3
+        ],
+        "ms_type": 1,
+        "power_site_type": 5,
+        "is_allow_delete": true,
+        "support_device_models": [
+          "A17C1",
+          "A17X7",
+          "SHEM3",
+          "SHEMP3",
+          "A17X8"
+        ],
+        "current_site_device_models": [
+          "SHEM3",
+          "A17C1"
+        ]
+      }
+    ]
+  },
+  "trace_id": "b1bd599ac9defb115eddb1f3e535abfd"
+}

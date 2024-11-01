@@ -1,0 +1,63 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "0.00",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "",
+    "totalImportedEnergyUnit": "",
+    "totalExportedEnergy": "0.00",
+    "totalExportedEnergyUnit": "KWh",
+    "power": null,
+    "powerUnit": "",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "0.00",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0",
+            "to": "0.00",
+            "sourceType": "hes"
+          }
+        ],
+        "negRods": null
+      },
+      {
+        "value": "0.00",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0",
+            "to": "0.00",
+            "sourceType": "hes"
+          }
+        ],
+        "negRods": null
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Load power consumption",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "home",
+        "percent": "0%",
+        "imported": false,
+        "showPercent": "0%"
+      },
+      {
+        "title": "Sold power",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "grid",
+        "percent": "0%",
+        "imported": false,
+        "showPercent": "0%"
+      }
+    ]
+  },
+  "trace_id": "a72654eead8ed4d32fd7f3c8effed0b5"
+}

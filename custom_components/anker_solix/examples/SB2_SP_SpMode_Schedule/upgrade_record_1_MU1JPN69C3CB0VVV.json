@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "MU1JPN69C3CB0VVV",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2024-10-19 20:17:18",
+        "upgrade_version": "v0.0.2.7",
+        "pre_version": "v0.0.2.2",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "MU1JPN69C3CB0VVV",
+        "device_name": "Smart Plug",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "ea2e9be2a713bcdccf1fc76d12eb0f29"
+}

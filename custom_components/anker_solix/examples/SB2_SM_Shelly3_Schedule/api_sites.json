@@ -1,0 +1,194 @@
+{
+  "2cc387cb-2aba-aa1c-d591-dfd5d5c95d6f": {
+    "type": "system",
+    "site_info": {
+      "site_id": "2cc387cb-2aba-aa1c-d591-dfd5d5c95d6f",
+      "site_name": "Anker Solix 2 Pro",
+      "site_img": "",
+      "device_type_list": [
+        6,
+        3
+      ],
+      "ms_type": 1,
+      "power_site_type": 5,
+      "is_allow_delete": true,
+      "support_device_models": [
+        "A17C1",
+        "A17X7",
+        "SHEM3",
+        "SHEMP3",
+        "A17X8"
+      ],
+      "current_site_device_models": [
+        "SHEM3",
+        "A17C1"
+      ]
+    },
+    "site_admin": true,
+    "data_valid": true,
+    "requeries": 0,
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "186.02",
+        "unit": "kWh"
+      },
+      {
+        "type": "2",
+        "total": "185.46",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "74.41",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C1",
+          "device_sn": "65I557AHWTFILC10",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+          "battery_power": "27",
+          "bind_site_status": "",
+          "charging_power": "-378",
+          "power_unit": "W",
+          "charging_status": "2",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "0",
+          "output_power": "378",
+          "create_time": 1729684481,
+          "set_load_power": "",
+          "sub_package_num": 2,
+          "output_cutoff_data": 10,
+          "is_display": true,
+          "alias_name": "Solarbank 2 E1600 Pro",
+          "parallel_home_load": "0",
+          "current_home_load": "0"
+        }
+      ],
+      "total_charging_power": "-378.0",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.27",
+      "updated_time": "2024-10-30 17:53:00",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "378.00",
+      "display_set_power": false,
+      "battery_discharge_power": "378",
+      "ac_power": "0",
+      "to_home_load": "381",
+      "is_display_data": true,
+      "solar_power_1": "0",
+      "solar_power_2": "0",
+      "solar_power_3": "0",
+      "solar_power_4": "0"
+    },
+    "retain_load": "0W",
+    "scene_mode": 1,
+    "home_load_power": "370",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 5,
+    "site_id": "2cc387cb-2aba-aa1c-d591-dfd5d5c95d6f",
+    "powerpanel_list": [],
+    "grid_info": {
+      "grid_list": [
+        {
+          "device_pn": "SHEM3",
+          "device_sn": "R47PK6JJ33VBGR",
+          "device_name": "Shelly 3EM Stromz\u00e4hler",
+          "device_img": "",
+          "create_time": 1728591134,
+          "status": "1",
+          "bind_site_status": "",
+          "wireless_type": ""
+        }
+      ],
+      "photovoltaic_to_grid_power": "8",
+      "grid_to_home_power": "0",
+      "grid_status": 0,
+      "has_history_data": true
+    },
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "0w_feed": false,
+      "heating": false,
+      "multi_pv": true,
+      "shelly_meter": true,
+      "smart_plug": true
+    },
+    "other_loads_power": "370",
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 1,
+    "priority_discharge_upgrade_devices": "Solarbank 2 E1600 Pro",
+    "style_id": 0,
+    "is_show_priority_discharge": 0,
+    "site_details": {
+      "has_unread_msg": false,
+      "price": 0.4,
+      "site_co2": 0,
+      "site_price_unit": "\u20ac"
+    },
+    "energy_details": {
+      "last_period": {
+        "date": "2024-10-29",
+        "solarbank_discharge": "3.35",
+        "ac_socket": "0.00",
+        "battery_to_home": "3.70",
+        "home_usage": "13.14",
+        "grid_to_home": "17.14",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "0.48",
+        "solar_production_pv2": "0.46",
+        "solar_production_pv3": "1.18",
+        "solar_production_pv4": "0.00",
+        "solar_production": "2.12",
+        "solarbank_charge": "3.56",
+        "solar_to_grid": "0.00",
+        "battery_percentage": "0.95",
+        "solar_percentage": "0.05",
+        "other_percentage": "0"
+      },
+      "today": {
+        "date": "2024-10-30",
+        "solarbank_discharge": "0.41",
+        "ac_socket": "0.00",
+        "battery_to_home": "3.70",
+        "home_usage": "7.87",
+        "grid_to_home": "17.14",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "0.33",
+        "solar_production_pv2": "0.37",
+        "solar_production_pv3": "0.91",
+        "solar_production_pv4": "0.00",
+        "solar_production": "1.61",
+        "solarbank_charge": "3.56",
+        "solar_to_grid": "0.00",
+        "battery_percentage": "0.95",
+        "solar_percentage": "0.05",
+        "other_percentage": "0"
+      }
+    }
+  }
+}

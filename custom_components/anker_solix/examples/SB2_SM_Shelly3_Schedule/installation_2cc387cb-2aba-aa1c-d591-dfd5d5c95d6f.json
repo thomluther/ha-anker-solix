@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "display_installation": false,
+    "install_mode": 0,
+    "solar_sn": ""
+  },
+  "trace_id": "43e2dea6ad03a39d2e494ae2c4e8bf2d"
+}

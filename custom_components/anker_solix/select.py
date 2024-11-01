@@ -188,7 +188,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             if not ((site_data.get("grid_info") or {}).get("grid_list") or []):
                 # Remove smart meter usage mode if no smart meter installed
                 options = options - {SolarbankUsageMode.smartmeter.name}
-            if not ((site_data.get("smartplug_info") or {}).get("smartplug_list") or []):
+            if not ((site_data.get("smart_plug_info") or {}).get("smartplug_list") or []):
                 # Remove smart plugs usage mode if no smart plugs installed
                 options = options - {SolarbankUsageMode.smartplugs.name}
             self._attr_options = list(options)

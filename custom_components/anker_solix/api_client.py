@@ -119,7 +119,7 @@ class AnkerSolixApiClient:
             session,
             _LOGGER,
         )
-        self.api.requestDelay(
+        self.api.apisession.requestDelay(
             float(data.get(CONF_DELAY_TIME, SolixDefaults.REQUEST_DELAY_DEF))
         )
         self._deviceintervals = int(data.get(INTERVALMULT, DEFAULT_DEVICE_MULTIPLIER))
@@ -164,7 +164,7 @@ class AnkerSolixApiClient:
                     # if refresh from cache is requested, only the actual api dictionaries will be returned of coordinator data
                     _LOGGER.debug(
                         "Api Coordinator %s is updating data from Api dictionaries",
-                        self.api.nickname,
+                        self.api.apisession.nickname,
                     )
                 elif device_details:
                     # if device_details requested, enforce site and device refresh and reset intervals
@@ -178,13 +178,13 @@ class AnkerSolixApiClient:
                     ):
                         _LOGGER.warning(
                             "Api Coordinator %s cannot enforce device update within less than %s seconds, using data from Api dictionaries",
-                            self.api.nickname,
+                            self.api.apisession.nickname,
                             str(self.min_device_refresh),
                         )
                     else:
                         _LOGGER.debug(
                             "Api Coordinator %s is enforcing site and device update %s",
-                            self.api.nickname,
+                            self.api.apisession.nickname,
                             f"from folder {self.api.testDir()}"
                             if self._testmode
                             else "",
@@ -210,13 +210,13 @@ class AnkerSolixApiClient:
                         if not self._testmode:
                             _LOGGER.debug(
                                 "Api Coordinator %s request statistics: %s",
-                                self.api.nickname,
+                                self.api.apisession.nickname,
                                 self.api.request_count,
                             )
                 else:
                     _LOGGER.debug(
                         "Api Coordinator %s is updating sites %s",
-                        self.api.nickname,
+                        self.api.apisession.nickname,
                         f"from folder {self.api.testDir()}" if self._testmode else "",
                     )
                     await self.api.update_sites(fromFile=self._testmode)
@@ -225,7 +225,7 @@ class AnkerSolixApiClient:
                     if self._intervalcount <= 0:
                         _LOGGER.debug(
                             "Api Coordinator %s is updating devices %s",
-                            self.api.nickname,
+                            self.api.apisession.nickname,
                             f"from folder {self.api.testDir()}"
                             if self._testmode
                             else "",
@@ -250,7 +250,7 @@ class AnkerSolixApiClient:
                     if not self._testmode:
                         _LOGGER.debug(
                             "Api Coordinator %s request statistics: %s",
-                            self.api.nickname,
+                            self.api.apisession.nickname,
                             self.api.request_count,
                         )
                 # combine site and device details dictionaries for single data cache
@@ -258,7 +258,7 @@ class AnkerSolixApiClient:
             else:
                 # do not provide data when refresh suspended to avoid stale data from cache is used for real
                 data = {}
-            _LOGGER.debug("Coordinator %s data: %s", self.api.nickname, data)
+            _LOGGER.debug("Coordinator %s data: %s", self.api.apisession.nickname, data)
             return data  # noqa: TRY300
         except TimeoutError as exception:
             raise AnkerSolixApiClientCommunicationError(
@@ -287,7 +287,7 @@ class AnkerSolixApiClient:
             self._testmode = mode
             _LOGGER.info(
                 "Api Coordinator %s testmode was changed to %s",
-                self.api.nickname,
+                self.api.apisession.nickname,
                 ("ENABLED" if mode else "DISABLED"),
             )
         return self._testmode
@@ -303,7 +303,7 @@ class AnkerSolixApiClient:
             self._intervalcount = min(self._deviceintervals, self._intervalcount)
             _LOGGER.info(
                 "Api Coordinator %s device refresh multiplier was changed to %s",
-                self.api.nickname,
+                self.api.apisession.nickname,
                 self._deviceintervals,
             )
         return self._deviceintervals
@@ -313,15 +313,15 @@ class AnkerSolixApiClient:
         if (
             seconds is not None
             and isinstance(seconds, float | int)
-            and float(seconds) != float(self.api.requestDelay())
+            and float(seconds) != float(self.api.apisession.requestDelay())
         ):
-            newdelay = self.api.requestDelay(float(seconds))
+            newdelay = self.api.apisession.requestDelay(float(seconds))
             _LOGGER.info(
                 "Api Coordinator %s Api request delay time was changed to %.3f seconds",
-                self.api.nickname,
+                self.api.apisession.nickname,
                 newdelay,
             )
-        return self.api.requestDelay()
+        return self.api.apisession.requestDelay()
 
     def allow_refresh(self, allow: bool | None = None) -> bool:
         """Query or set api refresh capability for client."""
@@ -329,7 +329,7 @@ class AnkerSolixApiClient:
             self._allow_refresh = allow
             _LOGGER.info(
                 "Api Coordinator %s refresh was changed to %s",
-                self.api.nickname,
+                self.api.apisession.nickname,
                 ("ENABLED" if allow else "DISABLED"),
             )
         return self._allow_refresh

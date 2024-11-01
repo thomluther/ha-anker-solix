@@ -195,7 +195,7 @@
             "smartmeter_list": {
                 "default": "mdi:counter"
             },
-            "smart_plug_list": {
+            "smartplug_list": {
                 "default": "mdi:counter"
             },
             "set_output_power": {

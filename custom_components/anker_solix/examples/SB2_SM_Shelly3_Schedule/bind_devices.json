@@ -1,0 +1,61 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "R47PK6JJ33VBGR",
+        "product_code": "SHEM3",
+        "bt_ble_id": "",
+        "bt_ble_mac": "",
+        "device_name": "Shelly 3EM Stromz\u00e4hler",
+        "alias_name": "Shelly 3EM Stromz\u00e4hler",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/08/29/iot-admin/5lyJ9NmYG5pD7NIA/3em.png",
+        "link_time": 1728591091,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": ""
+      },
+      {
+        "device_sn": "65I557AHWTFILC10",
+        "product_code": "A17C1",
+        "bt_ble_id": "5D:B9:AF:4B:25:8B",
+        "bt_ble_mac": "5DB9AF4B258B",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "alias_name": "Solarbank 2 E1600 Pro",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "link_time": 1725713540,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.0.5.16",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-55"
+      }
+    ]
+  },
+  "trace_id": "da7991eebe7cd0515450cd214defb138"
+}

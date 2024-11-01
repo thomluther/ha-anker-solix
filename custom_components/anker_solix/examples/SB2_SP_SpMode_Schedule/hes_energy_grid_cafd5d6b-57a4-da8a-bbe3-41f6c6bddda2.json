@@ -1,0 +1,93 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "0.00",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "0.00",
+    "totalImportedEnergyUnit": "KWh",
+    "totalExportedEnergy": "0.00",
+    "totalExportedEnergyUnit": "KWh",
+    "power": null,
+    "powerUnit": "",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "0.00",
+        "negValue": "-0.00",
+        "rods": [
+          {
+            "from": "0",
+            "to": "0.00",
+            "sourceType": "grid"
+          }
+        ],
+        "negRods": [
+          {
+            "from": "0",
+            "to": "-0.00",
+            "sourceType": "grid"
+          }
+        ]
+      },
+      {
+        "value": "0.00",
+        "negValue": "-0.00",
+        "rods": [
+          {
+            "from": "0",
+            "to": "0.00",
+            "sourceType": "grid"
+          }
+        ],
+        "negRods": [
+          {
+            "from": "0",
+            "to": "-0.00",
+            "sourceType": "grid"
+          }
+        ]
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Battery charging capacity",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "hes",
+        "percent": "0%",
+        "imported": true,
+        "showPercent": "0%"
+      },
+      {
+        "title": "Load power consumption",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "home",
+        "percent": "0%",
+        "imported": true,
+        "showPercent": "0%"
+      },
+      {
+        "title": "Battery power supply",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "hes",
+        "percent": "0%",
+        "imported": false,
+        "showPercent": "0%"
+      },
+      {
+        "title": "Photovoltaic power supply",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "solar",
+        "percent": "0%",
+        "imported": false,
+        "showPercent": "0%"
+      }
+    ]
+  },
+  "trace_id": "c65c5dee1ade74f3fed1adaa7fccffee"
+}

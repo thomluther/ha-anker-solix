@@ -1,0 +1,72 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "0.00",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "0.00",
+    "totalImportedEnergyUnit": "KWh",
+    "totalExportedEnergy": "",
+    "totalExportedEnergyUnit": "",
+    "power": null,
+    "powerUnit": "",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "0.00",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0.00",
+            "to": "0.00",
+            "sourceType": "home"
+          }
+        ],
+        "negRods": null
+      },
+      {
+        "value": "0.00",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0.00",
+            "to": "0.00",
+            "sourceType": "home"
+          }
+        ],
+        "negRods": null
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Battery power supply",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "hes",
+        "percent": "0%",
+        "imported": false,
+        "showPercent": "0%"
+      },
+      {
+        "title": "Photovoltaic power supply",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "solar",
+        "percent": "0%",
+        "imported": false,
+        "showPercent": "0%"
+      },
+      {
+        "title": "Grid power consumption",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "grid",
+        "percent": "0%",
+        "imported": false,
+        "showPercent": "0%"
+      }
+    ]
+  },
+  "trace_id": "4a232d6cc5afc9ce71dc1d80ea8edcf9"
+}
