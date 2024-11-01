@@ -83,7 +83,7 @@
                     "testfolder": "Ordner mit json Dateien für den Integrationstest"
                 },
                 "data_description": {
-                    "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden nur einmal pro Minute aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
                     "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
                     "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
                     "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
@@ -666,15 +666,15 @@
     "services": {
         "get_system_info": {
             "name": "Abfrage der aktuellen Systeminformationen",
-            "description": "Die aktuelle Systeminformation wird als Antwort auf diesen Service geschickt"
+            "description": "Die aktuelle Systeminformation wird als Antwort auf diese Aktion geschickt"
         },
         "export_systems": {
             "name": "Export von anonymisierten Api Informationen aller zugänglichen Systeme und Geräte als gezippte JSON Dateien",
-            "description": "Die aktuellen Api Antworten deiner Anker Solix Systeme und Geräte werden anonymisiert in JSON Dateien gespeichert. Der gezippte Export Ordner wird als Antwort zurückgegeben. Dieser Service kann mehrere Sekunden dauern."
+            "description": "Die aktuellen Api Antworten deiner Anker Solix Systeme und Geräte werden anonymisiert in JSON Dateien gespeichert. Der gezippte Export Ordner wird als Antwort zurückgegeben. Diese Aktion kann über 10 Sekunden dauern!"
         },
         "get_solarbank_schedule": {
             "name": "Abfrage des aktuellen Solarbank Zeitplans",
-            "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diesen Service geschickt"
+            "description": "Der aktuelle Zeitplan der Solarbank wird als Antwort auf diese Aktion geschickt"
         },
         "clear_solarbank_schedule": {
             "name": "Löschen des Solarbank Zeitplans",
@@ -787,10 +787,10 @@
             "message": "Gerätedetails für {coordinator} können nicht innerhalb von {min_dev_refresh} Sekunden erneut aktualisiert werden"
         },
         "service_not_supported": {
-            "message": "Die Entität {entity} unterstützt den Service {service} nicht."
+            "message": "Die Entität {entity} unterstützt die Aktion {service} nicht."
         },
         "slot_time_error": {
-            "message": "Der service {service} kann nicht ausgeführt werden: {error}."
+            "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}."
         }
     }
 }

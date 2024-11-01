@@ -256,6 +256,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     else self._data.get(CONF_USERNAME),
                     data=self._data,
                     options=self._options,
+                    description_placeholders=placeholders,
                 )
             # Test mode enabled but no existing folder selected
             errors[TESTFOLDER] = "folder_invalid"
@@ -331,13 +332,16 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
         placeholders: dict[
             str, str
         ] = {}  # NOTE: Passed option placeholder do not work with translation files, HASS Bug?
+
         existing_options = self.config_entry.options.copy()
 
         if user_input:
             if user_input.get(TESTFOLDER) or not user_input.get(TESTMODE):
                 # merge new options from user form with existing options in config entry
                 return self.async_create_entry(
-                    title="", data=existing_options | user_input
+                    title="",
+                    data=existing_options | user_input,
+                    description_placeholders=placeholders,
                 )
             # Test mode enabled but no existing folder selected
             errors[TESTFOLDER] = "folder_invalid"

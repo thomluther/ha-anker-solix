@@ -83,7 +83,7 @@
                     "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
                 },
                 "data_description": {
-                    "scan_interval": "Remarque: Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "scan_interval": "Remarque: Les données sur le serveur cloud sont actualisées au maximum toutes les 60 à 300 secondes. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
                     "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues.",
                     "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
@@ -666,15 +666,15 @@
     "services": {
         "get_system_info": {
             "name": "Demander les informations actuelles sur le système",
-            "description": "Les informations réelles sur le système seront fournies en réponse à la demande de service."
+            "description": "Les informations réelles sur le système seront fournies en réponse à cette action"
         },
         "export_systems": {
             "name": "Exporter les informations api anonymes des systèmes et dispositifs accessibles dans des fichiers JSON zippés",
-            "description": "Les réponses Api actuelles pour votre système Anker Solix et les informations sur l'appareil seront anonymisées et enregistrées dans des fichiers JSON. Le dossier de sortie zippé sera renvoyé en tant que réponse. Ce service peut être exécuté pendant plusieurs secondes."
+            "description": "Les réponses Api actuelles pour votre système Anker Solix et les informations sur l'appareil seront anonymisées et enregistrées dans des fichiers JSON. Le dossier de sortie zippé sera renvoyé en tant que réponse. Cette action peut durer plus de 10 secondes!"
         },
         "get_solarbank_schedule": {
             "name": "Demandez l'horaire actuel de solarbank",
-            "description": "L'horaire effective de solarbank sera fournie en réponse à la demande de service"
+            "description": "L'horaire effective de solarbank sera fournie en réponse à cette action"
         },
         "clear_solarbank_schedule": {
             "name": "Effacer l'horaire de solarbank",
@@ -787,10 +787,10 @@
             "message": "Les appareils de {coordinator} ne peuvent pas être réactualisés dans les {min_dev_refresh} secondes"
         },
         "service_not_supported": {
-            "message": "L'entité {entity} ne supporte pas le service {service}"
+            "message": "L'entité {entity} ne supporte pas l'action {service}"
         },
         "slot_time_error": {
-            "message": "Le service {service} ne peut pas être exécuté : {error}."
+            "message": "L'action {service} ne peut pas être exécuté: {error}."
         }
     }
 }

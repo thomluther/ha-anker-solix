@@ -34,7 +34,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.2.0.0"
+VERSION: str = "2.2.1.0"
 
 
 class AnkerSolixApiExport:
@@ -675,7 +675,14 @@ class AnkerSolixApiExport:
                 )
 
         except (errors.AnkerSolixError, ClientError) as err:
-            self._logger.error("%s: %s", type(err), err)
+            if isinstance(err,ClientError):
+                self._logger.warning(
+                    "%s endpoint data queries may not be supported on used server: %s",
+                    ApiEndpointServices.power,
+                    err,
+                )
+            else:
+                self._logger.error("%s: %s", type(err), err)
             self._logger.warning(
                 "Skipping remaining %s endpoint data queries.",
                 ApiEndpointServices.power,
@@ -985,11 +992,14 @@ class AnkerSolixApiExport:
                     )
 
         except (errors.AnkerSolixError, ClientError) as err:
-            self._logger.error(
-                "%s: %s",
-                type(err),
-                err,
-            )
+            if isinstance(err,ClientError):
+                self._logger.warning(
+                    "%s endpoint data queries may not be supported on used server: %s",
+                    ApiEndpointServices.charging,
+                    err,
+                )
+            else:
+                self._logger.error("%s: %s", type(err), err)
             self._logger.warning(
                 "Skipping remaining %s endpoint data queries.",
                 ApiEndpointServices.charging,
@@ -1237,11 +1247,14 @@ class AnkerSolixApiExport:
                     )
 
         except (errors.AnkerSolixError, ClientError) as err:
-            self._logger.error(
-                "%s: %s",
-                type(err),
-                err,
-            )
+            if isinstance(err,ClientError):
+                self._logger.warning(
+                    "%s endpoint data queries may not be supported on used server: %s",
+                    ApiEndpointServices.hes_svc,
+                    err,
+                )
+            else:
+                self._logger.error("%s: %s", type(err), err)
             self._logger.warning(
                 "Skipping remaining %s endpoint data queries.",
                 ApiEndpointServices.hes_svc,

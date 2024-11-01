@@ -65,6 +65,7 @@ class AnkerSolixPicturePath:
     A5102: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
     A5103: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
 
+
 @dataclass(frozen=True)
 class AnkerSolixEntityType:
     """Definition of entity types used."""
@@ -101,7 +102,7 @@ def get_AnkerSolixDeviceInfo(
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
         # model=" ".join([data.get("name") or "", pn]),
-        model=data.get("name"),
+        model=data.get("name") or data.get("device_pn"),
         # Use new model_id attribute supported since core 2024.8.0
         model_id=data.get("device_pn"),
         serial_number=data.get("device_sn"),

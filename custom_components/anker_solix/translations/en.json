@@ -83,7 +83,7 @@
                     "testfolder": "Folder with json files for integration testing"
                 },
                 "data_description": {
-                    "scan_interval": "Note: Data on the cloud server is updated only once per minute. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
                     "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
                     "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
                     "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
@@ -97,7 +97,7 @@
             "duplicate_devices": "{username} has shared devices with existing account {shared_account}, you cannot configure both at the same time!",
             "accept_terms": "Usage terms and conditions must be accepted",
             "folder_invalid": "Valid folder required for testmode",
-            "unknown": "Unknown error occurred:: {error_detail}"
+            "unknown": "Unknown error occurred: {error_detail}"
         },
         "abort": {
             "already_configured": "This account is already configured",
@@ -666,15 +666,15 @@
     "services": {
         "get_system_info": {
             "name": "Request actual system information",
-            "description": "The actual system information will be provided as response to the service request"
+            "description": "The actual system information will be provided as response to this action"
         },
         "export_systems": {
             "name": "Export anonymized Api information of accessible systems and devices into zipped JSON files",
-            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This service can run multiple seconds."
+            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This action can run more than 10 seconds!"
         },
         "get_solarbank_schedule": {
             "name": "Request the actual Solarbank schedule",
-            "description": "The actual Solarbank schedule will be provided as response to the service request"
+            "description": "The actual Solarbank schedule will be provided as response to this action"
         },
         "clear_solarbank_schedule": {
             "name": "Clear the Solarbank schedule",
@@ -787,10 +787,10 @@
             "message": "Devices for {coordinator} cannot be updated within less than {min_dev_refresh} seconds"
         },
         "service_not_supported": {
-            "message": "The entity {entity} does not support the service {service}"
+            "message": "The entity {entity} does not support the action {service}"
         },
         "slot_time_error": {
-            "message": "The service {service} cannot be executed: {error}."
+            "message": "The action {service} cannot be executed: {error}."
         }
     }
 }
