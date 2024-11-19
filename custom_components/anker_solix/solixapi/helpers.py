@@ -18,9 +18,9 @@ class RequestCounter:
         """Print the counters."""
         return f"{self.last_hour()} last hour, {self.last_minute()} last minute"
 
-    def add(self, request_time: datetime = datetime.now()) -> None:
-        """Add new timestamp to end of counter."""
-        self.elements.append(request_time)
+    def add(self, request_time: datetime | None = None, request_info: str = "") -> None:
+        """Add new tuple with timestamp and optional request info to end of counter."""
+        self.elements.append((request_time or datetime.now(), request_info))
         # limit the counter entries to 1 hour when adding new
         self.recycle()
 
@@ -28,17 +28,35 @@ class RequestCounter:
         self, last_time: datetime = datetime.now() - timedelta(hours=1)
     ) -> None:
         """Remove oldest timestamps from beginning of counter until last_time is reached, default is 1 hour ago."""
-        self.elements = [x for x in self.elements if x > last_time]
+        self.elements = [x for x in self.elements if x[0] > last_time]
 
-    def last_minute(self) -> int:
-        """Get number of timestamps for last minute."""
+    def last_minute(self, details: bool = False) -> int | list:
+        """Get number of timestamps or all details for last minute."""
         last_time = datetime.now() - timedelta(minutes=1)
-        return len([x for x in self.elements if x > last_time])
+        requests = [x for x in self.elements if x[0] > last_time]
+        return requests if details else len(requests)
 
-    def last_hour(self) -> int:
-        """Get number of timestamps for last hour."""
+    def last_hour(self, details: bool = False) -> int | list:
+        """Get number of timestamps or details for last hour."""
         last_time = datetime.now() - timedelta(hours=1)
-        return len([x for x in self.elements if x > last_time])
+        requests = [x for x in self.elements if x[0] > last_time]
+        return requests if details else len(requests)
+
+    def get_details(self, last_hour: bool = False) -> str:
+        """Get string with details of selected interval."""
+        return "\n".join(
+            [
+                (item[0]).strftime("%H:%M:%S.")
+                + str((item[0]).microsecond)[0:3]
+                + " --> "
+                + str(item[1])
+                for item in (
+                    self.last_hour(details=True)
+                    if last_hour
+                    else self.last_minute(details=True)
+                )
+            ]
+        )
 
 
 def md5(text: str) -> str:
@@ -53,3 +71,25 @@ def getTimezoneGMTString() -> str:
     tzo = datetime.now().astimezone().strftime("%z")
     return f"GMT{tzo[:3]}:{tzo[3:5]}"
 
+
+def convertToKwh(val: str | float, unit: str) -> str | float | None:
+    """Convert a given value to kWh depending on unit."""
+    try:
+        result = None
+        if isinstance(val, str):
+            result = float(val)
+        elif isinstance(val, int | float):
+            result = val
+        if result is None or not isinstance(unit, str):
+            return None
+        if (unit := unit.lower()) == "wh":
+            result = round(result / 1000, 2)
+        elif unit == "mwh":
+            result = round(result * 1000, 2)
+        elif unit == "gwh":
+            result = round(result * 1000 * 1000, 2)
+        else:
+            return val
+        return str(result) if isinstance(val, str) else result
+    except ValueError:
+        return None

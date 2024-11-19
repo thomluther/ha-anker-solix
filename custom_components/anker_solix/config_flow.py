@@ -112,7 +112,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     if cfg_entry := await async_check_and_remove_devices(
                         self.hass,
                         user_input,
-                        self.client.api.sites | self.client.api.devices,
+                        self.client.api.getCaches(),
                     ):
                         errors[CONF_USERNAME] = "duplicate_devices"
                         placeholders[CONF_USERNAME] = str(account_user)
@@ -186,7 +186,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     if cfg_entry := await async_check_and_remove_devices(
                         hass=self.hass,
                         user_input=user_input,
-                        apidata=client.api.sites | client.api.devices,
+                        apidata=client.api.getCaches(),
                         configured_user=self._data.get(CONF_USERNAME),
                     ):
                         errors[CONF_USERNAME] = "duplicate_devices"
@@ -476,6 +476,7 @@ async def async_check_and_remove_devices(
             ApiCategories.smartmeter_energy,
             ApiCategories.smartplug_energy,
             ApiCategories.solar_energy,
+            ApiCategories.powerpanel_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SYSTEM.value}
         # Subcategories for Solarbank only
@@ -490,6 +491,11 @@ async def async_check_and_remove_devices(
             ApiCategories.smartplug_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SMARTPLUG.value}
+        # Subcategories for Power Panels only
+        if {
+            ApiCategories.powerpanel_energy,
+        } & excluded:
+            excluded = excluded | {SolixDeviceType.POWERPANEL.value}
         # Subcategories for all managed Devices
         if {
             ApiCategories.device_auto_upgrade,

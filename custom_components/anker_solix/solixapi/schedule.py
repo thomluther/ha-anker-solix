@@ -21,7 +21,11 @@ from .apitypes import (
 
 
 async def get_device_load(
-    self, siteId: str, deviceSn: str, fromFile: bool = False, testSchedule: dict | None = None
+    self,
+    siteId: str,
+    deviceSn: str,
+    fromFile: bool = False,
+    testSchedule: dict | None = None,
 ) -> dict:
     r"""Get device load settings. This provides only SB1 schedule structure, not useful for SB2.
 
@@ -36,13 +40,13 @@ async def get_device_load(
     Attention: This method and endpoint actually returns only solarbank 1 schedule structure, which is invalid for different Solarbank 2 structures.
     While it also returns the applied home load settings, it cannot be used for Solarbank 2 due to wrong schedule data.
     """
-    if not isinstance(testSchedule,dict):
+    if not isinstance(testSchedule, dict):
         testSchedule = None
     if testSchedule is None:
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
             )
         else:
@@ -150,19 +154,19 @@ async def get_device_parm(
             {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":20}]}],
     \"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
     """
-    if not isinstance(testSchedule,dict):
+    if not isinstance(testSchedule, dict):
         testSchedule = None
     if testSchedule is None:
         data = {"site_id": siteId, "param_type": paramType}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
             )
             # ensure backward filename compatibility without parm type in name
             if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
                 resp = await self.apisession.loadFromFile(
-                    Path(self._testdir)
+                    Path(self.testDir())
                     / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
                 )
         else:

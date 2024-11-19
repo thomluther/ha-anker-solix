@@ -33,6 +33,13 @@
                     "on": "mdi:message-alert",
                     "off": "mdi:message-check-outline"
                 }
+            },
+            "use_files": {
+                "default": "mdi:account-alert",
+                "state": {
+                    "on": "mdi:file-document-refresh-outline",
+                    "off": "mdi:web-sync"
+                }
             }
         },
         "number": {
@@ -120,6 +127,12 @@
             "ac_socket": {
                 "default": "mdi:power-plug-battery"
             },
+            "heating_power": {
+                "default": "mdi:sun-snowflake-variant"
+            },
+            "grid_to_battery_power": {
+                "default": "mdi:power-plug-battery"
+            },
             "fittings": {
                 "default": "mdi:tools"
             },
@@ -153,20 +166,32 @@
             "daily_solar_production_pv4": {
                 "default": "mdi:solar-power-variant"
             },
+            "daily_solar_to_home": {
+                "default": "mdi:solar-power"
+            },
+            "daily_solar_to_battery": {
+                "default": "mdi:solar-power"
+            },
             "daily_ac_socket": {
                 "default": "mdi:power-plug-battery"
-            },
-            "daily_battery_to_home": {
-                "default": "mdi:home-battery"
             },
             "daily_home_usage": {
                 "default": "mdi:home-lightning-bolt"
             },
+            "daily_battery_to_home": {
+                "default": "mdi:home-battery"
+            },
             "daily_smartplugs_total": {
                 "default": "mdi:lightning-bolt-circle"
             },
+            "daily_grid_import": {
+                "default": "mdi:transmission-tower-export"
+            },
             "daily_grid_to_home": {
                 "default": "mdi:home-import-outline"
+            },
+            "daily_grid_to_battery": {
+                "default": "mdi:power-plug-battery"
             },
             "daily_solar_to_grid": {
                 "default": "mdi:transmission-tower-import"
@@ -247,6 +272,15 @@
             },
             "photovoltaic_to_grid_power": {
                 "default": "mdi:transmission-tower-import"
+            },
+            "data_timestamp": {
+                "default": "mdi:weather-cloudy-clock"
+            },
+            "charge_power": {
+                "default": "mdi:battery-plus-variant"
+            },
+            "discharge_power": {
+                "default": "mdi:battery-minus-variant"
             }
         },
         "switch": {
@@ -274,11 +308,28 @@
         }
     },
     "services": {
-        "get_system_info": "mdi:text-box-search-outline",
-        "export_systems": "mdi:cloud-print-outline",
-        "get_solarbank_schedule": "mdi:sun-clock",
-        "clear_solarbank_schedule": "mdi:history",
-        "set_solarbank_schedule": "mdi:sun-clock",
-        "update_solarbank_schedule": "mdi:sun-clock"
+        "get_system_info": {"service": "mdi:text-box-search-outline"},
+        "export_systems": {"service": "mdi:cloud-print-outline"},
+        "get_solarbank_schedule": {"service": "mdi:sun-clock"},
+        "clear_solarbank_schedule": {
+            "service": "mdi:history",
+            "sections": {
+                "sb2_fields": "mdi:numeric-2-box-outline"
+              }
+        },
+        "set_solarbank_schedule": {
+            "service": "mdi:sun-clock",
+            "sections": {
+                "sb1_fields": "mdi:numeric-1-box-outline",
+                "sb2_fields": "mdi:numeric-2-box-outline"
+              }
+        },
+        "update_solarbank_schedule": {
+            "service": "mdi:sun-clock",
+            "sections": {
+                "sb1_fields": "mdi:numeric-1-box-outline",
+                "sb2_fields": "mdi:numeric-2-box-outline"
+              }
+        }
     }
 }

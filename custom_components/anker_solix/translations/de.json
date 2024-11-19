@@ -10,16 +10,16 @@
                 "solarbank_solar_info": "Solarbank WR Info",
                 "solar_energy": "Solar Energiestatistik",
                 "solarbank_energy": "Solarbank Energiestatistik",
-                "smartmeter_energy": "Smart Meter Energiestatistik",
-                "smartplug_energy": "Smarte Steckdosen Energiestatistik",
-                "system": "Systeme",
                 "solarbank": "Solarbänke",
                 "inverter": "Wechselrichter",
                 "pps": "Power Stationen",
                 "powerpanel": "Power Panels",
+                "powerpanel_energy": "Power Panel Energiestatistik",
                 "powercooler": "Power Kühler",
                 "smartmeter": "Smart Meter",
-                "smartplug": "Smarte Steckdosen"
+                "smartmeter_energy": "Smart Meter Energiestatistik",
+                "smartplug": "Smarte Steckdosen",
+                "smartplug_energy": "Smarte Steckdosen Energiestatistik"
             }
         },
         "plan": {
@@ -170,6 +170,9 @@
                 "state_attributes": {
                     "ota_version": {
                         "name": "OTA Version"
+                    },
+                    "ota_components": {
+                        "name": "OTA Komponenten"
                     }
                 }
             },
@@ -182,6 +185,13 @@
             },
             "has_unread_msg": {
                 "name": "Nachrichten",
+                "state": {
+                    "on": "Ja",
+                    "off": "Nein"
+                }
+            },
+            "use_files": {
+                "name": "Benutze Dateien",
                 "state": {
                     "on": "Ja",
                     "off": "Nein"
@@ -286,6 +296,12 @@
             },
             "ac_generate_power": {
                 "name": "AC Leistung"
+            },
+            "heating_power": {
+                "name": "Heizleistung"
+            },
+            "grid_to_battery_power": {
+                "name": "Netzaufladung"
             },
             "set_output_power": {
                 "name": "Einspeisevorgabe",
@@ -536,6 +552,28 @@
                     }
                 }
             },
+            "daily_solar_to_home": {
+                "name": "Tägliche PV Hausabgabe",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_solar_to_battery": {
+                "name": "Tägliche PV Aufladung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
             "daily_ac_socket": {
                 "name": "Tägliche AC Steckdose",
                 "state_attributes": {
@@ -548,7 +586,7 @@
                 }
             },
             "daily_battery_to_home": {
-                "name": "Tägliche AC Hausabgabe",
+                "name": "Tägliche Akku Hausabgabe",
                 "state_attributes": {
                     "date": {
                         "name": "Datum"
@@ -580,8 +618,30 @@
                     }
                 }
             },
-            "daily_grid_to_home": {
+            "daily_grid_import": {
                 "name": "Täglicher Netzbezug",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_grid_to_home": {
+                "name": "Tägliche Netznutzung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Datum"
+                    },
+                    "last_period": {
+                        "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_grid_to_battery": {
+                "name": "Tägliche Netzaufladung",
                 "state_attributes": {
                     "date": {
                         "name": "Datum"
@@ -634,6 +694,20 @@
                         "name": "Letzte Periode"
                     }
                 }
+            },
+            "data_timestamp": {
+                "name": "Datenzeit",
+                "state_attributes": {
+                    "last_check": {
+                        "name": "Letzte Kontrolle"
+                    }
+                }
+            },
+            "charge_power": {
+                "name": "Aufladeleistung"
+            },
+            "discharge_power": {
+                "name": "Entladeleistung"
             }
         },
         "switch": {
@@ -644,7 +718,15 @@
                 "name": "Erlaube Leistungsabgabe"
             },
             "allow_refresh": {
-                "name": "Api Nutzung"
+                "name": "Api Nutzung",
+                "state_attributes": {
+                    "requests_last_min": {
+                        "name": "Abfragen letzte Minute"
+                    },
+                    "requests_last_hour": {
+                        "name": "Abfragen letzt Stunde"
+                    }
+                }
             }
         }
     },
@@ -666,7 +748,13 @@
     "services": {
         "get_system_info": {
             "name": "Abfrage der aktuellen Systeminformationen",
-            "description": "Die aktuelle Systeminformation wird als Antwort auf diese Aktion geschickt"
+            "description": "Die aktuelle Systeminformation wird als Antwort auf diese Aktion geschickt",
+            "fields": {
+                "include_cache": {
+                    "name": "Inkludiere Cache",
+                    "description": "Inkludiere Cache um die existierenden System Daten aus dem Api Cache mit den neuen Daten der scene_info Abfrage zu verknüpfen"
+                }
+            }
         },
         "export_systems": {
             "name": "Export von anonymisierten Api Informationen aller zugänglichen Systeme und Geräte als gezippte JSON Dateien",
@@ -679,20 +767,36 @@
         "clear_solarbank_schedule": {
             "name": "Löschen des Solarbank Zeitplans",
             "description": "Der aktuelle Zeitplan der Solarbank wird gelöscht",
+            "sections": {
+                "sb2_fields": {
+                    "name": "Solarbank 2 Optionen",
+                    "description": "Für Solarbank 2 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                }
+            },
             "fields": {
                 "plan": {
                     "name": "Plan",
-                    "description": "Wähle den zu bearbeitenden Plan, standardmäßig wird der Plan für den aktiven Benutzermodus gewählt (ignoriert für Solarbank 1)"
+                    "description": "Wähle den zu bearbeitenden Plan, standardmäßig wird der Plan für den aktiven Benutzermodus gewählt"
                 },
                 "week_days": {
                     "name": "Wochentage",
-                    "description": "Wähle Wochentage die vom Zeitplan gelöscht werden (ignoriert für Solarbank 1)"
+                    "description": "Wähle Wochentage die vom Zeitplan gelöscht werden"
                 }
             }
         },
         "set_solarbank_schedule": {
             "name": "Erstelle einen neuen Solarbank Zeitplan",
             "description": "Erstelle einen neuen Zeitplan für die Solarbank mit dem definierten Zeitintervall. Ein bestehender Zeitplan wird dabei komplett ersetzt!",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Solarbank 1 Optionen",
+                    "description": "Für Solarbank 1 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 2)"
+                },
+                "sb2_fields": {
+                    "name": "Solarbank 2 Optionen",
+                    "description": "Für Solarbank 2 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                }
+            },
             "fields": {
                 "start_time": {
                     "name": "Startzeit",
@@ -706,7 +810,7 @@
                     "name": "Plan",
                     "description": "Wähle den zu bearbeitenden Plan, standardmäßig wird der Plan für den aktiven Benutzermodus gewählt (ignoriert für Solarbank 1)"
                 },
-                    "week_days": {
+                "week_days": {
                     "name": "Wochentage",
                     "description": "Wochentage für das definierte Zeitintervall (ignoriert für Solarbank 1)"
                 },
@@ -731,6 +835,16 @@
         "update_solarbank_schedule": {
             "name": "Aktualisiere einen Solarbank Zeitplan",
             "description": "Ein existierender Zeitplan wird mit dem definierten Zeitintervall aktualisiert. Angrenzende Zeitintervalle werden dabei zeitlich angepasst und überlagernde ersetzt.",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Solarbank 1 Optionen",
+                    "description": "Für Solarbank 1 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 2)"
+                },
+                "sb2_fields": {
+                    "name": "Solarbank 2 Optionen",
+                    "description": "Für Solarbank 2 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                }
+            },
             "fields": {
                 "start_time": {
                     "name": "Startzeit",
@@ -776,6 +890,9 @@
         },
         "active_testmode": {
             "message": "{entity_id} kann nicht geändert werden solange die Konfiguration im Testmodus ist"
+        },
+        "apiusage_deactivated": {
+            "message": "{entity_id} kann nicht für die angeforderte Aktion benutzt werden solange die Api Nutzung ausgeschaltet ist"
         },
         "shared_devices": {
             "message": "{username} kann nicht geladen werden weil sie Geräte mit der Konfiguration {shared_account} teilt"

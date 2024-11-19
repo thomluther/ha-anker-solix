@@ -36,6 +36,7 @@ from .poller import (
     poll_site_details,
     poll_sites,
 )
+from .powerpanel import AnkerSolixPowerpanelApi
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         # link previous api methods to apisession for refactoring backward compatibility
         self.request_count = self.apisession.request_count
         self.async_authenticate = self.apisession.async_authenticate
+        self.powerpanelApi: AnkerSolixPowerpanelApi | None = None
 
     def _update_dev(  # noqa: C901
         self,
@@ -125,6 +127,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({"name": str(value)})
                     elif key in ["alias_name"] and value:
                         device.update({"alias": str(value)})
+                        # preset default device name if only alias provided
+                        if (pn := device.get("device_pn") or None) and (
+                            not device.get("name") or not devData.get("device_name")
+                        ):
+                            device.update(
+                                {
+                                    "name": (
+                                        (self.account.get("products") or {}).get(pn)
+                                        or {}
+                                    ).get("name")
+                                    or ""
+                                }
+                            )
                     elif key in ["device_sw_version"] and value:
                         device.update({"sw_version": str(value)})
                     elif key in [
@@ -160,7 +175,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({key: str(value)})
                     elif key in ["wifi_signal"]:
                         # Make sure that key is added, but update only if new value provided to avoid deletion of value from rssi calculation
-                        if value or device.get("wifi_signal") is None:
+                        if value or device.get(key) is None:
                             device.update({key: str(value)})
                     elif key in ["rssi"]:
                         # This is actually not a relative rssi value (0-255), but a negative value and seems to be the absolute dBm of the signal strength
@@ -203,6 +218,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "solar_power_4",
                             "ac_power",
                             "to_home_load",
+                            "other_input_power",
+                            "micro_inverter_power",
+                            "micro_inverter_power_limit",
+                            "micro_inverter_low_power_limit",
+                            "grid_to_battery_power",
+                            "pei_heating_power",
                         ]
                         and value
                     ):
@@ -214,7 +235,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
-                            device.update({"sub_package_num": int(value)})
+                            device.update({key: int(value)})
                             calc_capacity = True
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
                     elif key in ["set_load_power", "parallel_home_load"] and value:
@@ -241,7 +262,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 }
                             )
                     elif key in ["status"]:
-                        device.update({"status": str(value)})
+                        device.update({key: str(value)})
                         # decode the status into a description
                         description = SolixDeviceStatus.unknown.name
                         for status in SolixDeviceStatus:
@@ -250,7 +271,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 break
                         device.update({"status_desc": description})
                     elif key in ["charging_status"]:
-                        device.update({"charging_status": str(value)})
+                        device.update({key: str(value)})
                         # decode the status into a description
                         description = SolarbankStatus.unknown.name
                         for status in SolarbankStatus:
@@ -332,30 +353,31 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         and str(value).isdigit()
                     ):
                         device.update({"power_cutoff": int(value)})
-                    elif key in ["power_cutoff_data"] and value:
-                        device.update({"power_cutoff_data": list(value)})
+                    elif key in ["power_cutoff_data", "ota_children"] and value:
+                        # list items with value
+                        device.update({key: list(value)})
                     elif key in ["fittings"]:
                         # update nested dictionary
-                        if "fittings" in device:
-                            device["fittings"].update(dict(value))
+                        if key in device:
+                            device[key].update(dict(value))
                         else:
-                            device["fittings"] = dict(value)
-                    elif key in ["solar_info"] and isinstance(value, dict) and value:
+                            device[key] = dict(value)
+                    elif key in ["solar_info"] and isinstance(value, dict):
                         # remove unnecessary keys from solar_info
                         keylist = value.keys()
-                        for key in [
+                        for extra in [
                             x
                             for x in ("brand_id", "model_img", "version", "ota_status")
                             if x in keylist
                         ]:
-                            value.pop(key, None)
-                        device.update({"solar_info": dict(value)})
+                            value.pop(extra, None)
+                        device.update({key: value})
                     elif key in ["solarbank_count"] and value:
-                        device.update({"solarbank_count": value})
+                        device.update({key: value})
                     # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
                     # When individual device schedules are supported in future, this info is needed per device anyway
                     elif key in ["schedule"] and isinstance(value, dict):
-                        device.update({"schedule": dict(value)})
+                        device.update({key: dict(value)})
                         # set default presets for no active schedule slot
                         generation = int(device.get("generation", 0))
                         cnt = device.get("solarbank_count", 0)
@@ -562,9 +584,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["generate_power"]:
                         device.update({key: str(value)})
 
+                    # Power Panel specific keys
+                    elif key in ["average_power"] and isinstance(value, dict):
+                        device.update({key: value})
+
                     # smartmeter specific keys
                     elif key in ["grid_status"]:
-                        device.update({"grid_status": str(value)})
+                        device.update({key: str(value)})
                         # decode the grid status into a description
                         description = SmartmeterStatus.unknown.name
                         for status in SmartmeterStatus:
@@ -653,10 +679,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         return sn
 
     async def update_sites(
-        self, siteId: str | None = None, fromFile: bool = False
+        self,
+        siteId: str | None = None,
+        fromFile: bool = False,
+        exclude: set | None = None,
     ) -> dict:  # noqa: C901
         """Create/Update api sites cache structure."""
-        return await poll_sites(self, siteId=siteId, fromFile=fromFile)
+        resp = await poll_sites(self, siteId=siteId, fromFile=fromFile, exclude=exclude)
+        # Clean up powerpanel api sites cache if used
+        if self.powerpanelApi:
+            self.powerpanelApi.recycleSites(activeSites=set(self.sites.keys()))
+        return resp
 
     async def update_site_details(
         self, fromFile: bool = False, exclude: set | None = None
@@ -674,7 +707,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         self, fromFile: bool = False, exclude: set | None = None
     ) -> dict:
         """Create/Update device details in api devices cache structure."""
-        return await poll_device_details(self, fromFile=fromFile, exclude=exclude)
+        resp = await poll_device_details(self, fromFile=fromFile, exclude=exclude)
+        # Clean up powerpanel devices cache if used
+        if self.powerpanelApi:
+            self.powerpanelApi.recycleDevices(activeDevices=set(self.sites.keys()))
+        return resp
 
     async def get_homepage(self, fromFile: bool = False) -> dict:
         """Get the latest homepage info.
@@ -690,7 +727,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['homepage']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['homepage']}.json"
             )
         else:
             resp = await self.apisession.request("post", API_ENDPOINTS["homepage"])
@@ -707,7 +744,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['user_devices']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['user_devices']}.json"
             )
         else:
             resp = await self.apisession.request("post", API_ENDPOINTS["user_devices"])
@@ -721,7 +758,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['charging_devices']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['charging_devices']}.json"
             )
         else:
             resp = await self.apisession.request(
@@ -738,7 +775,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['solar_info']}_{solarbankSn}.json"
             )
         else:
@@ -764,7 +801,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['compatible_process']}_{solarbankSn}.json"
             )
         else:
@@ -789,7 +826,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_cutoff']}_{deviceSn}.json"
             )
         else:
@@ -847,7 +884,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
             )
         else:
@@ -928,7 +965,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_device_fittings']}_{deviceSn}.json"
             )
         else:
@@ -964,7 +1001,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"solar_bank_sn": solarbankSn, "solar_sn": inverterSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_ota_info']}_{solarbankSn or inverterSn}.json"
             )
         else:
@@ -984,7 +1021,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"device_sn": deviceSn, "insert_sn": insertSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_ota_update']}_{deviceSn}.json"
             )
         else:
@@ -1012,7 +1049,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"type": recordType}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['check_upgrade_record']}_{recordType}.json"
             )
         else:
@@ -1052,7 +1089,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(
-                    self._testdir
+                    self.testDir()
                     / f"{API_FILEPREFIXES['get_upgrade_record']}_{recordType}_{deviceSn if deviceSn else siteId if siteId else recordType}.json"
                 )
             )

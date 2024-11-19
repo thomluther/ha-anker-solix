@@ -17,7 +17,7 @@
 
 ## Disclaimer:
 
-🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the Solarbank E1600 into their smart home. Initially, the Api library as well as the integration has been developed for monitoring of the Anker Solarbank only. Meanwhile additional devices can be monitored and additional enhancements allow modifications of their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
+🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the devices of Anker Solix power systems into their smart home. Initially, the Api library as well as the integration has been developed for monitoring of the Anker Solarbank only. Meanwhile additional devices and systems can be monitored and additional enhancements allow modifications of their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
 
 
 ## Usage terms and conditions:
@@ -101,7 +101,7 @@ To simplify usage of this workaround, please see [Automation to send and clear s
 
 ## Data refresh configuration options
 
-The data on the cloud which can be retrieved via the Api is typically refreshed only once per minute. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further when no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the data.
+The data on the cloud which can be retrieved via the Api is typically refreshed only once per minute at most. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further when no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the data.
 
 **Note:** The solarbank data timestamp is the only device category timestamp that seems to provide valid data (inverter data timestamp is not updated by the cloud).
 
@@ -111,7 +111,7 @@ The cloud Api also enforces a request limit but actual metrics for this limit ar
 The energy statistics can be re-enabled by removing them from the exclusion list.
 The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after successful account authorization and before the first data collection is done. Excluded device or details categories can be reviewed and changed as needed. Device types of no interest can be excluded completely. Exclusion of specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
 
-### Option considerations for Solarbank 2 devices and Smart Meters
+### Option considerations for Solarbank 2 systems
 
 Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transferred their power values every 60 seconds to the cloud, Solarbank 2 systems seem to use different intervals for Api cloud updates:
    - Default interval is **~5 minutes**: After ~60 seconds, the cloud considers the last values obsolete and no longer returns valid values upon refresh requests (only 0 values), until new values are received again from the devices. There was a change implemented in the cloud around 25. July 2024 to provide always the last known data upon refresh requests. This eliminated the missing value problem for shared accounts or 0 values in api client responses.
@@ -760,6 +760,8 @@ In order to run the script interactively from the dashboard, you just need to ad
 Starting with version 2.0.0, a new service was added for the system total yield entity in order to query the overall system information from the cloud Api, which contains the data that is presented on the Anker App home page screen. This data is used by the integration to represent most but not all of the entities. It may be helpful to debug what values are actually available on the Api cloud at the time requesting them. Following is an example screenshot showing only the top of the response:
 
 ![Get system info service][get-system-info-service-img]
+
+Version 2.3.0 added an option to include cached data in the presented response, so additional fields as cached or merged by the Api library may be shown.
 
 ### Export systems service
 

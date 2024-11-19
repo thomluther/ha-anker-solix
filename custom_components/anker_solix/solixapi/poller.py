@@ -7,11 +7,21 @@ import contextlib
 from datetime import datetime, timedelta
 
 from .apibase import AnkerSolixBaseApi
-from .apitypes import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
+from .apitypes import (
+    ApiCategories,
+    SolarbankStatus,
+    SolixDeviceType,
+    SolixParmType,
+    SolixSiteType,
+)
+from .powerpanel import AnkerSolixPowerpanelApi
 
 
 async def poll_sites(  # noqa: C901
-    api: AnkerSolixBaseApi, siteId: str | None = None, fromFile: bool = False
+    api: AnkerSolixBaseApi,
+    siteId: str | None = None,
+    fromFile: bool = False,
+    exclude: set | None = None,
 ) -> dict:
     """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
@@ -36,6 +46,9 @@ async def poll_sites(  # noqa: C901
         'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c',
         'powerpanel_list': []}}
     """
+    # define excluded categories to skip for queries
+    if not exclude or not isinstance(exclude, set):
+        exclude = set()
     if siteId and (api.sites.get(siteId) or {}):
         # update only the provided site ID
         api._logger.debug("Updating Sites data for site ID %s", siteId)
@@ -57,10 +70,19 @@ async def poll_sites(  # noqa: C901
             siteInfo: dict = mysite.get("site_info", {})
             siteInfo.update(site)
             mysite.update({"type": SolixDeviceType.SYSTEM.value, "site_info": siteInfo})
+            if hasattr(
+                SolixSiteType, item := "t_" + str(siteInfo.get("power_site_type") or "")
+            ):
+                mysite["site_type"] = getattr(SolixSiteType, item)
             admin = (
                 siteInfo.get("ms_type", 0) in [0, 1]
             )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
-            mysite.update({"site_admin": admin})
+            mysite["site_admin"] = admin
+            # Get product list once for device names if no admin and save it in account cache
+            if not admin and "products" not in api.account:
+                api._update_account(
+                    {"products": await api.get_products(fromFile=fromFile)}
+                )
             # Update scene info for site
             api._logger.debug("Getting scene info for site")
             scene = await api.get_scene_info(myid, fromFile=fromFile)
@@ -107,6 +129,24 @@ async def poll_sites(  # noqa: C901
                         if data_valid or not oldstamp
                         else oldstamp
                     )
+            # check if power panel site type to maintain statistic object which will be updated and replaced only during site details refresh
+            if mysite.get("site_type") == SolixDeviceType.POWERPANEL.value:
+                # initialize the powerpanel Api if not done yet
+                if not api.powerpanelApi:
+                    api.powerpanelApi = AnkerSolixPowerpanelApi(
+                        apisession=api.apisession
+                    )
+                # keep previous statistics since it should not overwrite stats updated by power panel site details update
+                if "statistics" in mysite:
+                    scene["statistics"] = mysite.get("statistics")
+                # pass the site ID and site info to avoid another site list query
+                await api.powerpanelApi.update_sites(
+                    siteId=myid,
+                    siteData=mysite | scene,
+                    fromFile=fromFile,
+                    exclude=exclude,
+                )
+                scene.update(api.powerpanelApi.sites.get(myid) or {})
             mysite.update(scene)
             new_sites.update({myid: mysite})
             # Update device details from scene info
@@ -165,6 +205,12 @@ async def poll_sites(  # noqa: C901
                         "solar_power_4": sb_info.get("solar_power_4"),
                         "ac_power": sb_info.get("ac_power"),
                         "to_home_load": sb_info.get("to_home_load"),
+                        "other_input_power": sb_info.get("other_input_power"),
+                        "micro_inverter_power": sb_info.get("micro_inverter_power"),
+                        "micro_inverter_power_limit": sb_info.get("micro_inverter_power_limit"),
+                        "micro_inverter_low_power_limit": sb_info.get("micro_inverter_low_power_limit"),
+                        "grid_to_battery_power": sb_info.get("grid_to_battery_power"),
+                        "pei_heating_power": sb_info.get("pei_heating_power"),
                         # only passed to device for proper SB2 charge status update
                         "home_load_power": mysite.get("home_load_power"),
                     },
@@ -288,7 +334,8 @@ async def poll_sites(  # noqa: C901
                     powerpanel = dict(powerpanel).copy()
                     powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                 if sn := api._update_dev(
-                    powerpanel,
+                    # merge powerpanel device details if available
+                    powerpanel | ((api.powerpanelApi.devices.get(powerpanel.get("device_sn") or "") or {}) if api.powerpanelApi else {}),
                     devType=SolixDeviceType.POWERPANEL.value,
                     siteId=myid,
                     isAdmin=admin,
@@ -318,7 +365,15 @@ async def poll_site_details(
     # Fetch unread account messages once and put in site details for all sites as well as into account dictionary
     api._logger.debug("Getting unread messages indicator")
     await api.get_message_unread(fromFile=fromFile)
+    # refresh power panel site details if used
+    if api.powerpanelApi:
+        await api.powerpanelApi.update_site_details(fromFile=fromFile, exclude=exclude)
     for site_id, site in api.sites.items():
+        # check if power panel site type to refresh runtime stats in sites cache
+        if ((site.get("site_info") or {}).get("power_site_type") or 0) in [4]:
+            api.sites[site_id]["statistics"] = (
+                (api.powerpanelApi.sites.get(site_id) or {}).get("statistics") or {}
+            ).copy()
         # Fetch details that only work for site admins
         if site.get("site_admin", False):
             # Fetch site price and CO2 settings
@@ -343,7 +398,7 @@ async def poll_device_details(
     if not exclude or not isinstance(exclude, set):
         exclude = set()
     api._logger.debug("Updating Device Details")
-    # Fetch firmware version of device
+    # Fetch firmware version of devices
     # This response will also contain unbound / standalone devices not added to a site
     api._logger.debug("Getting bind devices")
     await api.get_bind_devices(fromFile=fromFile)
@@ -354,6 +409,11 @@ async def poll_device_details(
         # Get the OTA batch info for firmware updates of owning devices
         api._logger.debug("Getting OTA update info for devices")
         await api.get_ota_batch(fromFile=fromFile)
+    # Get Power Panel device specific updates
+    if api.powerpanelApi:
+        await api.powerpanelApi.update_device_details(
+            fromFile=fromFile, exclude=exclude
+        )
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():
@@ -426,10 +486,15 @@ async def poll_device_details(
                         deviceSn=sn,
                         fromFile=fromFile,
                     )
-            # update entry in devices
-            api.devices.update({sn: device})
+
+        # Merge additional powerpanel data
+        if api.powerpanelApi:
+            device.update(api.powerpanelApi.devices.get(sn) or {})
 
         # TODO(#0): Fetch other details of specific device types as known and relevant
+
+        # update entry in devices
+        api.devices.update({sn: device})
 
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
@@ -439,7 +504,7 @@ async def poll_device_details(
 async def poll_device_energy(
     api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
-    """Get the site energy statistics for given device types from today and yesterday.
+    """Get the site energy statistics from today and yesterday.
 
     Yesterday energy will be queried only once if not available yet, but not updated in subsequent refreshes.
     Energy data can also be fetched by shared accounts.
@@ -448,125 +513,151 @@ async def poll_device_energy(
     # check exclusion list, default to all energy data
     if not exclude or not isinstance(exclude, set):
         exclude = set()
-    query_types: set = set()
-    query_sn: str = ""
+    # First check if power panel sites available and use appropriate method to merge the energy stats at the end
+    if api.powerpanelApi:
+        await api.powerpanelApi.update_device_energy(fromFile=fromFile, exclude=exclude)
     for site_id, site in api.sites.items():
-        # build device types set for daily energy query, depending on device types found for site
-        # solarinfo will always be queried by daily energy and required for general site statistics
-        # However, daily energy should not be queried for solarbank, smartmeter or smart plug devices when they or their energy category is explicitly excluded
-        if (
-            (dev_list := site.get("solar_list") or [])
-            and isinstance(dev_list, list)
-            and (sn := dev_list[0].get("device_sn"))
-        ):
-            query_types |= {SolixDeviceType.INVERTER.value}
-            query_sn = sn
-        if sn := (site.get("grid_info") or {}).get("device_sn"):
-            query_types -= {SolixDeviceType.INVERTER.value}
-            if not (
-                {
-                    SolixDeviceType.SMARTMETER.value,
-                    ApiCategories.smartmeter_energy,
-                }
-                & exclude
+        if api.powerpanelApi and site_id in api.powerpanelApi.sites:
+            # copy power panel energy stats into this sites dictionary
+            site["energy_details"] = (
+                api.powerpanelApi.sites[site_id].get("energy_details") or {}
+            )
+            api.sites[site_id] = site
+        else:
+            # build device types set for daily energy query, depending on device types found for site
+            # solarinfo will always be queried by daily energy and required for general site statistics
+            # However, daily energy should not be queried for solarbank, smartmeter or smart plug devices when they or their energy category is explicitly excluded
+            query_types: set = set()
+            query_sn: str = ""
+            if (
+                (dev_list := site.get("solar_list") or [])
+                and isinstance(dev_list, list)
+                and (sn := dev_list[0].get("device_sn"))
             ):
-                query_types |= {SolixDeviceType.SMARTMETER.value}
+                query_types |= {SolixDeviceType.INVERTER.value}
                 query_sn = sn
-        if plug_list := (site.get("smart_plug_info") or {}).get("smartplug_list") or []:
-            query_types -= {SolixDeviceType.INVERTER.value}
-            if not (
-                {
-                    SolixDeviceType.SMARTPLUG.value,
-                    ApiCategories.smartplug_energy,
-                }
-                & exclude
-            ):
-                query_types |= {SolixDeviceType.SMARTPLUG.value}
-                query_sn = plug_list[0].get("device_sn") or ""
-        if (
-            (dev_list := (site.get("solarbank_info") or {}).get("solarbank_list") or [])
-            and isinstance(dev_list, list)
-            and (sn := dev_list[0].get("device_sn"))
-        ):
-            query_types -= {SolixDeviceType.INVERTER.value}
-            if not (
-                {
-                    SolixDeviceType.SOLARBANK.value,
-                    ApiCategories.solarbank_energy,
-                }
-                & exclude
-            ):
-                query_types |= {SolixDeviceType.SOLARBANK.value}
-                query_sn = sn
-                # Query also embedded inverter energy per channel if not excluded
+            if sn := (site.get("grid_info") or {}).get("device_sn"):
+                query_types -= {SolixDeviceType.INVERTER.value}
                 if not (
                     {
-                        ApiCategories.solar_energy,
+                        SolixDeviceType.SMARTMETER.value,
+                        ApiCategories.smartmeter_energy,
                     }
                     & exclude
                 ):
-                    query_types |= {SolixDeviceType.INVERTER.value}
+                    query_types |= {SolixDeviceType.SMARTMETER.value}
+                    query_sn = sn
+            if (
+                plug_list := (site.get("smart_plug_info") or {}).get("smartplug_list")
+                or []
+            ):
+                query_types -= {SolixDeviceType.INVERTER.value}
+                if not (
+                    {
+                        SolixDeviceType.SMARTPLUG.value,
+                        ApiCategories.smartplug_energy,
+                    }
+                    & exclude
+                ):
+                    query_types |= {SolixDeviceType.SMARTPLUG.value}
+                    query_sn = plug_list[0].get("device_sn") or ""
+            if (
+                (
+                    dev_list := (site.get("solarbank_info") or {}).get("solarbank_list")
+                    or []
+                )
+                and isinstance(dev_list, list)
+                and (sn := dev_list[0].get("device_sn"))
+            ):
+                query_types -= {SolixDeviceType.INVERTER.value}
+                if not (
+                    {
+                        SolixDeviceType.SOLARBANK.value,
+                        ApiCategories.solarbank_energy,
+                    }
+                    & exclude
+                ):
+                    query_types |= {SolixDeviceType.SOLARBANK.value}
+                    query_sn = sn
+                    # Query also embedded inverter energy per channel if not excluded
+                    if not (
+                        {
+                            ApiCategories.solar_energy,
+                        }
+                        & exclude
+                    ):
+                        query_types |= {SolixDeviceType.INVERTER.value}
 
-        if query_types:
-            api._logger.debug("Getting Energy details for site")
-            # obtain previous energy details to check if yesterday must be queried as well
-            energy = site.get("energy_details") or {}
-            today = datetime.today().strftime("%Y-%m-%d")
-            yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-            # Fetch energy from today or both days
-            if yesterday != (energy.get("last_period") or {}).get("date"):
-                data = await api.energy_daily(
-                    siteId=site_id,
-                    deviceSn=query_sn,
-                    startDay=datetime.fromisoformat(yesterday),
-                    numDays=2,
-                    dayTotals=True,
-                    devTypes=query_types,
-                    fromFile=fromFile,
-                )
-            else:
-                data = await api.energy_daily(
-                    siteId=site_id,
-                    deviceSn=query_sn,
-                    startDay=datetime.fromisoformat(today),
-                    numDays=1,
-                    dayTotals=True,
-                    devTypes=query_types,
-                    fromFile=fromFile,
-                )
-            if fromFile:
-                # get last date entries from file and replace date with yesterday and today for testing
-                days = len(data)
-                if len(data) > 1:
-                    entry: dict = list(data.values())[days - 2]
-                    entry.update({"date": yesterday})
-                    energy["last_period"] = entry
-                if len(data) > 0:
-                    entry: dict = list(data.values())[days - 1]
-                    entry.update({"date": today})
-                    energy["today"] = entry
-            else:
-                energy["today"] = data.get(today) or {}
-                if data.get(yesterday):
-                    energy["last_period"] = data.get(yesterday) or {}
-            # save energy stats with sites dictionary
-            site["energy_details"] = energy
-            api.sites[site_id] = site
-            # Add individual smart plug energy per serial also to smart plug device cache
-            for plug in (energy.get("today") or {}).get("smartplug_list") or []:
-                api._update_dev(
-                    {
-                        "device_sn": plug.get("device_sn"),
-                        "energy_today": plug.get("energy"),
-                    }
-                )
-            for plug in (energy.get("last_period") or {}).get("smartplug_list") or []:
-                api._update_dev(
-                    {
-                        "device_sn": plug.get("device_sn"),
-                        "energy_last_period": plug.get("energy"),
-                    }
-                )
+            if query_types:
+                api._logger.debug("Getting Energy details for site")
+                # obtain previous energy details to check if yesterday must be queried as well
+                energy = site.get("energy_details") or {}
+                # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
+                # Cloud server energy stat updates may be delayed by 2-3 minutes
+                time: datetime = datetime.now() - timedelta(minutes=5)
+                today = time.strftime("%Y-%m-%d")
+                yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
+                # Fetch energy from today or both days
+                data: dict = {}
+                if yesterday != (energy.get("last_period") or {}).get("date"):
+                    data.update(
+                        await api.energy_daily(
+                            siteId=site_id,
+                            deviceSn=query_sn,
+                            startDay=datetime.fromisoformat(yesterday),
+                            numDays=2,
+                            dayTotals=True,
+                            devTypes=query_types,
+                            fromFile=fromFile,
+                        )
+                    )
+                else:
+                    data.update(
+                        await api.energy_daily(
+                            siteId=site_id,
+                            deviceSn=query_sn,
+                            startDay=datetime.fromisoformat(today),
+                            numDays=1,
+                            dayTotals=True,
+                            devTypes=query_types,
+                            fromFile=fromFile,
+                        )
+                    )
+                if fromFile:
+                    # get last date entries from file and replace date with yesterday and today for testing
+                    days = len(data)
+                    if len(data) > 1:
+                        entry: dict = list(data.values())[days - 2]
+                        entry.update({"date": yesterday})
+                        energy["last_period"] = entry
+                    if len(data) > 0:
+                        entry: dict = list(data.values())[days - 1]
+                        entry.update({"date": today})
+                        energy["today"] = entry
+                else:
+                    energy["today"] = data.get(today) or {}
+                    if data.get(yesterday):
+                        energy["last_period"] = data.get(yesterday) or {}
+                # save energy stats with sites dictionary
+                site["energy_details"] = energy
+                api.sites[site_id] = site
+                # Add individual smart plug energy per serial also to smart plug device cache
+                for plug in (energy.get("today") or {}).get("smartplug_list") or []:
+                    api._update_dev(
+                        {
+                            "device_sn": plug.get("device_sn"),
+                            "energy_today": plug.get("energy"),
+                        }
+                    )
+                for plug in (energy.get("last_period") or {}).get(
+                    "smartplug_list"
+                ) or []:
+                    api._update_dev(
+                        {
+                            "device_sn": plug.get("device_sn"),
+                            "energy_last_period": plug.get("energy"),
+                        }
+                    )
 
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})

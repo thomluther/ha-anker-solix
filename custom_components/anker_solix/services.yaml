@@ -9,15 +9,22 @@ get_system_info:
       # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
       supported_features:
         - calendar.CalendarEntityFeature.UPDATE_EVENT
+  fields:
+    include_cache:
+      required: true
+      example: true
+      default: false
+      selector:
+        boolean:
 export_systems:
   target:
     entity:
       integration: anker_solix
-      domain: sensor
-      # anker_solix.AnkerSolixEntityFeature.SYSTEM_INFO is not resolved by HA core when frontend is loaded and does not work as filter
+      domain: switch
+      # anker_solix.AnkerSolixEntityFeature.ACCOUNT_INFO is not resolved by HA core when frontend is loaded and does not work as filter
       # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
       supported_features:
-        - calendar.CalendarEntityFeature.UPDATE_EVENT
+        - update.UpdateEntityFeature.SPECIFIC_VERSION
 get_solarbank_schedule:
   target:
     entity:
@@ -37,35 +44,39 @@ clear_solarbank_schedule:
       supported_features:
         - calendar.CalendarEntityFeature.CREATE_EVENT
   fields:
-    plan:
-      required: false
-      example:
-        - blend_plan
-      selector:
-        select:
-          mode: list
-          multiple: false
-          translation_key: plan
-          options:
-            - custom_rate_plan
+    sb2_fields:
+      # Following section is used only for Solarbank 2 schedule types
+      collapsed: true
+      fields:
+        plan:
+          required: false
+          example:
             - blend_plan
-    week_days:
-      required: false
-      example:
-        - sun
-      selector:
-        select:
-          mode: list
-          multiple: true
-          translation_key: weekday
-          options:
+          selector:
+            select:
+              mode: list
+              multiple: false
+              translation_key: plan
+              options:
+                - custom_rate_plan
+                - blend_plan
+        week_days:
+          required: false
+          example:
             - sun
-            - mon
-            - tue
-            - wed
-            - thu
-            - fri
-            - sat
+          selector:
+            select:
+              mode: list
+              multiple: true
+              translation_key: weekday
+              options:
+                - sun
+                - mon
+                - tue
+                - wed
+                - thu
+                - fri
+                - sat
 set_solarbank_schedule:
   target:
     entity:
@@ -88,35 +99,39 @@ set_solarbank_schedule:
       default: "23:59:00"
       selector:
         time:
-    plan:
-      required: false
-      example:
-        - blend_plan
-      selector:
-        select:
-          mode: list
-          multiple: false
-          translation_key: plan
-          options:
-            - custom_rate_plan
+    sb2_fields:
+      # Following section is used only for Solarbank 2 schedule types
+      collapsed: true
+      fields:
+        plan:
+          required: false
+          example:
             - blend_plan
-    week_days:
-      required: false
-      example:
-        - sun
-      selector:
-        select:
-          mode: list
-          multiple: true
-          translation_key: weekday
-          options:
+          selector:
+            select:
+              mode: list
+              multiple: false
+              translation_key: plan
+              options:
+                - custom_rate_plan
+                - blend_plan
+        week_days:
+          required: false
+          example:
             - sun
-            - mon
-            - tue
-            - wed
-            - thu
-            - fri
-            - sat
+          selector:
+            select:
+              mode: list
+              multiple: true
+              translation_key: weekday
+              options:
+                - sun
+                - mon
+                - tue
+                - wed
+                - thu
+                - fri
+                - sat
     appliance_load:
       required: false
       example: 100
@@ -127,29 +142,33 @@ set_solarbank_schedule:
           max: 1600
           step: 10
           unit_of_measurement: "W"
-    device_load:
-      required: false
-      example: 50
-      selector:
-        number:
-          min: 50
-          max: 800
-          step: 5
-          unit_of_measurement: "W"
-    allow_export:
-      required: false
-      example: "True"
-      selector:
-        boolean:
-    charge_priority_limit:
-      required: false
-      example: 80
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 5
-          unit_of_measurement: "%"
+    sb1_fields:
+      # Following section is used only for Solarbank 1 schedule types
+      collapsed: true
+      fields:
+        device_load:
+          required: false
+          example: 50
+          selector:
+            number:
+              min: 50
+              max: 800
+              step: 5
+              unit_of_measurement: "W"
+        allow_export:
+          required: false
+          example: true
+          selector:
+            boolean:
+        charge_priority_limit:
+          required: false
+          example: 80
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 5
+              unit_of_measurement: "%"
 update_solarbank_schedule:
   target:
     entity:
@@ -172,35 +191,39 @@ update_solarbank_schedule:
       default: "23:59:00"
       selector:
         time:
-    plan:
-      required: false
-      example:
-        - blend_plan
-      selector:
-        select:
-          mode: list
-          multiple: false
-          translation_key: plan
-          options:
-            - custom_rate_plan
+    sb2_fields:
+      # Following section is used only for Solarbank 2 schedule types
+      collapsed: true
+      fields:
+        plan:
+          required: false
+          example:
             - blend_plan
-    week_days:
-      required: false
-      example:
-        - sun
-      selector:
-        select:
-          mode: list
-          multiple: true
-          translation_key: weekday
-          options:
+          selector:
+            select:
+              mode: list
+              multiple: false
+              translation_key: plan
+              options:
+                - custom_rate_plan
+                - blend_plan
+        week_days:
+          required: false
+          example:
             - sun
-            - mon
-            - tue
-            - wed
-            - thu
-            - fri
-            - sat
+          selector:
+            select:
+              mode: list
+              multiple: true
+              translation_key: weekday
+              options:
+                - sun
+                - mon
+                - tue
+                - wed
+                - thu
+                - fri
+                - sat
     appliance_load:
       required: false
       example: 100
@@ -211,26 +234,30 @@ update_solarbank_schedule:
           max: 1600
           step: 10
           unit_of_measurement: "W"
-    device_load:
-      required: false
-      example: 50
-      selector:
-        number:
-          min: 50
-          max: 800
-          step: 5
-          unit_of_measurement: "W"
-    allow_export:
-      required: false
-      example: "True"
-      selector:
-        boolean:
-    charge_priority_limit:
-      required: false
-      example: 80
-      selector:
-        number:
-          min: 0
-          max: 100
-          step: 5
-          unit_of_measurement: "%"
+    sb1_fields:
+      # Following section is used only for Solarbank 1 schedule types
+      collapsed: true
+      fields:
+        device_load:
+          required: false
+          example: 50
+          selector:
+            number:
+              min: 50
+              max: 800
+              step: 5
+              unit_of_measurement: "W"
+        allow_export:
+          required: false
+          example: true
+          selector:
+            boolean:
+        charge_priority_limit:
+          required: false
+          example: 80
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 5
+              unit_of_measurement: "%"

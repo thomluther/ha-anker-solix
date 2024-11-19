@@ -6,12 +6,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections.abc import Callable
 from contextlib import suppress
-import logging
 from pathlib import Path
 from random import randrange, choice
 from typing import Any
 
-import urllib.parse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
@@ -49,12 +47,10 @@ from .const import (
     LOGGER,
     ATTRIBUTION,
     CREATE_ALL_ENTITIES,
-    EXPORTFOLDER,
     TEST_NUMBERVARIANCE,
     LAST_PERIOD,
     LAST_RESET,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
-    SERVICE_EXPORT_SYSTEMS,
     SERVICE_GET_SOLARBANK_SCHEDULE,
     SERVICE_GET_SYSTEM_INFO,
     SERVICE_SET_SOLARBANK_SCHEDULE,
@@ -71,9 +67,9 @@ from .const import (
     PLAN,
     WEEK_DAYS,
     CONF_SKIP_INVALID,
+    INCLUDE_CACHE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
-from .solixapi import export
 from .solixapi.apitypes import (
     ApiCategories,
     SmartmeterStatus,
@@ -89,6 +85,7 @@ from .entity import (
     AnkerSolixPicturePath,
     AnkerSolixEntityType,
     AnkerSolixEntityRequiredKeyMixin,
+    get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
     AnkerSolixEntityFeature,
@@ -266,6 +263,26 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
+        key="heating_power",
+        translation_key="heating_power",
+        json_key="pei_heating_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="grid_to_battery_power",
+        translation_key="grid_to_battery_power",
+        json_key="grid_to_battery_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
         key="energy_today",
         translation_key="energy_today",
         json_key="energy_today",
@@ -276,8 +293,7 @@ DEVICE_SENSORS = [
         value_fn=lambda d, jk, _: d.get(jk),
         attrib_fn=lambda d, _: {"last_period": d.get("energy_last_period")},
         exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and {ApiCategories.smartplug_energy} - s
+            {d.get("type")} - s and {ApiCategories.smartplug_energy} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -475,6 +491,125 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    AnkerSolixSensorDescription(
+        key="discharge_power_avg",
+        translation_key="discharge_power",
+        json_key="discharge_power_avg",
+        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
+        .lower()
+        .replace("w", "W"),
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (avg := d.get("average_power"))
+        else avg.get(jk),
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="charge_power_avg",
+        translation_key="charge_power",
+        json_key="charge_power_avg",
+        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
+        .lower()
+        .replace("w", "W"),
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (avg := d.get("average_power"))
+        else avg.get(jk),
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="solar_power_avg",
+        translation_key="input_power",
+        json_key="solar_power_avg",
+        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
+        .lower()
+        .replace("w", "W"),
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (avg := d.get("average_power"))
+        else avg.get(jk),
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="home_usage_avg",
+        translation_key="home_load_power",
+        json_key="home_usage_avg",
+        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
+        .lower()
+        .replace("w", "W"),
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (avg := d.get("average_power"))
+        else avg.get(jk),
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="grid_import_avg",
+        translation_key="grid_to_home_power",
+        json_key="grid_import_avg",
+        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
+        .lower()
+        .replace("w", "W"),
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (avg := d.get("average_power"))
+        else avg.get(jk),
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="state_of_charge",
+        translation_key="state_of_charge",
+        json_key="state_of_charge",
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda d, jk, _: None
+        if not (avg := d.get("average_power"))
+        else avg.get(jk),
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        # timestamp of powerpanel average data, round down valid time to 5 minutes to match energy data timestamp
+        key="data_timestamp",
+        translation_key="data_timestamp",
+        json_key="valid_time",
+        value_fn=lambda d, jk, _: None
+        if not (val := (d.get("average_power") or {}).get(jk) or "")
+        else (
+            (tm := datetime.strptime(val, "%Y-%m-%d %H:%M:%S"))
+            - timedelta(
+                minutes=tm.minute % 5, seconds=tm.second, microseconds=tm.microsecond
+            )
+        ).isoformat(),
+        attrib_fn=lambda d, _: {
+            "last_check": None
+            if not (tm := (d.get("average_power") or {}).get("last_check"))
+            else datetime.strptime(tm, "%Y-%m-%d %H:%M:%S").isoformat(),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
     ),
 ]
 
@@ -701,7 +836,7 @@ SITE_SENSORS = [
             ]
             or [None]
         )[0],
-        device_class=SensorDeviceClass.WEIGHT,
+        # device_class=SensorDeviceClass.WEIGHT,
         state_class=SensorStateClass.MEASUREMENT,
         force_creation_fn=lambda d: True,
         value_fn=lambda d, jk, _: float(
@@ -764,7 +899,10 @@ SITE_SENSORS = [
                 ]
                 or [None]
             )[0]
-        ).replace("w", "W")
+        )
+        .upper()
+        .replace("K", "k")
+        .replace("H", "h")
         or None,
         device_class=SensorDeviceClass.ENERGY,
         force_creation_fn=lambda d: True,
@@ -812,45 +950,65 @@ SITE_SENSORS = [
     AnkerSolixSensorDescription(
         key="daily_discharge_energy",
         translation_key="daily_discharge_energy",
-        json_key="solarbank_discharge",
+        json_key="battery_discharge",
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        # ensure backward compatability to old key in json files
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk) or items.get("solarbank_discharge"),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solarbank_discharge"),
+                items := ((d.get("energy_details") or {}).get("last_period") or {})
+            ).get("battery_discharge")
+            or items.get("solarbank_discharge"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
         key="daily_charge_energy",
         translation_key="daily_charge_energy",
-        json_key="solarbank_charge",
+        json_key="battery_charge",
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        # ensure backward compatability to old key in json files
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk) or items.get("solarbank_charge"),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solarbank_charge"),
+                items := ((d.get("energy_details") or {}).get("last_period") or {})
+            ).get("battery_charge")
+            or items.get("solarbank_charge"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -861,9 +1019,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -871,8 +1029,16 @@ SITE_SENSORS = [
             ).get("solar_production"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -883,9 +1049,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -905,9 +1071,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -927,9 +1093,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -949,9 +1115,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -964,6 +1130,50 @@ SITE_SENSORS = [
         ),
     ),
     AnkerSolixSensorDescription(
+        key="daily_solar_to_home",
+        translation_key="daily_solar_to_home",
+        json_key="solar_to_home",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("solar_to_home"),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_solar_to_battery",
+        translation_key="daily_solar_to_battery",
+        json_key="solar_to_battery",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("solar_to_battery"),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
         key="daily_ac_socket",
         translation_key="daily_ac_socket",
         json_key="ac_socket",
@@ -971,36 +1181,14 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("ac_socket"),
-        },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
-        ),
-    ),
-    AnkerSolixSensorDescription(
-        key="daily_battery_to_home",
-        translation_key="daily_battery_to_home",
-        json_key="battery_to_home",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
-        attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("battery_to_home"),
         },
         exclude_fn=lambda s, _: not (
             {SolixDeviceType.SOLARBANK.value} - s
@@ -1015,9 +1203,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -1025,8 +1213,50 @@ SITE_SENSORS = [
             ).get("home_usage"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} - s
-            and {ApiCategories.solarbank_energy, ApiCategories.smartmeter_energy, ApiCategories.smartplug_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.SMARTPLUG.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.smartmeter_energy,
+                ApiCategories.smartplug_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_battery_to_home",
+        translation_key="daily_battery_to_home",
+        json_key="battery_to_home",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("battery_to_home"),
+        },
+        exclude_fn=lambda s, _: not (
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1037,9 +1267,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -1052,6 +1282,28 @@ SITE_SENSORS = [
         ),
     ),
     AnkerSolixSensorDescription(
+        key="daily_grid_import",
+        translation_key="daily_grid_import",
+        json_key="grid_import",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("grid_import"),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
         key="daily_grid_to_home",
         translation_key="daily_grid_to_home",
         json_key="grid_to_home",
@@ -1059,9 +1311,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -1069,8 +1321,38 @@ SITE_SENSORS = [
             ).get("grid_to_home"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SMARTMETER.value} - s
-            and {ApiCategories.smartmeter_energy} - s
+            {
+                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.smartmeter_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_grid_to_battery",
+        translation_key="daily_grid_to_battery",
+        json_key="grid_to_battery",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("grid_to_battery"),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value} - s
+            and {ApiCategories.powerpanel_energy} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1081,9 +1363,9 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("today") or {}
-        ).get(jk),
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -1091,8 +1373,16 @@ SITE_SENSORS = [
             ).get("solar_to_grid"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SMARTMETER.value} - s
-            and {ApiCategories.smartmeter_energy} - s
+            {
+                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.smartmeter_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1102,22 +1392,25 @@ SITE_SENSORS = [
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: None
-        if not d.get("energy_details")
-        else 100 * float(((d.get("energy_details") or {}).get("today") or {}).get(jk)),
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else 100 * float(items.get(jk)),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
-            if not d.get("energy_details")
-            else 100
-            * float(
-                ((d.get("energy_details") or {}).get("last_period") or {}).get(
-                    "solar_percentage"
-                )
-            ),
+            if not (items := (d.get("energy_details") or {}).get("last_period") or {})
+            else 100 * float(items.get("solar_percentage")),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1127,22 +1420,25 @@ SITE_SENSORS = [
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: None
-        if not d.get("energy_details")
-        else 100 * float(((d.get("energy_details") or {}).get("today") or {}).get(jk)),
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else 100 * float(items.get(jk)),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
-            if not d.get("energy_details")
-            else 100
-            * float(
-                ((d.get("energy_details") or {}).get("last_period") or {}).get(
-                    "battery_percentage"
-                )
-            ),
+            if not (items := (d.get("energy_details") or {}).get("last_period") or {})
+            else 100 * float(items.get("battery_percentage")),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1152,25 +1448,30 @@ SITE_SENSORS = [
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: None
-        if not d.get("energy_details")
-        else 100 * float(((d.get("energy_details") or {}).get("today") or {}).get(jk)),
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else 100 * float(items.get(jk)),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
-            if not d.get("energy_details")
-            else 100
-            * float(
-                ((d.get("energy_details") or {}).get("last_period") or {}).get(
-                    "other_percentage"
-                )
-            ),
+            if not (items := (d.get("energy_details") or {}).get("last_period") or {})
+            else 100 * float(items.get("other_percentage")),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SMARTMETER.value} - s
-            and {ApiCategories.smartmeter_energy} - s
+            {
+                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.smartmeter_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
 ]
+
+ACCOUNT_SENSORS = []
 
 
 async def async_setup_entry(
@@ -1184,13 +1485,17 @@ async def async_setup_entry(
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
-        # create entity type based on type of entry in coordinator data, which consolidates the api.sites and api.devices dictionaries
-        # the coordinator.data dict key is either a site_id or device_sn and used as context for the entity to lookup its data
+        # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
+        # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
-            if data.get("type") == SolixDeviceType.SYSTEM.value:
+            if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SENSORS
+            elif data_type == SolixDeviceType.ACCOUNT.value:
+                # Unique key for account entry in data
+                entity_type = AnkerSolixEntityType.ACCOUNT
+                entity_list = ACCOUNT_SENSORS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -1240,13 +1545,6 @@ async def async_setup_entry(
         name=SERVICE_GET_SYSTEM_INFO,
         schema=SOLIX_ENTITY_SCHEMA,
         func=SERVICE_GET_SYSTEM_INFO,
-        required_features=[AnkerSolixEntityFeature.SYSTEM_INFO],
-        supports_response=SupportsResponse.ONLY,
-    )
-    platform.async_register_entity_service(
-        name=SERVICE_EXPORT_SYSTEMS,
-        schema=SOLIX_ENTITY_SCHEMA,
-        func=SERVICE_EXPORT_SYSTEMS,
         required_features=[AnkerSolixEntityFeature.SYSTEM_INFO],
         supports_response=SupportsResponse.ONLY,
     )
@@ -1341,7 +1639,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(self._context_base) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(data, self._context_base)
+            self._attr_device_info = get_AnkerSolixDeviceInfo(
+                data, self._context_base, coordinator.client.api.apisession.email
+            )
             # add service attribute for managble devices
             self._attr_supported_features: AnkerSolixEntityFeature = (
                 description.feature if data.get("is_admin", False) else None
@@ -1364,12 +1664,19 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 ).is_file()
             ):
                 self._attr_entity_picture = None
-
+        elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
+            # get the account data from account context entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
+            # add service attribute for account entities
+            self._attr_supported_features: AnkerSolixEntityFeature = description.feature
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(self._context_base, {})).get("site_info", {})
-            self._attr_device_info = get_AnkerSolixSystemInfo(data, self._context_base)
-            # add service attribute for managble sites
+            self._attr_device_info = get_AnkerSolixSystemInfo(
+                data, self._context_base, coordinator.client.api.apisession.email
+            )
+            # add service attribute for site entities
             self._attr_supported_features: AnkerSolixEntityFeature = description.feature
 
         self._native_value = None
@@ -1507,12 +1814,6 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             service_name=SERVICE_GET_SYSTEM_INFO, **kwargs
         )
 
-    async def export_systems(self, **kwargs: Any) -> dict | None:
-        """Export the actual api responses for accessible systems and devices into zipped JSON files."""
-        return await self._solix_system_service(
-            service_name=SERVICE_EXPORT_SYSTEMS, **kwargs
-        )
-
     async def get_solarbank_schedule(self, **kwargs: Any) -> dict | None:
         """Get the active solarbank schedule from the api."""
         return await self._solarbank_schedule_service(
@@ -1537,12 +1838,14 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             service_name=SERVICE_UPDATE_SOLARBANK_SCHEDULE, **kwargs
         )
 
-    async def _solix_system_service(self, service_name: str, **kwargs: Any) -> dict | None:
-        """Execute the defined solarbank schedule service."""
+    async def _solix_system_service(
+        self, service_name: str, **kwargs: Any
+    ) -> dict | None:
+        """Execute the defined solarbank schedule action."""
         # Raise alerts to frontend
         if not (self.supported_features & AnkerSolixEntityFeature.SYSTEM_INFO):
             raise ServiceValidationError(
-                f"The entity {self.entity_id} does not support the service {service_name}",
+                f"The entity {self.entity_id} does not support the action {service_name}",
                 translation_domain=DOMAIN,
                 translation_key="service_not_supported",
                 translation_placeholders={
@@ -1555,9 +1858,19 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             SERVICE_GET_SYSTEM_INFO
         ]:
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be used for requested service while running in testmode",
+                f"{self.entity_id} cannot be used for requested action while running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                },
+            )
+        # When Api refresh is deactivated, do not run action to avoid kicking off other client Api token
+        if not self.coordinator.client.allow_refresh():
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be used for requested action while Api usage is deactivated",
+                translation_domain=DOMAIN,
+                translation_key="apiusage_deactivated",
                 translation_placeholders={
                     "entity_id": self.entity_id,
                 },
@@ -1568,42 +1881,27 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             and self._context_base in self.coordinator.data
         ):
             if service_name in [SERVICE_GET_SYSTEM_INFO]:
-                LOGGER.debug("%s service will be applied", service_name)
-                result = await self.coordinator.client.api.get_scene_info(
-                    siteId=self._context_base,
-                    fromFile=self.coordinator.client.testmode(),
-                )
+                LOGGER.debug("%s action will be applied", service_name)
+                include_cache = kwargs.get(INCLUDE_CACHE)
+                if include_cache == cv.ENTITY_MATCH_NONE:
+                    include_cache = None
+                if include_cache:
+                    result = (
+                        await self.coordinator.client.api.update_sites(
+                            siteId=self._context_base,
+                            fromFile=self.coordinator.client.testmode(),
+                            exclude=set(self.coordinator.client.exclude_categories),
+                        )
+                    ).get(self._context_base) or None
+                else:
+                    result = await self.coordinator.client.api.get_scene_info(
+                        siteId=self._context_base,
+                        fromFile=self.coordinator.client.testmode(),
+                    )
                 return {"system_info": result}
 
-            if service_name in [SERVICE_EXPORT_SYSTEMS]:
-                LOGGER.debug("%s service will be applied", service_name)
-                exportlogger: logging.Logger = logging.getLogger("anker_solix_export")
-                exportlogger.setLevel(logging.DEBUG)
-                # disable updates via coordinator while using Api client and caches for randomized system export
-                self.coordinator.skip_update = True
-                myexport = export.AnkerSolixApiExport(
-                    client=self.coordinator.client.api,
-                    logger=exportlogger,
-                )
-                wwwroot = str(Path(self.coordinator.hass.config.config_dir) / "www")
-                exportpath: str = str(
-                    Path(wwwroot) / "community" / DOMAIN / EXPORTFOLDER
-                )
-                if await myexport.export_data(export_path=exportpath):
-                    # convert path to public available url folder and filename
-                    result = urllib.parse.quote(
-                        myexport.zipfilename.replace(
-                            wwwroot, AnkerSolixPicturePath.LOCALPATH
-                        )
-                    )
-                else:
-                    result = None
-                # re-enable updates via coordinator
-                self.coordinator.skip_update = False
-                return {"export_filename": result}
-
             raise ServiceValidationError(
-                f"The entity {self.entity_id} does not support the service {service_name}",
+                f"The entity {self.entity_id} does not support the action {service_name}",
                 translation_domain=DOMAIN,
                 translation_key="service_not_supported",
                 translation_placeholders={
@@ -1616,11 +1914,11 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
     async def _solarbank_schedule_service(  # noqa: C901
         self, service_name: str, **kwargs: Any
     ) -> dict | None:
-        """Execute the defined solarbank schedule service."""
+        """Execute the defined solarbank schedule action."""
         # Raise alerts to frontend
         if not (self.supported_features & AnkerSolixEntityFeature.SOLARBANK_SCHEDULE):
             raise ServiceValidationError(
-                f"The entity {self.entity_id} does not support the service {service_name}",
+                f"The entity {self.entity_id} does not support the action {service_name}",
                 translation_domain=DOMAIN,
                 translation_key="service_not_supported",
                 translation_placeholders={
@@ -1639,6 +1937,16 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 f"{self.entity_id} cannot be changed while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                },
+            )
+        # When Api refresh is deactivated, do not run action to avoid kicking off other client Api token
+        if not self.coordinator.client.allow_refresh():
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be used for requested action while Api usage is deactivated",
+                translation_domain=DOMAIN,
+                translation_key="apiusage_deactivated",
                 translation_placeholders={
                     "entity_id": self.entity_id,
                 },
@@ -1727,10 +2035,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 },
                             )
 
-                        LOGGER.debug("%s service will be applied", service_name)
+                        LOGGER.debug("%s action will be applied", service_name)
                         if generation > 1:
-                            # SB2 schedule service
-                            # Map service keys to api slot keys
+                            # SB2 schedule action
+                            # Map action keys to api slot keys
                             slot = Solarbank2Timeslot(
                                 start_time=start_time,
                                 end_time=end_time,
@@ -1764,8 +2072,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             else:
                                 result = False
                         else:
-                            # SB1 schedule service
-                            # Map service keys to api slot keys
+                            # SB1 schedule action
+                            # Map action keys to api slot keys
                             slot = SolarbankTimeslot(
                                 start_time=start_time,
                                 end_time=end_time,
@@ -1823,7 +2131,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             ).get("preset_system_output_power") or None
                     else:
                         raise ServiceValidationError(
-                            f"The service {service_name} cannot be executed: {'start_time must be earlier than end_time'}.",
+                            f"The action {service_name} cannot be executed: {'start_time must be earlier than end_time'}.",
                             translation_domain=DOMAIN,
                             translation_key="slot_time_error",
                             translation_placeholders={
@@ -1833,7 +2141,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         )
                 else:
                     raise ServiceValidationError(
-                        f"The service {service_name} cannot be executed: {'start_time or end_time missing'}.",
+                        f"The action {service_name} cannot be executed: {'start_time or end_time missing'}.",
                         translation_domain=DOMAIN,
                         translation_key="slot_time_error",
                         translation_placeholders={
@@ -1843,7 +2151,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     )
 
             elif service_name in [SERVICE_GET_SOLARBANK_SCHEDULE]:
-                LOGGER.debug("%s service will be applied", service_name)
+                LOGGER.debug("%s action will be applied", service_name)
                 if generation > 1 and (schedule := data.get("schedule") or {}):
                     # get SB2 schedule
                     result = (
@@ -1867,7 +2175,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 return {"schedule": result}
 
             elif service_name in [SERVICE_CLEAR_SOLARBANK_SCHEDULE]:
-                LOGGER.debug("%s service will be applied", service_name)
+                LOGGER.debug("%s action will be applied", service_name)
                 if generation > 1:
                     # Clear SB2 schedule
                     if schedule := data.get("schedule") or {}:
@@ -1924,7 +2232,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
 
             else:
                 raise ServiceValidationError(
-                    f"The entity {self.entity_id} does not support the service {service_name}",
+                    f"The entity {self.entity_id} does not support the action {service_name}",
                     translation_domain=DOMAIN,
                     translation_key="service_not_supported",
                     translation_placeholders={

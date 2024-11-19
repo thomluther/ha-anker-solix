@@ -4,8 +4,9 @@ from __future__ import annotations  # noqa: I001
 
 from dataclasses import dataclass
 from enum import IntFlag
+
+from .solixapi.apitypes import SolixSiteType
 from .const import IMAGEFOLDER, DOMAIN, MANUFACTURER
-from .coordinator import AnkerSolixDataUpdateCoordinator
 from pathlib import Path
 from homeassistant.helpers.entity import DeviceInfo
 
@@ -65,6 +66,9 @@ class AnkerSolixPicturePath:
     A5102: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
     A5103: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
 
+    A2345: str = str(Path(IMAGEPATH) / "Prime_Charger_250W_A2345.png")
+    A91B2: str = str(Path(IMAGEPATH) / "Charging_Station_240W_A91B2.png")
+
 
 @dataclass(frozen=True)
 class AnkerSolixEntityType:
@@ -86,13 +90,11 @@ class AnkerSolixEntityFeature(IntFlag):
     """Supported features of the Anker Solix Entities."""
 
     SOLARBANK_SCHEDULE = 1
+    ACCOUNT_INFO = 2
     SYSTEM_INFO = 4
 
 
-def get_AnkerSolixDeviceInfo(
-    data: dict,
-    identifier: str,
-) -> DeviceInfo:
+def get_AnkerSolixDeviceInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
     """Return an Anker Solix End Device DeviceInfo."""
 
     # Get model id to add it to model name
@@ -101,7 +103,6 @@ def get_AnkerSolixDeviceInfo(
     return DeviceInfo(
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
-        # model=" ".join([data.get("name") or "", pn]),
         model=data.get("name") or data.get("device_pn"),
         # Use new model_id attribute supported since core 2024.8.0
         model_id=data.get("device_pn"),
@@ -109,46 +110,50 @@ def get_AnkerSolixDeviceInfo(
         name=data.get("alias"),
         sw_version=data.get("sw_version"),
         # map to site, or map standalone devices to account device
-        via_device=(DOMAIN, data.get("site_id") or data.get("email")),
+        via_device=(DOMAIN, data.get("site_id") or account),
     )
 
 
-def get_AnkerSolixSystemInfo(
-    data: dict,
-    identifier: str,
-) -> DeviceInfo:
+def get_AnkerSolixSystemInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
     """Return an Anker Solix System DeviceInfo."""
 
-    if account_email := data.get("email"):
+    power_site_type = data.get("power_site_type")
+    site_type = (
+        getattr(SolixSiteType, "t_" + str(power_site_type))
+        if hasattr(SolixSiteType, "t_" + str(power_site_type))
+        else ""
+    )
+    if account:
         return DeviceInfo(
             identifiers={(DOMAIN, identifier)},
             manufacturer=MANUFACTURER,
             serial_number=data.get("site_id"),
-            model="Power Site",
+            model=(str(site_type).capitalize() + " Site").strip(),
             model_id=f'Type {data.get("power_site_type")}',
             name=f'System {data.get("site_name")}',
-            via_device=(DOMAIN, account_email),
+            via_device=(DOMAIN, account),
         )
     return DeviceInfo(
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
         serial_number=data.get("site_id"),
-        model="Power Site",
+        model=(str(site_type).capitalize() + " Site").strip(),
         model_id=f'Type {data.get("power_site_type")}',
         name=f'System {data.get("site_name")}',
     )
 
 
 def get_AnkerSolixAccountInfo(
-    coordinator: AnkerSolixDataUpdateCoordinator,
+    data: dict,
+    identifier: str,
 ) -> DeviceInfo:
     """Return an Anker Solix Account DeviceInfo."""
 
     return DeviceInfo(
-        identifiers={(DOMAIN, coordinator.client.api.apisession.email)},
+        identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
-        serial_number=coordinator.client.api.apisession.email,
-        model="Account",
-        model_id=f"{coordinator.client.api.apisession.server}",
-        name=f"{coordinator.client.api.apisession.nickname}",
+        serial_number=identifier,
+        model=str(data.get("type")).capitalize(),
+        model_id=data.get("server"),
+        name=f'{data.get("nickname")} ({str(data.get("country") or "--").upper()})',
     )

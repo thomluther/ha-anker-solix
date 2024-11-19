@@ -35,7 +35,7 @@ IMAGEFOLDER: str = "images"
 EXPORTFOLDER: str = "exports"
 
 ALLOW_TESTMODE: bool = (
-    False  # True will enable configuration options for testmode and testfolder
+    True  # True will enable configuration options for testmode and testfolder
 )
 TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
 CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
@@ -55,6 +55,7 @@ APPLIANCE_LOAD = "appliance_load"
 DEVICE_LOAD = "device_load"
 CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
 ALLOW_EXPORT = "allow_export"
+INCLUDE_CACHE = "include_cache"
 
 
 VALID_DAYTIME = vol.All(
@@ -66,7 +67,7 @@ VALID_APPLIANCE_LOAD = vol.Any(
     vol.All(
         vol.Coerce(int),
         vol.Range(
-            #min=api.SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
+            # min=api.SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
             min=0,
             max=api.SolixDefaults.PRESET_MAX * 2,
         ),
@@ -95,8 +96,11 @@ VALID_CHARGE_PRIORITY = vol.Any(
     ),
 )
 VALID_ALLOW_DISCHARGE = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
+VALID_INCLUDE_CACHE = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
 VALID_WEEK_DAYS = vol.Any(None, cv.ENTITY_MATCH_NONE, cv.weekdays)
-VALID_PLAN = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Any('active', 'custom_rate_plan', 'blend_plan'))
+VALID_PLAN = vol.Any(
+    None, cv.ENTITY_MATCH_NONE, vol.Any("active", "custom_rate_plan", "blend_plan")
+)
 
 
 SOLARBANK_TIMESLOT_DICT: dict = {
@@ -129,17 +133,26 @@ SOLARBANK_TIMESLOT_SCHEMA: vol.Schema = vol.All(
 )
 
 SOLIX_WEEKDAY_SCHEMA: vol.Schema = vol.All(
-    cv.make_entity_service_schema({**cv.TARGET_SERVICE_FIELDS,
-        vol.Optional(
-            PLAN,
-        ): VALID_PLAN,
-        vol.Optional(
-            WEEK_DAYS,
-        ): VALID_WEEK_DAYS,
-    }),
+    cv.make_entity_service_schema(
+        {
+            **cv.TARGET_SERVICE_FIELDS,
+            vol.Optional(
+                PLAN,
+            ): VALID_PLAN,
+            vol.Optional(
+                WEEK_DAYS,
+            ): VALID_WEEK_DAYS,
+        }
+    ),
 )
 
-
 SOLIX_ENTITY_SCHEMA: vol.Schema = vol.All(
-    cv.make_entity_service_schema(cv.TARGET_SERVICE_FIELDS),
+    cv.make_entity_service_schema(
+        {
+            **cv.TARGET_SERVICE_FIELDS,
+            vol.Optional(
+                INCLUDE_CACHE,
+            ): VALID_INCLUDE_CACHE,
+        }
+    ),
 )
