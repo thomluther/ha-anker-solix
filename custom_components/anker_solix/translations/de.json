@@ -724,7 +724,7 @@
                         "name": "Abfragen letzte Minute"
                     },
                     "requests_last_hour": {
-                        "name": "Abfragen letzt Stunde"
+                        "name": "Abfragen letzte Stunde"
                     }
                 }
             }

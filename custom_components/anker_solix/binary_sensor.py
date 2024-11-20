@@ -103,11 +103,13 @@ ACCOUNT_SENSORS = [
         json_key="has_unread_msg",
         #entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    # This should be shown only when testmode is active
     AnkerSolixBinarySensorDescription(
         key="use_files",
         translation_key="use_files",
         json_key="use_files",
         entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda d, _: not ALLOW_TESTMODE,
     ),
 ]
 
@@ -252,12 +254,7 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         elif self.coordinator_context in self.coordinator.data:
             data = self.coordinator.data.get(self.coordinator_context)
             key = self.entity_description.json_key
-
-            # Entity to be shown only when testmode allowed
-            if self._attribute_name == "use_files":
-                self._attr_is_on = self.entity_description.value_fn(data, key) if ALLOW_TESTMODE else None
-            else:
-                self._attr_is_on = self.entity_description.value_fn(data, key)
+            self._attr_is_on = self.entity_description.value_fn(data, key)
 
             # When running in Test mode, simulate some variance for entities with set device class
             if (

@@ -600,11 +600,11 @@ DEVICE_SENSORS = [
             - timedelta(
                 minutes=tm.minute % 5, seconds=tm.second, microseconds=tm.microsecond
             )
-        ).isoformat(),
+        ).isoformat(sep=" "),
         attrib_fn=lambda d, _: {
             "last_check": None
             if not (tm := (d.get("average_power") or {}).get("last_check"))
-            else datetime.strptime(tm, "%Y-%m-%d %H:%M:%S").isoformat(),
+            else datetime.strptime(tm, "%Y-%m-%d %H:%M:%S").isoformat(sep=" "),
         },
         exclude_fn=lambda s, _: not (
             {SolixDeviceType.POWERPANEL.value} - s
