@@ -255,6 +255,7 @@
                     "charge_priority":  "Charge prioritaire",
                     "full_bypass": "Bypass 100%",
                     "wakeup": "Réveil",
+                    "cold_wakeup": "Réveil froid",
                     "standby": "Veille",
                     "unknown": "Pas disponible"
                 },

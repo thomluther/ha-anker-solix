@@ -92,6 +92,7 @@
                     "charge_bypass": "mdi:home-battery",
                     "charge_priority":  "mdi:home-battery-outline",
                     "wakeup": "mdi:battery-sync",
+                    "cold_wakeup": "mdi:battery-sync",
                     "full_bypass": "mdi:battery-remove-outline",
                     "standby": "mdi:battery-off",
                     "unknown": "mdi:battery-unknown"

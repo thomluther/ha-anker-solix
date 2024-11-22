@@ -255,6 +255,7 @@
                     "charge_priority":  "Ladepriorität",
                     "full_bypass": "Voller Bypass",
                     "wakeup": "Wachzustand",
+                    "cold_wakeup": "Kalter Wachzustand",
                     "standby": "Ruhezustand",
                     "unknown": "Unbekannt"
                 },

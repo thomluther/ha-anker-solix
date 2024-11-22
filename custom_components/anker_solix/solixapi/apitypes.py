@@ -692,6 +692,7 @@ class SolarbankStatus(Enum):
     charge_bypass = "31"  # pseudo state, the solarbank does not distinguish this
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
+    cold_wakeup = "116"  # At cold temperatures, 116 was observed instead of 4. Not sure why this state is different at low temps?
     # TODO(3): Add descriptions once status code usage is observed/known
     # code 5 was not observed yet
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
