@@ -10,16 +10,16 @@
                 "solarbank_solar_info": "Solarbank inverter info",
                 "solar_energy": "Solar energy stats",
                 "solarbank_energy": "Solarbank energy stats",
-                "smartmeter_energy": "Smart meter energy stats",
-                "smartplug_energy": "Smart plug energy stats",
-                "system": "Systems",
                 "solarbank": "Solarbanks",
                 "inverter": "Inverter",
                 "pps": "Portable power stations",
                 "powerpanel": "Power panels",
+                "powerpanel_energy": "Power panel energy stats",
                 "powercooler": "Power cooler",
                 "smartmeter": "Smart meter",
-                "smartplug": "Smart plugs"
+                "smartmeter_energy": "Smart meter energy stats",
+                "smartplug": "Smart plugs",
+                "smartplug_energy": "Smart plug energy stats"
             }
         },
         "plan": {
@@ -170,6 +170,9 @@
                 "state_attributes": {
                     "ota_version": {
                         "name": "OTA version"
+                    },
+                    "ota_components": {
+                        "name": "OTA Components"
                     }
                 }
             },
@@ -182,6 +185,13 @@
             },
             "has_unread_msg": {
                 "name": "Messages",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            },
+            "use_files": {
+                "name": "Use Files",
                 "state": {
                     "on": "Yes",
                     "off": "No"
@@ -245,6 +255,7 @@
                     "charge_priority":  "Charge priority",
                     "full_bypass": "Full bypass",
                     "wakeup": "Wakeup",
+                    "cold_wakeup": "Cold wakeup",
                     "standby": "Standby",
                     "unknown": "Unknown"
                 },
@@ -286,6 +297,12 @@
             },
             "ac_generate_power": {
                 "name": "AC power"
+            },
+            "heating_power": {
+                "name": "Heating power"
+            },
+            "grid_to_battery_power": {
+                "name": "Grid charge"
             },
             "set_output_power": {
                 "name": "Home preset",
@@ -536,6 +553,28 @@
                     }
                 }
             },
+            "daily_solar_to_home": {
+                "name": "Daily solar home",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_solar_to_battery": {
+                "name": "Daily solar charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_ac_socket": {
                 "name": "Daily AC socket",
                 "state_attributes": {
@@ -548,7 +587,7 @@
                 }
             },
             "daily_battery_to_home": {
-                "name": "Daily AC to home",
+                "name": "Daily battery home",
                 "state_attributes": {
                     "date": {
                         "name": "Date"
@@ -580,8 +619,30 @@
                     }
                 }
             },
-            "daily_grid_to_home": {
+            "daily_grid_import": {
                 "name": "Daily grid import",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_to_home": {
+                "name": "Daily grid home",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_grid_to_battery": {
+                "name": "Daily grid charge",
                 "state_attributes": {
                     "date": {
                         "name": "Date"
@@ -634,6 +695,20 @@
                         "name": "Last period"
                     }
                 }
+            },
+            "data_timestamp": {
+                "name": "Data time",
+                "state_attributes": {
+                    "last_check": {
+                        "name": "Last check"
+                    }
+                }
+            },
+            "charge_power": {
+                "name": "Charge power"
+            },
+            "discharge_power": {
+                "name": "Discharge power"
             }
         },
         "switch": {
@@ -644,7 +719,15 @@
                 "name": "Allow power export"
             },
             "allow_refresh": {
-                "name": "Api Usage"
+                "name": "Api Usage",
+                "state_attributes": {
+                    "requests_last_min": {
+                        "name": "Requests last minute"
+                    },
+                    "requests_last_hour": {
+                        "name": "Requests last hour"
+                    }
+                }
             }
         }
     },
@@ -666,7 +749,13 @@
     "services": {
         "get_system_info": {
             "name": "Request actual system information",
-            "description": "The actual system information will be provided as response to this action"
+            "description": "The actual system information will be provided as response to this action",
+            "fields": {
+                "include_cache": {
+                    "name": "Include cache",
+                    "description": "Include cache to merge existing system data from Api cache and new data from the scene_info query"
+                }
+            }
         },
         "export_systems": {
             "name": "Export anonymized Api information of accessible systems and devices into zipped JSON files",
@@ -679,20 +768,36 @@
         "clear_solarbank_schedule": {
             "name": "Clear the Solarbank schedule",
             "description": "The Solarbank schedule will be cleared",
+            "sections": {
+                "sb2_fields": {
+                    "name": "Solarbank 2 options",
+                    "description": "For Solarbank 2 systems you can specify following options (ignored for Solarbank 1)"
+                }
+            },
             "fields": {
                 "plan": {
                     "name": "Plan",
-                    "description": "Select plan to be modified, plan for active usage mode is the default (ignored for Solarbank 1)"
+                    "description": "Select plan to be modified, plan for active usage mode is the default"
                 },
                 "week_days": {
                     "name": "Weekdays",
-                    "description": "Select weekdays to be removed from schedule (ignored for Solarbank 1)"
+                    "description": "Select weekdays to be removed from schedule"
                 }
             }
     },
         "set_solarbank_schedule": {
             "name": "Set a new Solarbank Schedule",
             "description": "Create a new time schedule for the Solarbank with the defined time interval. An existing time schedule is completely replaced by the new interval!",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Solarbank 1 options",
+                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2)"
+                },
+                "sb2_fields": {
+                    "name": "Solarbank 2 options",
+                    "description": "For Solarbank 2 systems you can specify following options (ignored for Solarbank 1)"
+                }
+            },
             "fields": {
                 "start_time": {
                     "name": "Start time",
@@ -731,6 +836,16 @@
         "update_solarbank_schedule": {
             "name": "Update Solarbank Schedule",
             "description": "An existing Solarbank schedule is updated with the defined time interval. Adjacent time intervals are adjusted in time and overlapping ones are replaced.",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Solarbank 1 options",
+                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2)"
+                },
+                "sb2_fields": {
+                    "name": "Solarbank 2 options",
+                    "description": "For Solarbank 2 systems you can specify following options (ignored for Solarbank 1)"
+                }
+            },
             "fields": {
                 "start_time": {
                     "name": "Start time",
@@ -776,6 +891,9 @@
         },
         "active_testmode": {
             "message": "{entity_id} cannot be changed while configuration is running in testmode"
+        },
+        "apiusage_deactivated": {
+            "message": "{entity_id} cannot be used for requested action while Api usage is deactivated"
         },
         "shared_devices": {
             "message": "{username} cannot be loaded because it shares devices with active configuration {shared_account}"

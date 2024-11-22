@@ -29,6 +29,7 @@ from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
     AnkerSolixEntityType,
+    get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
@@ -61,9 +62,7 @@ DEVICE_NUMBERS = [
         native_step=10,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, d: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-        ),
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixNumberDescription(
         # Device output setting, determined by schedule
@@ -109,6 +108,8 @@ SITE_NUMBERS = [
     ),
 ]
 
+ACCOUNT_NUMBERS = []
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -121,13 +122,17 @@ async def async_setup_entry(
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
-        # create number type based on type of entry in coordinator data, which consolidates the api.sites and api.devices dictionaries
-        # the coordinator.data dict key is either a site_id or device_sn and used as context for the number entity to lookup its data
+        # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
+        # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
-            if data.get("type") == SolixDeviceType.SYSTEM.value:
+            if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_NUMBERS
+            elif data_type == SolixDeviceType.ACCOUNT.value:
+                # Unique key for account entry in data
+                entity_type = AnkerSolixEntityType.ACCOUNT
+                entity_list = ACCOUNT_NUMBERS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -187,7 +192,9 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
+            self._attr_device_info = get_AnkerSolixDeviceInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
             # update number limits based on solarbank count in system
             if self._attribute_name == "preset_system_output_power":
                 if (data.get("generation") or 0) > 1:
@@ -206,10 +213,16 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 self.native_min_value = int(
                     self.native_min_value / (data.get("solarbank_count") or 1)
                 )
+        elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
+            # get the account data from account context entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context, {})).get("site_info") or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
+            self._attr_device_info = get_AnkerSolixSystemInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
 
         self._native_value = None
         self._assumed_state = False

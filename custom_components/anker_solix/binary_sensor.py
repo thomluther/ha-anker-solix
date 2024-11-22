@@ -23,11 +23,19 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, TEST_NUMBERVARIANCE
+from .const import (
+    ALLOW_TESTMODE,
+    ATTRIBUTION,
+    CREATE_ALL_ENTITIES,
+    DOMAIN,
+    TEST_NUMBERVARIANCE,
+)
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
+    AnkerSolixEntityFeature,
     AnkerSolixEntityRequiredKeyMixin,
     AnkerSolixEntityType,
+    get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
@@ -57,7 +65,9 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d: {
             "wifi_ssid": d.get("wifi_name"),
             "wifi_signal": " ".join([d.get("wifi_signal") or "--", PERCENTAGE]),
-            "rssi": " ".join([d.get("rssi") or "--", SIGNAL_STRENGTH_DECIBELS_MILLIWATT]),
+            "rssi": " ".join(
+                [d.get("rssi") or "--", SIGNAL_STRENGTH_DECIBELS_MILLIWATT]
+            ),
             "bt_mac": d.get("bt_ble_mac"),
             "wireless_type": d.get("wireless_type"),
         },
@@ -71,7 +81,8 @@ DEVICE_SENSORS = [
         device_class=BinarySensorDeviceClass.UPDATE,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         attrib_fn=lambda d: {
-            "ota_version": d.get("ota_version") or "unknown",
+            "ota_version": d.get("ota_version") or None,
+            "ota_components": d.get("ota_children") or [],
         },
     ),
 ]
@@ -83,12 +94,22 @@ SITE_SENSORS = [
         json_key="site_admin",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+]
+
+ACCOUNT_SENSORS = [
     AnkerSolixBinarySensorDescription(
         key="has_unread_msg",
         translation_key="has_unread_msg",
         json_key="has_unread_msg",
-        value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
+        #entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    # This should be shown only when testmode is active
+    AnkerSolixBinarySensorDescription(
+        key="use_files",
+        translation_key="use_files",
+        json_key="use_files",
         entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda d, _: not ALLOW_TESTMODE,
     ),
 ]
 
@@ -104,13 +125,17 @@ async def async_setup_entry(
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
-        # create binary sensor type based on type of entry in coordinator data, which consolidates the api.sites and api.devices dictionaries
-        # the coordinator.data dict key is either a site_id or device_sn and used as context for the binary sensor to lookup its data
+        # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
+        # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
-            if data.get("type") == SolixDeviceType.SYSTEM.value:
+            if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SENSORS
+            elif data_type == SolixDeviceType.ACCOUNT.value:
+                # Unique key for account entry in data
+                entity_type = AnkerSolixEntityType.ACCOUNT
+                entity_list = ACCOUNT_SENSORS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -152,6 +177,7 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "bt_mac",
             "site_admin",
             "rssi",
+            "ota_components",
         }
     )
 
@@ -181,11 +207,19 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
+            self._attr_device_info = get_AnkerSolixDeviceInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
+        elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
+            # get the account data from account context entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})
-            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
+            self._attr_device_info = get_AnkerSolixSystemInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
 
         self._attr_is_on = None
         self.update_state_value()
@@ -195,6 +229,11 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         """Handle updated data from the coordinator."""
         self.update_state_value()
         super()._handle_coordinator_update()
+
+    @property
+    def supported_features(self) -> AnkerSolixEntityFeature:
+        """Flag supported features."""
+        return self._attr_supported_features
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

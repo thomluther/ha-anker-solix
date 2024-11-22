@@ -10,16 +10,16 @@
                 "solarbank_solar_info": "Info onduleur de Solarbank",
                 "solar_energy": "Statistiques sur l'énergie solaire",
                 "solarbank_energy": "Statistiques sur l'énergie de Solarbank",
-                "smartmeter_energy": "Statistiques énergétiques du compteur intelligent",
-                "smartplug_energy": "Statistiques énergétiques des prises intelligentes",
-                "system": "Systèmes",
                 "solarbank": "Solarbanks",
                 "inverter": "Onduleurs",
                 "pps": "Centrales électriques portables",
                 "powerpanel": "Panneaux électriques",
+                "powerpanel_energy": "Statistiques énergétiques du panneaux électriques",
                 "powercooler": "Refroidisseur d'électricité",
                 "smartmeter": "Compteur intelligent",
-                "smartplug": "Prises intelligentes"
+                "smartmeter_energy": "Statistiques énergétiques du compteur intelligent",
+                "smartplug": "Prises intelligentes",
+                "smartplug_energy": "Statistiques énergétiques des prises intelligentes"
             }
         },
         "plan": {
@@ -170,6 +170,9 @@
                 "state_attributes": {
                     "ota_version": {
                         "name": "Version OTA"
+                    },
+                    "ota_components": {
+                        "name": "Composants OTA"
                     }
                 }
             },
@@ -182,6 +185,13 @@
             },
             "has_unread_msg": {
                 "name": "Nouvelles",
+                "state": {
+                    "on": "Oui",
+                    "off": "Non"
+                }
+            },
+            "use_files": {
+                "name": "Utiliser les fichiers",
                 "state": {
                     "on": "Oui",
                     "off": "Non"
@@ -245,6 +255,7 @@
                     "charge_priority":  "Charge prioritaire",
                     "full_bypass": "Bypass 100%",
                     "wakeup": "Réveil",
+                    "cold_wakeup": "Réveil froid",
                     "standby": "Veille",
                     "unknown": "Pas disponible"
                 },
@@ -286,6 +297,12 @@
             },
             "ac_generate_power": {
                 "name": "Alimentation AC"
+            },
+            "heating_power": {
+                "name": "Puissance de chauffage"
+            },
+            "grid_to_battery_power": {
+                "name": "Charge du réseau"
             },
             "set_output_power": {
                 "name": "Réglage puissance de sortie",
@@ -536,6 +553,28 @@
                     }
                 }
             },
+            "daily_solar_to_home": {
+                "name": "Soleil journalier à domicile",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_solar_to_battery": {
+                "name": "Soleil journalier à la batterie",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
             "daily_ac_socket": {
                 "name": "Prise de courant journalière",
                 "state_attributes": {
@@ -548,7 +587,7 @@
                 }
             },
             "daily_battery_to_home": {
-                "name": "AC journalière à domicile",
+                "name": "Batterie journalière à domicile",
                 "state_attributes": {
                     "date": {
                         "name": "Date"
@@ -580,8 +619,30 @@
                     }
                 }
             },
-            "daily_grid_to_home": {
+            "daily_grid_import": {
                 "name": "Importation journalière du réseau",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_grid_to_home": {
+                "name": "Réseau journalière à domicile",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_grid_to_battery": {
+                "name": "Réseau journalier à la batterie",
                 "state_attributes": {
                     "date": {
                         "name": "Date"
@@ -634,6 +695,20 @@
                         "name": "Dernière période"
                     }
                 }
+            },
+            "data_timestamp": {
+                "name": "Temps des données",
+                "state_attributes": {
+                    "last_check": {
+                        "name": "Dernier contrôle"
+                    }
+                }
+            },
+            "charge_power": {
+                "name": "Puissance de charge"
+            },
+            "discharge_power": {
+                "name": "Puissance de décharge"
             }
         },
         "switch": {
@@ -644,7 +719,16 @@
                 "name": "Autoriser l'exportation"
             },
             "allow_refresh": {
-                "name": "Utilisation de l'API"
+                "name": "Utilisation de l'API",
+                "state_attributes": {
+                    "requests_last_min": {
+                        "name": "Demandes de dernière minute"
+                    },
+                    "requests_last_hour": {
+                        "name": "Demandes de la dernière heure"
+                    }
+                }
+
             }
         }
     },
@@ -666,7 +750,13 @@
     "services": {
         "get_system_info": {
             "name": "Demander les informations actuelles sur le système",
-            "description": "Les informations réelles sur le système seront fournies en réponse à cette action"
+            "description": "Les informations réelles sur le système seront fournies en réponse à cette action",
+            "fields": {
+                "include_cache": {
+                    "name": "Inclure le cache",
+                    "description": "Inclure le cache pour fusionner les données existantes du système provenant du cache Api et les nouvelles données provenant de la requête scene_info"
+                }
+            }
         },
         "export_systems": {
             "name": "Exporter les informations api anonymes des systèmes et dispositifs accessibles dans des fichiers JSON zippés",
@@ -679,20 +769,36 @@
         "clear_solarbank_schedule": {
             "name": "Effacer l'horaire de solarbank",
             "description": "L'horaire de solarbank sera effacé",
+            "sections": {
+                "sb2_fields": {
+                    "name": "Options de Solarbank 2",
+                    "description": "Pour les systèmes Solarbank 2, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                }
+            },
             "fields": {
                 "plan": {
                     "name": "Plan",
-                    "description": "Sélectionner le plan à modifier, le plan pour le mode d'utilisation active est le plan par défaut (ignoré pour Solarbank 1)"
+                    "description": "Sélectionner le plan à modifier, le plan pour le mode d'utilisation active est le plan par défaut"
                 },
                 "week_days": {
                     "name": "En semaine",
-                    "description": "Jours de la semaine sélectionnés à supprimer de l'horaire (ignoré pour Solarbank 1)"
+                    "description": "Jours de la semaine sélectionnés à supprimer de l'horaire"
                 }
             }
         },
         "set_solarbank_schedule": {
             "name": "Créer un nouveau horaire de solarbank",
             "description": "Crée un nouveau planning pour la solarbank avec l'intervalle de temps défini. Un horaire existant sera alors complètement remplacé !",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Options de Solarbank 1",
+                    "description": "Pour les systèmes Solarbank 1, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 2)"
+                },
+                "sb2_fields": {
+                    "name": "Options de Solarbank 2",
+                    "description": "Pour les systèmes Solarbank 2, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                }
+            },
             "fields": {
                 "start_time": {
                     "name": "Heure de début",
@@ -731,6 +837,16 @@
         "update_solarbank_schedule": {
             "name": "Mise à jour du tableau horaire de solarbank",
             "description": "Un horaire de solarbank existant est mis à jour avec l'intervalle de temps défini. Les intervalles de temps adjacents sont ajustés dans le temps et ceux qui se chevauchent sont remplacés",
+            "sections": {
+                "sb1_fields": {
+                    "name": "Options de Solarbank 1",
+                    "description": "Pour les systèmes Solarbank 1, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 2)"
+                },
+                "sb2_fields": {
+                    "name": "Options de Solarbank 2",
+                    "description": "Pour les systèmes Solarbank 2, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                }
+            },
             "fields": {
                 "start_time": {
                     "name": "Heure de début",
@@ -776,6 +892,9 @@
         },
         "active_testmode": {
             "message": "{entity_id} ne peut pas être modifié lorsque la configuration est exécutée en mode test"
+        },
+        "apiusage_deactivated": {
+            "message": "{entity_id} ne peut pas être utilisé pour l'action demandée si l'utilisation de l'Api est désactivée"
         },
         "shared_devices": {
             "message": "{username} ne peut pas être chargé car il partage des périphériques avec la configuration {shared_account}"

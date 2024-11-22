@@ -34,7 +34,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.2.1.0"
+VERSION: str = "2.3.0.0"
 
 
 class AnkerSolixApiExport:
@@ -176,96 +176,145 @@ class AnkerSolixApiExport:
                     self.request_delay,
                 )
 
-            # Export power_service endpoint data
-            if {
-                ApiEndpointServices.power
-            } & self.export_services or not self.export_services:
-                await self.export_power_service_data()
+            # Export common data for all service types and skip rest on error
+            if await self.export_common_data():
+                # Export power_service endpoint data
+                if {
+                    ApiEndpointServices.power
+                } & self.export_services or not self.export_services:
+                    await self.export_power_service_data()
 
-            # Export charging_energy_service endpoint data
-            if {
-                ApiEndpointServices.charging
-            } & self.export_services or not self.export_services:
-                await self.export_charging_energy_service_data()
+                # Export charging_energy_service endpoint data
+                if {
+                    ApiEndpointServices.charging
+                } & self.export_services or not self.export_services:
+                    await self.export_charging_energy_service_data()
 
-            # Export charging_hes_svc endpoint data
-            if {
-                ApiEndpointServices.hes_svc
-            } & self.export_services or not self.export_services:
-                await self.export_charging_hes_svc_data()
+                # Export charging_hes_svc endpoint data
+                if {
+                    ApiEndpointServices.hes_svc
+                } & self.export_services or not self.export_services:
+                    await self.export_charging_hes_svc_data()
 
-            # Always export account dictionary
-            self._logger.info("")
-            self._logger.info("Exporting Api account cache...")
-            self._logger.debug(
-                "Api account cache --> %s",
-                filename := f"{API_FILEPREFIXES['api_account']}.json",
-            )
-            # update account dictionary with number of requests during export
-            self.api_power._update_account()  # noqa: SLF001
-            # Randomizing dictionary for account data
-            await self._export(
-                Path(self.export_path) / filename,
-                self.api_power.account,
-            )
-
-            # Print stats
-            self._logger.info("Api Request stats: %s", self.client.request_count)
-
-            # restore old api session delay
-            if old_delay != self.request_delay:
-                self.client.requestDelay(old_delay)
-                self._logger.debug(
-                    "Restored original client request delay to %s seconds.",
-                    old_delay,
-                )
-
-            # remove queue file handler again before zipping folder
-            self._logger.removeHandler(qh)
-            self._logger.info("")
-            self._logger.info(
-                "Completed export of Anker Solix system data for account %s",
-                self.client.nickname,
-            )
-            if self.randomized:
-                self._logger.info(
-                    "Folder %s contains the randomized JSON files. Pls check and update fields that may contain unrecognized personalized data.",
-                    self.export_path,
-                )
-            else:
-                self._logger.warning(
-                    "Folder %s contains the JSON files with personalized data.",
-                    self.export_path,
-                )
-
-            # Optionally zip the output
-            if self.zipped:
-                zipname = "_".join(
-                    [
-                        str(self.export_path),
-                        datetime.now().strftime("%Y-%m-%d_%H%M"),
-                    ]
-                )
-                self.zipfilename = zipname + ".zip"
+                # update api dictionaries from exported files to use randomized input data
+                # this is more efficient and allows validation of randomized data in export files
+                # save real api cache data first
+                old_account = deepcopy(self.api_power.account)
+                old_sites = deepcopy(self.api_power.sites)
+                old_devices = deepcopy(self.api_power.devices)
+                old_testdir = self.api_power.testDir()
+                self.api_power.testDir(self.export_path)
+                self._logger.debug("Saved original testfolder.")
+                await self.api_power.update_sites(fromFile=True)
+                await self.api_power.update_site_details(fromFile=True)
+                await self.api_power.update_device_details(fromFile=True)
+                await self.api_power.update_device_energy(fromFile=True)
                 self._logger.info("")
-                self._logger.info("Zipping output folder to %s", self.zipfilename)
-                loop = asyncio.get_running_loop()
-
-                self._logger.info(
-                    "Zipfile created: %s",
-                    await loop.run_in_executor(
-                        None,
-                        partial(
-                            shutil.make_archive,
-                            base_name=zipname,
-                            format="zip",
-                            root_dir=Path(self.export_path).parent,
-                            base_dir=Path(self.export_path).name,
-                        ),
-                    ),
+                self._logger.info("Exporting Api sites cache from files...")
+                self._logger.debug(
+                    "Api sites cache --> %s",
+                    filename := f"{API_FILEPREFIXES['api_sites']}.json",
                 )
-            else:
-                self.zipfilename = None
+                # avoid randomizing dictionary export twice when imported from randomized files already
+                await self._export(
+                    Path(self.export_path) / filename,
+                    self.api_power.sites,
+                    skip_randomize=True,
+                )
+                self._logger.info("Exporting Api devices cache from files...")
+                self._logger.debug(
+                    "Api devices cache --> %s",
+                    filename := f"{API_FILEPREFIXES['api_devices']}.json",
+                )
+                # avoid randomizing dictionary export twice when imported from randomized files already
+                await self._export(
+                    Path(self.export_path) / filename,
+                    self.api_power.devices,
+                    skip_randomize=True,
+                )
+                # restore real client cache data for re-use of sites and devices in other Api services
+                self.api_power.account = old_account
+                self.api_power.sites = old_sites
+                self.api_power.devices = old_devices
+                # skip restore of default test dir in client session since it may not exist
+                if Path(old_testdir).is_dir() and old_testdir != self.export_path:
+                    self.api_power.testDir(old_testdir)
+                    self._logger.debug(
+                        "Restored original test folder for api client session.",
+                    )
+
+                # Always export account dictionary
+                self._logger.info("")
+                self._logger.info("Exporting Api account cache...")
+                self._logger.debug(
+                    "Api account cache --> %s",
+                    filename := f"{API_FILEPREFIXES['api_account']}.json",
+                )
+                # update account dictionary with number of requests during export
+                self.api_power._update_account()  # noqa: SLF001
+                # Randomizing dictionary for account data
+                await self._export(
+                    Path(self.export_path) / filename,
+                    self.api_power.account,
+                )
+
+                # Print stats
+                self._logger.info("Api Request stats: %s", self.client.request_count)
+
+                # restore old api session delay
+                if old_delay != self.request_delay:
+                    self.client.requestDelay(old_delay)
+                    self._logger.debug(
+                        "Restored original client request delay to %s seconds.",
+                        old_delay,
+                    )
+
+                # remove queue file handler again before zipping folder
+                self._logger.removeHandler(qh)
+                self._logger.info("")
+                self._logger.info(
+                    "Completed export of Anker Solix system data for account %s",
+                    self.client.nickname,
+                )
+                if self.randomized:
+                    self._logger.info(
+                        "Folder %s contains the randomized JSON files. Pls check and update fields that may contain unrecognized personalized data.",
+                        self.export_path,
+                    )
+                else:
+                    self._logger.warning(
+                        "Folder %s contains the JSON files with personalized data.",
+                        self.export_path,
+                    )
+
+                # Optionally zip the output
+                if self.zipped:
+                    zipname = "_".join(
+                        [
+                            str(self.export_path),
+                            datetime.now().strftime("%Y-%m-%d_%H%M"),
+                        ]
+                    )
+                    self.zipfilename = zipname + ".zip"
+                    self._logger.info("")
+                    self._logger.info("Zipping output folder to %s", self.zipfilename)
+                    loop = asyncio.get_running_loop()
+
+                    self._logger.info(
+                        "Zipfile created: %s",
+                        await loop.run_in_executor(
+                            None,
+                            partial(
+                                shutil.make_archive,
+                                base_name=zipname,
+                                format="zip",
+                                root_dir=Path(self.export_path).parent,
+                                base_dir=Path(self.export_path).name,
+                            ),
+                        ),
+                    )
+                else:
+                    self.zipfilename = None
 
         except errors.AnkerSolixError as err:
             self._logger.error("%s: %s", type(err), err)
@@ -277,13 +326,13 @@ class AnkerSolixApiExport:
             listener.stop()
             return True
 
-    async def export_power_service_data(self) -> bool:  # noqa: C901
-        """Run functions to export power_service endpoint data."""
+    async def export_common_data(self) -> bool:  # noqa: C901
+        """Run functions to export common data."""
 
         self._logger.info("")
-        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.power)
+        self._logger.info("Querying common endpoint data...")
         # first update Api caches if still empty
-        if not (self.api_power.sites | self.api_power.devices):
+        if not self.api_power.sites | self.api_power.devices:
             self._logger.info("Querying site information...")
             await self.api_power.update_sites()
             # Run bind devices to get also standalone devices for data export
@@ -297,22 +346,96 @@ class AnkerSolixApiExport:
 
         # Query API using direct endpoints to save full response of each query in json files
         try:
-            self._logger.info("")
-            self._logger.info("Exporting homepage...")
-            await self.query(
-                endpoint=API_ENDPOINTS["homepage"],
-                filename=f"{API_FILEPREFIXES['homepage']}.json",
-            )
             self._logger.info("Exporting site list...")
             await self.query(
                 endpoint=API_ENDPOINTS["site_list"],
                 filename=f"{API_FILEPREFIXES['site_list']}.json",
+                catch=False,
             )
             self._logger.info("Exporting bind devices...")
             # shows only owner devices
             await self.query(
                 endpoint=API_ENDPOINTS["bind_devices"],
                 filename=f"{API_FILEPREFIXES['bind_devices']}.json",
+                catch=False,
+            )
+            # Single OTA batch query for all devices, provides responses for owning devices only
+            self._logger.info("Exporting OTA batch info for all devices...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_ota_batch"],
+                filename=f"{API_FILEPREFIXES['get_ota_batch']}.json",
+                payload={
+                    "device_list": [
+                        {"device_sn": serial, "version": ""}
+                        for serial in self.api_power.devices
+                    ]
+                },
+                replace=[
+                    (serial, f"<deviceSn{idx+1}>")
+                    for idx, serial in enumerate(self.api_power.devices.keys())
+                ],
+                catch=False,
+            )
+            self._logger.info("Exporting supported sites, devices and accessories...")
+            await self.query(
+                endpoint=API_ENDPOINTS["site_rules"],
+                filename=f"{API_FILEPREFIXES['site_rules']}.json",
+                catch=False,
+            )
+            await self.query(
+                method="get",
+                endpoint=API_ENDPOINTS["get_product_categories"],
+                filename=f"{API_FILEPREFIXES['get_product_categories']}.json",
+                catch=False,
+            )
+            await self.query(
+                method="get",
+                endpoint=API_ENDPOINTS["get_product_accessories"],
+                filename=f"{API_FILEPREFIXES['get_product_accessories']}.json",
+                catch=False,
+            )
+            await self.query(
+                endpoint=API_ENDPOINTS["get_third_platforms"],
+                filename=f"{API_FILEPREFIXES['get_third_platforms']}.json",
+                catch=False,
+            )
+            # loop through all found sites
+            for siteId in self.api_power.sites:
+                self._logger.info("Exporting scene info...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["scene_info"],
+                    filename=f"{API_FILEPREFIXES['scene_info']}_{self._randomize(siteId,'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    catch=False,
+                )
+
+        except (errors.AnkerSolixError, ClientError) as err:
+            if isinstance(err, ClientError):
+                self._logger.warning(
+                    "Connection problems or common endpoint data queries may not be supported on used server: %s",
+                    err,
+                )
+            else:
+                self._logger.error("%s: %s", type(err), err)
+            self._logger.warning(
+                "Skipping remaining data queries.",
+            )
+            return False
+        return True
+
+    async def export_power_service_data(self) -> bool:  # noqa: C901
+        """Run functions to export power_service endpoint data."""
+
+        self._logger.info("")
+        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.power)
+        # Query API using direct endpoints to save full response of each query in json files
+        try:
+            self._logger.info("")
+            self._logger.info("Exporting homepage...")
+            await self.query(
+                endpoint=API_ENDPOINTS["homepage"],
+                filename=f"{API_FILEPREFIXES['homepage']}.json",
             )
             self._logger.info("Exporting user devices...")
             # shows only owner devices
@@ -332,45 +455,10 @@ class AnkerSolixApiExport:
                 endpoint=API_ENDPOINTS["get_auto_upgrade"],
                 filename=f"{API_FILEPREFIXES['get_auto_upgrade']}.json",
             )
-            # Single OTA batch query for all devices, provides responses for owning devices only
-            self._logger.info("Exporting OTA batch info for all devices...")
-            await self.query(
-                endpoint=API_ENDPOINTS["get_ota_batch"],
-                filename=f"{API_FILEPREFIXES['get_ota_batch']}.json",
-                payload={
-                    "device_list": [
-                        {"device_sn": serial, "version": ""}
-                        for serial in self.api_power.devices
-                    ]
-                },
-                replace=[
-                    (serial, f"<deviceSn{idx+1}>")
-                    for idx, serial in enumerate(self.api_power.devices.keys())
-                ],
-            )
             self._logger.info("Exporting config...")
             await self.query(
                 endpoint=API_ENDPOINTS["get_config"],
                 filename=f"{API_FILEPREFIXES['get_config']}.json",
-            )
-            self._logger.info("Exporting supported sites, devices and accessories...")
-            await self.query(
-                endpoint=API_ENDPOINTS["site_rules"],
-                filename=f"{API_FILEPREFIXES['site_rules']}.json",
-            )
-            await self.query(
-                method="get",
-                endpoint=API_ENDPOINTS["get_product_categories"],
-                filename=f"{API_FILEPREFIXES['get_product_categories']}.json",
-            )
-            await self.query(
-                method="get",
-                endpoint=API_ENDPOINTS["get_product_accessories"],
-                filename=f"{API_FILEPREFIXES['get_product_accessories']}.json",
-            )
-            await self.query(
-                endpoint=API_ENDPOINTS["get_third_platforms"],
-                filename=f"{API_FILEPREFIXES['get_third_platforms']}.json",
             )
             self._logger.info("Get token for user account...")
             response = await self.query(
@@ -393,13 +481,6 @@ class AnkerSolixApiExport:
                     self._randomize(siteId, "site_id"),
                 )
                 admin = site.get("site_admin")
-                self._logger.info("Exporting scene info...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["scene_info"],
-                    filename=f"{API_FILEPREFIXES['scene_info']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={"site_id": siteId},
-                    replace=[(siteId, "<siteId>")],
-                )
                 self._logger.info("Exporting site detail...")
                 # works only for site owners
                 await self.query(
@@ -627,55 +708,8 @@ class AnkerSolixApiExport:
                 filename=f"{API_FILEPREFIXES['get_message_unread']}.json",
             )
 
-            # update api dictionaries from exported files to use randomized input data
-            # this is more efficient and allows validation of randomized data in export files
-            # save real api cache data first
-            old_account = deepcopy(self.api_power.account)
-            old_sites = deepcopy(self.api_power.sites)
-            old_devices = deepcopy(self.api_power.devices)
-            old_testdir = self.api_power.testDir()
-            self.api_power.testDir(self.export_path)
-            self._logger.debug("Saved original testfolder.")
-            await self.api_power.update_sites(fromFile=True)
-            await self.api_power.update_site_details(fromFile=True)
-            await self.api_power.update_device_details(fromFile=True)
-            await self.api_power.update_device_energy(fromFile=True)
-            self._logger.info("")
-            self._logger.info("Exporting Api sites cache from files...")
-            self._logger.debug(
-                "Api sites cache --> %s",
-                filename := f"{API_FILEPREFIXES['api_sites']}.json",
-            )
-            # avoid randomizing dictionary export twice when imported from randomized files already
-            await self._export(
-                Path(self.export_path) / filename,
-                self.api_power.sites,
-                skip_randomize=True,
-            )
-            self._logger.info("Exporting Api devices cache from files...")
-            self._logger.debug(
-                "Api devices cache --> %s",
-                filename := f"{API_FILEPREFIXES['api_devices']}.json",
-            )
-            # avoid randomizing dictionary export twice when imported from randomized files already
-            await self._export(
-                Path(self.export_path) / filename,
-                self.api_power.devices,
-                skip_randomize=True,
-            )
-            # restore real client cache data for re-use of sites and devices in other Api services
-            self.api_power.account = old_account
-            self.api_power.sites = old_sites
-            self.api_power.devices = old_devices
-            # skip restore of default test dir in client session since it may not exist
-            if Path(old_testdir).is_dir() and old_testdir != self.export_path:
-                self.api_power.testDir(old_testdir)
-                self._logger.debug(
-                    "Restored original test folder for api client session.",
-                )
-
         except (errors.AnkerSolixError, ClientError) as err:
-            if isinstance(err,ClientError):
+            if isinstance(err, ClientError):
                 self._logger.warning(
                     "%s endpoint data queries may not be supported on used server: %s",
                     ApiEndpointServices.power,
@@ -688,7 +722,6 @@ class AnkerSolixApiExport:
                 ApiEndpointServices.power,
             )
             return False
-
         return True
 
     async def export_charging_energy_service_data(self) -> bool:  # noqa: C901
@@ -845,6 +878,77 @@ class AnkerSolixApiExport:
                     },
                     replace=[(siteId, "<siteId>")],
                 )
+
+                # get various energies of today for last 5 min average values
+                self._logger.info(
+                    "Exporting Charging site energy data of today for solar..."
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_solar_today']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "solar",
+                        "dateType": "day",
+                        "start": datetime.today().strftime("%Y-%m-%d"),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info(
+                    "Exporting Charging site energy data of today for home energy systems..."
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_hes_today']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "hes",
+                        "dateType": "day",
+                        "start": datetime.today().strftime("%Y-%m-%d"),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info(
+                    "Exporting Charging site energy data of today for home usage..."
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_home_today']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "home",
+                        "dateType": "day",
+                        "start": datetime.today().strftime("%Y-%m-%d"),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info(
+                    "Exporting Charging site energy data of today for grid..."
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                    filename=f"{API_FILEPREFIXES['charging_energy_grid_today']}_{self._randomize(siteId, "site_id")}.json",
+                    payload={
+                        "siteId": siteId,
+                        "sourceType": "grid",
+                        "dateType": "day",
+                        "start": datetime.today().strftime("%Y-%m-%d"),
+                        "end": datetime.today().strftime("%Y-%m-%d"),
+                        "global": False,
+                        "productCode": "",
+                    },
+                    replace=[(siteId, "<siteId>")],
+                )
+
                 self._logger.info("Exporting Charging site wifi info...")
                 # works only for site owners
                 await self.query(
@@ -992,7 +1096,7 @@ class AnkerSolixApiExport:
                     )
 
         except (errors.AnkerSolixError, ClientError) as err:
-            if isinstance(err,ClientError):
+            if isinstance(err, ClientError):
                 self._logger.warning(
                     "%s endpoint data queries may not be supported on used server: %s",
                     ApiEndpointServices.charging,
@@ -1005,7 +1109,6 @@ class AnkerSolixApiExport:
                 ApiEndpointServices.charging,
             )
             return False
-
         return True
 
     async def export_charging_hes_svc_data(self) -> bool:  # noqa: C901
@@ -1247,7 +1350,7 @@ class AnkerSolixApiExport:
                     )
 
         except (errors.AnkerSolixError, ClientError) as err:
-            if isinstance(err,ClientError):
+            if isinstance(err, ClientError):
                 self._logger.warning(
                     "%s endpoint data queries may not be supported on used server: %s",
                     ApiEndpointServices.hes_svc,

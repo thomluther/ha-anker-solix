@@ -43,6 +43,7 @@ API_CATEGORIES: list = [
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
+    ApiCategories.powerpanel_energy,
     ApiCategories.solarbank_cutoff,
     ApiCategories.solarbank_fittings,
     ApiCategories.solarbank_solar_info,
@@ -189,7 +190,10 @@ class AnkerSolixApiClient:
                             if self._testmode
                             else "",
                         )
-                        await self.api.update_sites(fromFile=self._testmode)
+                        await self.api.update_sites(
+                            fromFile=self._testmode,
+                            exclude=set(self.exclude_categories),
+                        )
                         # Fetch site details without excluded types or categories
                         await self.api.update_site_details(
                             fromFile=self._testmode,
@@ -219,7 +223,10 @@ class AnkerSolixApiClient:
                         self.api.apisession.nickname,
                         f"from folder {self.api.testDir()}" if self._testmode else "",
                     )
-                    await self.api.update_sites(fromFile=self._testmode)
+                    await self.api.update_sites(
+                        fromFile=self._testmode,
+                        exclude=set(self.exclude_categories),
+                    )
                     # update device details only after given refresh interval count
                     self._intervalcount -= 1
                     if self._intervalcount <= 0:
@@ -253,8 +260,8 @@ class AnkerSolixApiClient:
                             self.api.apisession.nickname,
                             self.api.request_count,
                         )
-                # combine site and device details dictionaries for single data cache
-                data = self.api.sites | self.api.devices
+                # combine api sites, devices and account dictionaries for single data cache
+                data = self.api.getCaches()
             else:
                 # do not provide data when refresh suspended to avoid stale data from cache is used for real
                 data = {}

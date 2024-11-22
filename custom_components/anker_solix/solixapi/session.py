@@ -155,7 +155,6 @@ class AnkerSolixClientSession:
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
 
-
     def requestDelay(self, delay: float | None = None) -> float:
         """Get or set the api request delay in seconds."""
         if (
@@ -169,9 +168,10 @@ class AnkerSolixClientSession:
                     max(SolixDefaults.REQUEST_DELAY_MIN, delay),
                 )
             )
-            self._logger.info("Set api request delay to %.3f seconds", self._request_delay)
+            self._logger.info(
+                "Set api request delay to %.3f seconds", self._request_delay
+            )
         return self._request_delay
-
 
     async def _wait_delay(self, delay: float | None = None) -> None:
         """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occurred."""
@@ -191,7 +191,6 @@ class AnkerSolixClientSession:
                     delay - (datetime.now() - self._last_request_time).total_seconds(),
                 )
             )
-
 
     async def async_authenticate(self, restart: bool = False) -> bool:
         """Authenticate with server and get an access token. If restart is not enforced, cached login data may be used to obtain previous token."""
@@ -266,7 +265,9 @@ class AnkerSolixClientSession:
         self._token = data.get("auth_token")
         self.nickname = data.get("nick_name") or ""
         if data.get("token_expires_at"):
-            self._token_expiration = datetime.fromtimestamp(data.get("token_expires_at"))
+            self._token_expiration = datetime.fromtimestamp(
+                data.get("token_expires_at")
+            )
         else:
             self._token_expiration = None
             self._loggedIn = False
@@ -277,7 +278,6 @@ class AnkerSolixClientSession:
             self._gtoken = None
             self._loggedIn = False
         return self._loggedIn
-
 
     async def request(
         self,
@@ -365,7 +365,10 @@ class AnkerSolixClientSession:
         ) as resp:
             try:
                 self._last_request_time = datetime.now()
-                self.request_count.add(self._last_request_time)
+                self.request_count.add(
+                    request_time=self._last_request_time,
+                    request_info=" ".join([method.upper(), url, str(json)]),
+                )
                 self._logger.debug(
                     "%s request %s %s response received", self.nickname, method, url
                 )
@@ -388,7 +391,9 @@ class AnkerSolixClientSession:
                 if endpoint == API_LOGIN:
                     self._logger.debug(
                         "Response Data: %s",
-                        self.mask_values(data, "user_id", "auth_token", "email", "geo_key"),
+                        self.mask_values(
+                            data, "user_id", "auth_token", "email", "geo_key"
+                        ),
                     )
                 else:
                     self._logger.debug("Response Data: %s", data)
@@ -424,7 +429,9 @@ class AnkerSolixClientSession:
                                 method, endpoint, headers=headers, json=json
                             )
                         self._logger.error("Re-Login failed for user %s", self._email)
-                    errors.raise_error(data, prefix=f"Login failed for user {self._email}")
+                    errors.raise_error(
+                        data, prefix=f"Login failed for user {self._email}"
+                    )
                     # catch error if Api code not defined
                     raise errors.AuthorizationError(
                         f"Login failed for user {self._email}"
@@ -504,6 +511,7 @@ class AnkerSolixClientSession:
                             data, "user_id", "auth_token", "email", "geo_key", "token"
                         ),
                     )
+                    self.request_count.add(request_info=f"LOAD {masked_filename}")
                     return data
         except OSError as err:
             self._logger.error(

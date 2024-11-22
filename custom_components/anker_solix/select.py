@@ -20,6 +20,7 @@ from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
     AnkerSolixEntityType,
+    get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSystemInfo,
 )
@@ -68,7 +69,13 @@ DEVICE_SELECTS = [
             mode.name for mode in SolarbankUsageMode if "unknown" not in mode.name
         ],
         value_fn=lambda d, jk: next(
-            iter([item.name for item in SolarbankUsageMode if item.value == d.get(jk) and "unknown" not in item.name]),
+            iter(
+                [
+                    item.name
+                    for item in SolarbankUsageMode
+                    if item.value == d.get(jk) and "unknown" not in item.name
+                ]
+            ),
             None,
         ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
@@ -94,6 +101,8 @@ SITE_SELECTS = [
     ),
 ]
 
+ACCOUNT_SELECTS = []
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -106,13 +115,17 @@ async def async_setup_entry(
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
-        # create select type based on type of entry in coordinator data, which consolidates the api.sites and api.devices dictionaries
-        # the coordinator.data dict key is either a site_id or device_sn and used as context for the number entity to lookup its data
+        # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
+        # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
-            if data.get("type") == SolixDeviceType.SYSTEM.value:
+            if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SELECTS
+            elif data_type == SolixDeviceType.ACCOUNT.value:
+                # Unique key for account entry in data
+                entity_type = AnkerSolixEntityType.ACCOUNT
+                entity_list = ACCOUNT_SELECTS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -171,11 +184,19 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
+            self._attr_device_info = get_AnkerSolixDeviceInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
+        elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
+            # get the account data from account context entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})
-            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
+            self._attr_device_info = get_AnkerSolixSystemInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
 
         self.update_state_value()
         self._attr_options = self.entity_description.options_fn(
@@ -188,7 +209,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             if not ((site_data.get("grid_info") or {}).get("grid_list") or []):
                 # Remove smart meter usage mode if no smart meter installed
                 options = options - {SolarbankUsageMode.smartmeter.name}
-            if not ((site_data.get("smart_plug_info") or {}).get("smartplug_list") or []):
+            if not (
+                (site_data.get("smart_plug_info") or {}).get("smartplug_list") or []
+            ):
                 # Remove smart plugs usage mode if no smart plugs installed
                 options = options - {SolarbankUsageMode.smartplugs.name}
             self._attr_options = list(options)
@@ -232,7 +255,10 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             option (str): The option to set.
 
         """
-        if self.coordinator.client.testmode() and not self._attribute_name == "preset_usage_mode":
+        if (
+            self.coordinator.client.testmode()
+            and not self._attribute_name == "preset_usage_mode"
+        ):
             # Raise alert to frontend
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be changed while configuration is running in testmode",
@@ -275,13 +301,15 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     resp = await self.coordinator.client.api.set_sb2_home_load(
                         siteId=data.get("site_id") or "",
                         deviceSn=self.coordinator_context,
-                        usage_mode=getattr(SolarbankUsageMode,option,None),
-                        test_schedule=data.get("schedule") or {} if self.coordinator.client.testmode() else None
+                        usage_mode=getattr(SolarbankUsageMode, option, None),
+                        test_schedule=data.get("schedule") or {}
+                        if self.coordinator.client.testmode()
+                        else None,
                     )
-                    if isinstance(resp,dict) and self.coordinator.client.testmode():
+                    if isinstance(resp, dict) and self.coordinator.client.testmode():
                         LOGGER.info(
                             "Resulting schedule to be applied:\n%s",
-                            json.dumps(resp,indent=2),
+                            json.dumps(resp, indent=2),
                         )
             elif self._attribute_name == "system_price_unit":
                 LOGGER.debug(
