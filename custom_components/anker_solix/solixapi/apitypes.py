@@ -151,8 +151,8 @@ API_CHARGING_ENDPOINTS = {
     "get_installation_inspection": "charging_energy_service/get_installation_inspection",  # appears to say which page last viewed on App, needs owner account
     "get_utility_rate_plan": "charging_energy_service/get_utility_rate_plan",  # needs owner account
     "report_device_data": "charging_energy_service/report_device_data",  # ctrol [0 1], works but data is null (may need owner account?)
-    "get_configs": "charging_energy_service/get_configs",  # needs owner account
-    "get_sns": "charging_energy_service/get_sns",  # Displays Serial Numbers of attached PPS in Home, needs owner account
+    "get_configs": "charging_energy_service/get_configs",  # json={"siteId": "SITEID", "sn": "POWERPANELSN", "param_types": []})) # needs owner account, list of parm types not clear
+    "get_sns": "charging_energy_service/get_sns",  # json={"main_sn": "POWERPANELSN","macs": ["F38001MAC001","F38002MAC002"]})) # needs owner account, Displays Serial Numbers of attached PPS in Home
     "get_monetary_units": "charging_energy_service/get_world_monetary_unit",  # monetary unit list for system, needs owner account
 }
 
@@ -419,6 +419,13 @@ class SolarbankPowerMode(IntEnum):
     advanced = 2
 
 
+class SolarbankDischargePriorityMode(IntEnum):
+    """Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
+
+    off = 0
+    on = 1
+
+
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 Power Usage modes."""
 
@@ -663,6 +670,8 @@ class SolixDefaults:
     CHARGE_PRIORITY_MIN: int = 0
     CHARGE_PRIORITY_MAX: int = 100
     CHARGE_PRIORITY_DEF: int = 80
+    # Discharge Priority preset for Solarbank schedule timeslot settings
+    DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
     REQUEST_DELAY_MIN: float = 0.0
     REQUEST_DELAY_MAX: float = 5.0
@@ -725,6 +734,7 @@ class SolarbankTimeslot:
     )
     allow_export: bool | None = None  # mapped to the turn_on boolean
     charge_priority_limit: int | None = None  # mapped to charge_priority setting
+    discharge_priority: int | None = None  # mapped to discharge priority setting
 
 
 @dataclass

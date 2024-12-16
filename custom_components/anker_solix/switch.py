@@ -70,6 +70,12 @@ DEVICE_SWITCHES = [
         json_key="preset_allow_export",
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
+    AnkerSolixSwitchDescription(
+        key="preset_discharge_priority",
+        translation_key="preset_discharge_priority",
+        json_key="preset_discharge_priority",
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
 ]
 
 
@@ -249,11 +255,13 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **_: any) -> None:
         """Turn on the switch."""
         if self._attribute_name == "allow_refresh":
-            self.coordinator.client.allow_refresh(allow=True)
-            await self.coordinator.async_refresh_device_details()
+            await self.coordinator.async_execute_command(
+                command=self.entity_description.key, option=True
+            )
         # When running in Test mode do not switch for entities not supporting test mode
         elif self.coordinator.client.testmode() and self._attribute_name not in [
             "preset_allow_export",
+            "preset_discharge_priority",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -271,20 +279,22 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     {self.coordinator_context: True}
                 )
                 await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "preset_allow_export":
+        elif self._attribute_name in [
+            "preset_allow_export",
+            "preset_discharge_priority",
+        ]:
             if (
                 self.coordinator
                 and hasattr(self.coordinator, "data")
                 and self.coordinator_context in self.coordinator.data
             ):
                 data = self.coordinator.data.get(self.coordinator_context)
-                LOGGER.debug(
-                    "%s System allow export will be set %s", self.entity_id, True
-                )
+                LOGGER.debug("%s will be enabled", self.entity_id)
                 resp = await self.coordinator.client.api.set_home_load(
                     siteId=data.get("site_id") or "",
                     deviceSn=self.coordinator_context,
-                    export=True,
+                    export=True if self._attribute_name == "preset_allow_export" else None,
+                    discharge_prio=True if self._attribute_name == "preset_discharge_priority" else None,
                     test_schedule=data.get("schedule") or {}
                     if self.coordinator.client.testmode()
                     else None,
@@ -297,19 +307,20 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
                 LOGGER.error(
-                    "%s System allow export cannot be set %s because entity data was not found",
+                    "%s cannot be enabled because entity data was not found",
                     self.entity_id,
-                    True,
                 )
 
     async def async_turn_off(self, **_: any) -> None:
         """Turn off the switch."""
         if self._attribute_name == "allow_refresh":
-            self.coordinator.client.allow_refresh(allow=False)
-            await self.coordinator.async_refresh_data_from_apidict()
+            await self.coordinator.async_execute_command(
+                command=self.entity_description.key, option=False
+            )
         # When running in Test mode do not switch for entities not supporting test mode
         elif self.coordinator.client.testmode() and self._attribute_name not in [
             "preset_allow_export",
+            "preset_discharge_priority",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -325,20 +336,22 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 {self.coordinator_context: False}
             )
             await self.coordinator.async_refresh_data_from_apidict()
-        elif self._attribute_name == "preset_allow_export":
+        elif self._attribute_name in [
+            "preset_allow_export",
+            "preset_discharge_priority",
+        ]:
             if (
                 self.coordinator
                 and hasattr(self.coordinator, "data")
                 and self.coordinator_context in self.coordinator.data
             ):
                 data = self.coordinator.data.get(self.coordinator_context)
-                LOGGER.debug(
-                    "%s System allow export will be set %s", self.entity_id, False
-                )
+                LOGGER.debug("%s will be disabled", self.entity_id)
                 resp = await self.coordinator.client.api.set_home_load(
                     siteId=data.get("site_id") or "",
                     deviceSn=self.coordinator_context,
-                    export=False,
+                    export=False if self._attribute_name == "preset_allow_export" else None,
+                    discharge_prio=False if self._attribute_name == "preset_discharge_priority" else None,
                     test_schedule=data.get("schedule") or {}
                     if self.coordinator.client.testmode()
                     else None,
@@ -351,9 +364,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
                 LOGGER.error(
-                    "%s System allow export cannot be set %s because entity data was not found",
+                    "%s cannot be disabled because entity data was not found",
                     self.entity_id,
-                    False,
                 )
 
     async def _solix_account_service(

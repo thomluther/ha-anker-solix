@@ -73,6 +73,11 @@ class AnkerSolixBaseApi:
         """Return a merged dictionary with api cache dictionaries."""
         return self.sites | self.devices | {self.apisession.email: self.account}
 
+    def clearCaches(self) -> None:
+        """Clear the api cache dictionaries except the account cache."""
+        self.sites = {}
+        self.devices = {}
+
     def recycleDevices(
         self, extraDevices: set | None = None, activeDevices: set | None = None
     ) -> None:

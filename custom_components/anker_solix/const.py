@@ -5,6 +5,7 @@ from logging import Logger, getLogger
 
 import voluptuous as vol
 
+from homeassistant.const import Platform
 import homeassistant.helpers.config_validation as cv
 
 from .solixapi import api
@@ -13,12 +14,19 @@ LOGGER: Logger = getLogger(__package__)
 
 NAME: str = "Anker Solix"
 DOMAIN: str = "anker_solix"
-VERSION: str = "2.2.0"
 MANUFACTURER: str = "Anker"
 ATTRIBUTION: str = "Data provided by Anker Solix Api"
 ACCEPT_TERMS: str = "accept_terms"
 TERMS_LINK: str = "terms_link"
 TC_LINK: str = "https://github.com/thomluther/ha-anker-solix/blob/main/README.md"
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.NUMBER,
+    Platform.SELECT,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
 TESTMODE: str = "testmode"
 TESTFOLDER: str = "testfolder"
 INTERVALMULT: str = "dev_interval_mult"
@@ -55,6 +63,7 @@ APPLIANCE_LOAD = "appliance_load"
 DEVICE_LOAD = "device_load"
 CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
 ALLOW_EXPORT = "allow_export"
+DISCHARGE_PRIORITY = "discharge_priority"
 INCLUDE_CACHE = "include_cache"
 
 
@@ -95,8 +104,7 @@ VALID_CHARGE_PRIORITY = vol.Any(
         ),
     ),
 )
-VALID_ALLOW_DISCHARGE = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
-VALID_INCLUDE_CACHE = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
+VALID_SWITCH = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
 VALID_WEEK_DAYS = vol.Any(None, cv.ENTITY_MATCH_NONE, cv.weekdays)
 VALID_PLAN = vol.Any(
     None, cv.ENTITY_MATCH_NONE, vol.Any("active", "custom_rate_plan", "blend_plan")
@@ -123,7 +131,10 @@ SOLARBANK_TIMESLOT_DICT: dict = {
     ): VALID_CHARGE_PRIORITY,
     vol.Optional(
         ALLOW_EXPORT,
-    ): VALID_ALLOW_DISCHARGE,
+    ): VALID_SWITCH,
+    vol.Optional(
+        DISCHARGE_PRIORITY,
+    ): VALID_SWITCH,
 }
 
 SOLARBANK_TIMESLOT_SCHEMA: vol.Schema = vol.All(
@@ -152,7 +163,7 @@ SOLIX_ENTITY_SCHEMA: vol.Schema = vol.All(
             **cv.TARGET_SERVICE_FIELDS,
             vol.Optional(
                 INCLUDE_CACHE,
-            ): VALID_INCLUDE_CACHE,
+            ): VALID_SWITCH,
         }
     ),
 )

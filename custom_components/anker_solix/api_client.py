@@ -156,15 +156,29 @@ class AnkerSolixApiClient:
             ) from exception
 
     async def async_get_data(
-        self, from_cache: bool = False, device_details: bool = False
+        self, from_cache: bool = False, device_details: bool = False, reset_cache: bool = False,
     ) -> any:
         """Get data from the API."""
         try:
             if self._allow_refresh:
-                if from_cache:
-                    # if refresh from cache is requested, only the actual api dictionaries will be returned of coordinator data
+                if reset_cache:
+                    # if reset_cache is requested, clear existing api sites and devices caches first prior refresh to avoid stale structures
                     _LOGGER.debug(
-                        "Api Coordinator %s is updating data from Api dictionaries",
+                        "Api Coordinator %s is clearing Api cache",
+                        self.api.apisession.nickname,
+                    )
+                    # reset last refresh time to allow details refresh
+                    self.last_device_refresh = None
+                    # TODO: Implementent method into api for clearing caches (except account cache)
+                    self.api.sites = {}
+                    self.api.devices = {}
+                    if self.api.powerpanelApi:
+                        self.api.powerpanelApi.sites = {}
+                        self.api.powerpanelApi.devices = {}
+                if from_cache:
+                    # if refresh from cache is requested, only the actual api cache will be returned for coordinator data
+                    _LOGGER.debug(
+                        "Api Coordinator %s is updating data from Api cache",
                         self.api.apisession.nickname,
                     )
                 elif device_details:
@@ -178,7 +192,7 @@ class AnkerSolixApiClient:
                         < self.min_device_refresh
                     ):
                         _LOGGER.warning(
-                            "Api Coordinator %s cannot enforce device update within less than %s seconds, using data from Api dictionaries",
+                            "Api Coordinator %s cannot enforce device update within less than %s seconds, using data from Api cache",
                             self.api.apisession.nickname,
                             str(self.min_device_refresh),
                         )

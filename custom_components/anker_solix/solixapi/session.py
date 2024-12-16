@@ -349,15 +349,20 @@ class AnkerSolixClientSession:
             API_ENDPOINTS["get_token_by_userid"],
             API_ENDPOINTS["get_shelly_status"],
         ]:
-            self._logger.debug(
-                "Request Body: %s",
+            body_text = str(
                 self.mask_values(
-                    json, "user_id", "auth_token", "email", "geo_key", "token"
-                ),
+                    json,
+                    "user_id",
+                    "auth_token",
+                    "email",
+                    "geo_key",
+                    "token",
+                    "password",
+                )
             )
         else:
-            self._logger.debug("Request Body: %s", json)
-        body_text = ""
+            body_text = str(json)
+        self._logger.debug("Request Body: %s", body_text)
         # enforce configured delay between any subsequent request
         await self._wait_delay()
         async with self._session.request(
@@ -367,7 +372,7 @@ class AnkerSolixClientSession:
                 self._last_request_time = datetime.now()
                 self.request_count.add(
                     request_time=self._last_request_time,
-                    request_info=" ".join([method.upper(), url, str(json)]),
+                    request_info=(f"{method.upper()} {url} {body_text}").strip(),
                 )
                 self._logger.debug(
                     "%s request %s %s response received", self.nickname, method, url

@@ -50,7 +50,7 @@
                 "default": "mdi:generator-stationary"
             },
             "preset_charge_priority": {
-                "default": "mdi:battery-arrow-up"
+                "default": "mdi:battery-arrow-up-outline"
             },
             "system_price": {
                 "default": "mdi:cash-edit"
@@ -297,6 +297,13 @@
                 "state": {
                     "on": "mdi:export",
                     "off": "mdi:card-off-outline"
+                }
+            },
+            "preset_discharge_priority": {
+                "default": "mdi:battery-alert",
+                "state": {
+                    "on": "mdi:battery-arrow-down",
+                    "off": "mdi:battery-clock"
                 }
             },
             "allow_refresh": {

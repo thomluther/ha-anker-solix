@@ -718,6 +718,9 @@
             "preset_allow_export": {
                 "name": "Allow power export"
             },
+            "preset_discharge_priority": {
+                "name": "Discharge priority"
+            },
             "allow_refresh": {
                 "name": "Api Usage",
                 "state_attributes": {
@@ -827,6 +830,10 @@
                     "name": "Allow export",
                     "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2)"
                 },
+                "discharge_priority": {
+                    "name": "Discharge priority",
+                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2)"
+                },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",
                     "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2."
@@ -874,6 +881,10 @@
                 "allow_export": {
                     "name": "Allow export",
                     "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2)"
+                },
+                "discharge_priority": {
+                    "name": "Discharge priority",
+                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",

@@ -17,7 +17,6 @@ from homeassistant.const import (
     CONF_EXCLUDE,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
-    Platform,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
@@ -31,6 +30,7 @@ from .const import (
     EXAMPLESFOLDER,
     INTERVALMULT,
     LOGGER,
+    PLATFORMS,
     REGISTERED_EXCLUDES,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
     SERVICE_EXPORT_SYSTEMS,
@@ -43,15 +43,6 @@ from .const import (
     TESTMODE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
-
-PLATFORMS: list[Platform] = [
-    Platform.BINARY_SENSOR,
-    Platform.BUTTON,
-    Platform.NUMBER,
-    Platform.SELECT,
-    Platform.SENSOR,
-    Platform.SWITCH,
-]
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry

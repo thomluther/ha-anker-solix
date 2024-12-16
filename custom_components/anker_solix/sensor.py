@@ -64,6 +64,7 @@ from .const import (
     APPLIANCE_LOAD,
     DEVICE_LOAD,
     CHARGE_PRIORITY_LIMIT,
+    DISCHARGE_PRIORITY,
     PLAN,
     WEEK_DAYS,
     CONF_SKIP_INVALID,
@@ -1967,23 +1968,25 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     if (start_time := kwargs.get(START_TIME)) < (
                         end_time := kwargs.get(END_TIME)
                     ):
-                        plan = kwargs.get(PLAN)
-                        if plan in [cv.ENTITY_MATCH_NONE]:
+                        if (plan := kwargs.get(PLAN)) in [cv.ENTITY_MATCH_NONE]:
                             plan = None
-                        weekdays = kwargs.get(WEEK_DAYS)
-                        if weekdays == cv.ENTITY_MATCH_NONE:
+                        if (weekdays := kwargs.get(WEEK_DAYS)) == cv.ENTITY_MATCH_NONE:
                             weekdays = None
-                        load = kwargs.get(APPLIANCE_LOAD)
-                        if load == cv.ENTITY_MATCH_NONE:
+                        if (load := kwargs.get(APPLIANCE_LOAD)) == cv.ENTITY_MATCH_NONE:
                             load = None
-                        dev_load = kwargs.get(DEVICE_LOAD)
-                        if dev_load == cv.ENTITY_MATCH_NONE:
+                        if (
+                            dev_load := kwargs.get(DEVICE_LOAD)
+                        ) == cv.ENTITY_MATCH_NONE:
                             dev_load = None
-                        allow_export = kwargs.get(ALLOW_EXPORT)
-                        if allow_export == cv.ENTITY_MATCH_NONE:
+                        if (
+                            allow_export := kwargs.get(ALLOW_EXPORT)
+                        ) == cv.ENTITY_MATCH_NONE:
                             allow_export = None
-                        prio = kwargs.get(CHARGE_PRIORITY_LIMIT)
-                        if prio == cv.ENTITY_MATCH_NONE:
+                        if (
+                            discharge_prio := kwargs.get(DISCHARGE_PRIORITY)
+                        ) == cv.ENTITY_MATCH_NONE:
+                            discharge_prio = None
+                        if (prio := kwargs.get(CHARGE_PRIORITY_LIMIT)) == cv.ENTITY_MATCH_NONE:
                             prio = None
                         # check if now is in given time range and ensure preset increase is limited by min interval
                         now = datetime.now().astimezone()
@@ -2080,6 +2083,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 appliance_load=load,
                                 device_load=dev_load,
                                 allow_export=allow_export,
+                                discharge_priority=discharge_prio,
                                 charge_priority_limit=prio,
                             )
                             if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:

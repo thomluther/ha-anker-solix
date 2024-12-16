@@ -160,6 +160,11 @@ set_solarbank_schedule:
           example: true
           selector:
             boolean:
+        discharge_priority:
+          required: false
+          example: false
+          selector:
+            boolean:
         charge_priority_limit:
           required: false
           example: 80
@@ -250,6 +255,11 @@ update_solarbank_schedule:
         allow_export:
           required: false
           example: true
+          selector:
+            boolean:
+        discharge_priority:
+          required: false
+          example: false
           selector:
             boolean:
         charge_priority_limit:

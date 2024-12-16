@@ -261,6 +261,7 @@ async def set_home_load(  # noqa: C901
     dev_preset: int | None = None,
     export: bool | None = None,
     charge_prio: int | None = None,
+    discharge_prio: int | None = None,
     set_slot: SolarbankTimeslot | None = None,
     insert_slot: SolarbankTimeslot | None = None,
     test_schedule: dict | None = None,  # used only for testing instead of real schedule
@@ -294,6 +295,11 @@ async def set_home_load(  # noqa: C901
         if str(charge_prio).isdigit() or isinstance(charge_prio, int | float)
         else None
     )
+    discharge_prio = (
+        int(discharge_prio)
+        if str(discharge_prio).isdigit() or isinstance(discharge_prio, int | float)
+        else None
+    )
     preset = (
         int(preset)
         if str(preset).isdigit() or isinstance(preset, int | float)
@@ -309,6 +315,7 @@ async def set_home_load(  # noqa: C901
         and dev_preset is None
         and export is None
         and charge_prio is None
+        and discharge_prio is None
         and set_slot is None
         and insert_slot is None
     ):
@@ -552,6 +559,15 @@ async def set_home_load(  # noqa: C901
                             )
                         }
                     )
+                    # optional discharge priority update if supported by schedule
+                    if "priority_discharge_switch" in insert:
+                        insert.update(
+                            {
+                                "priority_discharge_switch": SolixDefaults.DISCHARGE_PRIORITY_DEF
+                                if discharge_prio is None
+                                else discharge_prio
+                            }
+                        )
 
                     # if gap is before current slot, insert now
                     if now < start_time:
@@ -704,6 +720,17 @@ async def set_home_load(  # noqa: C901
                                 else insert_slot.allow_export
                             }
                         )
+                    # optional priority_discharge_switch settings if supported by schedule
+                    if "priority_discharge_switch" in insert and (
+                        insert_slot.discharge_priority is not None or overwrite
+                    ):
+                        insert.update(
+                            {
+                                "priority_discharge_switch": SolixDefaults.DISCHARGE_PRIORITY_DEF
+                                if insert_slot.discharge_priority is None
+                                else int(insert_slot.discharge_priority)
+                            }
+                        )
                     if insert_slot.charge_priority_limit is not None or overwrite:
                         insert.update(
                             {
@@ -826,6 +853,10 @@ async def set_home_load(  # noqa: C901
 
                         if insert_slot.allow_export is None:
                             insert_slot.allow_export = slot.get("turn_on")
+                        if insert_slot.discharge_priority is None:
+                            insert_slot.discharge_priority = slot.get(
+                                "priority_discharge_switch"
+                            )
                         if insert_slot.charge_priority_limit is None:
                             insert_slot.charge_priority_limit = slot.get(
                                 "charge_priority"
@@ -897,6 +928,12 @@ async def set_home_load(  # noqa: C901
                                     )
                     if export is not None:
                         slot.update({"turn_on": export})
+                    # optional priority_discharge_switch settings if supported by schedule
+                    if (
+                        "priority_discharge_switch" in slot
+                        and discharge_prio is not None
+                    ):
+                        slot.update({"priority_discharge_switch": discharge_prio})
                     if charge_prio is not None:
                         slot.update(
                             {
@@ -952,6 +989,7 @@ async def set_home_load(  # noqa: C901
                 device_load=dev_preset,
                 allow_export=export,
                 charge_priority_limit=charge_prio,
+                discharge_priority=discharge_prio,
             )
         # generate the new slot
         # adjust appliance load depending on device load preset and ensure appliance load is consistent with device load min/max values
@@ -1041,6 +1079,15 @@ async def set_home_load(  # noqa: C901
                             },
                         )
                 slot.update({"device_power_loads": device_power_loads})
+        # optional priority_discharge_switch settings if supported by schedule
+        if "is_show_priority_discharge" in schedule:
+            slot.update(
+                {
+                    "priority_discharge_switch": SolixDefaults.DISCHARGE_PRIORITY_DEF
+                    if set_slot.discharge_priority is None
+                    else set_slot.discharge_priority
+                }
+            )
 
         # use previous appliance name if a slot was defined originally
         if appliance_name:

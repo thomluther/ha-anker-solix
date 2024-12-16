@@ -94,7 +94,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
         This method is used to consolidate various device related key values from various requests under a common set of device keys.
         """
-        sn = devData.get("device_sn")
+        sn = devData.pop("device_sn", None)
         if sn:
             device: dict = self.devices.get(sn, {})  # lookup old device info if any
             device.update({"device_sn": str(sn)})
@@ -403,6 +403,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 {
                                     "preset_system_output_power": SolixDefaults.PRESET_NOSCHEDULE,
                                     "preset_allow_export": SolixDefaults.ALLOW_EXPORT,
+                                    "preset_discharge_priority": SolixDefaults.DISCHARGE_PRIORITY_DEF,
                                     "preset_charge_priority": SolixDefaults.CHARGE_PRIORITY_DEF,
                                     "preset_power_mode": SolixDefaults.POWER_MODE
                                     if cnt > 1
@@ -504,10 +505,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         )[0].get("power")
                                         export = slot.get("turn_on")
                                         prio = slot.get("charge_priority")
+                                        if bool(value.get("is_show_priority_discharge")):
+                                            discharge_prio = slot.get(
+                                                "priority_discharge_switch"
+                                            )
+                                        else:
+                                            discharge_prio = None
                                         device.update(
                                             {
                                                 "preset_system_output_power": preset_power,
                                                 "preset_allow_export": export,
+                                                "preset_discharge_priority": discharge_prio,
                                                 "preset_charge_priority": prio,
                                             }
                                         )
@@ -677,6 +685,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
             self.devices.update({str(sn): device})
         return sn
+
+    def clearCaches(self) -> None:
+        """Clear the api cache dictionaries except the account cache."""
+        super().clearCaches()
+        if self.powerpanelApi:
+            self.powerpanelApi.clearCaches()
 
     async def update_sites(
         self,

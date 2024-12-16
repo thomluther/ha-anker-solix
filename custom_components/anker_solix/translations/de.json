@@ -718,6 +718,9 @@
             "preset_allow_export": {
                 "name": "Erlaube Leistungsabgabe"
             },
+            "preset_discharge_priority": {
+                "name": "Entladepriorität"
+            },
             "allow_refresh": {
                 "name": "Api Nutzung",
                 "state_attributes": {
@@ -825,7 +828,11 @@
                 },
                 "allow_export": {
                     "name": "Export erlauben",
-                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
+                    "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
+                },
+                "discharge_priority": {
+                    "name": "Enladepriorität",
+                    "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",
@@ -873,7 +880,11 @@
                 },
                 "allow_export": {
                     "name": "Export erlauben",
-                    "description": "Wenn deaktiviert wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
+                    "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
+                },
+                "discharge_priority": {
+                    "name": "Enladepriorität",
+                    "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",

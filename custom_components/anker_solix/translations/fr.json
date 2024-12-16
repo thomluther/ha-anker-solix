@@ -718,6 +718,9 @@
             "preset_allow_export": {
                 "name": "Autoriser l'exportation"
             },
+            "preset_discharge_priority": {
+                "name": "Décharge prioritaire"
+            },
             "allow_refresh": {
                 "name": "Utilisation de l'API",
                 "state_attributes": {
@@ -828,6 +831,10 @@
                     "name": "Autoriser l'exportation",
                     "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2)"
                 },
+                "discharge_priority": {
+                    "name": "Décharge prioritaire",
+                    "description": "Si activé, la décharge de la batterie sera prioritaire pour l'exportation et la production photovoltaïque éventuelle sera interrompue (ignoré pour solarbank 2)"
+                },
                 "charge_priority_limit": {
                     "name": "Limite de la priorité de charge",
                     "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé ou il s'agit d'un solarbank 2"
@@ -875,6 +882,10 @@
                 "allow_export": {
                     "name": "Autoriser l'exportation",
                     "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2)"
+                },
+                "discharge_priority": {
+                    "name": "Décharge prioritaire",
+                    "description": "Si activé, la décharge de la batterie sera prioritaire pour l'exportation et la production photovoltaïque éventuelle sera interrompue (ignoré pour solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limite de la priorité de charge",
