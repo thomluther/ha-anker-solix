@@ -1,5 +1,5 @@
 colorlog==6.9.0
 homeassistant>=2024.9.0
 pip>=21.0,<24.4
-ruff==0.8.3
+ruff==0.8.4
 aiofiles>=23.2.0
