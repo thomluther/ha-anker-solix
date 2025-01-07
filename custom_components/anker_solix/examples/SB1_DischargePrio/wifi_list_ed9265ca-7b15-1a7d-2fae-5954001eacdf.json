@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "100",
+        "device_sn": "9J7O8O4D8WLG8JQO",
+        "rssi": "",
+        "offline": false
+      }
+    ]
+  },
+  "trace_id": "b22ac6a55fc95858cd923b0f5d59efac"
+}

@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": true,
+    "device_list": [
+      {
+        "device_sn": "9J7O8O4D8WLG8JQO",
+        "device_name": "Solarbank E1600",
+        "auto_upgrade": false,
+        "alias_name": "SB E1600",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png"
+      }
+    ]
+  },
+  "trace_id": "76dccd8718f761ce1f5206243eefbcda"
+}

@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "ed9265ca-7b15-1a7d-2fae-5954001eacdf",
+        "site_name": "BKW",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": []
+  },
+  "trace_id": "715e11dbeea5cea6786cf94accfc1d3c"
+}

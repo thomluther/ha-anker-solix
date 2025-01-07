@@ -1,0 +1,26 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "mainSn": "",
+    "pcsSns": null,
+    "mainDeviceModel": "",
+    "connected": false,
+    "totalSystemSavings": 0,
+    "systemSavingsPriceUnit": "",
+    "saveCarbonFootprint": 0,
+    "saveCarbonUnit": "",
+    "saveCarbonC": 0.997,
+    "totalSystemPowerGeneration": 0,
+    "systemPowerGenerationUnit": "",
+    "numberOfParallelDevice": 0,
+    "batCount": 0,
+    "rePostTime": 5,
+    "supportDiesel": false,
+    "net": 0,
+    "isAddHeatPump": false,
+    "realNet": 0,
+    "systemCode": ""
+  },
+  "trace_id": "aaedc0fd9c0df94cdfcd19babaacfbc1"
+}

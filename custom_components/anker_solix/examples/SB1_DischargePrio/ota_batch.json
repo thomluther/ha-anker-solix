@@ -1,0 +1,53 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "9J7O8O4D8WLG8JQO",
+        "need_update": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A17C0",
+          "product_component": "A17C0",
+          "version": "v2.0.9",
+          "is_forced": false,
+          "md5": "d41d8cd98f00b204e9800998ecf8427e",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/11/30/iot-admin/QVUVoAf3Lz6oSrE8/A17C0_EUOTA_V2.0.9_20241105%28main%29.bin",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v2.0.9",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A17C0_mcu",
+            "rom_version_name": "v2.0.9",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/11/30/iot-admin/g2OkZo4bNcEo4gQB/A17C0_EUOTA_V2.0.9_20241105.bin",
+              "file_size": 263168,
+              "file_md5": "4cb797f68fd587a20175e47977d6134c"
+            },
+            "change_log": "",
+            "sub_current_version": ""
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C0_esp32",
+            "rom_version_name": "v0.0.9.8",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/11/30/iot-admin/G4UvLIqZTGIlkByY/A17C0_EUOTAWIFI_V0.0.9.8_20241015.bin",
+              "file_size": 1075968,
+              "file_md5": "668871003d506aad2dfe176a20d4ee48"
+            },
+            "change_log": "",
+            "sub_current_version": ""
+          }
+        ]
+      }
+    ]
+  },
+  "trace_id": "fe20cd9a6cdf61da92cc8ddbc0dad743"
+}

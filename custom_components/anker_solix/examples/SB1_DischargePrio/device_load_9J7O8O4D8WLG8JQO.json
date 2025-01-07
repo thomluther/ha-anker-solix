@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "ed9265ca-7b15-1a7d-2fae-5954001eacdf",
+    "home_load_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":5,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"9J7O8O4D8WLG8JQO\",\"power\":150}],\"priority_discharge_switch\":0},{\"id\":0,\"start_time\":\"08:30\",\"end_time\":\"15:50\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":100,\"number\":1}],\"charge_priority\":5,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"9J7O8O4D8WLG8JQO\",\"power\":50}],\"priority_discharge_switch\":0},{\"id\":0,\"start_time\":\"15:50\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"9J7O8O4D8WLG8JQO\",\"power\":150}],\"priority_discharge_switch\":1}],\"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":1,\"display_advanced_mode\":0,\"advanced_mode_min_load\":0,\"is_show_install_mode\":1,\"display_priority_discharge_tips\":0,\"priority_discharge_upgrade_devices\":\"\",\"default_home_load\":200,\"is_show_priority_discharge\":1}",
+    "current_home_load": "0W",
+    "parallel_home_load": "",
+    "parallel_display": false,
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "is_show_priority_discharge": 1
+  },
+  "trace_id": "dc11a6d4b534c18af72b6ee9fd0ce30a"
+}

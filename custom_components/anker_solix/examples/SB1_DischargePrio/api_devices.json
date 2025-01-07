@@ -1,0 +1,170 @@
+{
+  "9J7O8O4D8WLG8JQO": {
+    "device_sn": "9J7O8O4D8WLG8JQO",
+    "type": "solarbank",
+    "site_id": "ed9265ca-7b15-1a7d-2fae-5954001eacdf",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "generation": 1,
+    "battery_soc": "75",
+    "battery_capacity": "1600",
+    "battery_energy": "1200",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "detection",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "0",
+    "power_cutoff": 10,
+    "alias": "SB E1600",
+    "name": "Solarbank E1600",
+    "set_output_power": "0",
+    "set_system_output_power": "0",
+    "data_valid": true,
+    "solarbank_count": 1,
+    "bt_ble_mac": "4E3AFA92B4B7",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v2.0.9",
+    "tag": "",
+    "rssi": "",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v2.0.9",
+    "ota_children": [
+      {
+        "device_type": "A17C0_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v2.0.9"
+      },
+      {
+        "device_type": "A17C0_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.0.9.8"
+      }
+    ],
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A5140",
+      "solar_sn": "",
+      "solar_model_name": "MI60 Microinverter"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "08:30",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 300,
+              "number": 1
+            }
+          ],
+          "charge_priority": 5,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "9J7O8O4D8WLG8JQO",
+              "power": 150
+            }
+          ],
+          "priority_discharge_switch": 0
+        },
+        {
+          "id": 0,
+          "start_time": "08:30",
+          "end_time": "15:50",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 100,
+              "number": 1
+            }
+          ],
+          "charge_priority": 5,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "9J7O8O4D8WLG8JQO",
+              "power": 50
+            }
+          ],
+          "priority_discharge_switch": 0
+        },
+        {
+          "id": 0,
+          "start_time": "15:50",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 300,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "9J7O8O4D8WLG8JQO",
+              "power": 150
+            }
+          ],
+          "priority_discharge_switch": 1
+        }
+      ],
+      "min_load": 100,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 0,
+      "default_charge_priority": 0,
+      "is_zero_output_tips": 1,
+      "display_advanced_mode": 0,
+      "advanced_mode_min_load": 0,
+      "is_show_install_mode": 1,
+      "display_priority_discharge_tips": 0,
+      "priority_discharge_upgrade_devices": "",
+      "default_home_load": 200,
+      "is_show_priority_discharge": 1
+    },
+    "preset_system_output_power": 100,
+    "preset_allow_export": false,
+    "preset_discharge_priority": 0,
+    "preset_charge_priority": 5,
+    "preset_power_mode": null,
+    "preset_device_output_power": null,
+    "fittings": {}
+  }
+}

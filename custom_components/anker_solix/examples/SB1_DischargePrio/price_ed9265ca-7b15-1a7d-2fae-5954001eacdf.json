@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "ed9265ca-7b15-1a7d-2fae-5954001eacdf",
+    "price": 0.33,
+    "site_co2": 0,
+    "site_price_unit": "\u20ac",
+    "price_type": "fixed",
+    "current_mode": 0
+  },
+  "trace_id": "15af15c31c0cd5eceaf8c8aa2648d22c"
+}

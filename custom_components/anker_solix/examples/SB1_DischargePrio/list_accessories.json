@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": [
+    {
+      "name": "E1600 0W Output Switch",
+      "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/01/10/iot-admin/EPBsJ3a5JyMGqA1j/picl_A17Y0_normal.png",
+      "index": 1,
+      "product_code": "A17Y0",
+      "net_img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/01/10/iot-admin/7FhPIwMwf9BD0UPm/A17Y0_guide.png",
+      "net_guideline": "Click the button and the sync icon will quick blinking.",
+      "p_codes": null
+    }
+  ],
+  "trace_id": "e994edf30e753cb809fa0cb5cdaf89b1"
+}

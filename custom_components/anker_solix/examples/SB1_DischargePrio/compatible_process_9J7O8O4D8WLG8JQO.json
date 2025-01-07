@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "ota_complete_status": 2,
+    "process_skip_type": 1,
+    "solar_info": {
+      "solar_sn": "",
+      "solar_brand": "ANKER",
+      "solar_model": "A5140",
+      "brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f",
+      "model_img": "https://public-aiot-ore-qa.s3.us-west-2.amazonaws.com/product/870cd979-95d8-4cc1-89c4-04a26511c9b1/picl_A1771_normal.png",
+      "version": "",
+      "ota_status": 1,
+      "solar_model_name": "MI60 Microinverter"
+    }
+  },
+  "trace_id": "96f414241ef30a27cefd21c3c920bf57"
+}

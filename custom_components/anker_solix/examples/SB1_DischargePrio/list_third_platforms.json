@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "index": 0,
+        "name": "Shelly",
+        "content": "Shelly is a company specializing in smart home devices, providing high-performance, easy-to-use smart switches, sockets, sensors, and controllers that are compatible with other smart home systems to enhance user experience.",
+        "logo": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/08/29/iot-admin/isCjeqQviU5L4O7D/20240829-102526.jpg",
+        "tag": "shelly",
+        "url": "https://my.shelly.cloud/integrator.html",
+        "callback_url": "https://ankerpower-api-eu.anker.com/cloud/powerservice/shelly_callback",
+        "tag_code": "ITG_AIN2",
+        "products": [
+          {
+            "name": "3EM",
+            "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/08/29/iot-admin/5lyJ9NmYG5pD7NIA/3em.png",
+            "index": 0,
+            "product_code": "SHEM3",
+            "net_img_url": "",
+            "net_guideline": "",
+            "p_codes": null
+          },
+          {
+            "name": "Pro 3EM",
+            "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+            "index": 0,
+            "product_code": "SHEMP3",
+            "net_img_url": "",
+            "net_guideline": "",
+            "p_codes": null
+          }
+        ],
+        "countries": "DE,AT,FR,IT,ES,PL,PT"
+      }
+    ]
+  },
+  "trace_id": "101c9f7fccaa35fc1db7f247ab19bf58"
+}

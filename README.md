@@ -23,13 +23,13 @@ This Home Assistant custom integration utilizes the [anker-solix Python library]
 
 **Notes:**
 
-Anker power devices which are not configured into a power system in your Anker mobile app typically do **NOT** provide any consumption data to the Anker power cloud. Therefore the api library cannot get consumption data of standalone devices.
+Anker power devices which are not configured into a power system in your Anker mobile app typically do **NOT** provide any consumption data to the Anker power cloud. Likewise it has turned out, that portable power stations (PPS), power banks or power cooler do not send data to the Anker power cloud either since they are not configurable as a main power system device.Therefore, the Api library cannot get consumption data of standalone devices.
 
 Please refer to [supported sensors and devices](#supported-sensors-and-devices) for a list of supported Anker Solix devices.
 
 ## Disclaimer:
 
-🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the devices of Anker Solix power systems into their smart home. Initially, the Api library as well as the integration has been developed for monitoring of the Anker Solarbank only. Meanwhile additional devices and systems can be monitored and additional enhancements allow modifications of their device settings. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
+🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the devices of Anker Solix power systems into their smart home. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
 
 
 ## Usage terms and conditions:
@@ -45,10 +45,10 @@ Because of the way the Anker cloud Api works, one account with e-mail/password c
 
 **Attention:**
 
-System members cannot manage any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
+System members cannot manage any devices of the shared system or view any device details. You can only see the system overview in the app. Likewise you have the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
 
-Since the initial version of this integration did not support many setting capabilities, it was advised to use a shared account for the integration to monitor your power device values and integrate them into your home energy dashboards. The system owner account could be used in the Anker mobile app to maintain full control capabilities of your devices.
-Starting with version 1.1.0, the integration supports most of the relevant parameter changes for your system and your solarbank, including modifications of the solarbank schedule. To utilize those capabilities, you must use an owner account in the integration. Likewise you could use the shared account in the Anker mobile app.
+Since the initial version of this integration did not support many setting capabilities, it was advised to use a shared account for the HA integration to monitor your power system values and integrate them into your home energy dashboards. The system owner account could be used in the Anker mobile app to maintain full control capabilities of your devices.
+Starting with version 1.1.0, the integration supports most of the relevant parameter changes for your system and your solarbank, including modifications of the solarbank schedule. To utilize those capabilities, you must use an owner account in the HA integration. Likewise you can use the shared account in the Anker mobile app for system home page monitoring.
 
 For detailed usage instructions, please refer to the [INFO](INFO.md)
 
@@ -56,23 +56,23 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 ## Limitations
 
 - The used Api library is by no means an official Api and is very limited as there is no documentation at all
-- The Api or the login can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in the underlying Api library
-- The Api library was validated against both Anker cloud servers (EU and COM). Assignment of countries to either of the two servers however is unknown and depending on the selected country for your account. Upon wrong server assignment for your registered country, the Api may login but show no valid devices or sensors in the integration
+- The Api library or the login can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in the underlying Api library
+- The Api library was validated against both Anker cloud servers (EU and COM). Assignment of countries to either of the two servers however is unknown and depending on the selected country for your account. Upon wrong server assignment for your registered country, the Api may login but show no valid systems, devices or sensors in the integration
 - The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
 - The Anker account used in the integration cannot longer be used in the Anker mobile app since the cloud Api allows only 1 active client user token at a time. Existing user tokens will be removed from the server upon new client authentication requests. That means the integration kicks out the App user and vice versa. The behavior is the same as using the Anker app on multiple devices, which will kick out each other.
-- It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While device Wifi is disconnected, the reported data in the cloud may be stale. You can use the cloud state sensor of the end device to verify the device cloud connection state and potentially stale data.
-- The integration can support only Solix power devices which are defined in a power system via the Anker mobile app. While it may present also standalone devices that are not defined in a system, those standalone devices do not provide any usage or consumption data via the cloud Api and therefore will not present any power entitles.
+- It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While device Wifi is disconnected, the reported data in the cloud may be stale. You can use the cloud state sensor of the end device to verify the device cloud connection state and recognize potentially stale data.
+- The integration can support only Solix power devices which are defined in a power system via the Anker mobile app. While it may present also standalone devices that are not defined in a system, those standalone devices do not provide any usage or consumption data via the cloud Api and therefore will not present any power entities.
 - Further devices which can be added to a power system and managed by the Anker Power cloud may be added in future once examples of Api response data can be provided to the developers.
 
 **Note:**
 
-To export randomized example data of your Anker power system configuration, please refer to the [anker-solix Python library][anker-solix-api] and the tool [export_system.py](https://github.com/thomluther/anker-solix-api#export_systempy). A new [HA service/action to export anonymized Api response data](INFO.md#export-systems-service) was added to the integration to simplify data collection in a downloadable zip file.
+To export randomized example data of your Anker power system configuration, please refer to the [anker-solix Python library][anker-solix-api] and the tool [export_system.py](https://github.com/thomluther/anker-solix-api#export_systempy). A new [HA service/action to export anonymized Api response data](INFO.md#export-systems-action) was added to the integration to simplify data collection in a downloadable zip file.
 You can open a new [issue](https://github.com/thomluther/anker-solix-api/issues) in the api library repo and upload the zip file with the exported json files, together with a short description of your setup. Make sure to add your device to a Power System via the Anker mobile app before exporting the configuration. Standalone devices will barely provide data through the cloud Api.
 
 
 ## Supported sensors and devices
 
-**This integration will set up the following platforms and provides support for following devices:**
+**This integration will set up the following HA platforms and provides support for following Anker Solix devices:**
 
 Platform | Description
 -- | --

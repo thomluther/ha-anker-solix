@@ -831,12 +831,12 @@
                     "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
                 },
                 "discharge_priority": {
-                    "name": "Enladepriorität",
+                    "name": "Entladepriorität",
                     "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",
-                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
+                    "description": "Bis zum eingestellten Ladestand wird bei definiertem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
                 }
             }
         },
@@ -883,12 +883,12 @@
                     "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
                 },
                 "discharge_priority": {
-                    "name": "Enladepriorität",
+                    "name": "Entladepriorität",
                     "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",
-                    "description": "Bis zum eingestelten Ladestand wird bei eingestelltem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
+                    "description": "Bis zum eingestellten Ladestand wird bei definiertem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
                 }
             }
         }
