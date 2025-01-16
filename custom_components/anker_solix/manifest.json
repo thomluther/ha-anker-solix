@@ -12,9 +12,9 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/thomluther/ha-anker-solix/issues",
   "requirements": [
-    "aiohttp>=3.9.3",
+    "aiohttp>=3.10.11",
     "aiofiles>=23.2.0",
     "cryptography>=3.4.8"
   ],
-  "version": "2.4.1"
+  "version": "2.5.0"
 }
