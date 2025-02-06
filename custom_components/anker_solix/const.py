@@ -44,7 +44,7 @@ IMAGEFOLDER: str = "images"
 EXPORTFOLDER: str = "exports"
 
 ALLOW_TESTMODE: bool = (
-    True  # True will enable configuration options for testmode and testfolder
+    False  # True will enable configuration options for testmode and testfolder
 )
 TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
 CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
