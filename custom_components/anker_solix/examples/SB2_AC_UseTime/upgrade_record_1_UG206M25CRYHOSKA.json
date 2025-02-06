@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "UG206M25CRYHOSKA",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-01-27 15:31:51",
+        "upgrade_version": "v1.0.3.2",
+        "pre_version": "v1.0.2.3",
+        "upgrade_type": "2",
+        "upgrade_desc": "",
+        "device_sn": "UG206M25CRYHOSKA",
+        "device_name": "Solarbank 2 E1600 AC",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "befa97b7ba2b7abc18ff9edcfaea338c"
+}

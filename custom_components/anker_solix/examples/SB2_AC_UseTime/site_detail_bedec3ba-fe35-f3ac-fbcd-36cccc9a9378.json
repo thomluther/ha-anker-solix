@@ -1,0 +1,30 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_info": {
+      "site_id": "bedec3ba-fe35-f3ac-fbcd-36cccc9a9378",
+      "site_name": "Rheinbach",
+      "site_img": "",
+      "device_type_list": null,
+      "ms_type": 0,
+      "power_site_type": 11,
+      "is_allow_delete": false,
+      "support_device_models": [
+        "A17C2",
+        "A17X7",
+        "A17X8",
+        "SHEM3",
+        "SHEMP3"
+      ],
+      "current_site_device_models": null
+    },
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "grid_list": [],
+    "smartplug_list": []
+  },
+  "trace_id": "1b08e8daccada441ba9b10f49fad189e"
+}

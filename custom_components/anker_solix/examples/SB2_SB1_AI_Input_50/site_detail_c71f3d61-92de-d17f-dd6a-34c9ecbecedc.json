@@ -1,0 +1,112 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_info": {
+      "site_id": "c71f3d61-92de-d17f-dd6a-34c9ecbecedc",
+      "site_name": "FluxKompensator",
+      "site_img": "",
+      "device_type_list": [
+        3,
+        6
+      ],
+      "ms_type": 0,
+      "power_site_type": 5,
+      "is_allow_delete": false,
+      "support_device_models": [
+        "A17C1",
+        "A17X7",
+        "SHEM3",
+        "SHEMP3",
+        "A17X8",
+        "A17C0"
+      ],
+      "current_site_device_models": null
+    },
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [
+      {
+        "device_pn": "A17C1",
+        "device_sn": "6SFNCVTFOG0OC6AP",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "battery_power": "",
+        "bind_site_status": "",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "",
+        "wireless_type": "",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 1735924816,
+        "set_load_power": "",
+        "sub_package_num": 0,
+        "output_cutoff_data": 0,
+        "is_display": false,
+        "bat_charge_power": ""
+      },
+      {
+        "device_pn": "A17C0",
+        "device_sn": "V58HMP9PK2TW1G0A",
+        "device_name": "Solarbank Wohnzimmer",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "",
+        "wireless_type": "",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 1735925245,
+        "set_load_power": "",
+        "sub_package_num": 0,
+        "output_cutoff_data": 0,
+        "is_display": false,
+        "bat_charge_power": ""
+      },
+      {
+        "device_pn": "A17C0",
+        "device_sn": "3K3YXE9E47A6YH8M",
+        "device_name": "Solarbank Wintergarten",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "",
+        "wireless_type": "",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 1735925314,
+        "set_load_power": "",
+        "sub_package_num": 0,
+        "output_cutoff_data": 0,
+        "is_display": false,
+        "bat_charge_power": ""
+      }
+    ],
+    "powerpanel_list": [],
+    "grid_list": [
+      {
+        "device_pn": "SHEMP3",
+        "device_sn": "RXRMEJ2X4LL98",
+        "device_name": "Hauptstrom Keller",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+        "create_time": 0,
+        "status": "",
+        "bind_site_status": "",
+        "wireless_type": ""
+      }
+    ],
+    "smartplug_list": []
+  },
+  "trace_id": "02164ab9af2959e96a1fe4c1087dc1ae"
+}

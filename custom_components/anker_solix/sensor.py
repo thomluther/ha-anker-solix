@@ -79,7 +79,9 @@ from .solixapi.apitypes import (
     SolixDeviceStatus,
     SolixDeviceType,
     SolixParmType,
+    SolarbankRatePlan,
     SolarbankTimeslot,
+    SolarbankUsageMode,
     Solarbank2Timeslot,
 )
 from .entity import (
@@ -117,6 +119,7 @@ DEVICE_SENSORS = [
         key="status_desc",
         translation_key="status_desc",
         json_key="status_desc",
+        entity_category=EntityCategory.DIAGNOSTIC,
         device_class=SensorDeviceClass.ENUM,
         options=[status.name for status in SolixDeviceStatus],
         attrib_fn=lambda d, _: {
@@ -284,6 +287,26 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
+        key="micro_inverter_power",
+        translation_key="micro_inverter_power",
+        json_key="micro_inverter_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="micro_inverter_power_limit",
+        translation_key="micro_inverter_power_limit",
+        json_key="micro_inverter_power_limit",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
         key="energy_today",
         translation_key="energy_today",
         json_key="energy_today",
@@ -315,7 +338,7 @@ DEVICE_SENSORS = [
         value_fn=lambda d, jk, _: str(d.get(jk) or "").replace("W", "") or None,
         # Force the creation for solarbanks since data could be empty if disconnected?
         force_creation_fn=lambda d: bool(
-            d.get("type") == SolixDeviceType.SOLARBANK.value
+            d.get("type") == SolixDeviceType.SOLARBANK.value and "set_output_power" in d
         ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
@@ -333,6 +356,9 @@ DEVICE_SENSORS = [
             "mode": d.get("preset_power_mode"),
         },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        force_creation_fn=lambda d: "preset_power_mode" in d
+        and d.get("cascaded")
+        and int(d.get("solarbank_count") or 0) > 1,
     ),
     AnkerSolixSensorDescription(
         key="state_of_charge",
@@ -468,6 +494,7 @@ DEVICE_SENSORS = [
         translation_key="grid_status_desc",
         json_key="grid_status_desc",
         device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
         options=[status.name for status in SmartmeterStatus],
         attrib_fn=lambda d, _: {"grid_status": d.get("grid_status")},
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTMETER.value} - s),
@@ -840,7 +867,7 @@ SITE_SENSORS = [
         # device_class=SensorDeviceClass.WEIGHT,
         state_class=SensorStateClass.MEASUREMENT,
         force_creation_fn=lambda d: True,
-        value_fn=lambda d, jk, _: float(
+        value_fn=lambda d, jk, _: (
             (
                 [
                     stat.get(jk)
@@ -870,7 +897,7 @@ SITE_SENSORS = [
         # device_class=SensorDeviceClass.MONETARY,   # remove MONETARY device class as fix for issue #35
         suggested_display_precision=2,
         force_creation_fn=lambda d: True,
-        value_fn=lambda d, jk, _: float(
+        value_fn=lambda d, jk, _: (
             (
                 [
                     stat.get(jk)
@@ -908,7 +935,7 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.ENERGY,
         force_creation_fn=lambda d: True,
         feature=AnkerSolixEntityFeature.SYSTEM_INFO,
-        value_fn=lambda d, jk, _: float(
+        value_fn=lambda d, jk, _: (
             (
                 [
                     stat.get(jk)
@@ -947,6 +974,23 @@ SITE_SENSORS = [
         value_fn=lambda d, jk, _: str(d.get(jk) or "").replace("W", "") or None,
         # Common site field, may also be used by other devices beside solarbank
         # exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="active_scene_mode",
+        translation_key="active_scene_mode",
+        json_key="scene_mode",
+        device_class=SensorDeviceClass.ENUM,
+        options=[m.name for m in SolarbankUsageMode],
+        value_fn=lambda d, jk, _: None
+        if not ((mode := d.get(jk)) and str(mode).isdigit())
+        else next(
+            iter([m.name for m in SolarbankUsageMode if m.value == mode]),
+            "unknown",
+        ),
+        attrib_fn=lambda d, _: {
+            "mode_type": d.get("scene_mode"),
+        },
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="daily_discharge_energy",
@@ -1964,12 +2008,30 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 SERVICE_SET_SOLARBANK_SCHEDULE,
                 SERVICE_UPDATE_SOLARBANK_SCHEDULE,
             ]:
+                if (plan := kwargs.get(PLAN)) in [cv.ENTITY_MATCH_NONE]:
+                    plan = None
+                # Raise error if selected (active) plan not usable for the service
+                if plan not in {
+                    SolarbankRatePlan.smartplugs,
+                    SolarbankRatePlan.manual,
+                } and data.get("preset_usage_mode") not in {None, 1, 2, 3}:
+                    raise ServiceValidationError(
+                        f"The action {service_name} cannot be executed: {'Selected plan [' + str(plan) + '] of [' + self.entity_id + '] not usable for this action'}.",
+                        translation_domain=DOMAIN,
+                        translation_key="slot_time_error",
+                        translation_placeholders={
+                            "service": service_name,
+                            "error": "Selected plan ["
+                            + str(plan)
+                            + "] of ["
+                            + self.entity_id
+                            + "]not usable for this action",
+                        },
+                    )
                 if START_TIME in kwargs and END_TIME in kwargs:
                     if (start_time := kwargs.get(START_TIME)) < (
                         end_time := kwargs.get(END_TIME)
                     ):
-                        if (plan := kwargs.get(PLAN)) in [cv.ENTITY_MATCH_NONE]:
-                            plan = None
                         if (weekdays := kwargs.get(WEEK_DAYS)) == cv.ENTITY_MATCH_NONE:
                             weekdays = None
                         if (load := kwargs.get(APPLIANCE_LOAD)) == cv.ENTITY_MATCH_NONE:
@@ -1986,7 +2048,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             discharge_prio := kwargs.get(DISCHARGE_PRIORITY)
                         ) == cv.ENTITY_MATCH_NONE:
                             discharge_prio = None
-                        if (prio := kwargs.get(CHARGE_PRIORITY_LIMIT)) == cv.ENTITY_MATCH_NONE:
+                        if (
+                            prio := kwargs.get(CHARGE_PRIORITY_LIMIT)
+                        ) == cv.ENTITY_MATCH_NONE:
                             prio = None
                         # check if now is in given time range and ensure preset increase is limited by min interval
                         now = datetime.now().astimezone()
@@ -2076,6 +2140,22 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 result = False
                         else:
                             # SB1 schedule action
+                            # Raise error if action currently not usable for active schedule
+                            if (
+                                data.get("cascaded")
+                                and data.get("preset_allow_export") is None
+                            ):
+                                raise ServiceValidationError(
+                                    f"The action {service_name} cannot be executed: {'Active schedule of [' + self.entity_id + '] not usable for this action'}.",
+                                    translation_domain=DOMAIN,
+                                    translation_key="slot_time_error",
+                                    translation_placeholders={
+                                        "service": service_name,
+                                        "error": "Active schedule of ["
+                                        + self.entity_id
+                                        + "] not usable for this action",
+                                    },
+                                )
                             # Map action keys to api slot keys
                             slot = SolarbankTimeslot(
                                 start_time=start_time,
@@ -2213,6 +2293,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             )
                 else:
                     # clear SB 1 schedule
+                    # No need to Raise error if cascaded, since clearing will directly be done against correct Api device param for custom SB1 schedule
                     schedule = {"ranges": []}
                     if self.coordinator.client.testmode():
                         LOGGER.info(

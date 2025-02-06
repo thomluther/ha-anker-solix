@@ -153,52 +153,113 @@ async def poll_sites(  # noqa: C901
             sb_total_charge = sb_info.get("total_charging_power", "")
             sb_total_output = sb_info.get("total_output_power", "")
             sb_total_solar = sb_info.get("total_photovoltaic_power", "")
+            sb_total_battery_discharge = sb_info.get("battery_discharge_power", "")
+            sb_total_soc = sb_info.get("total_battery_power", "")
             sb_total_charge_calc = 0
+            sb_total_casc_out_calc = 0
             sb_charges: dict = {}
             sb_list = sb_info.get("solarbank_list") or []
+            # Mark if SB system contains cascaded solarbanks for proper totals calculation
+            if (
+                cascaded_system := len({sb.get("device_pn") for sb in sb_list}) > 1
+                or None
+            ):
+                sb_total_output_calc = 0
+                sb_total_solar_calc = 0
+                sb_total_battery_discharge_calc = 0
+                sb_total_soc_calc = []
+            else:
+                sb_total_output_calc = sb_total_output
+                sb_total_solar_calc = sb_total_solar
+                sb_total_battery_discharge_calc = sb_total_battery_discharge
+                sb_total_soc_calc = sb_total_soc
+
             for index, solarbank in enumerate(sb_list):
                 # work around for device_name which is actually the device_alias in scene info
                 if "device_name" in solarbank:
                     # modify only a copy of the device dict to prevent changing the scene info dict
                     solarbank = dict(solarbank).copy()
                     solarbank.update({"alias_name": solarbank.pop("device_name")})
-                # work around for system and device output presets in dual solarbank setups, which are not set correctly and cannot be queried with load schedule for shared accounts
+                # work around for system and device output presets in dual solarbank 1 setups, which are not set correctly and cannot be queried with load schedule for shared accounts
                 total_preset = str(mysite.get("retain_load", "")).replace("W", "")
+                # get count of same solarbank types in site
+                sb_count = max(
+                    1,
+                    len(
+                        [
+                            sb
+                            for sb in sb_list
+                            if sb.get("device_pn") == solarbank.get("device_pn")
+                        ]
+                    ),
+                )
                 if (
                     not str(solarbank.get("set_load_power")).isdigit()
                     and total_preset.isdigit()
                 ):
                     solarbank.update(
                         {
-                            "parallel_home_load": f"{(int(total_preset)/len(sb_list)):.0f}",
+                            "parallel_home_load": f"{(int(total_preset) / sb_count):.0f}",
                             "current_home_load": total_preset,
                         }
                     )
+                # Mark SB1 cascaded of other SB types in system
+                cascaded = (
+                    sb_count != len(sb_list) and solarbank.get("device_pn") in ["A17C0"]
+                ) or None
+
                 # Work around for weird charging power fields in SB totals and device list: They have same names, but completely different usage
                 # SB total charging power shows only power into the battery. At this time, charging power in device list seems to reflect the output power. This is seen for status 3
                 # SB total charging power show 0 when discharging, but then device charging power shows correct value. This is seen for status 2
-                # Conclusion: SB total charging power is correct total power INTO the batteries. When discharging it is 0
-                # Device list charging power is ONLY correct power OUT of the batteries. When charging it is 0 or shows the output power.
+                # Conclusion: SB total charging power is correct total power INTO the batteries. When discharging it is 0 (Only SB2 total in SB1/SB2 combined systems)
+                # New field battery_discharge_power is correct total discharge OUT of the batteries. (Only SB2 total in SB1/SB2 combined systems)
+                # Device list charging power is ONLY correct power OUT of the batteries. When charging it is 0 or shows the output power. It seems to be the discharge power
                 # Need to simplify this per device details and SB totals, will use positive value on both for charging power and negative for discharging power
                 # calculate estimate based on total for proportional split across available solarbanks and their calculated charge power
+                # Consider correction of totals for combined SB1/SB2 systems which reflect only SB2 totals, which likely also causes wrong energy statistics in the cloud
                 with contextlib.suppress(ValueError):
                     charge_calc = 0
-                    power_in = int(solarbank.get("photovoltaic_power", ""))
-                    power_out = int(solarbank.get("output_power", ""))
-                    # power_charge = int(solarbank.get("charging_power", "")) # This value seems to reflect the output power, which is corect for status 2, but may be wrong for other states
-                    charge_calc = power_in - power_out
+                    power_in = int(solarbank.get("photovoltaic_power"))
+                    power_out = int(solarbank.get("output_power"))
+                    soc = int(solarbank.get("battery_power"))
+                    # power_charge = int(solarbank.get("charging_power", "")) # This value seems to reflect the output or discharge power, which is correct for status 2, but may be wrong for other states
+                    # charge and discharge power will be combined into charging_power field to eliminate cloud field inconsistency and use negative values for discharge power
+                    # The cloud introduced new solarbank field bat_charge_power which seems to reflect the positive charging power. It will be used if larger than calculated power
+                    batt_charge = int(solarbank.get("bat_charge_power") or 0)
+                    if (charge_calc := power_in - power_out) >= 0:
+                        # No discharging, use the bat charge value if available in response
+                        charge_calc = max(charge_calc,batt_charge)
                     solarbank["charging_power"] = str(
                         charge_calc
                     )  # allow negative values
+                    # calculate correct totals
                     sb_total_charge_calc += charge_calc
+                    if cascaded_system:
+                        # accumulate all PV per device, substract cascaded output total at the end
+                        sb_total_solar_calc += power_in
+                        # accumulate only discharge power (negative values) to absolute discharge
+                        sb_total_battery_discharge_calc -= min(0, charge_calc)
+                        # accumulate weighted SOC in list
+                        sb_total_soc_calc.extend(
+                            [soc] * (int(solarbank.get("sub_package_num") or 0) + 1)
+                        )
+                        if cascaded:
+                            # Solarbank is first device
+                            sb_total_casc_out_calc += power_out
+                        else:
+                            # Solarbank is last device
+                            sb_total_output_calc += power_out
+
                 mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                 new_sites.update({myid: mysite})
-                # add count of solarbanks to device details and other metrics that might be device related
+                # add count of same solarbanks to device details and other metrics that might be device related
                 if sn := api._update_dev(
                     solarbank
                     | {
                         "data_valid": data_valid,
-                        "solarbank_count": len(sb_list),
+                        "solarbank_count": sb_count,
+                        # mark SB1 cascaded if other type in system
+                        "cascaded": cascaded,
                         "solar_power_1": sb_info.get("solar_power_1"),
                         "solar_power_2": sb_info.get("solar_power_2"),
                         "solar_power_3": sb_info.get("solar_power_3"),
@@ -207,8 +268,12 @@ async def poll_sites(  # noqa: C901
                         "to_home_load": sb_info.get("to_home_load"),
                         "other_input_power": sb_info.get("other_input_power"),
                         "micro_inverter_power": sb_info.get("micro_inverter_power"),
-                        "micro_inverter_power_limit": sb_info.get("micro_inverter_power_limit"),
-                        "micro_inverter_low_power_limit": sb_info.get("micro_inverter_low_power_limit"),
+                        "micro_inverter_power_limit": sb_info.get(
+                            "micro_inverter_power_limit"
+                        ),
+                        "micro_inverter_low_power_limit": sb_info.get(
+                            "micro_inverter_low_power_limit"
+                        ),
                         "grid_to_battery_power": sb_info.get("grid_to_battery_power"),
                         "pei_heating_power": sb_info.get("pei_heating_power"),
                         # only passed to device for proper SB2 charge status update
@@ -229,12 +294,36 @@ async def poll_sites(  # noqa: C901
                                 "retain_load": total_preset,  # only a flag to indicate the actual schedule preset updates don't need to update site appliance load
                             }
                         )
-            # adjust calculated SB charge to match total
-            if len(sb_charges) == len(sb_list) and str(sb_total_charge).isdigit():
+            # finally adjust solarbank totals for cascaded system in site cache since SB1 and SB2 combined systems report totals only for SB2 system from scene info
+            if cascaded_system:
+                # Add info for cascaded solarbanks
+                mysite["solarbank_info"]["sb_cascaded"] = True
+                # subtract cascaded output total from pv total
+                mysite["solarbank_info"]["total_photovoltaic_power"] = str(
+                    max(0, sb_total_solar_calc - sb_total_casc_out_calc)
+                )
+                mysite["solarbank_info"]["total_charging_power"] = str(
+                    sb_total_charge_calc
+                )
+                mysite["solarbank_info"]["total_output_power"] = str(
+                    sb_total_output_calc
+                )
+                mysite["solarbank_info"]["total_battery_power"] = str(
+                    round(sum(sb_total_soc_calc) / len(sb_total_soc_calc) / 100, 2)
+                )
+                # adjust new battery discharge total if available
+                if str(
+                    (mysite.get("solarbank_info") or {}).get("battery_discharge_power")
+                ).isdigit():
+                    mysite["solarbank_info"]["battery_discharge_power"] = str(
+                        sb_total_battery_discharge_calc
+                    )
+            # otherwise adjust calculated SB charge to match total if only one SB type
+            elif str(sb_total_charge).isdigit():
                 sb_total_charge = int(sb_total_charge)
                 if sb_total_charge_calc < 0:
                     with contextlib.suppress(ValueError):
-                        # discharging, adjust sb total charge value in scene info and allow negativ value to indicate discharge
+                        # discharging, adjust sb total charge value in scene info and allow negative value to indicate discharge
                         sb_total_charge = float(sb_total_solar) - float(sb_total_output)
                         mysite["solarbank_info"]["total_charging_power"] = str(
                             sb_total_charge
@@ -335,7 +424,17 @@ async def poll_sites(  # noqa: C901
                     powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                 if sn := api._update_dev(
                     # merge powerpanel device details if available
-                    powerpanel | ((api.powerpanelApi.devices.get(powerpanel.get("device_sn") or "") or {}) if api.powerpanelApi else {}),
+                    powerpanel
+                    | (
+                        (
+                            api.powerpanelApi.devices.get(
+                                powerpanel.get("device_sn") or ""
+                            )
+                            or {}
+                        )
+                        if api.powerpanelApi
+                        else {}
+                    ),
                     devType=SolixDeviceType.POWERPANEL.value,
                     siteId=myid,
                     isAdmin=admin,
@@ -467,6 +566,10 @@ async def poll_device_details(
                         api._logger.debug("Getting inverter settings for device")
                         await api.get_solar_info(solarbankSn=sn, fromFile=fromFile)
                     # Fetch schedule for Solarbank 1
+                    # Note: There may be different schedules for SB1 devices when used in combined system with SB2
+                    # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
+                    # SB2 is using Manual mode and sync its settings to SB1
+                    # get_device_parm with param for SB1 schedule seems to return always the full SB1 schedule, even if not active
                     api._logger.debug("Getting schedule details for device")
                     await api.get_device_load(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
@@ -479,6 +582,7 @@ async def poll_device_details(
                         )
                 else:
                     # Fetch schedule for Solarbank 2
+                    # Note: get_device_load always seems to return SB1 schedule format, which does not contain usefull values for the SB2
                     api._logger.debug("Getting schedule details for device")
                     await api.get_device_parm(
                         siteId=site_id,

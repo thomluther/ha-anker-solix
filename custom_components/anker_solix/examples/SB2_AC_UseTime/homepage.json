@@ -1,0 +1,35 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "bedec3ba-fe35-f3ac-fbcd-36cccc9a9378",
+        "site_name": "Rheinbach",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      },
+      {
+        "site_id": "a283eb18-511c-f6e6-da9d-fecf81ea79ad",
+        "site_name": "Rheinbach L1",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": []
+  },
+  "trace_id": "9fbdf98fb2accd2ed5b66f0c8aea0a12"
+}

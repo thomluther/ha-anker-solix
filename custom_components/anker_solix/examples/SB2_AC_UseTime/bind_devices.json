@@ -1,0 +1,87 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "UG206M25CRYHOSKA",
+        "product_code": "A17C2",
+        "bt_ble_id": "73:46:CD:57:D0:45",
+        "bt_ble_mac": "7346CD57D045",
+        "device_name": "Solarbank 2 E1600 AC",
+        "alias_name": "Rheinbach L1",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/11/11/iot-admin/NycsbknWijoZcv1b/output.lin.png",
+        "link_time": 1737474582,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.0.3.2",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-52"
+      },
+      {
+        "device_sn": "94NYIMTJN2AQGQ7K",
+        "product_code": "A17C1",
+        "bt_ble_id": "D7:31:A0:7E:88:18",
+        "bt_ble_mac": "D731A07E8818",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "alias_name": "Rheinbach L3",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "link_time": 1735221175,
+        "wifi_online": false,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.0.5.29",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-58"
+      },
+      {
+        "device_sn": "XWZNFAX5WB8KK3I",
+        "product_code": "SHEMP3",
+        "bt_ble_id": "",
+        "bt_ble_mac": "",
+        "device_name": "stromzaehler-01",
+        "alias_name": "stromzaehler-01",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+        "link_time": 1733749435,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": ""
+      }
+    ]
+  },
+  "trace_id": "3fdccbebfc4d7863dc2b4dece2d4bcb5"
+}

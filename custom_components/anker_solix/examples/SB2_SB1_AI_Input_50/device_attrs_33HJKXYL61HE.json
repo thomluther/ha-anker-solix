@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "33HJKXYL61HE",
+    "attributes": {}
+  },
+  "trace_id": "cc7f2d424c5aefebec145fa98c5eea56"
+}

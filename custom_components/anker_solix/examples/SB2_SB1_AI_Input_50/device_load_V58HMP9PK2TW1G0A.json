@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "c71f3d61-92de-d17f-dd6a-34c9ecbecedc",
+    "home_load_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":150,\"number\":1}],\"charge_priority\":80,\"power_setting_mode\":1,\"device_power_loads\":[{\"device_sn\":\"V58HMP9PK2TW1G0A\",\"power\":75},{\"device_sn\":\"3K3YXE9E47A6YH8M\",\"power\":75}],\"priority_discharge_switch\":0}],\"min_load\":100,\"max_load\":1200,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":80,\"is_zero_output_tips\":0,\"display_advanced_mode\":1,\"advanced_mode_min_load\":50,\"is_show_install_mode\":1,\"display_priority_discharge_tips\":0,\"priority_discharge_upgrade_devices\":\"\",\"default_home_load\":200,\"is_show_priority_discharge\":0}",
+    "current_home_load": "150W",
+    "parallel_home_load": "75W",
+    "parallel_display": true,
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "is_show_priority_discharge": 0
+  },
+  "trace_id": "1cf2bf1bb512bbdcb21cfcecd9528405"
+}

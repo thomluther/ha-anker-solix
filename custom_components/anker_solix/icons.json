@@ -20,6 +20,13 @@
                     "off": "mdi:check-circle-outline"
                 }
             },
+            "heating": {
+                "default": "mdi:thermometer-alert",
+                "state": {
+                    "on": "mdi:radiator",
+                    "off": "mdi:radiator-off"
+                }
+            },
             "site_admin": {
                 "default": "mdi:account-alert",
                 "state": {
@@ -42,6 +49,14 @@
                 }
             }
         },
+        "datetime": {
+            "preset_manual_backup_start": {
+                "default": "mdi:clock-start"
+            },
+            "preset_manual_backup_end": {
+                "default": "mdi:clock-end"
+            }
+        },
         "number": {
             "preset_system_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"
@@ -54,6 +69,9 @@
             },
             "system_price": {
                 "default": "mdi:cash-edit"
+            },
+            "preset_plan_price": {
+                "default": "mdi:cash-edit"
             }
         },
         "select": {
@@ -64,11 +82,20 @@
                 "default": "mdi:account-clock",
                 "state": {
                     "smartmeter": "mdi:auto-mode",
-                    "smartplugs": "mdi:power-plug"
+                    "smartplugs": "mdi:power-plug",
+                    "backup": "mdi:power-plug-battery-outline",
+                    "use_time": "mdi:battery-clock"
                 }
             },
             "system_price_unit": {
                 "default": "mdi:cash-edit"
+            },
+            "system_price_type": {
+                "default": "mdi:cash-edit",
+                "state": {
+                    "fixed": "mdi:cash-lock",
+                    "use_time": "mdi:cash-clock"
+                }
             }
         },
         "sensor": {
@@ -134,6 +161,12 @@
             "grid_to_battery_power": {
                 "default": "mdi:power-plug-battery"
             },
+            "micro_inverter_power": {
+                "default": "mdi:sine-wave"
+            },
+            "micro_inverter_power_limit": {
+                "default": "mdi:flash-triangle-outline"
+            },
             "fittings": {
                 "default": "mdi:tools"
             },
@@ -144,6 +177,17 @@
                 "default": "mdi:alert-box",
                 "state": {
                     "0": "mdi:checkbox-outline"
+                }
+            },
+            "active_scene_mode": {
+                "default": "mdi:alert-box-outline",
+                "state": {
+                    "smartmeter": "mdi:numeric-1-box-outline",
+                    "smartplugs": "mdi:numeric-2-box-outline",
+                    "manual": "mdi:numeric-3-box-outline",
+                    "backup": "mdi:numeric-4-box-outline",
+                    "use_time": "mdi:numeric-5-box-outline",
+                    "unknown": "mdi:help-box-outline"
                 }
             },
             "daily_discharge_energy": {
@@ -304,6 +348,13 @@
                 "state": {
                     "on": "mdi:battery-arrow-down",
                     "off": "mdi:battery-clock"
+                }
+            },
+            "preset_backup_option": {
+                "default": "mdi:timer-alert-outline",
+                "state": {
+                    "off": "mdi:power-plug-battery-outline",
+                    "on": "mdi:power-plug-battery"
                 }
             },
             "allow_refresh": {

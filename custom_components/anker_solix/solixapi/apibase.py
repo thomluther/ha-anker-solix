@@ -111,7 +111,7 @@ class AnkerSolixBaseApi:
             for site in rem_sites:
                 self.sites.pop(site, None)
 
-    def _update_account(  # noqa: C901
+    def _update_account(
         self,
         details: dict | None = None,
     ) -> None:
@@ -146,7 +146,7 @@ class AnkerSolixBaseApi:
         )
         self.account = account_details
 
-    def _update_site(  # noqa: C901
+    def _update_site(
         self,
         siteId: str,
         details: dict,
@@ -164,7 +164,7 @@ class AnkerSolixBaseApi:
             self.sites[siteId] = {}
         self.sites[siteId]["site_details"] = site_details
 
-    def _update_dev(  # noqa: C901
+    def _update_dev(
         self,
         devData: dict,
         devType: str | None = None,
@@ -237,7 +237,7 @@ class AnkerSolixBaseApi:
         siteId: str | None = None,
         fromFile: bool = False,
         exclude: set | None = None,
-    ) -> dict:  # noqa: C901
+    ) -> dict:
         """Create/Update api sites cache structure.
 
         Implement this method to get the latest info for all accessible sites or only the provided siteId and update class cache dictionaries.

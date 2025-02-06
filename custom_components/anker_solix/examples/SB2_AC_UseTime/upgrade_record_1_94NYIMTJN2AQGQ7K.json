@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "94NYIMTJN2AQGQ7K",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2024-12-26 15:01:15",
+        "upgrade_version": "v1.0.5.29",
+        "pre_version": "v0.0.0.1",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "94NYIMTJN2AQGQ7K",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "6d13235c4feb16c3b55c3a0a52e2de46"
+}

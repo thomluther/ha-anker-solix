@@ -22,6 +22,7 @@ TC_LINK: str = "https://github.com/thomluther/ha-anker-solix/blob/main/README.md
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.DATETIME,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
@@ -43,7 +44,7 @@ IMAGEFOLDER: str = "images"
 EXPORTFOLDER: str = "exports"
 
 ALLOW_TESTMODE: bool = (
-    False  # True will enable configuration options for testmode and testfolder
+    True  # True will enable configuration options for testmode and testfolder
 )
 TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
 CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
@@ -107,9 +108,11 @@ VALID_CHARGE_PRIORITY = vol.Any(
 VALID_SWITCH = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
 VALID_WEEK_DAYS = vol.Any(None, cv.ENTITY_MATCH_NONE, cv.weekdays)
 VALID_PLAN = vol.Any(
-    None, cv.ENTITY_MATCH_NONE, vol.Any("active", "custom_rate_plan", "blend_plan")
+    None,
+    cv.ENTITY_MATCH_NONE,
+    vol.Any(api.SolarbankRatePlan.manual, api.SolarbankRatePlan.smartplugs),
 )
-
+EXTRA_PLAN_AC = vol.Any(api.SolarbankRatePlan.backup, api.SolarbankRatePlan.use_time)
 
 SOLARBANK_TIMESLOT_DICT: dict = {
     vol.Required(START_TIME): VALID_DAYTIME,
@@ -149,7 +152,7 @@ SOLIX_WEEKDAY_SCHEMA: vol.Schema = vol.All(
             **cv.TARGET_SERVICE_FIELDS,
             vol.Optional(
                 PLAN,
-            ): VALID_PLAN,
+            ): vol.Any(VALID_PLAN,EXTRA_PLAN_AC),
             vol.Optional(
                 WEEK_DAYS,
             ): VALID_WEEK_DAYS,

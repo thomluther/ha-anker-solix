@@ -1,0 +1,69 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [
+      {
+        "device_pn": "A17C2",
+        "device_sn": "UG206M25CRYHOSKA",
+        "device_name": "Rheinbach L1",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/11/11/iot-admin/NycsbknWijoZcv1b/output.lin.png",
+        "battery_power": "",
+        "bind_site_status": "1",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "1",
+        "wireless_type": "1",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 0,
+        "set_load_power": "",
+        "sub_package_num": 0,
+        "output_cutoff_data": 0,
+        "is_display": false,
+        "bat_charge_power": ""
+      },
+      {
+        "device_pn": "A17C1",
+        "device_sn": "94NYIMTJN2AQGQ7K",
+        "device_name": "Rheinbach L3",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "battery_power": "",
+        "bind_site_status": "0",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "0",
+        "wireless_type": "1",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 0,
+        "set_load_power": "",
+        "sub_package_num": 0,
+        "output_cutoff_data": 0,
+        "is_display": false,
+        "bat_charge_power": ""
+      }
+    ],
+    "powerpanel_list": [],
+    "grid_list": [
+      {
+        "device_pn": "SHEMP3",
+        "device_sn": "XWZNFAX5WB8KK3I",
+        "device_name": "stromzaehler-01",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+        "create_time": 0,
+        "status": "1",
+        "bind_site_status": "1",
+        "wireless_type": "1"
+      }
+    ],
+    "smartplug_list": []
+  },
+  "trace_id": "3aa3b7ebac114d2d312dafe4d8baf2e9"
+}

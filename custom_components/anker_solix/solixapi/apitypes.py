@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from typing import ClassVar
 
 # API servers per region. Country assignment not clear, defaulting to EU server
@@ -144,7 +144,7 @@ API_ENDPOINTS = {
 API_CHARGING_ENDPOINTS = {
     "get_error_info": "charging_energy_service/get_error_infos",  # No input param needed, show errors for account?
     "get_system_running_info": "charging_energy_service/get_system_running_info",  # Cumulative Home/System Energy Savings since Home creation date
-    "energy_statistics": "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel, # source type [solar hes grid home pps]
+    "energy_statistics": "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel, # source type [solar hes grid home pps diesel]
     "get_rom_versions": "charging_energy_service/get_rom_versions",  # Check for firmware update and download available packages, needs owner account
     "get_device_info": "charging_energy_service/get_device_infos",  # Wifi and MAC infos for provided devices, needs owner account
     "get_wifi_info": "charging_energy_service/get_wifi_info",  # Displays WiFi network connected to Home Power Panel, needs owner account
@@ -164,9 +164,9 @@ API_HES_SVC_ENDPOINTS = {
     "get_system_running_info": "charging_hes_svc/get_system_running_info",  # system runtime info, works with shared account
     "energy_statistics": "charging_hes_svc/get_energy_statistics",  # Energy stats for HES, # source type [solar hes grid home]
     "get_monetary_units": "charging_hes_svc/get_world_monetary_unit",  # monetary unit list for system, works with shared account
-    "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account
+    "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account. Shows installation location
     "get_wifi_info": "charging_hes_svc/get_wifi_info",  # get device wifi info, works with shared account
-    "get_installer_info": "charging_hes_svc/get_installer_info",  # no shared account access, needs HES site?
+    "get_installer_info": "charging_hes_svc/get_installer_info",  # no shared account access, Shows contact information of the installer
     "get_system_running_time": "charging_hes_svc/get_system_running_time",  # no shared account access, needs HES site?
     "get_mi_layout": "charging_hes_svc/get_mi_layout",  # no shared account access, needs HES site?
     "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips",  # no shared account access, needs HES site?
@@ -174,7 +174,7 @@ API_HES_SVC_ENDPOINTS = {
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
-""" Other endpoints neither implemented nor explored: 37 + 39 used => 76
+""" Other endpoints neither implemented nor explored: 40 + 39 used => 79
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -197,6 +197,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/after_sale/check_popup',
     'power_service/v1/app/after_sale/check_sn',
     'power_service/v1/app/after_sale/mark_sn',
+    'power_service/v1/app/share_site/anonymous_join_site',
     'power_service/v1/app/share_site/delete_site_member',
     'power_service/v1/app/share_site/invite_member',
     'power_service/v1/app/share_site/delete_inviting_member',
@@ -204,6 +205,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
     'power_service/v1/app/get_phonecode_list',
+    'power_service/v1/app/get_annual_report',  # new report starting Jan 2025?
+    'power_service/v1/app/device/remove_param_config_key'
     'power_service/v1/app/device/set_device_attrs', # for solarbank 2 and/or smart meter?
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
@@ -230,7 +233,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
 
-Home Energy System related (X1): 35 + 14 used => 49 total
+Home Energy System related (X1): 36 + 14 used => 50 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -255,6 +258,7 @@ Home Energy System related (X1): 35 + 14 used => 49 total
     "charging_hes_svc/get_user_fault_info",
     "charging_hes_svc/get_utility_rate_plan",
     "charging_hes_svc/get_vpp_check_code",
+    "charging_hes_svc/get_vpp_service_policy_by_agg_user",
     "charging_hes_svc/update_device_info_by_app",
     "charging_hes_svc/update_hes_utility_rate_plan",
     "charging_hes_svc/update_wifi_config",
@@ -330,11 +334,13 @@ API_FILEPREFIXES = {
     "charging_energy_pps": "charging_energy_pps",
     "charging_energy_home": "charging_energy_home",
     "charging_energy_grid": "charging_energy_grid",
+    "charging_energy_diesel": "charging_energy_diesel",
     "charging_energy_solar_today": "charging_energy_solar_today",
     "charging_energy_hes_today": "charging_energy_hes_today",
     "charging_energy_pps_today": "charging_energy_pps_today",
     "charging_energy_home_today": "charging_energy_home_today",
     "charging_energy_grid_today": "charging_energy_grid_today",
+    "charging_energy_diesel_today": "charging_energy_diesel_today",
     "charging_get_rom_versions": "charging_rom_versions",
     "charging_get_device_info": "charging_device_info",
     "charging_get_wifi_info": "charging_wifi_info",
@@ -410,6 +416,7 @@ class SolixParmType(Enum):
 
     SOLARBANK_SCHEDULE = "4"
     SOLARBANK_2_SCHEDULE = "6"
+    SOLARBANK_SCHEDULE_ENFORCED = "9"
 
 
 class SolarbankPowerMode(IntEnum):
@@ -429,9 +436,27 @@ class SolarbankDischargePriorityMode(IntEnum):
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 Power Usage modes."""
 
-    smartmeter = 1
-    smartplugs = 2
-    manual = 3
+    smartmeter = 1  # AC output based on measured smart meter power
+    smartplugs = 2  # AC output based on measured smart plug power
+    manual = 3  # manual time plan for home load output
+    backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
+    use_time = 5  # Use Time plan with SB2 AC and smart meter
+
+
+class SolarbankTariffTypes(IntEnum):
+    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+
+    PEEK = 1
+    MID_PEEK = 2
+    OFF_PEEK = 3
+    OTHER = 4
+
+
+class SolarbankPriceTypes(StrEnum):
+    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+
+    FIXED = "fixed"
+    USE_TIME = "use_time"
 
 
 @dataclass(frozen=True)
@@ -439,11 +464,11 @@ class SolarbankRatePlan:
     """Dataclass for Anker Solix Solarbank 2 rate plan types."""
 
     # rate plan per usage mode
-    smartmeter: str = (
-        "custom_rate_plan"  # used for default output setting on connection loss
-    )
+    smartmeter: str = ""  # does not use a plan
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
+    backup: str = "manual_backup"
+    use_time: str = "use_time"
 
 
 @dataclass(frozen=True)
@@ -512,15 +537,15 @@ class SolixSiteType:
     """Dataclass for Anker Solix System/Site types according to the main device in site rules."""
 
     t_1 = SolixDeviceType.INVERTER.value  # Main A5143
-    t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0
+    t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0 SB1
     t_4 = SolixDeviceType.POWERPANEL.value  # Main A17B1
-    t_5 = SolixDeviceType.SOLARBANK.value  # Main A17C1
+    t_5 = SolixDeviceType.SOLARBANK.value  # Main A17C1 SB2 Pro, can also add SB1
     t_6 = SolixDeviceType.HES.value  # Main A5341
     t_7 = SolixDeviceType.HES.value  # Main A5101
     t_8 = SolixDeviceType.HES.value  # Main A5102
     t_9 = SolixDeviceType.HES.value  # Main A5103
-    t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3
-    t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2
+    t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
+    t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
 
 
 @dataclass(frozen=True)
@@ -602,9 +627,7 @@ class SolarbankDeviceMetrics:
     """Dataclass for Anker Solarbank metrics which should be tracked in device details cache depending on model type."""
 
     # SOLIX E1600 Solarbank, single MPPT without channel reporting
-    A17C0: ClassVar[set[str]] = (
-        set()
-    )
+    A17C0: ClassVar[set[str]] = set()
     # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
     A17C1: ClassVar[set[str]] = {
         "sub_package_num",
@@ -614,21 +637,21 @@ class SolarbankDeviceMetrics:
         "solar_power_4",
         "ac_power",
         "to_home_load",
-        # TODO: Remove what is not used from the new fields
         "pei_heating_power",
-        "micro_inverter_power",
-        "micro_inverter_power_limit",
-        "micro_inverter_low_power_limit",
-        "other_input_power",
+        # Only used by AC model?
+        # "micro_inverter_power",
+        # "micro_inverter_power_limit",
+        # "micro_inverter_low_power_limit",
+        # "other_input_power",
     }
     # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
         "sub_package_num",
+        "bat_charge_power",
         "solar_power_1",
         "solar_power_2",
         "ac_power",
         "to_home_load",
-        # TODO: Remove what is not used from the new fields
         "pei_heating_power",
         "micro_inverter_power",
         "micro_inverter_power_limit",
@@ -642,12 +665,12 @@ class SolarbankDeviceMetrics:
         "solar_power_1",
         "solar_power_2",
         "to_home_load",
-        # TODO: Remove what is not used from the new fields
         "pei_heating_power",
-        "micro_inverter_power",
-        "micro_inverter_power_limit",
-        "micro_inverter_low_power_limit",
-        "other_input_power",
+        # Only used by AC model?
+        # "micro_inverter_power",
+        # "micro_inverter_power_limit",
+        # "micro_inverter_low_power_limit",
+        # "other_input_power",
     }
 
 
@@ -707,7 +730,7 @@ class SolarbankStatus(Enum):
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
-    # TODO: Is there a new mode for AC charging? Can it be distinguished from existing values?
+    # TODO(AC): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
 class SmartmeterStatus(Enum):

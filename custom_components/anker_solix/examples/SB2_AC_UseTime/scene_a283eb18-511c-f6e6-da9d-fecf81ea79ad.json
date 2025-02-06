@@ -1,0 +1,139 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "0.00",
+        "unit": "kWh"
+      },
+      {
+        "type": "2",
+        "total": "0.00",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "0.00",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C2",
+          "device_sn": "UG206M25CRYHOSKA",
+          "device_name": "Rheinbach L1",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/11/11/iot-admin/NycsbknWijoZcv1b/output.lin.png",
+          "battery_power": "75",
+          "bind_site_status": "",
+          "charging_power": "0",
+          "power_unit": "W",
+          "charging_status": "0",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "0",
+          "output_power": "0",
+          "create_time": 1737474784,
+          "set_load_power": "",
+          "sub_package_num": 4,
+          "output_cutoff_data": 0,
+          "is_display": true,
+          "bat_charge_power": "0"
+        }
+      ],
+      "total_charging_power": "0",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.75",
+      "updated_time": "1970-01-01 00:00:00",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "0.00",
+      "display_set_power": false,
+      "battery_discharge_power": "0",
+      "ac_power": "0",
+      "to_home_load": "0",
+      "is_display_data": true,
+      "solar_power_1": "0",
+      "solar_power_2": "0",
+      "solar_power_3": "0",
+      "solar_power_4": "0",
+      "other_input_power": "0",
+      "micro_inverter_power": "0",
+      "micro_inverter_power_limit": "800",
+      "micro_inverter_low_power_limit": "0",
+      "grid_to_battery_power": "0",
+      "pei_heating_power": "0",
+      "backup_info": {
+        "start_time": 1738105709,
+        "end_time": 1738105769,
+        "full_time": 0
+      }
+    },
+    "retain_load": "20W",
+    "scene_mode": 5,
+    "home_load_power": "401",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 11,
+    "site_id": "a283eb18-511c-f6e6-da9d-fecf81ea79ad",
+    "powerpanel_list": [],
+    "grid_info": {
+      "grid_list": [
+        {
+          "device_pn": "SHEMP3",
+          "device_sn": "XWZNFAX5WB8KK3I",
+          "device_name": "stromzaehler-01",
+          "device_img": "",
+          "create_time": 1738105958,
+          "status": "1",
+          "bind_site_status": "",
+          "wireless_type": ""
+        }
+      ],
+      "photovoltaic_to_grid_power": "0",
+      "grid_to_home_power": "401",
+      "grid_status": 0,
+      "has_history_data": true
+    },
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "0w_feed": true,
+      "exceed_power": false,
+      "heating": false,
+      "manual_backup_mode": true,
+      "micro_inverter_output_exceed": false,
+      "micro_inverter_power_exceed": false,
+      "offgrid_with_micro_inverter_alert": false,
+      "peak_valley_mode": true,
+      "shelly_meter": true,
+      "smart_plug": false
+    },
+    "other_loads_power": "401",
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "priority_discharge_upgrade_devices": "",
+    "style_id": 0,
+    "is_show_priority_discharge": 0
+  },
+  "trace_id": "cddaf5ddeac66fdf3d7ddd2f6e44d806"
+}

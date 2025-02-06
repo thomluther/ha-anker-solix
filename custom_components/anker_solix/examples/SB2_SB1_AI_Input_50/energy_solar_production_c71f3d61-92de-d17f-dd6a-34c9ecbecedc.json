@@ -1,0 +1,58 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "power": [
+      {
+        "time": "2025-01-22",
+        "value": "2.44"
+      },
+      {
+        "time": "2025-01-23",
+        "value": "0.04"
+      }
+    ],
+    "charge_trend": null,
+    "charge_level": [],
+    "power_unit": "wh",
+    "charge_total": "1.09",
+    "charge_unit": "kwh",
+    "discharge_total": "21.12",
+    "discharge_unit": "kwh",
+    "charging_pre": "0.44",
+    "electricity_pre": "0.56",
+    "others_pre": "0",
+    "statistics": [
+      {
+        "type": "1",
+        "total": "2.48",
+        "unit": "kwh"
+      },
+      {
+        "type": "2",
+        "total": "2.47",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "0.79",
+        "unit": "\u20ac"
+      }
+    ],
+    "battery_discharging_total": "",
+    "solar_to_grid_total": "0.06",
+    "grid_to_home_total": "",
+    "ac_out_put_total": "",
+    "home_usage_total": "",
+    "solar_total": "2.48",
+    "trend_unit": "kwh",
+    "battery_to_home_total": "",
+    "smart_plug_info": null,
+    "local_time": "",
+    "grid_to_battery_total": "",
+    "grid_imported_total": "",
+    "solar_to_battery_total": "0.00",
+    "solar_to_home_total": "0.00"
+  },
+  "trace_id": "a34afe0bd730c1e5a4a0e08afee08deb"
+}

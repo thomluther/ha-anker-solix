@@ -66,7 +66,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
 
-    def _update_site(  # noqa: C901
+    def _update_site(
         self,
         siteId: str,
         details: dict,
@@ -84,7 +84,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self.sites[siteId] = {}
         self.sites[siteId]["site_details"] = site_details
 
-    def _update_dev(  # noqa: C901
+    def _update_dev(
         self,
         devData: dict,
         devType: str | None = None,
@@ -170,7 +170,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         fromFile: bool = False,
         exclude: set | None = None,
         siteData: dict | None = None,
-    ) -> dict:  # noqa: C901
+    ) -> dict:
         """Create/Update api sites cache structure.
 
         Implement this method to get the latest info for all power panel sites or only the provided siteId and update class cache dictionaries.
@@ -474,11 +474,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 if source == "hes":
                     future = ""
                     for diff in (
-                        [-1, 0, 1]
+                        [1, 0, -1]
                         if offset.total_seconds() == 0 and not fromFile
                         else [0]
                     ):
-                        # check -/+ 1 day to find initial last valid SOC timestamp in real data before invalid SOC entry of 0 %
+                        # check +/- 1 day to find last valid SOC timestamp in real data before invalid SOC entry of 0 %
                         checkdate = validtime + timedelta(days=diff)
                         self._logger.debug(
                             "Checking %s data of %s",
@@ -500,48 +500,31 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 startDay=checkdate,
                                 endDay=checkdate,
                             )
+                        # generate list of SOC timestamps different from 0 and pick last one
                         if soclist := [
                             item
                             for item in (data.get("chargeLevel") or [])
-                            if (item.get("value") or "") == "0"
+                            if (item.get("value") or "0") != "0"
                         ]:
-                            if not future:
-                                future = datetime.strptime(
+                            if soclist[-1].get("time"):
+                                last = datetime.strptime(
                                     checkdate.strftime("%Y-%m-%d")
-                                    + soclist[0].get("time")
-                                    or "00:00",
+                                    + soclist[-1].get("time"),
                                     "%Y-%m-%d%H:%M",
                                 )
-                                # keep actual or previous day depending on first invalid timestamp
-                                validdata = (
-                                    validdata
-                                    if soclist[0].get("time") == "00:00"
-                                    else data
-                                )
-                            # check future SOC values are all 0
-                            checktime = (
-                                future.strftime("%H:%M")
-                                if future.day == checkdate.day
-                                else "00:00"
-                            )
-                            if soclist := [
-                                item
-                                for item in (data.get("chargeLevel") or [])
-                                if (item.get("value") or "") != "0"
-                                and (item.get("time") or "24:00") > checktime
-                            ]:
-                                # Found another value in future timestamp, reset previous timestamp
-                                future = ""
-                                validdata = {}
-                        else:
-                            # No or only valid timestamps in day, keep data if the last entry is last valid timestamp
-                            validdata = data
-                    # get min offset to first invalid timestamp, use default offset 2 days for first calculation
+                                future: datetime = last + timedelta(minutes=5)
+                                validdata = data
+                                break
+                    # get min offset to first invalid timestamp to find best check time (smallest delay after new statue value from cloud)
                     if future:
                         offset = min(
+                            # use default offset 2 days for first calculation
                             timedelta(days=2)
                             if offset.total_seconds() == 0
+                            # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
+                            or future - datetime.now() > offset + timedelta(minutes=6)
                             else offset,
+                            # set offset few seconds before future invalid time if smaller than previous offset
                             future - datetime.now() - timedelta(seconds=2),
                         )
                         validtime = datetime.now() + offset
@@ -595,11 +578,14 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
                 avg_data["offset_seconds"] = round(offset.total_seconds())
                 avg_data["power_unit"] = data.get("powerUnit")
-                if powerlist := [
-                    item
-                    for item in (data.get("power") or [])
-                    if (item.get("time") or "24:00") <= validtime.strftime("%H:%M")
-                ]:
+                # extract power values only if offset to last valid SOC entry was found
+                if offset.total_seconds() != 0 and (
+                    powerlist := [
+                        item
+                        for item in (data.get("power") or [])
+                        if (item.get("time") or "24:00") <= validtime.strftime("%H:%M")
+                    ]
+                ):
                     if source == "hes":
                         for idx, power in enumerate(
                             powerlist[-1].get("powerInfos") or [], start=1
@@ -672,7 +658,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         rangeType: "day" | "week" | "year"
         startTime: optional start Date and time
         endTime: optional end Date and time
-        devType: "solar" | "hes" | "grid" | "home" | "pps"
+        devType: "solar" | "hes" | "grid" | "home" | "pps" | "diesel"
         Example Data for solar_production:
         {"totalEnergy": "37.23","totalEnergyUnit": "KWh","totalImportedEnergy": "","totalImportedEnergyUnit": "","totalExportedEnergy": "37.23","totalExportedEnergyUnit": "KWh",
         "power": null,"powerUnit": "","chargeLevel": null,"energy": [
@@ -695,11 +681,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         Daily: Home Usage Energy, Extra Totals: grid_to_home, battery_to_home, pv_to_home, 3 x percentage share home usage source
         Responses for grid:
         Daily: Grid import, Extra Totals: solar_to_grid, grid_to_home, grid_to_battery, 2 x percentage share how import used
+        Responses for diesel:
+        unknown
         """
         data = {
             "siteId": siteId,
             "sourceType": sourceType
-            if sourceType in ["solar", "hes", "home", "grid", "pps"]
+            if sourceType in ["solar", "hes", "home", "grid", "pps", "diesel"]
             else "solar",
             "dateType": rangeType if rangeType in ["day", "week", "year"] else "day",
             "start": startDay.strftime("%Y-%m-%d")
@@ -732,7 +720,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         Example:
         {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "battery_discharge": "0.47", "battery_charge": "0.56"},
         "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
-        """  # noqa: D413
+        """
         table = {}
         if not devTypes or not isinstance(devTypes, set):
             devTypes = set()

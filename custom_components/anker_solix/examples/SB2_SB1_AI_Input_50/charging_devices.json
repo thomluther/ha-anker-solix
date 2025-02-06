@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_list": null,
+    "guide_txt": ""
+  },
+  "trace_id": "7ff8d77aba369b9d63445fdaab6c7ddb"
+}

@@ -1,0 +1,30 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "100",
+        "device_sn": "6SFNCVTFOG0OC6AP",
+        "rssi": "-38",
+        "offline": false
+      },
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "100",
+        "device_sn": "V58HMP9PK2TW1G0A",
+        "rssi": "",
+        "offline": false
+      },
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "100",
+        "device_sn": "3K3YXE9E47A6YH8M",
+        "rssi": "",
+        "offline": false
+      }
+    ]
+  },
+  "trace_id": "1cf96d6a6169f764f80cfee8cdd1cbc4"
+}

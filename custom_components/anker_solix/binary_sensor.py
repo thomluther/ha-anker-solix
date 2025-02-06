@@ -94,6 +94,33 @@ SITE_SENSORS = [
         json_key="site_admin",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    AnkerSolixBinarySensorDescription(
+        key="heating",
+        translation_key="heating",
+        json_key="heating",
+        device_class=BinarySensorDeviceClass.HEAT,
+        value_fn=lambda d, jk: (d.get("feature_switch") or {}).get(jk),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="micro_inverter_power_exceed",
+        translation_key="micro_inverter_power_exceed",
+        json_key="micro_inverter_power_exceed",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda d, jk: (d.get("feature_switch") or {}).get(jk),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="offgrid_with_micro_inverter_alert",
+        translation_key="offgrid_with_micro_inverter_alert",
+        json_key="offgrid_with_micro_inverter_alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda d, jk: (d.get("feature_switch") or {}).get(jk),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
+    ),
 ]
 
 ACCOUNT_SENSORS = [

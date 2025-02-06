@@ -1,0 +1,138 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "NEBY5IUHDXTGQKC2",
+        "product_code": "A17C0",
+        "bt_ble_id": "A8:AA:A9:2B:AF:3A",
+        "bt_ble_mac": "A8AAA92BAF3A",
+        "device_name": "Solarbank E1600",
+        "alias_name": "Solarbank Wintergarten",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "link_time": 1735925288,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v2.0.9",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": ""
+      },
+      {
+        "device_sn": "B91KD2ROPQVP6MLG",
+        "product_code": "A17C0",
+        "bt_ble_id": "66:AD:B4:F2:1C:0E",
+        "bt_ble_mac": "66ADB4F21C0E",
+        "device_name": "Solarbank E1600",
+        "alias_name": "Solarbank Wohnzimmer",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "link_time": 1735925082,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v2.0.9",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": ""
+      },
+      {
+        "device_sn": "7P5PFRUSCH7NK",
+        "product_code": "SHEMP3",
+        "bt_ble_id": "",
+        "bt_ble_mac": "",
+        "device_name": "Hauptstrom Keller",
+        "alias_name": "Hauptstrom Keller",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+        "link_time": 1735924945,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": ""
+      },
+      {
+        "device_sn": "1CC2UKC60CE16V6T",
+        "product_code": "A17C1",
+        "bt_ble_id": "C6:E1:E8:F8:0A:F7",
+        "bt_ble_mac": "C6E1E8F80AF7",
+        "device_name": "Solarbank 2 E1600 Pro",
+        "alias_name": "Solarbank 2 E1600 Pro",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+        "link_time": 1735924799,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.0.5.29",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-39"
+      },
+      {
+        "device_sn": "J66TVTZGJG3G",
+        "product_code": "A5143",
+        "bt_ble_id": "941E9FC079DF",
+        "bt_ble_mac": "941E9FC079DF",
+        "device_name": "MI80 Microinverter(BLE)",
+        "alias_name": "Maschweg 12b",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
+        "link_time": 1729425037,
+        "wifi_online": false,
+        "wifi_name": "wifi-network-1",
+        "relate_type": [
+          "ble"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v0.0.1",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": ""
+      }
+    ]
+  },
+  "trace_id": "ec69a3c1ddbefedddbf999709ff90b6b"
+}

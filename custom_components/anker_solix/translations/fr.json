@@ -25,7 +25,9 @@
         "plan": {
             "options": {
                 "custom_rate_plan": "Plan personnalisé",
-                "blend_plan": "Plan de mixage"
+                "blend_plan": "Plan de mixage",
+                "manual_backup": "Plan de charge d'urgence",
+                "use_time": "Plan de temps d'utilisation"
             }
         },
         "weekday": {
@@ -176,6 +178,27 @@
                     }
                 }
             },
+            "heating": {
+                "name": "Chauffage de la batterie",
+                "state": {
+                    "on": "actif",
+                    "off": "inactif"
+                }
+            },
+            "micro_inverter_power_exceed": {
+                "name": "Puissance de l'onduleur dépassée",
+                "state": {
+                    "on": "actif",
+                    "off": "inactif"
+                }
+            },
+            "offgrid_with_micro_inverter_alert": {
+                "name": "Alerte de l'onduleur hors réseau",
+                "state": {
+                    "on": "actif",
+                    "off": "inactif"
+                }
+            },
             "site_admin": {
                 "name": "Administration système",
                 "state": {
@@ -198,6 +221,14 @@
                 }
             }
         },
+        "datetime": {
+            "preset_manual_backup_start": {
+                "name": "Début charge de secours"
+            },
+            "preset_manual_backup_end": {
+                "name": "Fin charge de secours"
+            }
+        },
         "number": {
             "preset_system_output_power": {
                 "name": "Réglage puissance de sortie du système"
@@ -209,7 +240,10 @@
                 "name": "Limite de priorité de charge"
             },
             "system_price": {
-                "name": "Prix du kWh"
+                "name": "Prix fixe kWh"
+            },
+            "preset_plan_price": {
+                "name": "Prix du plan kWh"
             }
         },
         "select": {
@@ -221,11 +255,25 @@
                 "state": {
                     "smartmeter": "Compteur intelligent",
                     "smartplugs": "Prises intelligentes",
+                    "use_time": "Temps d'utilisation",
+                    "backup": "Charge de secours",
                     "manual": "Manuel"
                 }
             },
             "system_price_unit": {
                 "name": "Devise du prix"
+            },
+            "system_price_type": {
+                "name": "Type de prix",
+                "state": {
+                    "fixed": "Fixe",
+                    "use_time": "Temps d'utilisation"
+                },
+                "state_attributes": {
+                    "current_mode": {
+                        "name": "Mode d'utilisation actif"
+                    }
+                }
             }
         },
         "sensor": {
@@ -303,6 +351,12 @@
             },
             "grid_to_battery_power": {
                 "name": "Charge du réseau"
+            },
+            "micro_inverter_power": {
+                "name": "Puissance de l'onduleur"
+            },
+            "micro_inverter_power_limit": {
+                "name": "Limite de l'onduleur"
             },
             "set_output_power": {
                 "name": "Réglage puissance de sortie",
@@ -419,6 +473,22 @@
             },
             "solarbank_timestamp": {
                 "name": "Temps de données SB"
+            },
+            "active_scene_mode": {
+                "name": "Mode d'utilisation actif",
+                "state": {
+                    "smartmeter": "Compteur intelligent",
+                    "smartplugs": "Prises intelligentes",
+                    "manual": "Manuel",
+                    "backup": "Charge de secours",
+                    "use_time": "Temps d'utilisation",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "mode_type": {
+                        "name": "Type de mode"
+                    }
+                }
             },
             "pps_charging_power": {
                 "name": "Puissance de la batterie PPS"
@@ -721,6 +791,9 @@
             "preset_discharge_priority": {
                 "name": "Décharge prioritaire"
             },
+            "preset_backup_option": {
+                "name": "Option charge de secours"
+            },
             "allow_refresh": {
                 "name": "Utilisation de l'API",
                 "state_attributes": {
@@ -920,7 +993,10 @@
             "message": "L'entité {entity} ne supporte pas l'action {service}"
         },
         "slot_time_error": {
-            "message": "L'action {service} ne peut pas être exécuté: {error}."
+            "message": "L'action {service} ne peut pas être exécuté: {error}"
+        },
+        "action_blocked": {
+            "message": "L'action {service} ne peut pas être exécutée à nouveau alors qu'elle est encore en cours d'exécution"
         }
     }
 }

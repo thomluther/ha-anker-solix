@@ -1,0 +1,10 @@
+{
+  "type": "account",
+  "email": "anonymous-1@domain.com",
+  "nickname": "f3f",
+  "country": "DE",
+  "server": "https://ankerpower-api-eu.anker.com",
+  "use_files": false,
+  "requests_last_min": 92,
+  "requests_last_hour": 93
+}

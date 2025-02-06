@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "RXRMEJ2X4LL98",
+    "site_id": "",
+    "upgrade_record_list": []
+  },
+  "trace_id": "c93cab66a710ecff37c5fbe78a3170bc"
+}

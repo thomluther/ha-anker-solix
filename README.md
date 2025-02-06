@@ -72,7 +72,7 @@ You can open a new [issue](https://github.com/thomluther/anker-solix-api/issues)
 
 ## Supported sensors and devices
 
-**This integration will set up the following HA platforms and provides support for following Anker Solix devices:**
+### This integration will set up the following HA platforms and provides support for following Anker Solix devices:
 
 Platform | Description
 -- | --
@@ -82,27 +82,29 @@ Platform | Description
 `select` | Select settings from available options
 `button` | Trigger device details refresh on demand
 `number` | Change values for certain entities
+`datetime` | Change date and time for certain entities
 `service` | Various Solarbank schedule or Api related services/actions
 
 Device type | Description
 -- | --
 `account` | Anker Solix user account used for the configured hub entry. It collects all common entities belonging to the account or api connection.
 `system` | Anker Solix 'Power System' as defined in the Anker app. It collects all entities belonging to the defined system.
-`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC (may be supported once released)
+`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC (initial support)
 `inverter` | Anker Solix inverter configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W (No individual device setting supported yet)
 `powerpanel` | Anker Solix Power Panels configured in the system:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 
-**Special note for Solarbank 2 devices and Smart Meters:**
+### Special note for Solarbank 2 devices and Smart Meters:
 
 Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transfer their power values every 60 seconds to the cloud, Solarbank 2 seems to use different intervals for their data updates in the cloud, which may result in **invalid data responses and unavailable entities**. Please see the [configuration option considerations for Solarbank 2 devices and Smart Meters](INFO.md#option-considerations-for-solarbank-2-devices-and-smart-meters) in the [INFO](INFO.md) for more details and how you can avoid unavailable entities.
+The Solarbank 2 AC model comes with new features and initial support has been implemented. While all provides usage modes can be toggled, the Integration does not support yet any modification of the new Usage Time plan, since this is a new and complex plan format that requires additional work and testing. There may be also issues when toggling the usage modes or output preset in the manual usage mode, which needs to be investigated by the community.
 
-**Special note for Power Panels:**
+### Special note for Power Panels:
 
 Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800 power stations attached to the Power Panel are not tracked as system devices. Actual power consumption data in the cloud api was not discovered yet and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). Power Panel owners need to explore and document cloud Api capabilities to further expand any Power Panel system or device support. Please refer to issue [Add F3800/BP3800 Equipment when connected to Home Power Panel](https://github.com/thomluther/anker-solix-api/issues/117) for contribution.
 
-**Other devices are neither supported nor tested with the Api library or the HA integration.**
+### Other devices are neither supported nor tested with the Api library or the HA integration
 
 To get additional Anker power devices added, please review the [anker-solix Python library][anker-solix-api] and contribute to [open issues](https://github.com/thomluther/anker-solix-api/issues) or Api exploration. Most devices can neither be tested by the developer, nor can they be added to the HA integration before their Api usage, parameters, structures and fields are fully understood, interpreted and implemented into the Api library.
 
@@ -129,7 +131,7 @@ Or following procedure for HACS 2.0 or later:
 
 Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see [Optional entity pictures](#optional-entity-pictures) for instructions to copy the image files manually.
 
-**Installation Notes:**
+### Installation Notes:
 - It was observed that when adding the repository to HACS via the button, an error may occur although it was added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
 - After adding the custom repository and installing the integration under HACS, you must restart Home Assistant to pick up the changes in your custom integration folder
    - HA 2024.02 will report the required restart automatically under problems
@@ -225,7 +227,8 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 If you need more assistance on the topic, please have a look at the following external resources:
 
 ### Blog-Posts
-- [simon42 - Anker Solix – Home Assistant Energiedashboard & Steuerung](https://www.simon42.com/anker-solix-home-assistant/)
+- [simon42 - Anker Solix – Home Assistant Energiedashboard & Steuerung](https://www.simon42.com/anker-solix-home-assistant/)  (🇩🇪)
+- [Alkly - Anker SOLIX Balkonkraftwerk & Home Assistant integrieren](https://alkly.de/anker-solix-in-home-assistant/)  (🇩🇪)
 
 ### Videos
 #### YouTube-Video "Anker SOLIX in Home Assistant integrieren" (🇩🇪)
@@ -244,3 +247,8 @@ Spoiler: This shows integration capabilities before Solarbank 2 was supported wi
 
 #### YouTube-Video "Anker Solix Solarbank 2 Pro: Alle Kritikpunkte behoben!" (🇩🇪)
 [![Anker Solix Solarbank 2 Pro: Alle Kritikpunkte behoben](https://img.youtube.com/vi/nKXdGELBKc8/mqdefault.jpg)](https://youtu.be/nKXdGELBKc8?t=1008)
+
+#### YouTube-Video "6 Monate Anker SOLIX mit Home Assistant" (🇩🇪)
+[![6 Monate Anker SOLIX mit Home Assistant](https://img.youtube.com/vi/_0wyATg7nnk/mqdefault.jpg)](https://www.youtube.com/watch?v=_0wyATg7nnk)
+
+Spoiler: Alkly explains his experience with Solarbank 1 and 2, the HA integration 2.4.1 and 0 grid export. Furthermore he shows how to integrate the solarbank into the energy dashboard, based on [this discussion](https://github.com/thomluther/ha-anker-solix/discussions/16)

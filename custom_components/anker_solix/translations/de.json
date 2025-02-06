@@ -25,7 +25,9 @@
         "plan": {
             "options": {
                 "custom_rate_plan": "Manueller Plan",
-                "blend_plan": "Mischungsplan"
+                "blend_plan": "Mischungsplan",
+                "manual_backup": "Notfallladungsplan",
+                "use_time": "Nutzungszeitplan"
             }
         },
         "weekday": {
@@ -176,6 +178,27 @@
                     }
                 }
             },
+            "heating": {
+                "name": "Akkuheizung",
+                "state": {
+                    "on": "An",
+                    "off": "Aus"
+                }
+            },
+            "micro_inverter_power_exceed": {
+                "name": "MWR Limit überschritten",
+                "state": {
+                    "on": "An",
+                    "off": "Aus"
+                }
+            },
+            "offgrid_with_micro_inverter_alert": {
+                "name": "MWR Stromnetzausfall",
+                "state": {
+                    "on": "An",
+                    "off": "Aus"
+                }
+            },
             "site_admin": {
                 "name": "Systemadministration",
                 "state": {
@@ -198,6 +221,14 @@
                 }
             }
         },
+        "datetime": {
+            "preset_manual_backup_start": {
+                "name": "Notladung Start"
+            },
+            "preset_manual_backup_end": {
+                "name": "Notladung Ende"
+            }
+        },
         "number": {
             "preset_system_output_power": {
                 "name": "System Einspeisevorgabe"
@@ -209,7 +240,10 @@
                 "name": "Ladeprioritätslimit"
             },
             "system_price": {
-                "name": "kWh Preis"
+                "name": "Festpreis kWh"
+            },
+            "preset_plan_price": {
+                "name": "Plan Preis kWh"
             }
         },
         "select": {
@@ -221,11 +255,25 @@
                 "state": {
                     "smartmeter": "Smart Meter",
                     "smartplugs": "Smarte Steckdosen",
+                    "use_time": "Nutzungszeit",
+                    "backup": "Notstromladung",
                     "manual": "Manuell"
                 }
             },
             "system_price_unit": {
                 "name": "Preis Währung"
+            },
+            "system_price_type": {
+                "name": "Preis Typ",
+                "state": {
+                    "fixed": "Fest",
+                    "use_time": "Nutzungszeit"
+                },
+                "state_attributes": {
+                    "current_mode": {
+                        "name": "Aktiver Benutzermodus"
+                    }
+                }
             }
         },
         "sensor": {
@@ -303,6 +351,12 @@
             },
             "grid_to_battery_power": {
                 "name": "Netzaufladung"
+            },
+            "micro_inverter_power": {
+                "name": "MWR Leistung"
+            },
+            "micro_inverter_power_limit": {
+                "name": "MWR Limit"
             },
             "set_output_power": {
                 "name": "Einspeisevorgabe",
@@ -419,6 +473,22 @@
             },
             "solarbank_timestamp": {
                 "name": "SB Datenzeit"
+            },
+            "active_scene_mode": {
+                "name": "Aktiver Benutzermodus",
+                "state": {
+                    "smartmeter": "Smart Meter",
+                    "smartplugs": "Smarte Steckdosen",
+                    "manual": "Manuell",
+                    "backup": "Notstromladung",
+                    "use_time": "Nutzungszeit",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "mode_type": {
+                        "name": "Mode Typ"
+                    }
+                }
             },
             "pps_charging_power": {
                 "name": "PPS Akkuleistung"
@@ -721,6 +791,9 @@
             "preset_discharge_priority": {
                 "name": "Entladepriorität"
             },
+            "preset_backup_option": {
+                "name": "Notladeoption"
+            },
             "allow_refresh": {
                 "name": "Api Nutzung",
                 "state_attributes": {
@@ -916,10 +989,13 @@
             "message": "Gerätedetails für {coordinator} können nicht innerhalb von {min_dev_refresh} Sekunden erneut aktualisiert werden"
         },
         "service_not_supported": {
-            "message": "Die Entität {entity} unterstützt die Aktion {service} nicht."
+            "message": "Die Entität {entity} unterstützt die Aktion {service} nicht"
         },
         "slot_time_error": {
-            "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}."
+            "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}"
+        },
+        "action_blocked": {
+            "message": "Die Aktion {service} kann nicht erneut ausgeführt werden solange sie noch aktiv ist"
         }
     }
 }

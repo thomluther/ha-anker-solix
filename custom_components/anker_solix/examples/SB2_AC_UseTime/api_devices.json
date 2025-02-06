@@ -1,0 +1,421 @@
+{
+  "UG206M25CRYHOSKA": {
+    "device_sn": "UG206M25CRYHOSKA",
+    "type": "solarbank",
+    "site_id": "a283eb18-511c-f6e6-da9d-fecf81ea79ad",
+    "is_admin": true,
+    "device_pn": "A17C2",
+    "generation": 2,
+    "battery_soc": "75",
+    "battery_capacity": "8000",
+    "battery_energy": "6000",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "detection",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "0",
+    "sub_package_num": 4,
+    "output_cutoff_data": 0,
+    "alias": "Rheinbach L1",
+    "name": "Solarbank 2 E1600 AC",
+    "set_output_power": "20",
+    "set_system_output_power": "20",
+    "data_valid": true,
+    "solarbank_count": 1,
+    "solar_power_1": "0",
+    "solar_power_2": "0",
+    "ac_power": "0",
+    "to_home_load": "0",
+    "other_input_power": "0",
+    "micro_inverter_power": "0",
+    "micro_inverter_power_limit": "800",
+    "micro_inverter_low_power_limit": "0",
+    "grid_to_battery_power": "0",
+    "pei_heating_power": "0",
+    "bt_ble_mac": "7346CD57D045",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.3.2",
+    "tag": "",
+    "rssi": "-52",
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v1.0.3.2",
+    "ota_children": [
+      {
+        "device_type": "A17C2_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.1.7.7"
+      },
+      {
+        "device_type": "A17C2_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.3.2"
+      },
+      {
+        "device_type": "A17C2_100Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.2.9"
+      }
+    ],
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "96",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "power_cutoff": 10,
+    "schedule": {
+      "mode_type": 5,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 20
+            }
+          ]
+        }
+      ],
+      "blend_plan": null,
+      "use_time": [
+        {
+          "sea": {
+            "start_month": 1,
+            "end_month": 3
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 6,
+              "type": 3
+            },
+            {
+              "start_time": 6,
+              "end_time": 11,
+              "type": 1
+            },
+            {
+              "start_time": 11,
+              "end_time": 14,
+              "type": 3
+            },
+            {
+              "start_time": 14,
+              "end_time": 17,
+              "type": 2
+            },
+            {
+              "start_time": 17,
+              "end_time": 22,
+              "type": 3
+            },
+            {
+              "start_time": 22,
+              "end_time": 24,
+              "type": 4
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 16,
+              "type": 3
+            },
+            {
+              "start_time": 16,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.25",
+              "type": 3
+            },
+            {
+              "price": "0.5",
+              "type": 1
+            },
+            {
+              "price": "0.35",
+              "type": 2
+            },
+            {
+              "price": "0.2",
+              "type": 4
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.25",
+              "type": 3
+            },
+            {
+              "price": "0.5",
+              "type": 1
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        },
+        {
+          "sea": {
+            "start_month": 4,
+            "end_month": 9
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 16,
+              "type": 3
+            },
+            {
+              "start_time": 16,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 6,
+              "type": 3
+            },
+            {
+              "start_time": 6,
+              "end_time": 13,
+              "type": 1
+            },
+            {
+              "start_time": 13,
+              "end_time": 16,
+              "type": 3
+            },
+            {
+              "start_time": 16,
+              "end_time": 20,
+              "type": 2
+            },
+            {
+              "start_time": 20,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.25",
+              "type": 3
+            },
+            {
+              "price": "0.35",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.25",
+              "type": 3
+            },
+            {
+              "price": "0.35",
+              "type": 1
+            },
+            {
+              "price": "0.31",
+              "type": 2
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        },
+        {
+          "sea": {
+            "start_month": 10,
+            "end_month": 12
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 16,
+              "type": 3
+            },
+            {
+              "start_time": 16,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 16,
+              "type": 3
+            },
+            {
+              "start_time": 16,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.23",
+              "type": 3
+            },
+            {
+              "price": "0.38",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.23",
+              "type": 3
+            },
+            {
+              "price": "0.38",
+              "type": 1
+            }
+          ],
+          "unit": "$",
+          "is_same": true
+        }
+      ],
+      "manual_backup": {
+        "ranges": [
+          {
+            "start_time": 1738105709,
+            "end_time": 1738105769
+          }
+        ],
+        "switch": false
+      },
+      "default_home_load": 200,
+      "max_load": 800,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_usage_mode": 5,
+    "preset_system_output_power": 20,
+    "preset_manual_backup_start": 1738105709,
+    "preset_manual_backup_end": 1738105769,
+    "preset_backup_option": false
+  },
+  "XWZNFAX5WB8KK3I": {
+    "device_sn": "XWZNFAX5WB8KK3I",
+    "type": "smartmeter",
+    "site_id": "a283eb18-511c-f6e6-da9d-fecf81ea79ad",
+    "is_admin": true,
+    "device_pn": "SHEMP3",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "alias": "stromzaehler-01",
+    "name": "stromzaehler-01",
+    "data_valid": true,
+    "photovoltaic_to_grid_power": "0",
+    "grid_to_home_power": "401",
+    "grid_status": "0",
+    "grid_status_desc": "ok",
+    "bt_ble_mac": "",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "tag": "",
+    "rssi": "-52",
+    "is_ota_update": false,
+    "ota_version": "",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "96"
+  },
+  "94NYIMTJN2AQGQ7K": {
+    "device_sn": "94NYIMTJN2AQGQ7K",
+    "device_pn": "A17C1",
+    "type": "solarbank",
+    "generation": 2,
+    "bt_ble_mac": "D731A07E8818",
+    "name": "Solarbank 2 E1600 Pro",
+    "alias": "Rheinbach L3",
+    "wifi_online": false,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.5.29",
+    "tag": "",
+    "rssi": "-58",
+    "is_ota_update": false,
+    "ota_version": "v1.0.5.29",
+    "ota_children": [
+      {
+        "device_type": "A17C1_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.1.7.7"
+      },
+      {
+        "device_type": "A17C1_100Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.2.9"
+      },
+      {
+        "device_type": "A17C1_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.5.29"
+      }
+    ]
+  }
+}

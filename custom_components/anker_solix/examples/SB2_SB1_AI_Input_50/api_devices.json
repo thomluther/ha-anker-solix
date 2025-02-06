@@ -1,0 +1,431 @@
+{
+  "6SFNCVTFOG0OC6AP": {
+    "device_sn": "6SFNCVTFOG0OC6AP",
+    "type": "solarbank",
+    "site_id": "c71f3d61-92de-d17f-dd6a-34c9ecbecedc",
+    "is_admin": true,
+    "device_pn": "A17C1",
+    "generation": 2,
+    "battery_soc": "92",
+    "battery_capacity": "1600",
+    "battery_energy": "1472",
+    "charging_power": "-63",
+    "power_unit": "W",
+    "charging_status": "1",
+    "charging_status_desc": "bypass_discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "154",
+    "output_power": "289",
+    "sub_package_num": 0,
+    "power_cutoff": 10,
+    "alias": "Solarbank 2 E1600 Pro",
+    "name": "Solarbank 2 E1600 Pro",
+    "set_output_power": "17",
+    "set_system_output_power": "50",
+    "data_valid": true,
+    "solarbank_count": 3,
+    "solar_power_1": "65",
+    "solar_power_2": "3",
+    "solar_power_3": "7",
+    "solar_power_4": "79",
+    "ac_power": "0",
+    "to_home_load": "289",
+    "other_input_power": "0",
+    "micro_inverter_power": "86",
+    "micro_inverter_power_limit": "0",
+    "micro_inverter_low_power_limit": "0",
+    "pei_heating_power": "0",
+    "bt_ble_mac": "EC52BED9F6B7",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.5.29",
+    "tag": "",
+    "rssi": "-38",
+    "is_ota_update": false,
+    "ota_version": "v1.0.5.29",
+    "ota_children": [
+      {
+        "device_type": "A17C1_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.1.7.7"
+      },
+      {
+        "device_type": "A17C1_100Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.2.9"
+      },
+      {
+        "device_type": "A17C1_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.5.29"
+      }
+    ],
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "schedule": {
+      "mode_type": 1,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 50
+            }
+          ]
+        }
+      ],
+      "blend_plan": null,
+      "use_time": null,
+      "manual_backup": null,
+      "default_home_load": 200,
+      "max_load": 800,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_usage_mode": 1,
+    "preset_system_output_power": 50
+  },
+  "V58HMP9PK2TW1G0A": {
+    "device_sn": "V58HMP9PK2TW1G0A",
+    "type": "solarbank",
+    "site_id": "c71f3d61-92de-d17f-dd6a-34c9ecbecedc",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "generation": 1,
+    "battery_soc": "98",
+    "battery_capacity": "1600",
+    "battery_energy": "1568",
+    "charging_power": "-35",
+    "power_unit": "W",
+    "charging_status": "2",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "75",
+    "power_cutoff": 10,
+    "alias": "Solarbank Wohnzimmer",
+    "name": "Solarbank E1600",
+    "set_output_power": "75",
+    "set_system_output_power": "150",
+    "data_valid": true,
+    "solarbank_count": 3,
+    "bt_ble_mac": "D7AECB3DEE24",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v2.0.9",
+    "tag": "",
+    "rssi": "-38",
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v2.0.9",
+    "ota_children": [
+      {
+        "device_type": "A17C0_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v2.0.9"
+      },
+      {
+        "device_type": "A17C0_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.0.9.8"
+      }
+    ],
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A17CX",
+      "solar_sn": "",
+      "solar_model_name": "Solarbank 2 E1600 Pro"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "V58HMP9PK2TW1G0A",
+              "power": 75
+            },
+            {
+              "device_sn": "3K3YXE9E47A6YH8M",
+              "power": 75
+            }
+          ],
+          "priority_discharge_switch": 0
+        }
+      ],
+      "min_load": 100,
+      "max_load": 1200,
+      "step": 0,
+      "is_charge_priority": 0,
+      "default_charge_priority": 80,
+      "is_zero_output_tips": 0,
+      "display_advanced_mode": 1,
+      "advanced_mode_min_load": 50,
+      "is_show_install_mode": 1,
+      "display_priority_discharge_tips": 0,
+      "priority_discharge_upgrade_devices": "",
+      "default_home_load": 200,
+      "is_show_priority_discharge": 0
+    },
+    "preset_system_output_power": 150,
+    "preset_allow_export": true,
+    "preset_discharge_priority": null,
+    "preset_charge_priority": 80,
+    "preset_power_mode": 1,
+    "preset_device_output_power": 75,
+    "fittings": {
+      "3WRJ46LOP23W8WA4": {
+        "device_sn": "3WRJ46LOP23W8WA4",
+        "product_code": "A17Y0",
+        "device_name": "E1600 0W Output Switch",
+        "alias_name": "E1600 0W Output Switch",
+        "bt_ble_mac": "D8AA3F1CBD66"
+      }
+    }
+  },
+  "3K3YXE9E47A6YH8M": {
+    "device_sn": "3K3YXE9E47A6YH8M",
+    "type": "solarbank",
+    "site_id": "c71f3d61-92de-d17f-dd6a-34c9ecbecedc",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "generation": 1,
+    "battery_soc": "98",
+    "battery_capacity": "1600",
+    "battery_energy": "1568",
+    "charging_power": "-36",
+    "power_unit": "W",
+    "charging_status": "2",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "79",
+    "power_cutoff": 10,
+    "alias": "Solarbank Wintergarten",
+    "name": "Solarbank E1600",
+    "set_output_power": "75",
+    "set_system_output_power": "150",
+    "data_valid": true,
+    "solarbank_count": 3,
+    "bt_ble_mac": "A083C75EB0BA",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v2.0.9",
+    "tag": "",
+    "rssi": "-38",
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v2.0.9",
+    "ota_children": [
+      {
+        "device_type": "A17C0_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v2.0.9"
+      },
+      {
+        "device_type": "A17C0_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.0.9.8"
+      }
+    ],
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100",
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 150,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80,
+          "power_setting_mode": 1,
+          "device_power_loads": [
+            {
+              "device_sn": "V58HMP9PK2TW1G0A",
+              "power": 75
+            },
+            {
+              "device_sn": "3K3YXE9E47A6YH8M",
+              "power": 75
+            }
+          ],
+          "priority_discharge_switch": 0
+        }
+      ],
+      "min_load": 100,
+      "max_load": 1200,
+      "step": 0,
+      "is_charge_priority": 0,
+      "default_charge_priority": 80,
+      "is_zero_output_tips": 0,
+      "display_advanced_mode": 1,
+      "advanced_mode_min_load": 50,
+      "is_show_install_mode": 1,
+      "display_priority_discharge_tips": 0,
+      "priority_discharge_upgrade_devices": "",
+      "default_home_load": 200,
+      "is_show_priority_discharge": 0
+    },
+    "preset_system_output_power": 150,
+    "preset_allow_export": true,
+    "preset_discharge_priority": null,
+    "preset_charge_priority": 80,
+    "preset_power_mode": 1,
+    "preset_device_output_power": 75,
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A17CX",
+      "solar_sn": "",
+      "solar_model_name": "Solarbank 2 E1600 Pro"
+    },
+    "fittings": {
+      "9VLVPFQHLCSGDIWI": {
+        "device_sn": "9VLVPFQHLCSGDIWI",
+        "product_code": "A17Y0",
+        "device_name": "E1600 0W Output Switch",
+        "alias_name": "E1600 0W Output Switch",
+        "bt_ble_mac": "4EB5692F5DAF"
+      }
+    }
+  },
+  "RXRMEJ2X4LL98": {
+    "device_sn": "RXRMEJ2X4LL98",
+    "type": "smartmeter",
+    "site_id": "c71f3d61-92de-d17f-dd6a-34c9ecbecedc",
+    "is_admin": true,
+    "device_pn": "SHEMP3",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "alias": "Hauptstrom Keller",
+    "name": "Hauptstrom Keller",
+    "data_valid": true,
+    "photovoltaic_to_grid_power": "8",
+    "grid_to_home_power": "0",
+    "grid_status": "0",
+    "grid_status_desc": "ok",
+    "bt_ble_mac": "",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "tag": "",
+    "rssi": "",
+    "is_ota_update": false,
+    "ota_version": ""
+  },
+  "33HJKXYL61HE": {
+    "device_sn": "33HJKXYL61HE",
+    "device_pn": "A5143",
+    "type": "inverter",
+    "bt_ble_mac": "168233DC37EE",
+    "name": "MI80 Microinverter(BLE)",
+    "alias": "Maschweg 12b",
+    "wifi_online": false,
+    "wifi_name": "wifi-network-1",
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.1",
+    "tag": "",
+    "rssi": "",
+    "is_ota_update": false,
+    "ota_version": ""
+  }
+}

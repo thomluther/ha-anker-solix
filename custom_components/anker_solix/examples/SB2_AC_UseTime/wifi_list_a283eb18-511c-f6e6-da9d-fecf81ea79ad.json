@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "96",
+        "device_sn": "UG206M25CRYHOSKA",
+        "rssi": "-52",
+        "offline": false
+      }
+    ]
+  },
+  "trace_id": "d5bcb39fb56b4c5de5f85bebf424975f"
+}

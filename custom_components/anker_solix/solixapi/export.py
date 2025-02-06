@@ -34,7 +34,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.3.2.0"
+VERSION: str = "2.5.0.0"
 
 
 class AnkerSolixApiExport:
@@ -70,7 +70,7 @@ class AnkerSolixApiExport:
             self._logger = _LOGGER
             self._logger.setLevel(logging.DEBUG)
 
-    async def export_data(  # noqa: C901
+    async def export_data(
         self,
         export_path: Path | str | None = None,
         export_folder: Path | str | None = None,
@@ -327,7 +327,7 @@ class AnkerSolixApiExport:
             listener.stop()
             return True
 
-    async def export_common_data(self) -> bool:  # noqa: C901
+    async def export_common_data(self) -> bool:
         """Run functions to export common data."""
 
         self._logger.info("")
@@ -426,7 +426,7 @@ class AnkerSolixApiExport:
             return False
         return True
 
-    async def export_power_service_data(self) -> bool:  # noqa: C901
+    async def export_power_service_data(self) -> bool:
         """Run functions to export power_service endpoint data."""
 
         self._logger.info("")
@@ -519,7 +519,7 @@ class AnkerSolixApiExport:
                     admin=admin,
                 )
 
-                for parmtype in ["4", "6"]:
+                for parmtype in ["4", "6", "9"]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
                     )
@@ -531,39 +531,27 @@ class AnkerSolixApiExport:
                         replace=[(siteId, "<siteId>")],
                         admin=admin,
                     )
-
-                self._logger.info("Exporting site energy data for solarbank...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["energy_analysis"],
-                    filename=f"{API_FILEPREFIXES['energy_solarbank']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "solarbank",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info("Exporting site energy data for solar_production...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["energy_analysis"],
-                    filename=f"{API_FILEPREFIXES['energy_solar_production']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "solar_production",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
+                # exporting various energy stats for power sites
+                for stat_type in ["solarbank", "solar_production", "home_usage", "grid"]:
+                    self._logger.info(
+                        "Exporting site energy data for %s...",
+                        stat_type.upper(),
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["energy_analysis"],
+                        filename=f"{API_FILEPREFIXES['energy_'+stat_type]}_{self._randomize(siteId,'site_id')}.json",
+                        payload={
+                            "site_id": siteId,
+                            "device_sn": "",
+                            "type": "week",
+                            "device_type": stat_type,
+                            "start_time": (datetime.today() - timedelta(days=1)).strftime(
+                                "%Y-%m-%d"
+                            ),
+                            "end_time": datetime.today().strftime("%Y-%m-%d"),
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
                 for ch in range(1, 5):
                     self._logger.info(
                         "Exporting site energy data for solar_production PV%s...", ch
@@ -589,38 +577,6 @@ class AnkerSolixApiExport:
                             ch,
                         )
                         break
-                self._logger.info("Exporting site energy data for home_usage...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["energy_analysis"],
-                    filename=f"{API_FILEPREFIXES['energy_home_usage']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "home_usage",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info("Exporting site energy data for grid...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["energy_analysis"],
-                    filename=f"{API_FILEPREFIXES['energy_grid']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={
-                        "site_id": siteId,
-                        "device_sn": "",
-                        "type": "week",
-                        "device_type": "grid",
-                        "start_time": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end_time": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
 
             # loop through all devices for other queries
             for sn, device in self.api_power.devices.items():
@@ -719,7 +675,7 @@ class AnkerSolixApiExport:
             return False
         return True
 
-    async def export_charging_energy_service_data(self) -> bool:  # noqa: C901
+    async def export_charging_energy_service_data(self) -> bool:
         """Run functions to export charging_energy_service endpoint data."""
 
         self._logger.info("")
@@ -766,167 +722,48 @@ class AnkerSolixApiExport:
                     has_charging = True
 
                 # get various daily energies since yesterday
-                self._logger.info("Exporting Charging site energy data for solar...")
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_solar']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "solar",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info(
-                    "Exporting Charging site energy data for home energy systems..."
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_hes']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "hes",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info(
-                    "Exporting Charging site energy data for portable power stations..."
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_pps']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "pps",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info(
-                    "Exporting Charging site energy data for home usage..."
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_home']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "home",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info("Exporting Charging site energy data for grid...")
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_grid']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "grid",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
+                for stat_type in ["solar", "hes", "pps", "home", "grid", "diesel"]:
+                    self._logger.info(
+                        "Exporting Charging site energy data for %s...",
+                        stat_type.upper(),
+                    )
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                        filename=f"{API_FILEPREFIXES['charging_energy_'+stat_type]}_{self._randomize(siteId, "site_id")}.json",
+                        payload={
+                            "siteId": siteId,
+                            "sourceType": stat_type,
+                            "dateType": "week",
+                            "start": (datetime.today() - timedelta(days=1)).strftime(
+                                "%Y-%m-%d"
+                            ),
+                            "end": datetime.today().strftime("%Y-%m-%d"),
+                            "global": False,
+                            "productCode": "",
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
 
                 # get various energies of today for last 5 min average values
-                self._logger.info(
-                    "Exporting Charging site energy data of today for solar..."
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_solar_today']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "solar",
-                        "dateType": "day",
-                        "start": datetime.today().strftime("%Y-%m-%d"),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info(
-                    "Exporting Charging site energy data of today for home energy systems..."
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_hes_today']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "hes",
-                        "dateType": "day",
-                        "start": datetime.today().strftime("%Y-%m-%d"),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info(
-                    "Exporting Charging site energy data of today for home usage..."
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_home_today']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "home",
-                        "dateType": "day",
-                        "start": datetime.today().strftime("%Y-%m-%d"),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info(
-                    "Exporting Charging site energy data of today for grid..."
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['charging_energy_grid_today']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "grid",
-                        "dateType": "day",
-                        "start": datetime.today().strftime("%Y-%m-%d"),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                        "global": False,
-                        "productCode": "",
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
+                for stat_type in ["solar", "hes", "home", "grid", "diesel"]:
+                    self._logger.info(
+                        "Exporting Charging site energy data of today for %s...",
+                        stat_type.upper(),
+                    )
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                        filename=f"{API_FILEPREFIXES['charging_energy_'+stat_type+'_today']}_{self._randomize(siteId, "site_id")}.json",
+                        payload={
+                            "siteId": siteId,
+                            "sourceType": stat_type,
+                            "dateType": "day",
+                            "start": datetime.today().strftime("%Y-%m-%d"),
+                            "end": datetime.today().strftime("%Y-%m-%d"),
+                            "global": False,
+                            "productCode": "",
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
 
                 self._logger.info("Exporting Charging site device data report...")
                 # check all control options
@@ -1049,7 +886,7 @@ class AnkerSolixApiExport:
             return False
         return True
 
-    async def export_charging_hes_svc_data(self) -> bool:  # noqa: C901
+    async def export_charging_hes_svc_data(self) -> bool:
         """Run functions to export charging_hes_svc endpoint data."""
 
         self._logger.info("")
@@ -1101,87 +938,46 @@ class AnkerSolixApiExport:
                     payload={"siteId": siteId},
                     replace=[(siteId, "<siteId>")],
                 )
-                self._logger.info("Exporting HES install info...")
-                response = await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["get_install_info"],
-                    filename=f"{API_FILEPREFIXES['hes_get_install_info']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={"siteId": siteId},
-                    replace=[(siteId, "<siteId>")],
-                )
+                # Following will show sensitive information and addresses
+                # self._logger.info("Exporting HES install info...")
+                # response = await self.query(
+                #     endpoint=API_HES_SVC_ENDPOINTS["get_install_info"],
+                #     filename=f"{API_FILEPREFIXES['hes_get_install_info']}_{self._randomize(siteId,'site_id')}.json",
+                #     payload={"siteId": siteId},
+                #     replace=[(siteId, "<siteId>")],
+                # )
 
                 # get various daily energies since yesterday
-                self._logger.info("Exporting HES site energy data for solar...")
-                await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['hes_energy_solar']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "solar",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info(
-                    "Exporting HES site energy data for home energy systems..."
-                )
-                await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['hes_energy_hes']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "hes",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info("Exporting HES site energy data for home usage...")
-                await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['hes_energy_home']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "home",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
-                self._logger.info("Exporting HES site energy data for grid...")
-                await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
-                    filename=f"{API_FILEPREFIXES['hes_energy_grid']}_{self._randomize(siteId, "site_id")}.json",
-                    payload={
-                        "siteId": siteId,
-                        "sourceType": "grid",
-                        "dateType": "week",
-                        "start": (datetime.today() - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
-                        ),
-                        "end": datetime.today().strftime("%Y-%m-%d"),
-                    },
-                    replace=[(siteId, "<siteId>")],
-                )
+                for stat_type in ["solar", "hes", "home", "grid"]:
+                    self._logger.info(
+                        "Exporting HES site energy data for %s...",
+                        stat_type.upper(),
+                    )
+                    await self.query(
+                        endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
+                        filename=f"{API_FILEPREFIXES['hes_energy_'+stat_type]}_{self._randomize(siteId, "site_id")}.json",
+                        payload={
+                            "siteId": siteId,
+                            "sourceType": stat_type,
+                            "dateType": "week",
+                            "start": (datetime.today() - timedelta(days=1)).strftime(
+                                "%Y-%m-%d"
+                            ),
+                            "end": datetime.today().strftime("%Y-%m-%d"),
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
 
                 # Export site infos requiring owner accounts
-                self._logger.info("Exporting HES installer info...")
-                response = await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["get_installer_info"],
-                    filename=f"{API_FILEPREFIXES['hes_get_installer_info']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={"siteIds": [siteId], "siteId": siteId},
-                    replace=[(siteId, "<siteId>")],
-                    admin=admin,
-                )
+                # Following will show sensitive information and addresses of installer
+                # self._logger.info("Exporting HES installer info...")
+                # response = await self.query(
+                #     endpoint=API_HES_SVC_ENDPOINTS["get_installer_info"],
+                #     filename=f"{API_FILEPREFIXES['hes_get_installer_info']}_{self._randomize(siteId,'site_id')}.json",
+                #     payload={"siteIds": [siteId], "siteId": siteId},
+                #     replace=[(siteId, "<siteId>")],
+                #     admin=admin,
+                # )
                 self._logger.info("Exporting HES system running time...")
                 response = await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_system_running_time"],

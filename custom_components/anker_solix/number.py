@@ -42,12 +42,12 @@ class AnkerSolixNumberDescription(
 ):
     """Number entity description with optional keys."""
 
-    force_creation: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
+    force_creation_fn: Callable[[dict, str], bool] = lambda d, _: False
 
 
 DEVICE_NUMBERS = [
@@ -63,6 +63,7 @@ DEVICE_NUMBERS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
         exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
+        force_creation_fn=lambda d, jk: jk in d,
     ),
     AnkerSolixNumberDescription(
         # Device output setting, determined by schedule
@@ -76,6 +77,7 @@ DEVICE_NUMBERS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        force_creation_fn=lambda d, jk: jk in d,
     ),
     AnkerSolixNumberDescription(
         # Charge Priority level to use for schedule slot
@@ -89,6 +91,7 @@ DEVICE_NUMBERS = [
         native_unit_of_measurement=PERCENTAGE,
         device_class=NumberDeviceClass.BATTERY,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        force_creation_fn=lambda d, jk: jk in d,
     ),
 ]
 
@@ -98,6 +101,19 @@ SITE_NUMBERS = [
         key="system_price",
         translation_key="system_price",
         json_key="price",
+        unit_fn=lambda d: (d.get("site_details") or {}).get("site_price_unit"),
+        device_class=NumberDeviceClass.MONETARY,
+        value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
+        native_min_value=0,
+        native_max_value=1000,
+        native_step=0.01,
+        exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
+    ),
+    AnkerSolixNumberDescription(
+        # Defined Site price for energy saving calculations by cloud
+        key="preset_plan_price",
+        translation_key="preset_plan_price",
+        json_key="preset_plan_price",
         unit_fn=lambda d: (d.get("site_details") or {}).get("site_price_unit"),
         device_class=NumberDeviceClass.MONETARY,
         value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
@@ -145,7 +161,7 @@ async def async_setup_entry(
                 or (
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
-                        desc.force_creation
+                        desc.force_creation_fn(data, desc.json_key)
                         or desc.value_fn(data, desc.json_key) is not None
                     )
                 )
@@ -287,6 +303,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             "preset_system_output_power",
             "preset_device_output_power",
             "preset_charge_priority",
+            "system_price",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -297,7 +314,11 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     "entity_id": self.entity_id,
                 },
             )
-        if self.coordinator and self.coordinator_context in self.coordinator.data:
+        if (
+            self.coordinator
+            and self.coordinator_context in self.coordinator.data
+            and self._native_value is not None
+        ):
             data = self.coordinator.data.get(self.coordinator_context) or {}
             if self.min_value <= value <= self.max_value:
                 # round the number to the defined steps if set via service call
@@ -411,10 +432,16 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     LOGGER.debug(
                         "%s change to %s will be applied", self.entity_id, value
                     )
-                    await self.coordinator.client.api.set_site_price(
+                    resp = await self.coordinator.client.api.set_site_price(
                         siteId=self.coordinator_context,
                         price=float(value),
+                        cache_only=self.coordinator.client.testmode(),
                     )
+                    if isinstance(resp, dict) and self.coordinator.client.testmode():
+                        LOGGER.info(
+                            "Applied site price settings:\n%s",
+                            json.dumps(resp, indent=2),
+                        )
             else:
                 LOGGER.debug(
                     "%s cannot be set because the value %s is out of range %s-%s",
@@ -437,5 +464,6 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 )
         # trigger coordinator update with api dictionary data
         await self.coordinator.async_refresh_data_from_apidict()
-        self._assumed_state = True
-        self._native_value = value
+        if self._native_value is not None:
+            self._assumed_state = True
+            self._native_value = value

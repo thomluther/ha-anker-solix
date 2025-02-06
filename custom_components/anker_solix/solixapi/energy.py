@@ -23,7 +23,7 @@ async def energy_daily(  # noqa: C901
     Example:
     {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "battery_discharge": "0.47", "battery_charge": "0.56"},
      "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
-    """  # noqa: D413
+    """
     table = {}
     if not devTypes or not isinstance(devTypes, set):
         devTypes = set()

@@ -1,0 +1,34 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "f3edf80e-0c97-1eff-d675-ec87ec9b1b36",
+        "site_name": "FluxKompensator",
+        "site_img": "",
+        "device_type_list": [
+          3,
+          6
+        ],
+        "ms_type": 1,
+        "power_site_type": 5,
+        "is_allow_delete": true,
+        "support_device_models": [
+          "A17C1",
+          "A17X7",
+          "SHEM3",
+          "SHEMP3",
+          "A17X8",
+          "A17C0"
+        ],
+        "current_site_device_models": [
+          "A17C1",
+          "SHEMP3",
+          "A17C0"
+        ]
+      }
+    ]
+  },
+  "trace_id": "f66a3361a74667be0a7dabbe4bac5a0a"
+}

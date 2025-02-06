@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": true,
+    "device_list": [
+      {
+        "device_sn": "3K3YXE9E47A6YH8M",
+        "device_name": "Solarbank E1600",
+        "auto_upgrade": true,
+        "alias_name": "Solarbank Wintergarten",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png"
+      },
+      {
+        "device_sn": "V58HMP9PK2TW1G0A",
+        "device_name": "Solarbank E1600",
+        "auto_upgrade": true,
+        "alias_name": "Solarbank Wohnzimmer",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png"
+      }
+    ]
+  },
+  "trace_id": "beee91ce87ffc999e4a56f9ffcf07f3a"
+}

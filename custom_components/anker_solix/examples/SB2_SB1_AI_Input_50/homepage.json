@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "c71f3d61-92de-d17f-dd6a-34c9ecbecedc",
+        "site_name": "FluxKompensator",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": []
+  },
+  "trace_id": "df7ba8b8a81fd3a1ec66a7a49f7bdc34"
+}

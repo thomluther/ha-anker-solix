@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": true,
+    "device_list": [
+      {
+        "device_sn": "UG206M25CRYHOSKA",
+        "device_name": "Solarbank 2 E1600 AC",
+        "auto_upgrade": true,
+        "alias_name": "Rheinbach L1",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/11/11/iot-admin/NycsbknWijoZcv1b/output.lin.png"
+      }
+    ]
+  },
+  "trace_id": "b6edbba8a7151c5c026fa8fddddaddb9"
+}

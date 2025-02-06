@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 import json
 import logging
 from pathlib import Path
@@ -19,6 +20,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util.dt import UTC
 
 from .const import (
     ATTRIBUTION,
@@ -49,12 +51,12 @@ class AnkerSolixSwitchDescription(
 ):
     """Switch entity description with optional keys."""
 
-    force_creation: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
     feature: AnkerSolixEntityFeature | None = None
+    force_creation_fn: Callable[[dict, str], bool] = lambda d, _: False
 
 
 DEVICE_SWITCHES = [
@@ -69,11 +71,19 @@ DEVICE_SWITCHES = [
         translation_key="preset_allow_export",
         json_key="preset_allow_export",
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        force_creation_fn=lambda d, jk: jk in d and d.get("cascaded"),
     ),
     AnkerSolixSwitchDescription(
         key="preset_discharge_priority",
         translation_key="preset_discharge_priority",
         json_key="preset_discharge_priority",
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        force_creation_fn=lambda d, jk: jk in d and d.get("cascaded"),
+    ),
+    AnkerSolixSwitchDescription(
+        key="preset_backup_option",
+        translation_key="preset_backup_option",
+        json_key="preset_backup_option",
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
@@ -89,7 +99,7 @@ ACCOUNT_SWITCHES = [
         json_key="allow_refresh",
         entity_category=EntityCategory.DIAGNOSTIC,
         feature=AnkerSolixEntityFeature.ACCOUNT_INFO,
-        force_creation=True,
+        force_creation_fn=lambda d, _: True,
         value_fn=lambda d, _: len(d) > 0,
         attrib_fn=lambda d, _: {
             "requests_last_min": d.get("requests_last_min"),
@@ -133,7 +143,7 @@ async def async_setup_entry(
                 or (
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
-                        desc.force_creation
+                        desc.force_creation_fn(data, desc.json_key)
                         or desc.value_fn(data, desc.json_key) is not None
                     )
                 )
@@ -185,6 +195,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         self._attr_unique_id = (f"{context}_{description.key}").lower()
         self.entity_description = description
         self.entity_type = entity_type
+        self.last_run: datetime | None = None
         self._attr_extra_state_attributes = None
 
         if self.entity_type == AnkerSolixEntityType.DEVICE:
@@ -254,6 +265,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **_: any) -> None:
         """Turn on the switch."""
+        if self._attr_is_on is None:
+            return
         if self._attribute_name == "allow_refresh":
             await self.coordinator.async_execute_command(
                 command=self.entity_description.key, option=True
@@ -262,6 +275,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         elif self.coordinator.client.testmode() and self._attribute_name not in [
             "preset_allow_export",
             "preset_discharge_priority",
+            "preset_backup_option",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -282,6 +296,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         elif self._attribute_name in [
             "preset_allow_export",
             "preset_discharge_priority",
+            "preset_backup_option",
         ]:
             if (
                 self.coordinator
@@ -290,15 +305,37 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             ):
                 data = self.coordinator.data.get(self.coordinator_context)
                 LOGGER.debug("%s will be enabled", self.entity_id)
-                resp = await self.coordinator.client.api.set_home_load(
-                    siteId=data.get("site_id") or "",
-                    deviceSn=self.coordinator_context,
-                    export=True if self._attribute_name == "preset_allow_export" else None,
-                    discharge_prio=True if self._attribute_name == "preset_discharge_priority" else None,
-                    test_schedule=data.get("schedule") or {}
-                    if self.coordinator.client.testmode()
-                    else None,
-                )
+                if self._attribute_name in ["preset_backup_option"]:
+                    # SB2 AC option, get cached start and end times when activating
+                    resp = await self.coordinator.client.api.set_sb2_ac_charge(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        backup_start=datetime.fromtimestamp(
+                            data.get("preset_manual_backup_start") or 0, UTC
+                        ).astimezone(),
+                        backup_end=datetime.fromtimestamp(
+                            data.get("preset_manual_backup_end") or 0, UTC
+                        ).astimezone(),
+                        backup_switch=True,
+                        test_schedule=data.get("schedule") or {}
+                        if self.coordinator.client.testmode()
+                        else None,
+                    )
+                else:
+                    # SB1 schedule options
+                    resp = await self.coordinator.client.api.set_home_load(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        export=True
+                        if self._attribute_name == "preset_allow_export"
+                        else None,
+                        discharge_prio=True
+                        if self._attribute_name == "preset_discharge_priority"
+                        else None,
+                        test_schedule=data.get("schedule") or {}
+                        if self.coordinator.client.testmode()
+                        else None,
+                    )
                 if isinstance(resp, dict) and self.coordinator.client.testmode():
                     LOGGER.info(
                         "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
@@ -313,6 +350,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_off(self, **_: any) -> None:
         """Turn off the switch."""
+        if self._attr_is_on is None:
+            return
         if self._attribute_name == "allow_refresh":
             await self.coordinator.async_execute_command(
                 command=self.entity_description.key, option=False
@@ -321,6 +360,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         elif self.coordinator.client.testmode() and self._attribute_name not in [
             "preset_allow_export",
             "preset_discharge_priority",
+            "preset_backup_option",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -339,6 +379,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         elif self._attribute_name in [
             "preset_allow_export",
             "preset_discharge_priority",
+            "preset_backup_option",
         ]:
             if (
                 self.coordinator
@@ -347,15 +388,31 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             ):
                 data = self.coordinator.data.get(self.coordinator_context)
                 LOGGER.debug("%s will be disabled", self.entity_id)
-                resp = await self.coordinator.client.api.set_home_load(
-                    siteId=data.get("site_id") or "",
-                    deviceSn=self.coordinator_context,
-                    export=False if self._attribute_name == "preset_allow_export" else None,
-                    discharge_prio=False if self._attribute_name == "preset_discharge_priority" else None,
-                    test_schedule=data.get("schedule") or {}
-                    if self.coordinator.client.testmode()
-                    else None,
-                )
+                if self._attribute_name in ["preset_backup_option"]:
+                    # SB2 AC option
+                    resp = await self.coordinator.client.api.set_sb2_ac_charge(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        backup_switch=False,
+                        test_schedule=data.get("schedule") or {}
+                        if self.coordinator.client.testmode()
+                        else None,
+                    )
+                else:
+                    # SB1 schedule options
+                    resp = await self.coordinator.client.api.set_home_load(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        export=False
+                        if self._attribute_name == "preset_allow_export"
+                        else None,
+                        discharge_prio=False
+                        if self._attribute_name == "preset_discharge_priority"
+                        else None,
+                        test_schedule=data.get("schedule") or {}
+                        if self.coordinator.client.testmode()
+                        else None,
+                    )
                 if isinstance(resp, dict) and self.coordinator.client.testmode():
                     LOGGER.info(
                         "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
@@ -403,9 +460,29 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     "entity_id": self.entity_id,
                 },
             )
+        # Ensure Export can be triggered only once
+        if self.last_run and datetime.now().astimezone() < self.last_run + timedelta(
+            minutes=2
+        ):
+            LOGGER.debug(
+                "The action %s cannot be executed again while still running",
+                service_name,
+            )
+            # Raise alert to frontend
+            raise ServiceValidationError(
+                f"The action {service_name} cannot be executed again while still running",
+                translation_domain=DOMAIN,
+                translation_key="action_blocked",
+                translation_placeholders={
+                    "service": service_name,
+                },
+            )
+        # Reset last run after timeout (for unexpected exceptions)
+        self.last_run = None
         if self.coordinator and hasattr(self.coordinator, "data"):
             if service_name in [SERVICE_EXPORT_SYSTEMS]:
                 LOGGER.debug("%s action will be applied", service_name)
+                self.last_run = datetime.now().astimezone()
                 exportlogger: logging.Logger = logging.getLogger("anker_solix_export")
                 exportlogger.setLevel(logging.DEBUG)
                 # disable updates via coordinator while using Api client and caches for randomized system export
@@ -429,6 +506,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     result = None
                 # re-enable updates via coordinator
                 self.coordinator.skip_update = False
+                # reset action blocker
+                self.last_run = None
                 return {"export_filename": result}
 
             raise ServiceValidationError(

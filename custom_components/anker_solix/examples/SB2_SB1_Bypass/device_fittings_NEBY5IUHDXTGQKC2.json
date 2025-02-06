@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "UKZPONZKZPT3W6KW",
+        "product_code": "A17Y0",
+        "device_name": "E1600 0W Output Switch",
+        "alias_name": "E1600 0W Output Switch",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/01/10/iot-admin/EPBsJ3a5JyMGqA1j/picl_A17Y0_normal.png",
+        "bt_ble_id": "",
+        "bt_ble_mac": "B7D4E2DEAAEE",
+        "link_time": 1737027736
+      }
+    ]
+  },
+  "trace_id": "8bd54e2e5ad06bb6c01b060f59d6c701"
+}

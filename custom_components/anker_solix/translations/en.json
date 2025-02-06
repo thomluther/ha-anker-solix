@@ -25,8 +25,10 @@
         "plan": {
             "options": {
                 "custom_rate_plan": "Custom plan",
-                "blend_plan": "Blend plan"
-            }
+                "blend_plan": "Blend plan",
+                "manual_backup": "Backup charge plan",
+                "use_time": "Usage time plan"
+        }
         },
         "weekday": {
             "options": {
@@ -176,6 +178,27 @@
                     }
                 }
             },
+            "heating": {
+                "name": "Battery heating",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "micro_inverter_power_exceed": {
+                "name": "Inverter power exceed",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "offgrid_with_micro_inverter_alert": {
+                "name": "Inverter offgrid alert",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
             "site_admin": {
                 "name": "System administration",
                 "state": {
@@ -198,6 +221,14 @@
                 }
             }
         },
+        "datetime": {
+            "preset_manual_backup_start": {
+                "name": "Backup start"
+            },
+            "preset_manual_backup_end": {
+                "name": "Backup end"
+            }
+        },
         "number": {
             "preset_system_output_power": {
                 "name": "System output preset"
@@ -209,7 +240,10 @@
                 "name": "Charge priority limit"
             },
             "system_price": {
-                "name": "kWh price"
+                "name": "Fixed price kWh"
+            },
+            "preset_plan_price": {
+                "name": "Plan price kWh"
             }
         },
         "select": {
@@ -221,11 +255,25 @@
                 "state": {
                     "smartmeter": "Smart meter",
                     "smartplugs": "Smart plugs",
+                    "use_time": "Usage time",
+                    "backup": "Backup charge",
                     "manual": "Manual"
                 }
             },
             "system_price_unit": {
                 "name": "Price currency"
+            },
+            "system_price_type": {
+                "name": "Price type",
+                "state": {
+                    "fixed": "Fixed",
+                    "use_time": "Usage time"
+                },
+                "state_attributes": {
+                    "current_mode": {
+                        "name": "Active usage mode"
+                    }
+                }
             }
         },
         "sensor": {
@@ -303,6 +351,12 @@
             },
             "grid_to_battery_power": {
                 "name": "Grid charge"
+            },
+            "micro_inverter_power": {
+                "name": "Inverter power"
+            },
+            "micro_inverter_power_limit": {
+                "name": "Inverter limit"
             },
             "set_output_power": {
                 "name": "Home preset",
@@ -419,6 +473,22 @@
             },
             "solarbank_timestamp": {
                 "name": "SB data time"
+            },
+            "active_scene_mode": {
+                "name": "Active usage mode",
+                "state": {
+                    "smartmeter": "Smart meter",
+                    "smartplugs": "Smart plugs",
+                    "manual": "Manual",
+                    "backup": "Backup charge",
+                    "use_time": "Usage time",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "mode_type": {
+                        "name": "Mode type"
+                    }
+                }
             },
             "pps_charging_power": {
                 "name": "PPS battery power"
@@ -721,6 +791,9 @@
             "preset_discharge_priority": {
                 "name": "Discharge priority"
             },
+            "preset_backup_option": {
+                "name": "Backup option"
+            },
             "allow_refresh": {
                 "name": "Api Usage",
                 "state_attributes": {
@@ -919,7 +992,10 @@
             "message": "The entity {entity} does not support the action {service}"
         },
         "slot_time_error": {
-            "message": "The action {service} cannot be executed: {error}."
+            "message": "The action {service} cannot be executed: {error}"
+        },
+        "action_blocked": {
+            "message": "The action {service} cannot be executed again while still running"
         }
     }
 }
