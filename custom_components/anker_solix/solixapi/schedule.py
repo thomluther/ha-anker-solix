@@ -1775,7 +1775,7 @@ async def set_sb2_ac_charge(
     deviceSn: str,
     backup_start: datetime | None = None,
     backup_end: datetime | None = None,
-    backup_duration: timedelta = timedelta(hours=1),
+    backup_duration: timedelta = timedelta(hours=3),
     backup_switch: bool | None = None,
     test_schedule: dict
     | None = None,  # used for testing or to apply changes only to api cache

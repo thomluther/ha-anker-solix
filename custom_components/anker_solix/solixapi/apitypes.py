@@ -638,7 +638,7 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        # Only used by AC model?
+        # Following Only used correctly by AC model!
         # "micro_inverter_power",
         # "micro_inverter_power_limit",
         # "micro_inverter_low_power_limit",
@@ -653,7 +653,7 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        "micro_inverter_power",
+        "micro_inverter_power", # This is external inverter input, counts to Solar power
         "micro_inverter_power_limit",
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
@@ -666,7 +666,7 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "to_home_load",
         "pei_heating_power",
-        # Only used by AC model?
+        # Following Only used correctly by AC model!
         # "micro_inverter_power",
         # "micro_inverter_power_limit",
         # "micro_inverter_low_power_limit",

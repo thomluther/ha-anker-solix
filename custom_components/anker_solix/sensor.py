@@ -1396,8 +1396,16 @@ SITE_SENSORS = [
             ).get("grid_to_battery"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(

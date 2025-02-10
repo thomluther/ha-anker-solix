@@ -39,6 +39,33 @@ This integration utilizes an unofficial Python library to communicate with the A
 🚨 **The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.** 🚨
 
 
+# Table of contents
+
+1. **[Disclaimer](#disclaimer)**
+1. **[Usage terms and conditions](#usage-terms-and-conditions)**
+1. **[Anker Account Information](#anker-account-information)**
+1. **[Limitations](#limitations)**
+1. **[Supported sensors and devices](#supported-sensors-and-devices)**
+1. **[Special device notes](#special-device-notes)**
+   * [Solarbank 2 devices and Smart Meters](#solarbank-2-devices-and-smart-meters)
+   * [Solarbank 2 AC devices](#solarbank-2-ac-devices)
+   * [Combined Solarbank 2 systems containing cascaded Solarbank 1 devices](#combined-solarbank-2-systems-containing-cascaded-solarbank-1-devices)
+   * [Power Panels](#power-panels)
+   * [Other devices](#other-devices)
+1. **[Installation via HACS (recommended)](#installation-via-hacs-recommended)**
+      * [Installation Notes](#installation-notes)
+1. **[Manual installation](#manual-installation)**
+1. **[Optional entity pictures](#optional-entity-pictures)**
+1. **[Integration configuration and usage](#integration-configuration-and-usage)**
+1. **[Issues, Q&A and other discussions](#issues-qa-and-other-discussions)**
+1. **[Contributions are welcome!](#contributions-are-welcome)**
+1. **[Attribution](#attribution)**
+1. **[Showing Your Appreciation](#showing-your-appreciation)**
+1. **[Additional Resources](#additional-resources)**
+   * [Blog-Posts](#blog-posts)
+   * [Videos](#videos)
+
+
 ## Anker Account Information
 
 Because of the way the Anker cloud Api works, one account with e-mail/password cannot be used for the Anker mobile app and the cloud Api in parallel. The Anker cloud allows only one user request token per account at any time for security reasons. Each new authentication request by a client will create a new token and drop a previous token on the server. Therefore, usage of this integration with your mobile app account will kick out your login in the mobile App. However, starting with Anker mobile app release 2.0, you can share your defined power system(s) with 'family members'. It is recommended to create a second Anker account with a different e-mail address and share your defined power system(s) with the second account.
@@ -72,7 +99,7 @@ You can open a new [issue](https://github.com/thomluther/anker-solix-api/issues)
 
 ## Supported sensors and devices
 
-### This integration will set up the following HA platforms and provides support for following Anker Solix devices:
+This integration will set up the following HA platforms and provides support for following Anker Solix devices:
 
 Platform | Description
 -- | --
@@ -95,18 +122,55 @@ Device type | Description
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W (No individual device setting supported yet)
 `powerpanel` | Anker Solix Power Panels configured in the system:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 
-### Special note for Solarbank 2 devices and Smart Meters:
+
+## Special device notes
+
+### Solarbank 2 devices and Smart Meters
 
 Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transfer their power values every 60 seconds to the cloud, Solarbank 2 seems to use different intervals for their data updates in the cloud, which may result in **invalid data responses and unavailable entities**. Please see the [configuration option considerations for Solarbank 2 devices and Smart Meters](INFO.md#option-considerations-for-solarbank-2-devices-and-smart-meters) in the [INFO](INFO.md) for more details and how you can avoid unavailable entities.
-The Solarbank 2 AC model comes with new features and initial support has been implemented. While all provides usage modes can be toggled, the Integration does not support yet any modification of the new Usage Time plan, since this is a new and complex plan format that requires additional work and testing. There may be also issues when toggling the usage modes or output preset in the manual usage mode, which needs to be investigated by the community.
 
-### Special note for Power Panels:
+
+### Solarbank 2 AC devices
+
+The Solarbank 2 AC model comes with new features and initial support has been implemented with version 2.5.0. While all provided usage modes and options can be toggled with a single entity, the Integration does not support yet any modification of the new Use Time plan, since this is a new and complex plan format that requires additional work and testing.
+
+Note:
+
+There may be issues when toggling the usage modes or output preset in the manual usage mode since not all changes may be applied by the device. This still has to be investigated and validated by YOU, the AC device owner. Api testing and exploration may be required via the Api library. See issue [#198](https://github.com/thomluther/ha-anker-solix/issues/198).
+
+
+### Combined Solarbank 2 systems containing cascaded Solarbank 1 devices
+
+This coupling feature for 1st generation Solarbank devices was [announced in May 2024](https://www.ankersolix.com/de/blogs/balkonkraftwerk-mit-speicher/solarbank-der-ersten-generation-und-solarbank-2-pro-zusammen-fur-mehr-energiekontrolle) and [delivered in Dec 2024](https://www.ankersolix.com/de/blogs/balkonkraftwerk/die-1-generation-der-solarbank-vereint-sich-mit-dem-energiesystem-der-solarbank-2-pro-plus).
+It turns out that Anker implemented just the bare minimum to support such combined systems. As users noticed, the power totals and energy statistics for such systems reflect ONLY the SB2 data, but not any SB1 data. That means you don't see anymore the SB1 solar power / energy during the day, but the SB1 discharge at night counts as solar power/energy of the SB2 during the night. All reported charge or discharge data does not reflect anything of the SB1 devices in the system. So the SB1 is pretty much a black box for the Anker home page, which is the page that can be accessed by system members.
+Furthermore the SB1 device(s) may have different schedules in combined systems. While SB2 is running in an automatic mode, the SB1 has its own schedule with all known controls for any number of time intervals. When SB2 is switched to manual mode however, it enforces another, minimalistic single interval schedule to the SB1 devices which is not accessible via the mobile App. This schedule has no interval control elements. The output preset is the only value for a whole day interval and is determined by the SB2, depending on its manual plan settings and SOC. When adding a SB1 device into a SB2 system, the Solarbank 2 will get configured as inverter type for the cascaded SB1 device. Therefore the output preset in this minimalistic schedule can also be 0 W for SB1, without any 0 W output switch installed. To prevent any SB1 schedule modifications while the enforced schedule is active, the integration will make all affected control entities unavailable to prevent user changes. Therefore you may see unavailable controls in cascaded SB1 devices that cannot be modified any longer, otherwise this may screw up the presented values and schedule settings, which would always be applied to the real SB1 schedule, even if inactive.
+To present correct total values for the combined system, the Api library corrects also the totals in the Api response based on proper accumulation of individual device values:
+  - Total solar power: SB1 device(s) solar power + SB2 device solar power - SB1 device(s) output power
+  - Total output power: Remains SB2 device output power
+  - Total SOC: Weighted average SOC across all devices, considering also number of SB2 battery packs
+  - Total battery power:
+    - The device battery power has always been calculated by the library, since the Api never reflected reliable charge or discharge power fields
+    - It is calculated as Solar power - Output power, resulting in the overall battery power for the device (positive charge power and negative discharge)
+    - Since a single device cannot charge and discharge at the same point in time, the device battery power typically reflects the complete charge OR discharge power
+    - The total battery power simply accumulates each device's battery power, and thus reflecting the total NET battery power
+    - However, this total NET battery power of multiple devices cannot reflect the total charge or discharge power at any given time, since a SB1 discharge of 100 W and a charge of those 100 W by the SB2 will result in 0 W NET battery power. So neither the 100 W charge power nor the 100 W discharge power are reflected in the total (NET) battery power value.
+
+**Important:**
+
+If you derived your HA energy integral sensors or other helpers from a positive/negative value split of the system battery power, your charge and discharge energy calculations will not be accurate anymore in combined systems. To achieve a correct charge and discharge energy calculation for your energy dashboard, you need to separate the charge and discharge power individually from each device battery power value. Then you can accumulate correct energies in following 2 ways:
+  - Accumulate charge and discharge energy individually for each device and add them all to the energy dashboard. This allows granular energy tracking per Solarbank, since the dashboard will automatically accumulate energies of same type, but display each in a different color. This is the recommended option.
+  - Create total charge and discharge power helper entities, that summarize the device power values separately. Then you can accumulate the total charge and discharge energies from those new summary helper entities.
+
+
+### Power Panels:
 
 Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800 power stations attached to the Power Panel are not tracked as system devices. Actual power consumption data in the cloud api was not discovered yet and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). Power Panel owners need to explore and document cloud Api capabilities to further expand any Power Panel system or device support. Please refer to issue [Add F3800/BP3800 Equipment when connected to Home Power Panel](https://github.com/thomluther/anker-solix-api/issues/117) for contribution.
 
-### Other devices are neither supported nor tested with the Api library or the HA integration
+### Other devices
 
-To get additional Anker power devices added, please review the [anker-solix Python library][anker-solix-api] and contribute to [open issues](https://github.com/thomluther/anker-solix-api/issues) or Api exploration. Most devices can neither be tested by the developer, nor can they be added to the HA integration before their Api usage, parameters, structures and fields are fully understood, interpreted and implemented into the Api library.
+Other devices not listed in the support table are neither supported nor tested with the Api library or the HA integration. Be aware that devices are only supported by the Anker cloud Api if they can be added into a Power System. Stand alone devices such as portable power stations (PPS), power charger or power cooler, cannot be added to a system and therefore do not provide any data into the power cloud.
+
+To get additional Anker power devices/systems added, please review the [anker-solix Python library][anker-solix-api] and contribute to [open issues](https://github.com/thomluther/anker-solix-api/issues) or Api exploration. Most devices can neither be tested by the developer, nor can they be added to the HA integration before their Api usage, parameters, structures and fields are fully understood, interpreted and implemented into the Api library.
 
 **Attention:**
 
@@ -131,7 +195,7 @@ Or following procedure for HACS 2.0 or later:
 
 Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see [Optional entity pictures](#optional-entity-pictures) for instructions to copy the image files manually.
 
-### Installation Notes:
+### Installation Notes
 - It was observed that when adding the repository to HACS via the button, an error may occur although it was added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
 - After adding the custom repository and installing the integration under HACS, you must restart Home Assistant to pick up the changes in your custom integration folder
    - HA 2024.02 will report the required restart automatically under problems
@@ -162,12 +226,11 @@ If you want to use the optional entity pictures that are shown in the example sc
  Make sure to reload your HA UI browser window without cache to get the entity pictures displayed correctly.
 
 
-## Integration configuration is done in the UI
+## Integration configuration and usage
 
 For detailed instructions on how to configure and use the integration, please refer to [INFO](INFO.md).
 
-Note: When you make changes to the integration folder content, you need to restart Home Assistant to pick up those changes
-for the container or virtual environment where Home Assistant is being started. This is applicable as well when the integration is updated manually or via HACS.
+Note: When you make changes to the integration folder content, you need to restart Home Assistant to pick up those changes for the container or virtual environment where Home Assistant is being started. This is applicable as well when the integration is updated manually or via HACS.
 
 
 ## Issues, Q&A and other discussions
@@ -252,3 +315,5 @@ Spoiler: This shows integration capabilities before Solarbank 2 was supported wi
 [![6 Monate Anker SOLIX mit Home Assistant](https://img.youtube.com/vi/_0wyATg7nnk/mqdefault.jpg)](https://www.youtube.com/watch?v=_0wyATg7nnk)
 
 Spoiler: Alkly explains his experience with Solarbank 1 and 2, the HA integration 2.4.1 and 0 grid export. Furthermore he shows how to integrate the solarbank into the energy dashboard, based on [this discussion](https://github.com/thomluther/ha-anker-solix/discussions/16)
+
+[def]: #issues-

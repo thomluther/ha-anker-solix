@@ -114,6 +114,7 @@ async def energy_daily(  # noqa: C901
                         "date": daystr,
                         "ac_socket": resp.get("ac_out_put_total") or None,
                         "battery_to_home": resp.get("battery_to_home_total") or None,
+                        "grid_to_battery": resp.get("grid_to_battery_total") or None,
                     }
                 )
                 table.update({daystr: entry})
@@ -424,11 +425,11 @@ async def energy_analysis(
     Responses for solar_production_pv*:
     Daily: Solar Energy
     Responses for solarbank:
-    Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home
+    Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home, grid_to_battery
     Responses for home_usage:
     Daily: Home Usage Energy, Extra Totals: discharge, grid_to_home, battery_to_home, smart_plugs
     Responses for grid:
-    Daily: solar_to_grid, grid_to_home, Extra Totals:
+    Daily: solar_to_grid, grid_to_home, Extra Totals: grid_to_battery
     """
     data = {
         "site_id": siteId,
