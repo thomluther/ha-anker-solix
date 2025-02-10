@@ -592,17 +592,17 @@ The markdown card is very sensitive for proper formatting of printed characters.
 type: markdown
 content: >
   {% set entity = 'sensor.solarbank_2_e1600_ac_home_preset' %}
-  {% set mode = states('select.solarbank_2_e1600_ac_usage_mode') %}
+  {% set mode = state_translated('select.solarbank_2_e1600_ac_usage_mode') %}
   {% set schedule = state_attr(entity,'schedule')|default({}) %}
   {% set plan = ((state_attr(entity,'schedule')).custom_rate_plan|default([]))|list %}
   {% set isnow = now().replace(second=0,microsecond=0) %}
-  ### SB2 Schedule (Usage Mode: {{mode|capitalize}})
+  ### SB2 Schedule (Set Usage Mode: {{mode|capitalize}})
   {% for plan_name,plan in schedule.items() %}
-    {% if plan_name in ['custom_rate_plan','blend_plan'] and plan %}
+    {% if plan_name in ['custom_rate_plan','blend_plan'] and plan -%}
       {%- set week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] -%}
       {%- set active = (mode=='smartplugs' and plan_name=='blend_plan') or (mode!='smartplugs' and plan_name!='blend_plan')-%}
     {{ "%s | %s | %s | %s | %s"|format('ID', 'Start', 'End', 'Preset', 'Weekdays ('+plan_name+')') }}
-    {{ ":---:|:---:|:---:|---:|:---" }}
+    {{ ":---|:---|:---|:---:|:---" }}
       {%- for idx in plan -%}
         {%- set index = idx.index|default('--') -%}
         {%- for slot in idx.ranges|default([]) -%}
@@ -612,37 +612,68 @@ content: >
           {%- endfor -%}
           {%- set bs = '_**' if strptime(slot.start_time,"%H:%M").time() <= isnow.time() < strptime(slot.end_time.replace('24:00','23:59'),"%H:%M").time() and int(isnow.strftime("%w")) in idx.week|default([]) and active else '' -%}
           {%- set be = '**_' if bs else '' %}
-    {{ "%s | %s | %s | %s | %s"|format(bs~index~be, bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.power~" W"~be, bs~','.join(ns.days)~be) }}
-        {%- endfor -%}
-      {%- endfor -%}
-    {%- endif -%}
+    {{ "%s%s | %s | %s | %s | %s"|format(bs~index~be,'*' if bs else '', bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.power~" W"~be, bs~','.join(ns.days)~be) }}
+        {%- endfor %}
+      {%- endfor %}
+    {%- endif %}
     {#- AC specific plans -#}
     {% if plan and plan_name in ['manual_backup'] %}
-    {{ "%s | %s | %s"|format('Start Time', 'End Time', 'Switch: ' + ('ON' if plan.switch|default(false) else 'OFF') + ' ('+plan_name+')') }}
+      {% set switch = plan.switch|default(false) %}
+    {{ "%s | %s | %s"|format('Start Time', 'End Time', 'Switch: ' + ('ON' if switch else 'OFF') + ' ('+plan_name+')') }}
     {{ ":---|:---|:---" }}
       {%- for idx in plan.ranges|default([]) %}
-    {{ "%s | %s | %s"|format((idx.start_time|as_datetime|as_local).strftime("%d.%m.%y %H:%M"), (idx.end_time|as_datetime|as_local).strftime("%d.%m.%y %H:%M"),'') }}
-      {% endfor -%}
-    {%- endif -%}
-    {% if plan and plan_name in ['use_time'] -%}
+        {%- set start = idx.start_time|as_datetime|as_local -%}
+        {%- set end = idx.end_time|as_datetime|as_local -%}
+        {%- set bs = '_**' if switch and start.time() <= isnow.time() < end.time() else '' -%}
+        {%- set be = '**_' if bs else '' %}
+    {{ "%s | %s | %s"|format(bs~start.strftime("%d.%m.%y %H:%M")~bs, bs~end.strftime("%d.%m.%y %H:%M")~be,'*' if be else '') }}
+      {%- endfor %}
+    {% endif %}
+    {% if plan and plan_name in ['use_time'] %}
       {%- set tarifs = ["High","Medium","Low","Other"] -%}
-      {% for sea in plan|default({}) %}
+      {% for sea in plan|default({}) -%}
         {%- set unit = sea.unit|default('-') -%}
-        {%- set m_start = now().replace(month=(sea.sea|default({})).start_month|default(1)|int(1)).strftime("%b") -%}
-        {%- set m_end = now().replace(month=(sea.sea|default({})).end_month|default(12)|int(12)).strftime("%b") %}
-        {% set is_same = sea.is_same|default('') %}
-    {{ '**Season: ' + [m_start,m_end]|join('-') + ',   Weekends: ' + ('SAME' if is_same else 'DIFF') + '  ('+plan_name+')**' }}
-    {{ "%s | %s | %s | %s"|format('Start', 'End', 'Type', 'Price') }}
-    {{ ":---:|:---:|:---:|---:" }}
-        {%- for slot in sea.weekday|default([]) -%}
-          {%- set tarif = slot.type|default(0)|int(0) -%}
-          {%- set price = sea.weekday_price | selectattr('type',"eq",tarif) | map(attribute='price') | list | first | float(0) -%}
-          {%- set tarif = tarifs[tarif-1] if tarif is number and 0 < tarif <= tarifs|length else '------' %}
-    {{ "%02i:00 | %02i:00 | %s | %.2f %s"|format(slot.start_time|default(0)|int(0), slot.end_time|default(0)|int(0), tarif, price, unit) }}
-        {%- endfor -%}
-      {%- endfor -%}
-    {%- endif -%}
-  {%- endfor -%}
+        {%- set wk = sea.weekday|default([]) -%}
+        {%- set we = sea.weekend|default([]) -%}
+        {%- set m_start = isnow.replace(month=(sea.sea|default({})).start_month|default(1)|int(1)) -%}
+        {%- set m_end = isnow.replace(month=(sea.sea|default({})).end_month|default(12)|int(12)) -%}
+        {%- set is_same = sea.is_same|default(true) %}
+    {{ '**Season: '~[m_start.strftime("%b"),m_end.strftime("%b")]|join(' - ')~',   Weekends: '~('SAME' if is_same else 'DIFF')~'  ('~plan_name~')**' }}
+    {{ "%s | %s | %s | %s | | %s | %s | %s | %s"|format('Start', 'End', 'Type', 'Price', 'Start', 'End', 'Type', 'Price') }}
+    {{ ":---|:---|:---|---|---|:---|:---|:---|:---" }}
+        {#- Show different weekend side by side in season -#}
+        {% for idx in range(max(wk|length,we|length)) -%}
+          {%- if wk|length > idx -%}
+            {%- set tarif = wk[idx].type|default(0)|int(0) -%}
+            {%- set price = sea.weekday_price | selectattr('type',"eq",tarif) | map(attribute='price') | list | first | float(0) -%}
+            {%- set tarif = tarifs[tarif-1] if tarif is number and 0 < tarif <= tarifs|length else '------' -%}
+            {%- set start = today_at(wk[idx].start_time|default(0)|string~":0") -%}
+            {%- set end = wk[idx].end_time|default(0)|int(0) -%}
+            {%- set end = today_at(end|string~":0") if end < 24 else today_at("0:0") + timedelta(days=1)  -%}
+            {%- set bs = '_**' if m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5) and start.time() <= isnow.time() < end.time() else '' -%}
+            {%- set be = '**_' if bs else '' -%}
+            {%- set row = "%s | %s | %s | %s%.2f %s | |"|format(bs~start.strftime("%H:%M")~be, bs~end.strftime("%H:%M")~be, bs~tarif~be, bs, price, unit~be~('*' if bs else '')) -%}
+          {%- else -%}
+            {%- set row = " | | | | | | " -%}
+          {%- endif %}
+          {%- if not is_same and we|length > idx -%}
+            {%- set tarif = we[idx].type|default(0)|int(0) -%}
+            {%- set price = sea.weekend_price | selectattr('type',"eq",tarif) | map(attribute='price') | list | first | float(0) -%}
+            {%- set tarif = tarifs[tarif-1] if tarif is number and 0 < tarif <= tarifs|length else '------' -%}
+            {%- set start = today_at(we[idx].start_time|default(0)|string~":0") -%}
+            {%- set end = we[idx].end_time|default(0)|int(0) -%}
+            {%- set end = today_at(end|string~":0") if end < 24 else today_at("0:0") + timedelta(days=1)  -%}
+            {%- set bs = '_**' if m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5,7) and start.time() <= isnow.time() < end.time() else '' -%}
+            {%- set be = '**_' if bs else '' -%}
+            {%- set row = row ~ "%s | %s | %s | %s%.2f %s"|format(bs~start.strftime("%H:%M")~be, bs~end.strftime("%H:%M")~be, bs~tarif~be, bs, price, unit~be~('*' if bs else '')) -%}
+          {%- else -%}
+            {%- set row = row ~ " | | | " %}
+          {%- endif %}
+    {{ row }}
+        {%- endfor %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
   {% if not plan %}
     {{ "No schedule available"}}
   {% endif %}
