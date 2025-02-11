@@ -127,7 +127,7 @@ Device type | Description
 
 ### Solarbank 2 devices and Smart Meters
 
-Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transfer their power values every 60 seconds to the cloud, Solarbank 2 seems to use different intervals for their data updates in the cloud, which may result in **invalid data responses and unavailable entities**. Please see the [configuration option considerations for Solarbank 2 devices and Smart Meters](INFO.md#option-considerations-for-solarbank-2-devices-and-smart-meters) in the [INFO](INFO.md) for more details and how you can avoid unavailable entities.
+Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transfer their power values every 60 seconds to the cloud, Solarbank 2 seems to use different intervals for their data updates in the cloud, which may result in **invalid data responses and unavailable entities**. Please see the [configuration option considerations for Solarbank 2 systems](INFO.md#option-considerations-for-solarbank-2-systems) in the [INFO](INFO.md) for more details and how you can avoid unavailable entities.
 
 
 ### Solarbank 2 AC devices
