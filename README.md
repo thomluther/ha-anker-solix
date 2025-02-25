@@ -292,6 +292,7 @@ If you need more assistance on the topic, please have a look at the following ex
 ### Blog-Posts
 - [simon42 - Anker Solix – Home Assistant Energiedashboard & Steuerung](https://www.simon42.com/anker-solix-home-assistant/)  (🇩🇪)
 - [Alkly - Anker SOLIX Balkonkraftwerk & Home Assistant integrieren](https://alkly.de/anker-solix-in-home-assistant/)  (🇩🇪)
+- [Alkly - Anker Integration in Home Assistant einrichten – Eine Schritt-für-Schritt-Anleitung](https://alkly.de/anker-integration-in-home-assistant-einrichten-eine-schritt-fuer-schritt-anleitung/)  (🇩🇪)
 
 ### Videos
 #### YouTube-Video "Anker SOLIX in Home Assistant integrieren" (🇩🇪)
