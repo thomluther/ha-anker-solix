@@ -921,11 +921,15 @@ Version 2.3.0 added an option to include cached data in the presented response, 
 
 ### Export systems action
 
-Starting with version 2.1.2, a new action was added to simplify an anonymized export of known Api information available for the configured account. The Api responses will be saved in JSON files and the folder will be zipped in your Home Assistant `/configuration` folder under `www/community/anker_solix/exports`. The action response field `export_filename` will provide the zipped filename url path as response to the action. This allows easy download from your HA instance through your browser when navigating to that url path. Optionally you can download the zip file via Add Ons that provide file system access.
+Starting with version 2.1.2, a new action was added to simplify an anonymized export of known Api information available for the configured account. The Api responses will be saved in JSON files and the folder will be zipped in your Home Assistant `/config` folder under `www/community/anker_solix/exports`. The `www` folder is the local file folder for the HA dashboard to access files directly via the browser. It is also used by custom dashboard cards. Home Assistant automatically maps this folder to `/local` in the URL path.
+The action response field `export_filename` will provide the zipped filename url path as response to the action. This allows easy download from your HA instance through your browser when navigating to that url path. Optionally you can download the zip file via Add Ons that provide file system access.
+
+**Important:**
+If the system export just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local`.
 
 **Notes:**
-- This action will execute a couple of Api queries and run about 10 or more seconds. The UI button will only show green once the action is finished
-- An error will be raised if the action is triggered while there is still a previous action active
+- This action will execute a couple of Api queries and run about 10 or more seconds. If Api throttling is active, it may even run 1-3 minutes.
+- The UI button will only show green once the action is finished. An error will be raised if the action is retriggered while there is still a previous action active.
 - There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
 - The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file (the `www` filesystem folder is accessible as `/local` in the url navigation path as given in the response).
 
