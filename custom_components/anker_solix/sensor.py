@@ -1175,6 +1175,28 @@ SITE_SENSORS = [
         ),
     ),
     AnkerSolixSensorDescription(
+        key="daily_solar_production_inverter",
+        translation_key="daily_solar_production_inverter",
+        json_key="solar_production_microinverter",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("solar_production_microinverter"),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value} - s
+            and {ApiCategories.solarbank_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
         key="daily_solar_to_home",
         translation_key="daily_solar_to_home",
         json_key="solar_to_home",
@@ -1938,6 +1960,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 include_cache = kwargs.get(INCLUDE_CACHE)
                 if include_cache == cv.ENTITY_MATCH_NONE:
                     include_cache = None
+                # Wait until client cache is valid
+                await self.coordinator.client.validate_cache()
                 if include_cache:
                     result = (
                         await self.coordinator.client.api.update_sites(
@@ -2111,6 +2135,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             )
 
                         LOGGER.debug("%s action will be applied", service_name)
+                        # Wait until client cache is valid
+                        await self.coordinator.client.validate_cache()
                         if generation > 1:
                             # SB2 schedule action
                             # Map action keys to api slot keys
@@ -2244,6 +2270,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
 
             elif service_name in [SERVICE_GET_SOLARBANK_SCHEDULE]:
                 LOGGER.debug("%s action will be applied", service_name)
+                # Wait until client cache is valid
+                await self.coordinator.client.validate_cache()
                 if generation > 1 and (schedule := data.get("schedule") or {}):
                     # get SB2 schedule
                     result = (
@@ -2268,6 +2296,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
 
             elif service_name in [SERVICE_CLEAR_SOLARBANK_SCHEDULE]:
                 LOGGER.debug("%s action will be applied", service_name)
+                # Wait until client cache is valid
+                await self.coordinator.client.validate_cache()
                 if generation > 1:
                     # Clear SB2 schedule
                     if schedule := data.get("schedule") or {}:

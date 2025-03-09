@@ -24,8 +24,15 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
 
 from . import api_client
-from .config_flow import SCAN_INTERVAL_DEF, async_check_and_remove_devices
+from .config_flow import (
+    DELAY_TIME_DEF,
+    ENDPOINT_LIMIT_DEF,
+    INTERVALMULT_DEF,
+    SCAN_INTERVAL_DEF,
+    async_check_and_remove_devices,
+)
 from .const import (
+    CONF_ENDPOINT_LIMIT,
     DOMAIN,
     EXAMPLESFOLDER,
     INTERVALMULT,
@@ -65,18 +72,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if coordinator and coordinator.client:
         testmode = coordinator.client.testmode(entry.options.get(TESTMODE))
         testfolder = entry.options.get(TESTFOLDER)
+        # load authentication info to get client nickname for coordinator
+        await coordinator.client.authenticate()
         if testmode and testfolder:
-            # load authentication info and set json test file folder for api
-            await coordinator.client.authenticate()
+            # set json test file folder for api
             coordinator.client.api.testDir(
                 str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
             )
         # set device detail refresh multiplier
-        coordinator.client.deviceintervals(entry.options.get(INTERVALMULT))
+        coordinator.client.deviceintervals(
+            entry.options.get(INTERVALMULT, INTERVALMULT_DEF)
+        )
         # set Api request delay time
-        coordinator.client.delay_time(entry.options.get(CONF_DELAY_TIME))
+        coordinator.client.delay_time(
+            entry.options.get(CONF_DELAY_TIME, DELAY_TIME_DEF)
+        )
+        # set Api request endpoint limit
+        coordinator.client.endpoint_limit(
+            entry.options.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF)
+        )
 
     # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
+    await coordinator.async_refresh_delay()
     await coordinator.async_config_entry_first_refresh()
     # Registers update listener to update config entry when options are updated.
     entry.async_on_unload(entry.add_update_listener(async_update_options))
@@ -120,7 +137,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle options update, triggered by update listener only."""
     coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     do_reload = True
@@ -148,29 +165,39 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
                     coordinator.config_entry.title,
                     seconds,
                 )
-            # set device detail refresh multiplier
+            # update device detail refresh multiplier
             coordinator.client.deviceintervals(entry.options.get(INTERVALMULT))
-            # set Api request delay time
+            # update Api request delay time
             coordinator.client.delay_time(entry.options.get(CONF_DELAY_TIME))
+            # update Api request delay time
+            coordinator.client.endpoint_limit(entry.options.get(CONF_ENDPOINT_LIMIT))
             # add modified coordinator back to hass
             hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    if do_reload:
-        await hass.config_entries.async_reload(entry.entry_id)
+        if do_reload:
+            await hass.config_entries.async_schedule_reload(entry.entry_id)
+    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry, also triggered when integration is reloaded by UI."""
-    if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
-    # unregister services if no config remains
-    if not hass.data[DOMAIN]:
+
+    other_entries = [
+        e
+        for e in hass.config_entries.async_loaded_entries(DOMAIN)
+        if e.entry_id != entry.entry_id
+    ]
+    if not other_entries:
+        # The last config entry is being unloaded, release shared resources, unregister services etc.
+        # unregister services if no config remains
         hass.services.async_remove(DOMAIN, SERVICE_GET_SYSTEM_INFO)
         hass.services.async_remove(DOMAIN, SERVICE_EXPORT_SYSTEMS)
         hass.services.async_remove(DOMAIN, SERVICE_GET_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_CLEAR_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_SET_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_UPDATE_SOLARBANK_SCHEDULE)
+    if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded
 
 

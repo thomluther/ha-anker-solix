@@ -76,9 +76,10 @@
                 "title": "Anker Solix Optionen",
                 "description": "Ändere die Nutzung der Schnittstelle",
                 "data": {
-                    "scan_interval": "Update Intervall (30-600 Sekunden)",
+                    "scan_interval": "Update Intervall",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
                     "skip_invalid": "Ignoriere ungültige Antwortdaten",
                     "exclude": "Ausgeschlossene Entitäts-Kategorien",
                     "testmode": "Benutze den Testmode für die Integration",
@@ -86,6 +87,7 @@
                 },
                 "data_description": {
                     "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "endpoint_limit": "Hinweis: Die Anker Cloud erzwingt ein Api Endpunkt Anfragelimit pro Minute. Standardmäßig werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, um Api Fehler zu vermeiden. Die Drosselung kann mit 0 deaktiviert werden.",
                     "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
                     "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
                     "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
@@ -112,16 +114,18 @@
                 "title": "Anker Solix Optionen",
                 "description": "Ändere die Nutzung der Schnittstelle",
                 "data": {
-                    "scan_interval": "Update Intervall (30-600 Sekunden)",
+                    "scan_interval": "Update Intervall",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
                     "skip_invalid": "Ignoriere ungültige Antwortdaten",
                     "exclude": "Ausgeschlossene Entitäts-Kategorien",
                     "testmode": "Benutze den Testmode für die Integration",
                     "testfolder": "Ordner mit json Dateien für den Integrationstest"
                 },
                 "data_description": {
-                    "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden nur einmal pro Minute aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
+                    "endpoint_limit": "Hinweis: Die Anker Cloud erzwingt ein Api Endpunkt Anfragelimit pro Minute. Standardmäßig werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, um Api Fehler zu vermeiden. Die Drosselung kann mit 0 deaktiviert werden.",
                     "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
                     "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
                     "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
@@ -623,6 +627,17 @@
                     }
                 }
             },
+            "daily_solar_production_inverter": {
+                "name": "Tägliche PV MWR",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_solar_to_home": {
                 "name": "Tägliche PV Hausabgabe",
                 "state_attributes": {
@@ -835,7 +850,7 @@
         },
         "export_systems": {
             "name": "Export von anonymisierten Api Informationen aller zugänglichen Systeme und Geräte als gezippte JSON Dateien",
-            "description": "Die aktuellen Api Antworten deiner Anker Solix Systeme und Geräte werden anonymisiert in JSON Dateien gespeichert. Der gezippte Export Ordner wird als Antwort zurückgegeben. Diese Aktion kann über 10 Sekunden dauern!"
+            "description": "Die aktuellen Api Antworten deiner Anker Solix Systeme und Geräte werden anonymisiert in JSON Dateien gespeichert. Der gezippte Export Ordner wird als Antwort zurückgegeben. Diese Aktion kann 10 Sekunden oder mehrere Minuten dauern falls Endpunkt Drosselung angewendet wird! Der Ausführen Knopf wird erst grün wenn die Aktion beendet ist."
         },
         "get_solarbank_schedule": {
             "name": "Abfrage des aktuellen Solarbank Zeitplans",
@@ -987,6 +1002,9 @@
         },
         "device_refresh": {
             "message": "Gerätedetails für {coordinator} können nicht innerhalb von {min_dev_refresh} Sekunden erneut aktualisiert werden"
+        },
+        "device_refresh_active": {
+            "message": "Gerätedetails für {coordinator} können nicht aktualisiert werden solange noch eine Aktualisierung läuft"
         },
         "service_not_supported": {
             "message": "Die Entität {entity} unterstützt die Aktion {service} nicht"

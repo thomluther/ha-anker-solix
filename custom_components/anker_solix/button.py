@@ -191,8 +191,19 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                         ),
                     },
                 )
+            if self.coordinator.client.active_device_refresh or self.coordinator.client.startup:
+                raise ServiceValidationError(
+                    f"Devices for {self.coordinator.client.api.apisession.nickname} cannot be updated while another update is still running",
+                    translation_domain=DOMAIN,
+                    translation_key="device_refresh_active",
+                    translation_placeholders={
+                        "coordinator": self.coordinator.client.api.apisession.nickname,
+                    },
+                )
             LOGGER.debug(
                 "%s triggered device refresh",
                 self.entity_id,
             )
+            # Wait until client cache is valid before running api action
+            await self.coordinator.client.validate_cache()
             await self.coordinator.async_execute_command(self.entity_description.key)

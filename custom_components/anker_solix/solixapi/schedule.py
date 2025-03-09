@@ -1138,7 +1138,9 @@ async def set_home_load(  # noqa: C901
             (slot.get("appliance_loads") or [{}])[0].update({"name": appliance_name})
         new_ranges.append(slot)
     schedule.update({"ranges": new_ranges})
-    self._logger.debug("Schedule to apply: %s", schedule)
+    self._logger.debug(
+        "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
+    )
     # return resulting schedule for test purposes without Api call
     if test_count is not None or test_schedule is not None:
         await self.get_device_parm(
@@ -1739,7 +1741,9 @@ async def set_sb2_home_load(  # noqa: C901
             else usage_mode
         }
     )
-    self._logger.debug("Schedule to apply: %s", schedule)
+    self._logger.debug(
+        "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
+    )
     # update Api dict and return resulting schedule for test purposes without Api call
     if test_schedule is not None:
         await self.get_device_parm(
@@ -1749,7 +1753,11 @@ async def set_sb2_home_load(  # noqa: C901
             deviceSn=deviceSn,
         )
         if price_type == SolarbankPriceTypes.USE_TIME:
-            self._logger.debug("Toggling price type to: %s", price_type)
+            self._logger.debug(
+                "Toggling api %s price type to: %s",
+                self.apisession.nickname,
+                price_type,
+            )
             await self.set_site_price(
                 siteId=siteId, price_type=price_type, cache_only=True
             )
@@ -1764,7 +1772,9 @@ async def set_sb2_home_load(  # noqa: C901
     # Make also the price type change if required by usage mode change
     # The mobile App only activates use_time price automatically with use_time mode, but does not toggle back to fixed price automatically
     if price_type == SolarbankPriceTypes.USE_TIME:
-        self._logger.debug("Toggling price type to: %s", price_type)
+        self._logger.debug(
+            "Toggling api %s price type to: %s", self.apisession.nickname, price_type
+        )
         await self.set_site_price(siteId=siteId, price_type=price_type)
     return resp
 
@@ -1869,7 +1879,9 @@ async def set_sb2_ac_charge(
         ]
 
     schedule.update({rate_plan_name: new_rate_plan})
-    self._logger.debug("Schedule to apply: %s", schedule)
+    self._logger.debug(
+        "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
+    )
     # return resulting schedule for test purposes without Api call
     if test_schedule is not None:
         await self.get_device_parm(
@@ -1948,7 +1960,9 @@ async def set_sb2_use_time(
     # TODO: Implement code to modify the use_time structures
 
     schedule.update({rate_plan_name: new_rate_plan})
-    self._logger.debug("Schedule to apply: %s", schedule)
+    self._logger.debug(
+        "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
+    )
     # return resulting schedule for test purposes without Api call
     if test_schedule is not None:
         await self.get_device_parm(

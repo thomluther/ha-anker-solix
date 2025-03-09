@@ -239,6 +239,8 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             and self._native_value is not None
         ):
             data = self.coordinator.data.get(self.coordinator_context) or {}
+            # Wait until client cache is valid before applying any api change
+            await self.coordinator.client.validate_cache()
             if (
                 self._attribute_name
                 in [

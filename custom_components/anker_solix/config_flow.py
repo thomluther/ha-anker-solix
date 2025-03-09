@@ -26,6 +26,7 @@ from . import api_client
 from .const import (
     ACCEPT_TERMS,
     ALLOW_TESTMODE,
+    CONF_ENDPOINT_LIMIT,
     CONF_SKIP_INVALID,
     DOMAIN,
     ERROR_DETAIL,
@@ -38,14 +39,13 @@ from .const import (
     TESTFOLDER,
     TESTMODE,
 )
-from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.apitypes import ApiCategories, SolixDeviceType
 
 # Define integration option limits and defaults
 SCAN_INTERVAL_DEF: int = api_client.DEFAULT_UPDATE_INTERVAL
-INTERVALMULT_DEF: int = (
-    api_client.DEFAULT_DEVICE_MULTIPLIER
-)  # multiplier for scan interval
-DELAY_TIME_DEF: float = SolixDefaults.REQUEST_DELAY_DEF
+INTERVALMULT_DEF: int = api_client.DEFAULT_DEVICE_MULTIPLIER
+DELAY_TIME_DEF: float = api_client.DEFAULT_DELAY_TIME
+ENDPOINT_LIMIT_DEF: int = api_client.DEFAULT_ENDPOINT_LIMIT
 
 _SCAN_INTERVAL_MIN: int = 10 if ALLOW_TESTMODE else 30
 _SCAN_INTERVAL_MAX: int = 600
@@ -56,6 +56,9 @@ _INTERVALMULT_STEP: int = 2
 _DELAY_TIME_MIN: float = 0.0
 _DELAY_TIME_MAX: float = 2.0
 _DELAY_TIME_STEP: float = 0.1
+_ENDPOINT_LIMIT_MIN: int = 0
+_ENDPOINT_LIMIT_MAX: int = 30
+_ENDPOINT_LIMIT_STEP: int = 1
 _ALLOW_TESTMODE: bool = bool(ALLOW_TESTMODE)
 _ACCEPT_TERMS: bool = False
 _SKIP_INVALID: bool = False
@@ -405,6 +408,18 @@ async def get_options_schema(entry: dict | None = None) -> dict:
             ),
         ),
         vol.Optional(
+            CONF_ENDPOINT_LIMIT,
+            default=entry.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF),
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=_ENDPOINT_LIMIT_MIN,
+                max=_ENDPOINT_LIMIT_MAX,
+                step=_ENDPOINT_LIMIT_STEP,
+                unit_of_measurement="requests",
+                mode=selector.NumberSelectorMode.SLIDER,
+            ),
+        ),
+        vol.Optional(
             CONF_SKIP_INVALID,
             default=entry.get(CONF_SKIP_INVALID, _SKIP_INVALID),
         ): selector.BooleanSelector(),
@@ -552,3 +567,4 @@ async def async_check_and_remove_devices(
                 serial,
             )
     return None
+

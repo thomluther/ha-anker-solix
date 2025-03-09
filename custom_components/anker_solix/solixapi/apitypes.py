@@ -308,7 +308,6 @@ API_FILEPREFIXES = {
     "wifi_list": "wifi_list",
     "energy_solarbank": "energy_solarbank",
     "energy_solar_production": "energy_solar_production",
-    "energy_solar_production_pv": "energy_solar_production_pv",
     "energy_home_usage": "energy_home_usage",
     "energy_grid": "energy_grid",
     "solar_info": "solar_info",
@@ -360,6 +359,11 @@ API_FILEPREFIXES = {
     "hes_energy_pps": "hes_energy_pps",
     "hes_energy_home": "hes_energy_home",
     "hes_energy_grid": "hes_energy_grid",
+    "hes_energy_solar_today": "hes_energy_solar_today",
+    "hes_energy_hes_today": "hes_energy_hes_today",
+    "hes_energy_pps_today": "hes_energy_pps_today",
+    "hes_energy_home_today": "hes_energy_home_today",
+    "hes_energy_grid_today": "hes_energy_grid_today",
     "hes_get_monetary_units": "hes_monetary_units",
     "hes_get_install_info": "hes_install_info",
     "hes_get_wifi_info": "hes_wifi_info",
@@ -496,6 +500,7 @@ class ApiCategories:
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
     powerpanel_energy: str = "powerpanel_energy"
+    hes_energy: str = "hes_energy"
 
 
 @dataclass(frozen=True)
@@ -538,6 +543,7 @@ class SolixSiteType:
 
     t_1 = SolixDeviceType.INVERTER.value  # Main A5143
     t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0 SB1
+    t_3 = SolixDeviceType.HES.value  # Main A5103, Note: This is not listed in actual site rules, but X1 export showing type 3 instead of 9 as site rules say
     t_4 = SolixDeviceType.POWERPANEL.value  # Main A17B1
     t_5 = SolixDeviceType.SOLARBANK.value  # Main A17C1 SB2 Pro, can also add SB1
     t_6 = SolixDeviceType.HES.value  # Main A5341
@@ -653,7 +659,7 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        "micro_inverter_power", # This is external inverter input, counts to Solar power
+        "micro_inverter_power",  # This is external inverter input, counts to Solar power
         "micro_inverter_power_limit",
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
@@ -695,10 +701,19 @@ class SolixDefaults:
     CHARGE_PRIORITY_DEF: int = 80
     # Discharge Priority preset for Solarbank schedule timeslot settings
     DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
+    # AC tariff settings for Use Time plan
+    TARIFF_MIN: int = SolarbankTariffTypes.PEEK.value
+    TARIFF_MAX: int = SolarbankTariffTypes.OTHER.value
+    TARIFF_DEF: int = SolarbankTariffTypes.MID_PEEK.value
+    TARIFF_PRICE_DEF: float = 0.0
+    TARIFF_WE_SAME: bool = True
+    CURRENCY_DEF: str = "€"
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
     REQUEST_DELAY_MIN: float = 0.0
-    REQUEST_DELAY_MAX: float = 5.0
+    REQUEST_DELAY_MAX: float = 10.0
     REQUEST_DELAY_DEF: float = 0.3
+    # Request limit per endpoint per minute
+    ENDPOINT_LIMIT_DEF: int = 10
 
 
 class SolixDeviceStatus(Enum):

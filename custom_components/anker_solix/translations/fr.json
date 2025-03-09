@@ -76,9 +76,10 @@
                 "title": "Options Anker Solix",
                 "description": "Modifier l'utilisation de l'API",
                 "data": {
-                    "scan_interval": "Intervalle de mise à jour (30-600 secondes)",
+                    "scan_interval": "Intervalle de mise à jour",
                     "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
                     "delay_time": "Délai pour les requêtes Api suivantes",
+                    "endpoint_limit": "Limite des demandes de points d'extrémité par minute (0 = désactivé)",
                     "skip_invalid": "Ignorer les réponses de données non valides",
                     "exclude": "Catégories d'entités exclues",
                     "testmode": "Utiliser le mode test d'intégration",
@@ -86,6 +87,7 @@
                 },
                 "data_description": {
                     "scan_interval": "Remarque: Les données sur le serveur cloud sont actualisées au maximum toutes les 60 à 300 secondes. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "endpoint_limit": "Remarque: Une limite de demande d'api par minute est appliquée par Anker Cloud. La limitation par défaut autorise 10 requêtes pour le même point d'accès par minute afin d'éviter les erreurs d'api. Avec 0, vous pouvez désactiver l'étranglement des points de terminaison.",
                     "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues.",
                     "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
@@ -112,16 +114,18 @@
                 "title": "Options Anker Solix",
                 "description": "Modifier l'utilisation de l'API",
                 "data": {
-                    "scan_interval": "Intervalle de mise à jour (30-600 secondes)",
+                    "scan_interval": "Intervalle de mise à jour",
                     "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
                     "delay_time": "Délai pour les requêtes Api suivantes",
+                    "endpoint_limit": "Limite des demandes de points d'extrémité par minute (0 = désactivé)",
                     "skip_invalid": "Ignorer les réponses de données non valides",
                     "exclude": "Catégories d'entités exclues",
                     "testmode": "Utiliser le mode test d'intégration",
                     "testfolder": "Dossier avec les fichiers JSON pour les tests d'intégration"
                 },
                 "data_description": {
-                    "scan_interval": "Remarque: Les données sur le serveur cloud ne sont mises à jour qu'une fois par minute. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "scan_interval": "Remarque: Les données sur le serveur cloud sont actualisées au maximum toutes les 60 à 300 secondes. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
+                    "endpoint_limit": "Remarque: Une limite de demande d'api par minute est appliquée par Anker Cloud. La limitation par défaut autorise 10 requêtes pour le même point d'accès par minute afin d'éviter les erreurs d'api. Avec 0, vous pouvez désactiver l'étranglement des points de terminaison.",
                     "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues.",
                     "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."
@@ -623,6 +627,17 @@
                     }
                 }
             },
+            "daily_solar_production_inverter": {
+                "name": "Solaire journalière onduleur",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_solar_to_home": {
                 "name": "Soleil journalier à domicile",
                 "state_attributes": {
@@ -836,7 +851,7 @@
         },
         "export_systems": {
             "name": "Exporter les informations api anonymes des systèmes et dispositifs accessibles dans des fichiers JSON zippés",
-            "description": "Les réponses Api actuelles pour votre système Anker Solix et les informations sur l'appareil seront anonymisées et enregistrées dans des fichiers JSON. Le dossier de sortie zippé sera renvoyé en tant que réponse. Cette action peut durer plus de 10 secondes!"
+            "description": "Les réponses Api actuelles pour votre système Anker Solix et les informations sur l'appareil seront anonymisées et enregistrées dans des fichiers JSON. Le dossier de sortie zippé sera renvoyé en tant que réponse. Cette action peut durer 10 secondes ou plusieurs minutes si l'étranglement des points d'extrémité est appliqué! Le bouton Exécuter devient vert une fois l'action terminée."
         },
         "get_solarbank_schedule": {
             "name": "Demandez l'horaire actuel de solarbank",
@@ -988,6 +1003,9 @@
         },
         "device_refresh": {
             "message": "Les appareils de {coordinator} ne peuvent pas être réactualisés dans les {min_dev_refresh} secondes"
+        },
+        "device_refresh_active": {
+            "message": "Les appareils de {coordinator} ne peuvent pas être mis à jour alors qu'une autre mise à jour est en cours"
         },
         "service_not_supported": {
             "message": "L'entité {entity} ne supporte pas l'action {service}"

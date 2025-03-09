@@ -20,6 +20,7 @@ from homeassistant.const import (
     EntityCategory,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -128,7 +129,7 @@ ACCOUNT_SENSORS = [
         key="has_unread_msg",
         translation_key="has_unread_msg",
         json_key="has_unread_msg",
-        #entity_category=EntityCategory.DIAGNOSTIC,
+        # entity_category=EntityCategory.DIAGNOSTIC,
     ),
     # This should be shown only when testmode is active
     AnkerSolixBinarySensorDescription(
@@ -154,19 +155,43 @@ async def async_setup_entry(
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
+        # manually register parent devices to avoid core warning while processing first component setup with account via device that may not exist yet
+        device_registry = dr.async_get(hass)
         for context, data in coordinator.data.items():
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SENSORS
+                device_registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers=(
+                        get_AnkerSolixSystemInfo(
+                            data, context, coordinator.client.api.apisession.email
+                        )
+                    ).get("identifiers"),
+                )
             elif data_type == SolixDeviceType.ACCOUNT.value:
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_SENSORS
+                device_registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers=(get_AnkerSolixAccountInfo(data, context)).get(
+                        "identifiers"
+                    ),
+                )
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_SENSORS
+                device_registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers=(
+                        get_AnkerSolixDeviceInfo(
+                            data, context, coordinator.client.api.apisession.email
+                        )
+                    ).get("identifiers"),
+                )
 
             for description in (
                 desc

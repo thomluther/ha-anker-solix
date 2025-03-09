@@ -134,15 +134,47 @@ To simplify usage of this workaround, please see [Automation to send and clear s
 
 ## Data refresh configuration options
 
-The data on the cloud which can be retrieved via the Api is typically refreshed only once per minute at most. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further if no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the received data.
+The data in the cloud which can be retrieved via the Api is typically refreshed only once per minute at most. Most of the device types refresh cloud data only in 5 minute intervals. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further if no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the received data.
 
 **Note:** The solarbank seems to be the only Anker system device category that provides valid timestamp data (inverter or power panel data timestamps are not updated by the cloud).
 
-During each Api refresh interval, the power sensor values will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut-off, auto-upgrade, schedule etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 30 seconds ago to avoid unnecessary Api traffic.
+During each Api refresh interval, the power sensor values of the systems and their devices will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut-off, auto-upgrade, schedule, system energy statistics etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 60 seconds ago and there is no device refresh ongoing to avoid unnecessary Api traffic.
 
-The cloud Api also enforces a request limit but actual metrics for this limit are unknown. You may see the configuration entry flagged with an error, that may indicate `429: Too many requests`. In that case, all entities may become unknown, unavailable or show stale data until further Api requests are permitted. To avoid hitting the request limit, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second. Furthermore, all energy statistic entities (introduced with version 1.1.0) will be excluded from new configuration entries per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/ha-anker-solix/discussions/32).
-Desired energy statistics can be re-enabled by removing them from the exclusion list in the configuration options.
-The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after successful account authorization and before the first data collection is done. Excluded device types, details categories or energy statistics can be reviewed and changed as needed. Device types of no interest can be excluded completely. Exclusion of specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
+To prevent too many requests in a short amount of time, a configurable request delay was introduced with version 1.1.1. This may be adjusted to avoid too many requests per second and potentially overload the Api or keep it busy.
+
+The cloud Api also enforces a request limit. This request limit is applied by the cloud and is independent of the used account. It is enforced per IP address and endpoint within the last ~minute. Originally this limit was ~25 requests. As of Feb. 2025, this endpoint limit was significantly reduced by Anker to 10-12 requests per IP, endpoint and minute. Every Api client you use in your home behind the same router IP will count towards that cloud limit, like running Anker Solix HA integration clients, Anker mobile app devices etc. The mobile App may appear only unresponsive or not showing data or charts when the endpoint limit is temporarily exceeded, but in the HA integration logs you will see errors as following:
+```text
+2025-02-28 16:54:34.343 ERROR (MainThread) [custom_components.anker_solix] Api Request Error: 429, message='Too Many Requests', url='https://ankerpower-api-eu.anker.com/power_service/v1/site/energy_analysis'
+2025-02-28 16:54:34.344 ERROR (MainThread) [custom_components.anker_solix] Response Text: {"error_msg":"Request too soon. Your actions have been recorded."}
+```
+If those errors occur during setup or reload of the configuration entry, you may see your configuration entry flagged with error `429: Too many requests`. Upon such errors, some or all entities may become unknown, unavailable or show stale data until further Api requests are permitted. To avoid hitting the request limit, starting with release 2.5.5 a new endpoint throttling capability was implemented to the Api client session. A default endpoint limit of 10 will be used for the throttle, which can be adjusted as required. Setting the endpoint limit to 0 will disable the throttle and provide the former client session behavior.
+
+**Note:**
+
+In order to avoid that potential endpoint throttling loops occurs during (re)load of the configuration while doing the initial data poll for entity creation, the initial poll of energy details is now deferred to the next data refresh cycle. This ensures fast configuration (re)loads and avoids that this process may be elongated for minute(s). This change however has the disadvantage, that energy entity creation will be delayed by one or more minutes. **So be calm and allow the integration a few minutes after restart to poll initial energy data and create the corresponding entities.**
+
+**Important:**
+
+The endpoint limit throttle is applied only for a single Api session. Other Api clients may query the same endpoints within last minute and therefore the integration may still exceed the endpoint limit. If you create multiple Anker configuration entries, you need to divide their endpoint limits accordingly since they can run in parallel, especially with your Anker app usage by another account.
+
+Due to the Api endpoint limit, it is recommended to exclude the energy categories from your configuration entry if you want to avoid such request errors or the throttling delays, which aim to avoid exceeding the endpoint limit for larger or multiple systems configurations. The daily energy entities require by far the most queries to the same endpoint, and therefore may cause one or more minute throttle delays for data refreshes even in small system configurations.
+Furthermore, all energy statistic entities (introduced with version 1.1.0) are excluded from new configuration entries per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/ha-anker-solix/discussions/32). Desired energy statistics can be re-enabled by removing them from the exclusion list in the configuration options.
+
+Furthermore there may be request errors when you configured more than one Anker account (or use the Anker app in parallel) in case multiple Api requests are done in parallel from same IP address, even if that is for different accounts or systems. This is typically logged with error code 21105 as shown in following example:
+```text
+[custom_components.anker_solix] (21105) Anker Api Error: Failed to request. 2024-09-26 08:59:39.442 ERROR (MainThread) [custom_components.anker_solix] Response Text: {"code":21105,"msg":"Failed to request.","trace_id":"<trace_id>"}
+```
+Request errors may cause entities become unavailable, or even cause the configuration (re)load to fail. You cannot avoid parallel requests of multiple clients by changing the configuration options. Starting with release 2.5.5, some enhancements have been implemented to better tolerate multiple configuration entries and parallel request errors:
+
+* Added a request retry capability to client session for Api return codes that can be classified as 'Api busy error', such as code 21105. A single retry will be attempted for the request after a random delay of 2-5 seconds, which should mask parallel request errors in most cases. A warning will be logged for the retry attempt to allow monitoring for their frequency.
+* If more than one Anker configuration entry is created, the integration will try to stagger their individual data refresh polls:
+    - The regular refresh interval may be delayed by 10 or more seconds to allow other active client refreshes to complete.
+    - The device details refresh may be delayed by at least 2 minutes to allow other active device refreshes to complete, assuming they can run into 1-2 throttle delays. Warnings will be logged for any refresh that is being delayed.
+
+Those enhancements should better tolerate multiple configuration entries and avoid that your entities become unavailable temporarily.
+
+The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after successful account authorization and before the first data collection is done. Excluded device types, details categories or energy statistics can be reviewed and changed as needed. Device types of no interest can be excluded completely. Exclusion of energy categories and specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
+
 
 ### Option considerations for Solarbank 2 systems
 
@@ -154,9 +186,9 @@ In consequence, before the cloud change in July 2024, the HA integration typical
 
 Note:
 
-The cloud change in July did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
+The cloud change in July 2024 did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
 
-### Default options as of version 2.0.0
+### Default options as of version 2.5.5
 
 ![Options][options-img]
 
@@ -597,7 +629,7 @@ content: >
   {% set plan = ((state_attr(entity,'schedule')).custom_rate_plan|default([]))|list %}
   {% set isnow = now().replace(second=0,microsecond=0) %}
   ### SB2 Schedule (Set Usage Mode: {{mode|capitalize}})
-  {% for plan_name,plan in schedule.items() %}
+  {% for plan_name,plan in (schedule or {}).items() %}
     {% if plan_name in ['custom_rate_plan','blend_plan'] and plan -%}
       {%- set week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] -%}
       {%- set active = (mode=='smartplugs' and plan_name=='blend_plan') or (mode!='smartplugs' and plan_name!='blend_plan')-%}
@@ -928,8 +960,8 @@ The action response field `export_filename` will provide the zipped filename url
 If the system export just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local`.
 
 **Notes:**
-- This action will execute a couple of Api queries and run about 10 or more seconds. If Api throttling is active, it may even run 1-3 minutes.
-- The UI button will only show green once the action is finished. An error will be raised if the action is retriggered while there is still a previous action active.
+- This action will execute a couple of Api queries and run about 10 or more seconds. **If Api throttling is active, it may even run 1-3 minutes.**
+- **The UI button will only show green once the action is finished.** An error will be raised if the action is retriggered while there is still a previous action active.
 - There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
 - The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file (the `www` filesystem folder is accessible as `/local` in the url navigation path as given in the response).
 

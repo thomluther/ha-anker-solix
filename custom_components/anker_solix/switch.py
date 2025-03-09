@@ -462,7 +462,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             )
         # Ensure Export can be triggered only once
         if self.last_run and datetime.now().astimezone() < self.last_run + timedelta(
-            minutes=2
+            minutes=10
         ):
             LOGGER.debug(
                 "The action %s cannot be executed again while still running",
@@ -485,8 +485,6 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 self.last_run = datetime.now().astimezone()
                 exportlogger: logging.Logger = logging.getLogger("anker_solix_export")
                 exportlogger.setLevel(logging.DEBUG)
-                # disable updates via coordinator while using Api client and caches for randomized system export
-                self.coordinator.skip_update = True
                 myexport = export.AnkerSolixApiExport(
                     client=self.coordinator.client.api,
                     logger=exportlogger,
@@ -495,7 +493,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 exportpath: str = str(
                     Path(wwwroot) / "community" / DOMAIN / EXPORTFOLDER
                 )
-                if await myexport.export_data(export_path=exportpath):
+                # Toogle coordinator client cache invalid during the cache export randomization of the randomized system export
+                if await myexport.export_data(export_path=exportpath,toggle_cache=self.coordinator.client.toggle_cache):
                     # convert path to public available url folder and filename
                     result = urllib.parse.quote(
                         myexport.zipfilename.replace(
@@ -504,8 +503,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     )
                 else:
                     result = None
-                # re-enable updates via coordinator
-                self.coordinator.skip_update = False
+                # Ensure to validate the coordinator client cache again
+                self.coordinator.client.toggle_cache(True)
                 # reset action blocker
                 self.last_run = None
                 return {"export_filename": result}

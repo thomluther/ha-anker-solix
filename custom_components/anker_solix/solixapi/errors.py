@@ -27,6 +27,10 @@ class RequestError(AnkerSolixError):
     """Request error."""
 
 
+class BusyError(AnkerSolixError):
+    """Busy error."""
+
+
 class RequestLimitError(AnkerSolixError):
     """Request Limit exceeded error."""
 
@@ -83,6 +87,7 @@ ERRORS: dict[int, type[AnkerSolixError]] = {
     10000: RequestError,
     10003: RequestError,
     10007: RequestError,
+    21105: BusyError,
     26050: VerifyCodeError,
     26051: VerifyCodeExpiredError,
     26052: NeedVerifyCodeError,
@@ -106,4 +111,4 @@ def raise_error(data: dict, prefix: str = "Anker Api Error") -> None:
     else:
         return
     if error := ERRORS.get(code) or (AnkerSolixError if code >= 10000 else None):
-        raise error(f'({code}) {prefix}: {data.get("msg","Error msg not found")}')
+        raise error(f"({code}) {prefix}: {data.get('msg', 'Error msg not found')}")

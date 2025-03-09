@@ -1,4 +1,4 @@
-"""Class for interacting with the Anker Power / Solix API Power Panel related charging_service endpoints.
+"""Class for interacting with the Anker Power / Solix API HES related charging_service endpoints.
 
 Required Python modules:
 pip install cryptography
@@ -16,8 +16,8 @@ from aiohttp import ClientSession
 
 from .apibase import AnkerSolixBaseApi
 from .apitypes import (
-    API_CHARGING_ENDPOINTS,
     API_FILEPREFIXES,
+    API_HES_SVC_ENDPOINTS,
     ApiCategories,
     SolixDeviceCategory,
     SolixDeviceStatus,
@@ -30,8 +30,8 @@ from .session import AnkerSolixClientSession
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
-    """Define the API class to handle Anker server communication via AnkerSolixClientSession for Power Panel related queries.
+class AnkerSolixHesApi(AnkerSolixBaseApi):
+    """Define the API class to handle Anker server communication via AnkerSolixClientSession for HES related queries.
 
     It will also build internal cache dictionaries with information collected through the Api.
     """
@@ -126,6 +126,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",
+                        "is_subdevice",
                     ]:
                         device.update({key: bool(value)})
                     elif key in [
@@ -136,6 +137,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         in [
                             # Example for key with string values that should only be updated if value returned
                             "wifi_name",
+                            "main_sn",
                         ]
                         and value
                     ):
@@ -163,7 +165,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
     ) -> dict:
         """Create/Update api sites cache structure.
 
-        Implement this method to get the latest info for all power panel sites or only the provided siteId and update class cache dictionaries.
+        Implement this method to get the latest info for all hes sites or only the provided siteId and update class cache dictionaries.
         """
         # define excluded categories to skip for queries
         if not exclude or not isinstance(exclude, set):
@@ -171,13 +173,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         if not siteData or not isinstance(siteData, dict):
             siteData = {}
         if siteId and (
-            (site_info := siteData.pop("site_info", {}))
+            site_info := siteData.pop("site_info", {})
             or (self.sites.get(siteId) or {}).get("site_info")
             or {}
         ):
             # update only the provided site ID when siteInfo available/provided to avoid another site list query
             self._logger.debug(
-                "Updating api %s Power Panel sites data for site ID %s",
+                "Updating api %s HES sites data for site ID %s",
                 self.apisession.nickname,
                 siteId,
             )
@@ -187,7 +189,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         else:
             # run normal refresh for given or all sites
             self._logger.debug(
-                "Updating api %s Power Panel sites data%s",
+                "Updating api %s HES Sites data%s",
                 self.apisession.nickname,
                 " for site ID " + siteId if siteId else "",
             )
@@ -220,8 +222,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     item := "t_" + str(site_info.get("power_site_type") or ""),
                 ):
                     mysite["site_type"] = getattr(SolixSiteType, item)
-                # check if power panel site type
-                if mysite.get("site_type") == SolixDeviceType.POWERPANEL.value:
+                # check if hes site type
+                if mysite.get("site_type") == SolixDeviceType.HES.value:
                     mysite.update(
                         {
                             "site_id": myid,
@@ -232,37 +234,54 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                     admin = site_info.get("ms_type", 0) in [0, 1]
                     mysite["site_admin"] = admin
-                    # query scene info if not provided in site Data
-                    if not (scene := siteData):
+                    # query site device info if not provided in site Data
+                    if not (hes_list := siteData.get("hes_list")):
                         self._logger.debug(
-                            "Getting api %s scene info for site",
+                            "Getting api %s device info for HES site",
                             self.apisession.nickname,
                         )
-                        scene = await self.get_scene_info(myid, fromFile=fromFile)
+                        hes_list = (
+                            await self.get_dev_info(siteId=myid, fromFile=fromFile)
+                        ).get("results") or []
+
                     # add extra site data to my site
-                    if scene:
-                        mysite["powerpanel_list"] = scene.get("powerpanel_list") or []
-                    for powerpanel in mysite.get("powerpanel_list") or []:
-                        # work around for device_name which is actually the device_alias in scene info
-                        if "device_name" in powerpanel:
-                            # modify only a copy of the device dict to prevent changing the scene info dict
-                            powerpanel = dict(powerpanel).copy()
-                            powerpanel.update(
-                                {"alias_name": powerpanel.pop("device_name")}
-                            )
+                    mysite["hes_list"] = hes_list
+                    for hes in hes_list or []:
+                        main_sn = hes.get("sn") or ""
                         if sn := self._update_dev(
-                            powerpanel,
-                            devType=SolixDeviceType.POWERPANEL.value,
+                            {
+                                "device_sn": hes.get("sn") or "",
+                                "main_sn": main_sn,
+                                "device_pn": hes.get("pn") or "",
+                            },
+                            devType=SolixDeviceType.HES.value,
                             siteId=myid,
                             isAdmin=admin,
                         ):
                             self._site_devices.add(sn)
+                        for subdev in [
+                            dev
+                            for dev in (hes.get("subDevInfo") or [])
+                            if dev.get("sn") != main_sn
+                        ]:
+                            if sn := self._update_dev(
+                                {
+                                    "device_sn": subdev.get("sn") or "",
+                                    "main_sn": main_sn,
+                                    "is_subdevice": True,
+                                    "device_pn": subdev.get("pn") or "",
+                                },
+                                devType=SolixDeviceType.HES.value,
+                                siteId=myid,
+                                isAdmin=admin,
+                            ):
+                                self._site_devices.add(sn)
 
-                    # Query 5 min avg power and soc from energy stats as work around since no current power values found for power panels in cloud server yet
+                    # Query 5 min avg power and soc from energy stats as work around since no current power values found for hes in cloud server yet
                     if not (
                         {
-                            SolixDeviceType.POWERPANEL.value,
-                            ApiCategories.powerpanel_energy,
+                            SolixDeviceType.HES.value,
+                            ApiCategories.hes_energy,
                         }
                         & exclude
                     ):
@@ -289,26 +308,28 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         if not exclude or not isinstance(exclude, set):
             exclude = set()
         self._logger.debug(
-            "Updating api %s Power Panel sites details",
+            "Updating api %s HES Sites details",
             self.apisession.nickname,
         )
         for site_id, site in self.sites.items():
-            # Fetch overall statistic totals for powerpanel site that should not be excluded since merged to overall site cache
+            # Fetch overall statistic totals for hes site that should not be excluded since merged to overall site cache
             self._logger.debug(
                 "Getting api %s system running totals information",
                 self.apisession.nickname,
             )
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
-            if {SolixDeviceType.POWERPANEL.value} - exclude:
+            if {SolixDeviceType.HES.value} - exclude:
                 # Fetch details that only work for site admins
                 if site.get("site_admin", False):
-                    # Add extra power panel site polling that may make sense
+                    # Add extra hes site polling that may make sense
                     pass
         return self.sites
 
     async def update_device_energy(
-        self, fromFile: bool = False, exclude: set | None = None
+        self,
+        fromFile: bool = False,
+        exclude: set | None = None,
     ) -> dict:
         """Get the site energy statistics for given site.
 
@@ -321,24 +342,24 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         for site_id, site in self.sites.items():
             query_types: set = set()
             # build device types set for daily energy query, depending on device types found for site
-            # Powerpanel sites have no variations for energy metrics, either all or none can be queried
+            # HES sites have no variations for energy metrics, either all or none can be queried
             if not (
                 {
-                    SolixDeviceType.POWERPANEL.value,
-                    ApiCategories.powerpanel_energy,
+                    SolixDeviceType.HES.value,
+                    ApiCategories.hes_energy,
                 }
                 & exclude
             ):
-                query_types: set = {SolixDeviceType.POWERPANEL.value}
+                query_types: set = {SolixDeviceType.HES.value}
             if query_types:
                 self._logger.debug(
-                    "Getting api %s Power Panel energy details for site",
+                    "Getting api %s HES energy details for site",
                     self.apisession.nickname,
                 )
                 # obtain previous energy details to check if yesterday must be queried as well
                 energy = site.get("energy_details") or {}
                 # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
-                # Cloud server energy stat updates may be delayed by 3 minutes for Power Panel
+                # Cloud server energy stat updates may be delayed by 3 minutes for HES
                 # min Offset in seconds to last valid record, reduce by 5 minutes to ensure last record is made
                 energy_offset = (site.get("energy_offset_seconds") or 0) - 300
                 time: datetime = datetime.now() + timedelta(seconds=energy_offset)
@@ -401,7 +422,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         if not exclude or not isinstance(exclude, set):
             exclude = set()
         self._logger.debug(
-            "Updating api %s Power Panel Device details",
+            "Updating api %s HES Device details",
             self.apisession.nickname,
         )
         #
@@ -416,18 +437,19 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         """Get the site running information with tracked total stats.
 
         Example data:
-        {"connect_infos": {"9NKBPG283YESZL5Y": true},"connected": true,"total_system_savings": 310.5,"system_savings_price_unit": "$",
-        "save_carbon_footprint": 2.53,"save_carbon_unit": "t","save_carbon_c": 0.997,"total_system_power_generation": 2.54,"system_power_generation_unit": "MWh"}
+        {"mainSn": "SFW0EKTKW7IA043U","pcsSns": ["ATHRE00E22200039"],"mainDeviceModel": "A5103","connected": true,"totalSystemSavings": 134.7,"systemSavingsPriceUnit": "\u20ac",
+        "saveCarbonFootprint": 304,"saveCarbonUnit": "kg","saveCarbonC": 0.997,"totalSystemPowerGeneration": 304.42,"systemPowerGenerationUnit": "KWh","numberOfParallelDevice": 1,
+        "batCount": 3,"rePostTime": 5,"supportDiesel": false,"net": 2,"isAddHeatPump": false,"realNet": 1,"systemCode": "DE202411140001"}
         """
         data = {"siteId": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_system_running_info']}_{siteId}.json"
+                / f"{API_FILEPREFIXES['hes_get_system_running_info']}_{siteId}.json"
             )
         else:
             resp = await self.apisession.request(
-                "post", API_CHARGING_ENDPOINTS["get_system_running_info"], json=data
+                "post", API_HES_SVC_ENDPOINTS["get_system_running_info"], json=data
             )
         data = resp.get("data") or {}
         # update sites dict with relevant info and with required structure
@@ -438,32 +460,54 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             stats.append(
                 {
                     "type": "1",
-                    "total": str(data.get("total_system_power_generation") or ""),
-                    "unit": str(data.get("system_power_generation_unit") or "").lower(),
+                    "total": str(data.get("totalSystemPowerGeneration") or ""),
+                    "unit": str(data.get("systemPowerGenerationUnit") or "").lower(),
                 }
             )
             # Total carbon
             stats.append(
                 {
                     "type": "2",
-                    "total": str(data.get("save_carbon_footprint") or ""),
-                    "unit": str(data.get("save_carbon_unit") or "").lower(),
+                    "total": str(data.get("saveCarbonFootprint") or ""),
+                    "unit": str(data.get("saveCarbonUnit") or "").lower(),
                 }
             )
             # Total savings
             stats.append(
                 {
                     "type": "3",
-                    "total": str(data.get("total_system_savings") or ""),
-                    "unit": str(data.get("system_savings_price_unit") or ""),
+                    "total": str(data.get("totalSystemSavings") or ""),
+                    "unit": str(data.get("systemSavingsPriceUnit") or ""),
                 }
             )
-            # Add stats and connect infos to sites cache
+            # Add stats and other system infos to sites cache
             mysite.update(
                 {
                     "statistics": stats,
-                    "connect_infos": data.get("connect_infos") or {},
-                },
+                    "hes_info": {
+                        "hes_list": [
+                            {
+                                "device_sn": data.get("mainSn") or "",
+                                "main_sn": True,
+                                "device_pn": data.get("mainDeviceModel") or "",
+                            }
+                        ]
+                        + [
+                            {"device_sn": sn, "main_sn": False}
+                            for sn in data.get("pcsSns") or []
+                        ],
+                        "total_charging_power": "0",
+                    },
+                    "connected": data.get("connected"),
+                    "numberOfParallelDevice": data.get("numberOfParallelDevice"),
+                    "batCount": data.get("batCount"),
+                    "rePostTime": data.get("rePostTime"),
+                    "net": data.get("net"),
+                    "realNet": data.get("realNet"),
+                    "supportDiesel": data.get("supportDiesel"),
+                    "isAddHeatPump": data.get("isAddHeatPump"),
+                    "systemCode": data.get("systemCode"),
+                }
             )
             self.sites[siteId] = mysite
         return data
@@ -475,24 +519,14 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
 
         Example data:
         """
-        # get existing data first from device detals to check if requery must be done
-        avg_data = next(
-            iter(
-                [
-                    (dev.get("average_power") or {})
-                    for dev in self.devices.values()
-                    if dev.get("type") == SolixDeviceType.POWERPANEL.value
-                    and dev.get("site_id") == siteId
-                ]
-            ),
-            {},
-        )
+        # get existing data first from site details to check if requery must be done
+        avg_data = (self.sites.get(siteId) or {}).get("average_power") or {}
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
             datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
         ) >= timedelta(minutes=5):
             self._logger.debug(
-                "Updating api %s power average values from energy statistics of Power Panel site ID %s",
+                "Updating api %s power average values from energy statistics of HES site ID %s",
                 self.apisession.nickname,
                 siteId,
             )
@@ -520,7 +554,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             data = (
                                 await self.apisession.loadFromFile(
                                     Path(self.testDir())
-                                    / f"{API_FILEPREFIXES[f'charging_energy_{source}_today']}_{siteId}.json"
+                                    / f"{API_FILEPREFIXES[f'hes_energy_{source}_today']}_{siteId}.json"
                                 )
                             ).get("data") or {}
                         else:
@@ -577,7 +611,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     data = (
                         await self.apisession.loadFromFile(
                             Path(self.testDir())
-                            / f"{API_FILEPREFIXES[f'charging_energy_{source}_today']}_{siteId}.json"
+                            / f"{API_FILEPREFIXES[f'hes_energy_{source}_today']}_{siteId}.json"
                         )
                     ).get("data") or {}
                 else:
@@ -665,22 +699,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         )
             # update device dict with relevant info and with required structure
             if avg_data:
-                # Add average power to device details as work around if no other powerpanel usage data will be found in cloud
-                for sn, dev in self.devices.items():
-                    if (
-                        dev.get("type") == SolixDeviceType.POWERPANEL.value
-                        and dev.get("site_id") == siteId
-                    ):
-                        self.devices[sn]["average_power"] = avg_data
+                # Add average power to site details as work around if no other hes usage data will be found in cloud for main devices
                 # Add energy offset info to site cache
-                if site := self.sites.get(siteId):
-                    site.update(
-                        {
-                            "energy_offset_seconds": avg_data.get("offset_seconds"),
-                            "energy_offset_check": avg_data.get("last_check"),
-                        }
-                    )
-
+                site = self.sites.get(siteId) or {}
+                site.update(
+                    {
+                        "average_power": avg_data,
+                        "energy_offset_seconds": avg_data.get("offset_seconds"),
+                        "energy_offset_check": avg_data.get("last_check"),
+                    }
+                )
+                self.sites[siteId] = site
         return avg_data
 
     async def energy_statistics(
@@ -690,8 +719,6 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         startDay: datetime | None = None,
         endDay: datetime | None = None,
         sourceType: str | None = None,
-        isglobal: bool = False,
-        productCode: str = "",
     ) -> dict:
         """Fetch Energy data for given device and optional time frame.
 
@@ -700,36 +727,30 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         rangeType: "day" | "week" | "year"
         startTime: optional start Date and time
         endTime: optional end Date and time
-        devType: "solar" | "hes" | "grid" | "home" | "pps" | "diesel"
+        devType: "solar" | "hes" | "grid" | "home"
         Example Data for solar_production:
-        {"totalEnergy": "37.23","totalEnergyUnit": "KWh","totalImportedEnergy": "","totalImportedEnergyUnit": "","totalExportedEnergy": "37.23","totalExportedEnergyUnit": "KWh",
-        "power": null,"powerUnit": "","chargeLevel": null,"energy": [
-            {"value": "20.55","negValue": "0","rods": [
-                {"from": "0.00","to": "20.55","sourceType": "solar"}]},
-            {"value": "16.70","negValue": "0","rods": [
-                {"from": "0.00","to": "16.70","sourceType": "solar"}]}],
-        "energyUnit": "KWh","aggregates": [
-            {"title": "Battery charging capacity","value": "26.00","unit": "KWh","type": "hes","percent": "69%","imported": false},
-            {"title": "Load power consumption","value": "6.33","unit": "KWh","type": "home","percent": "17%","imported": false},
-            {"title": "Sold power","value": "4.90","unit": "KWh","type": "grid","percent": "14%","imported": false}]}
+        {"power": [{"time": "2025-02-01","value": "0"},{"time": "2025-02-02","value": "0"}],
+        "charge_trend": null,"charge_level": [],"power_unit": "wh","charge_total": "0.00","charge_unit": "kwh","discharge_total": "0.00","discharge_unit": "kwh",
+        "charging_pre": "0","electricity_pre": "0","others_pre": "0","statistics": [
+            {"type": "1","total": "0.00","unit": "kwh"},
+            {"type": "2","total": "0.00","unit": "kg"},
+            {"type": "3","total": "0.00","unit": "\u20ac"}],
+        "battery_discharging_total":"","solar_to_grid_total":"","grid_to_home_total":"","ac_out_put_total":"","home_usage_total":"","solar_total":"0.0000","trend_unit":"",
+        "battery_to_home_total":"","smart_plug_info":null,"local_time":"","grid_to_battery_total":"","grid_imported_total":"","solar_to_battery_total":"","solar_to_home_total":""}
 
         Responses for solar:
         Daily: Solar Energy, Extra Totals: PV charged, PV usage, PV to grid, 3 x percentage share solar usage
-        Responses for pps:
-        Daily: Discharge Energy, Extra Totals: charge
         Responses for hes:
-        Daily: Discharge Energy, Extra Totals: charge
+        Daily: Discharge Energy, Extra Totals: battery_to_home, battery_to_grid
         Responses for home_usage:
-        Daily: Home Usage Energy, Extra Totals: grid_to_home, battery_to_home, pv_to_home, 3 x percentage share home usage source
+        Daily: Home Usage Energy, Extra Totals: grid_to_home, battery_to_home, solar_to_home, 3 x percentage share home usage source
         Responses for grid:
-        Daily: Grid import, Extra Totals: solar_to_grid, grid_to_home, grid_to_battery, 2 x percentage share how import used
-        Responses for diesel:
-        unknown
+        Daily: Grid import, Extra Totals: solar_to_grid, battery_to_grid, grid_to_home, grid_to_battery, 2 x percentage share how import used and 2 x export share
         """
         data = {
             "siteId": siteId,
             "sourceType": sourceType
-            if sourceType in ["solar", "hes", "home", "grid", "pps", "diesel"]
+            if sourceType in ["solar", "hes", "home", "grid"]
             else "solar",
             "dateType": rangeType if rangeType in ["day", "week", "year"] else "day",
             "start": startDay.strftime("%Y-%m-%d")
@@ -738,11 +759,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             "end": endDay.strftime("%Y-%m-%d")
             if endDay
             else datetime.today().strftime("%Y-%m-%d"),
-            "global": isglobal,
-            "productCode": productCode,
         }
         resp = await self.apisession.request(
-            "post", API_CHARGING_ENDPOINTS["energy_statistics"], json=data
+            "post", API_HES_SVC_ENDPOINTS["energy_statistics"], json=data
         )
         return resp.get("data") or {}
 
@@ -758,7 +777,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
     ) -> dict:
         """Fetch daily Energy data for given interval and provide it in a table format dictionary.
 
-        Solar production data is always queried. Additional energy data will be queried for devtypes 'powerpanel'. The number of
+        Solar production data is always queried. Additional energy data will be queried for devtypes 'hes'. The number of
         queries is optimized if dayTotals is True
         Example:
         {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "battery_discharge": "0.47", "battery_charge": "0.56"},
@@ -777,13 +796,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         numDays = min(366, max(1, numDays))
 
         # first get HES export
-        if SolixDeviceType.POWERPANEL.value in devTypes:
+        if SolixDeviceType.HES.value in devTypes:
             # get first data period from file or api
             if fromFile:
                 resp = (
                     await self.apisession.loadFromFile(
                         Path(self.testDir())
-                        / f"{API_FILEPREFIXES['charging_energy_hes']}_{siteId}.json"
+                        / f"{API_FILEPREFIXES['hes_energy_hes']}_{siteId}.json"
                     )
                 ).get("data", {})
             else:
@@ -802,7 +821,6 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             unit = resp.get("energyUnit") or ""
             for item in resp.get("energy") or []:
                 # No daystring in response, count the index for proper date
-                # daystr = item.get("time", None)
                 if daystr := (startDay + timedelta(days=fileNumDays)).strftime(
                     "%Y-%m-%d"
                 ):
@@ -818,52 +836,50 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                     )
                     table.update({daystr: entry})
-            # Power Panel HES has total charge energy for given interval. If requested, make daily queries for given interval
-            if dayTotals and table:
-                if fromFile:
-                    daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                        for x in range(fileNumDays)
-                    ]
-                else:
-                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                for day in daylist:
-                    daystr = day.strftime("%Y-%m-%d")
-                    entry = table.get(daystr, {"date": daystr})
-                    # update response only for real requests if not first day which was already queried
-                    if not fromFile and day != startDay:
-                        resp = await self.energy_statistics(
-                            siteId=siteId,
-                            rangeType="week",
-                            startDay=day,
-                            endDay=day,
-                            sourceType="hes",
-                        )
-                        # get first item from breakdown list for single day queries
-                        item = next(iter(resp.get("energy") or []), {})
-                        unit = resp.get("energyUnit") or ""
-                        entry.update(
-                            {
-                                "battery_discharge": convertToKwh(
-                                    val=item.get("value") or None, unit=unit
-                                ),
-                            }
-                        )
-                    entry.update(
-                        {
-                            "battery_charge": convertToKwh(
-                                val=resp.get("totalImportedEnergy") or None,
-                                unit=resp.get("totalImportedEnergyUnit"),
-                            ),
-                        }
-                    )
-                    table.update({daystr: entry})
-                    if showProgress:
-                        self._logger.info(
-                            "Received api %s hes energy for %s",
-                            self.apisession.nickname,
-                            daystr,
-                        )
+            # TODO: HES has currently no total discharge energy or other extra totals for interval. Check if discharge is available in PPS data to replace HES with PPS
+            # If requested, make daily queries for given interval
+            # if dayTotals and table:
+            #     if fromFile:
+            #         daylist = [
+            #             datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+            #             for x in range(fileNumDays)
+            #         ]
+            #     else:
+            #         daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+            #     for day in daylist:
+            #         daystr = day.strftime("%Y-%m-%d")
+            #         entry = table.get(daystr, {"date": daystr})
+            #         # update response only for real requests if not first day which was already queried
+            #         if not fromFile and day != startDay:
+            #             resp = await self.energy_statistics(
+            #                 siteId=siteId,
+            #                 rangeType="week",
+            #                 startDay=day,
+            #                 endDay=day,
+            #                 sourceType="hes",
+            #             )
+            #             # get first item from breakdown list for single day queries
+            #             item = next(iter(resp.get("energy") or []), {})
+            #             unit = resp.get("energyUnit") or ""
+            #             entry.update(
+            #                 {
+            #                     "battery_discharge": convertToKwh(
+            #                         val=item.get("value") or None, unit=unit
+            #                     ),
+            #                 }
+            #             )
+            #         # Discharge currently not provided with HES data
+            #         # entry.update(
+            #         #     {
+            #         #         "battery_charge": convertToKwh(
+            #         #             val=resp.get("totalImportedEnergy") or None,
+            #         #             unit=resp.get("totalImportedEnergyUnit"),
+            #         #         ),
+            #         #     }
+            #         # )
+            #         # table.update({daystr: entry})
+            #         # if showProgress:
+            #         #     self._logger.info("Received api %s hes energy for %s", self.apisession.nickname, daystr)
             if showProgress:
                 self._logger.info(
                     "Received api %s hes energy for period",
@@ -871,13 +887,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 )
 
         # Get home usage energy types
-        if SolixDeviceType.POWERPANEL.value in devTypes:
+        if SolixDeviceType.HES.value in devTypes:
             # get first data period from file or api
             if fromFile:
                 resp = (
                     await self.apisession.loadFromFile(
                         Path(self.testDir())
-                        / f"{API_FILEPREFIXES['charging_energy_home']}_{siteId}.json"
+                        / f"{API_FILEPREFIXES['hes_energy_home']}_{siteId}.json"
                     )
                 ).get("data", {})
             else:
@@ -1007,13 +1023,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 )
 
         # Add grid import, totals contain export and battery charging from grid for given interval
-        if SolixDeviceType.POWERPANEL.value in devTypes:
+        if SolixDeviceType.HES.value in devTypes:
             # get first data period from file or api
             if fromFile:
                 resp = (
                     await self.apisession.loadFromFile(
                         Path(self.testDir())
-                        / f"{API_FILEPREFIXES['charging_energy_grid']}_{siteId}.json"
+                        / f"{API_FILEPREFIXES['hes_energy_grid']}_{siteId}.json"
                     )
                 ).get("data", {})
             else:
@@ -1048,7 +1064,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                     )
                     table.update({daystr: entry})
-            # Grid import and battery charge from grid totals for given interval. If requested, make daily queries for given interval
+            # Grid import, grid charge and solar export from grid totals for given interval. If requested, make daily queries for given interval
             if dayTotals and table:
                 if fromFile:
                     daylist = [
@@ -1079,20 +1095,21 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 ),
                             }
                         )
-                    entry.update(
-                        {
-                            "solar_to_grid": convertToKwh(
-                                val=resp.get("totalExportedEnergy") or None,
-                                unit=resp.get("totalExportedEnergyUnit"),
-                            ),
-                        }
-                    )
                     for item in resp.get("aggregates") or []:
                         itemtype = str(item.get("type") or "").lower()
                         if itemtype == "hes":
                             entry.update(
                                 {
                                     "grid_to_battery": convertToKwh(
+                                        val=item.get("value") or None,
+                                        unit=item.get("unit"),
+                                    ),
+                                }
+                            )
+                        elif itemtype == "solar":
+                            entry.update(
+                                {
+                                    "solar_to_grid": convertToKwh(
                                         val=item.get("value") or None,
                                         unit=item.get("unit"),
                                     ),
@@ -1117,7 +1134,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             resp = (
                 await self.apisession.loadFromFile(
                     Path(self.testDir())
-                    / f"{API_FILEPREFIXES['charging_energy_solar']}_{siteId}.json"
+                    / f"{API_FILEPREFIXES['hes_energy_solar']}_{siteId}.json"
                 )
             ).get("data", {})
         else:
@@ -1205,3 +1222,29 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 self.apisession.nickname,
             )
         return table
+
+    async def get_dev_info(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the HES device info for site.
+
+        This contains the complete hes device structure for a given site and can be used to find all device SN per site
+        Example data:
+        {"ats": {"sn": "","pn": "","type": "ats","img": "","name": "","aliasName": ""},
+        "results": [{"sn": "SFW0EKTKW7IA043U","pn": "A5103","type": "pcs","img": "","name": "A5103_ARM","aliasName": "","subDevInfo": [
+            {"sn": "SFW0EKTKW7IA043U","pn": "A5103","type": "ems","img": "","name": "A5103_ARM","aliasName": ""},
+            {"sn": "SFW0EKTKW7IA043U","pn": "A5103","type": "pcs","img": "","name": "A5103_ARM","aliasName": ""},
+            {"sn": "LVB4J2MJIBDYSFIY","pn": "A5220","type": "pack","img": "","name": "A5220_BMS","aliasName": ""},
+            {"sn": "L1D6NQGANH5ODNPC","pn": "A5220","type": "pack","img": "","name": "A5220_BMS","aliasName": ""},
+            {"sn": "2RXWQNI8QLAYW0LX","pn": "A5220","type": "pack","img": "","name": "A5220_BMS","aliasName": ""}]}],
+        "ecuDevices": null},
+        """
+        data = {"siteId": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['hes_get_hes_dev_info']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_HES_SVC_ENDPOINTS["get_hes_dev_info"], json=data
+            )
+        return resp.get("data") or {}

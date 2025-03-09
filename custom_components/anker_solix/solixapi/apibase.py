@@ -62,11 +62,17 @@ class AnkerSolixBaseApi:
         """Get or set the subfolder for local API test files in the api session."""
         return self.apisession.testDir(subfolder)
 
+    def endpointLimit(self, limit: int | None = None) -> int:
+        """Get or set the api request limit per endpoint per minute."""
+        return self.apisession.endpointLimit(limit)
+
     def logLevel(self, level: int | None = None) -> int:
         """Get or set the logger log level."""
         if level is not None and isinstance(level, int):
             self._logger.setLevel(level)
-            self._logger.info("Set log level to: %s", level)
+            self._logger.info(
+                "Set api %s log level to: %s", self.apisession.nickname, level
+            )
         return self._logger.getEffectiveLevel()
 
     def getCaches(self) -> dict:
@@ -222,7 +228,8 @@ class AnkerSolixBaseApi:
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
-                        "%s occurred when updating device details for key %s with value %s: %s",
+                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
+                        self.apisession.nickname,
                         type(err),
                         key,
                         value,
@@ -247,15 +254,25 @@ class AnkerSolixBaseApi:
             exclude = set()
         if siteId and (self.sites.get(siteId) or {}):
             # update only the provided site ID
-            self._logger.debug("Updating Sites data for site ID %s", siteId)
+            self._logger.debug(
+                "Updating api %s sites data for site ID %s",
+                self.apisession.nickname,
+                siteId,
+            )
             new_sites = self.sites
             # prepare the site list dictionary for the update loop by copying the requested site from the cache
             sites: dict = {"site_list": [self.sites[siteId].get("site_info") or {}]}
         else:
             # run normal refresh for all sites
-            self._logger.debug("Updating Sites data")
+            self._logger.debug(
+                "Updating api %s sites data",
+                self.apisession.nickname,
+            )
             new_sites = {}
-            self._logger.debug("Getting site list")
+            self._logger.debug(
+                "Getting api %s site list",
+                self.apisession.nickname,
+            )
             sites = await self.get_site_list(fromFile=fromFile)
             self._site_devices = set()
         for site in sites.get("site_list", []):
@@ -272,7 +289,10 @@ class AnkerSolixBaseApi:
                 )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                 mysite.update({"site_admin": admin})
                 # Update scene info for site
-                self._logger.debug("Getting scene info for site")
+                self._logger.debug(
+                    "Getting api %s scene info for site",
+                    self.apisession.nickname,
+                )
                 scene = await self.get_scene_info(myid, fromFile=fromFile)
                 mysite.update(scene)
                 new_sites.update({myid: mysite})
@@ -302,7 +322,10 @@ class AnkerSolixBaseApi:
         # define excluded categories to skip for queries
         if not exclude or not isinstance(exclude, set):
             exclude = set()
-        self._logger.debug("Updating Sites Details")
+        self._logger.debug(
+            "Updating api %s sites details",
+            self.apisession.nickname,
+        )
         #
         # Implement required queries according to exclusion set
         #
@@ -323,7 +346,10 @@ class AnkerSolixBaseApi:
         if not exclude or not isinstance(exclude, set):
             exclude = set()
         for site_id, site in self.sites.items():
-            self._logger.debug("Getting Energy details for site")
+            self._logger.debug(
+                "Getting api %s energy details for site",
+                self.apisession.nickname,
+            )
             #
             # Implement required queries according to exclusion set
             #
@@ -347,7 +373,10 @@ class AnkerSolixBaseApi:
         # define excluded device types or categories to skip for queries
         if not exclude or not isinstance(exclude, set):
             exclude = set()
-        self._logger.debug("Updating Device Details")
+        self._logger.debug(
+            "Updating api %s device details",
+            self.apisession.nickname,
+        )
         #
         # Implement required queries according to exclusion set
         #
@@ -554,7 +583,7 @@ class AnkerSolixBaseApi:
             for wifi_info in data.get("wifi_info_list") or []:
                 if wifi_info.get("device_sn"):
                     self._update_dev(wifi_info)
-        return resp.get("data") or {}
+        return data
 
     async def get_ota_batch(
         self, deviceSns: list | None = None, fromFile: bool = False
@@ -626,7 +655,7 @@ class AnkerSolixBaseApi:
                             "ota_children": children,
                         }
                     )
-        return resp.get("data") or {}
+        return data
 
     async def get_message_unread(self, fromFile: bool = False) -> dict:
         """Get the unread messages for account.
@@ -709,7 +738,10 @@ class AnkerSolixBaseApi:
         """Compose the supported Anker and third platform products into a condensed dictionary."""
 
         products = {}
-        self._logger.debug("Getting Anker platform list")
+        self._logger.debug(
+            "Getting api %s Anker platform list",
+            self.apisession.nickname,
+        )
         for platform in await self.get_product_platforms_list(fromFile=fromFile):
             plat_name = platform.get("name") or ""
             for prod in platform.get("products") or []:
@@ -718,7 +750,10 @@ class AnkerSolixBaseApi:
                     "platform": plat_name,
                     # "img_url": prod.get("img_url"),
                 }
-        self._logger.debug("Getting 3rd party platform list")
+        self._logger.debug(
+            "Getting api %s 3rd party platform list",
+            self.apisession.nickname,
+        )
         for platform in await self.get_third_platforms_list(fromFile=fromFile):
             plat_name = platform.get("name") or ""
             countries = platform.get("countries") or ""

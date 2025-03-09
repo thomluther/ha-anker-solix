@@ -211,6 +211,9 @@
             "daily_solar_production_pv4": {
                 "default": "mdi:solar-power-variant"
             },
+            "daily_solar_production_inverter": {
+                "default": "mdi:power-socket-eu"
+            },
             "daily_solar_to_home": {
                 "default": "mdi:solar-power"
             },

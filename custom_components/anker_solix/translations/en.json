@@ -76,9 +76,10 @@
                 "title": "Anker Solix options",
                 "description": "Change usage of the Api",
                 "data": {
-                    "scan_interval": "Update interval (30-600 seconds)",
+                    "scan_interval": "Update interval",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "delay_time": "Delay for subsequent Api requests",
+                    "endpoint_limit": "Endpoint request limit per minute",
                     "skip_invalid": "Skip invalid data responses",
                     "exclude": "Excluded entity categories",
                     "testmode": "Use integration test mode",
@@ -86,6 +87,7 @@
                 },
                 "data_description": {
                     "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate endpoint throttling.",
                     "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
                     "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
                     "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
@@ -112,16 +114,18 @@
                 "title": "Anker Solix options",
                 "description": "Change usage of the Api",
                 "data": {
-                    "scan_interval": "Update interval (30-600 seconds)",
+                    "scan_interval": "Update interval",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "delay_time": "Delay for subsequent Api requests",
+                    "endpoint_limit": "Endpoint request limit per minute",
                     "skip_invalid": "Skip invalid data responses",
                     "exclude": "Excluded entity categories",
                     "testmode": "Use integration test mode",
                     "testfolder": "Folder with json files for integration testing"
                 },
                 "data_description": {
-                    "scan_interval": "Note: Data on the cloud server is updated only once per minute. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
+                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate endpoint throttling.",
                     "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
                     "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
                     "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
@@ -623,6 +627,17 @@
                     }
                 }
             },
+            "daily_solar_production_inverter": {
+                "name": "Daily solar micro inverter",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_solar_to_home": {
                 "name": "Daily solar home",
                 "state_attributes": {
@@ -835,7 +850,7 @@
         },
         "export_systems": {
             "name": "Export anonymized Api information of accessible systems and devices into zipped JSON files",
-            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This action can run more than 10 seconds!"
+            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This action can run 10 seconds or several minutes if endpoint throttling is being applied! The Execute button toggles just green once finished."
         },
         "get_solarbank_schedule": {
             "name": "Request the actual Solarbank schedule",
@@ -987,6 +1002,9 @@
         },
         "device_refresh": {
             "message": "Devices for {coordinator} cannot be updated within less than {min_dev_refresh} seconds"
+        },
+        "device_refresh_active": {
+            "message": "Devices for {coordinator} cannot be updated while another update is still running"
         },
         "service_not_supported": {
             "message": "The entity {entity} does not support the action {service}"

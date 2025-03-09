@@ -324,6 +324,8 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 # round the number to the defined steps if set via service call
                 if self.step:
                     value = self.step * round(value / self.step)
+                # Wait until client cache is valid before applying any api change
+                await self.coordinator.client.validate_cache()
                 if self._attribute_name in [
                     "preset_system_output_power",
                     "preset_device_output_power",

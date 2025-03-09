@@ -325,6 +325,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         "entity_id": self.entity_id,
                     },
                 )
+            # Wait until client cache is valid before applying any api change
+            await self.coordinator.client.validate_cache()
             if self._attribute_name == "power_cutoff":
                 LOGGER.debug(
                     "%s selection change to option %s will be applied",

@@ -31,6 +31,7 @@ from .apitypes import (
     SolixDeviceStatus,
     SolixDeviceType,
 )
+from .hesapi import AnkerSolixHesApi
 from .poller import (
     poll_device_details,
     poll_device_energy,
@@ -84,6 +85,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         self.request_count = self.apisession.request_count
         self.async_authenticate = self.apisession.async_authenticate
         self.powerpanelApi: AnkerSolixPowerpanelApi | None = None
+        self.hesApi: AnkerSolixHesApi | None = None
 
     def _update_dev(  # noqa: C901
         self,
@@ -420,6 +422,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_manual_backup_start": 0,
                                         "preset_manual_backup_end": 0,
                                         "preset_backup_option": False,
+                                        "preset_tariff": SolixDefaults.TARIFF_DEF,
+                                        "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
+                                        "preset_tariff_currency": SolixDefaults.CURRENCY_DEF,
                                     }
                                 )
                         else:
@@ -452,8 +457,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if generation >= 2:
                             # Solarbank 2 schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
-                            # TODO: Implement proper parsing for use_time plan of AC types if current settings to be extracted
                             weekday = int(datetime.now().strftime("%w"))
+                            month = datetime.now().month
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
                                 SolarbankRatePlan,
@@ -525,6 +530,54 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_backup_option": switch,
                                     }
                                 )
+                            if ac_type and (
+                                use_time := value.get(SolarbankRatePlan.use_time) or {}
+                            ):
+                                for season in [
+                                    sea
+                                    for sea in use_time
+                                    if ((sea.get("sea") or {}).get("start_month") or 1)
+                                    <= month
+                                    <= ((sea.get("sea") or {}).get("end_month") or 12)
+                                ]:
+                                    if weekday in range(1, 6) or season.get("is_same"):
+                                        dayplan = season.get("weekday") or []
+                                        prices = season.get("weekday_price") or []
+                                    else:
+                                        dayplan = season.get("weekend") or []
+                                        prices = season.get("weekend_price") or []
+                                    tariff = next(
+                                        iter(
+                                            [
+                                                slot
+                                                for slot in dayplan
+                                                if (slot.get("start_time") or 0)
+                                                <= now.hour
+                                                < (slot.get("end_time") or 24)
+                                            ]
+                                        ),
+                                        {},
+                                    ).get("type")
+                                    price = next(
+                                        iter(
+                                            [
+                                                slot
+                                                for slot in prices
+                                                if slot.get("type") == tariff
+                                            ]
+                                        ),
+                                        {},
+                                    ).get("price")
+                                    device.update(
+                                        {
+                                            "preset_tariff": tariff
+                                            or SolixDefaults.TARIFF_DEF,
+                                            "preset_tariff_price": price
+                                            or SolixDefaults.TARIFF_PRICE_DEF,
+                                            "preset_tariff_currency": season.get("unit")
+                                            or SolixDefaults.CURRENCY_DEF,
+                                        }
+                                    )
 
                             # adjust schedule preset for eventual reuse as active presets
                             # Active Preset must only be considered if usage mode is manual
@@ -737,7 +790,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
-                        "%s occurred when updating device details for key %s with value %s: %s",
+                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
+                        self.apisession.nickname,
                         type(err),
                         key,
                         value,
@@ -752,6 +806,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         super().clearCaches()
         if self.powerpanelApi:
             self.powerpanelApi.clearCaches()
+        if self.hesApi:
+            self.hesApi.clearCaches()
 
     async def update_sites(
         self,
@@ -761,9 +817,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     ) -> dict:
         """Create/Update api sites cache structure."""
         resp = await poll_sites(self, siteId=siteId, fromFile=fromFile, exclude=exclude)
-        # Clean up powerpanel api sites cache if used
+        # Clean up other api classes sites cache if used
         if self.powerpanelApi:
             self.powerpanelApi.recycleSites(activeSites=set(self.sites.keys()))
+        if self.hesApi:
+            self.hesApi.recycleSites(activeSites=set(self.sites.keys()))
         return resp
 
     async def update_site_details(
@@ -783,9 +841,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     ) -> dict:
         """Create/Update device details in api devices cache structure."""
         resp = await poll_device_details(self, fromFile=fromFile, exclude=exclude)
-        # Clean up powerpanel devices cache if used
+        # Clean up other api class devices cache if used
         if self.powerpanelApi:
             self.powerpanelApi.recycleDevices(activeDevices=set(self.sites.keys()))
+        if self.hesApi:
+            self.hesApi.recycleDevices(activeDevices=set(self.sites.keys()))
         return resp
 
     async def get_homepage(self, fromFile: bool = False) -> dict:
@@ -1001,12 +1061,24 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if not details or not isinstance(details, dict):
             return False
         # Validate parameters
-        price_type = str(price_type).lower() if str(price_type).lower() in [item.value for item in SolarbankPriceTypes] else None
+        price_type = (
+            str(price_type).lower()
+            if str(price_type).lower() in [item.value for item in SolarbankPriceTypes]
+            else None
+        )
         # Prepare payload from details
         data: dict = {}
-        data["price"] = float(price) if isinstance(price, float | int) else details.get("price")
-        data["site_price_unit"] = unit if unit in ["€", "$", "£", "¥", "₹", "원"] else details.get("site_price_unit")
-        data["site_co2"] = float(co2) if isinstance(co2, float | int) else details.get("site_co2")
+        data["price"] = (
+            float(price) if isinstance(price, float | int) else details.get("price")
+        )
+        data["site_price_unit"] = (
+            unit
+            if unit in ["€", "$", "£", "¥", "₹", "원"]
+            else details.get("site_price_unit")
+        )
+        data["site_co2"] = (
+            float(co2) if isinstance(co2, float | int) else details.get("site_co2")
+        )
         if "price_type" in details or price_type:
             data["price_type"] = price_type if price_type else details.get("price_type")
 

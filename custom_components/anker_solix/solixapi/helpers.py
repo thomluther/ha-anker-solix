@@ -32,7 +32,7 @@ class RequestCounter:
 
     def last_minute(self, details: bool = False) -> int | list:
         """Get number of timestamps or all details for last minute."""
-        last_time = datetime.now() - timedelta(minutes=1)
+        last_time = datetime.now() - timedelta(minutes=1,seconds=2)
         requests = [x for x in self.elements if x[0] > last_time]
         return requests if details else len(requests)
 
