@@ -183,7 +183,7 @@ async def get_device_parm(
         # The home_load_data is provided as string instead of object...Convert into object for proper handling
         # It must be converted back to a string when passing this as input to set home load
         string_data = (resp.get("data", {})).get("param_data", {})
-        if isinstance(string_data, str):
+        if string_data and isinstance(string_data, str):
             resp["data"].update({"param_data": json.loads(string_data)})
 
         # update api device dict with latest data if optional device SN was provided, e.g. when called by set_device_parm for device details update
@@ -224,8 +224,8 @@ async def set_device_parm(
 ) -> bool:
     r"""Set device parameters (e.g. solarbank schedule).
 
-    command: Must be 17 for solarbank schedule.
-    paramType: was always string "4" for SB1, SB2 needs "6" and different structure
+    command: Must be 17 for SB1 and SB2 solarbank schedules. Maybe for the new AC models this has to be different to apply custom_rate_plan changes?
+    paramType: was always string "4" for SB1, SB2 needs "6" and a different structure.
     Example paramData for type "4":
     {"param_data": '{"ranges":['
         '{"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},'
@@ -233,7 +233,7 @@ async def set_device_parm(
         '{"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],'
     '"min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}'
 
-    Example data for provided site_id with param_type 6 for SB2:
+    Example data for provided site_id with param_type "6" for SB2:
     {"param_data":"{\"mode_type\":3,\"custom_rate_plan\":[
         {\"index\":0,\"week\":[0,6],\"ranges\":[
             {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":110}]},
