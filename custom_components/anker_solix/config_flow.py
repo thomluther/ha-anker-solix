@@ -139,11 +139,11 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "connection"
                     placeholders[ERROR_DETAIL] = str(exception)
                 except api_client.AnkerSolixApiClientRetryExceededError as exception:
-                    LOGGER.exception(exception)
+                    LOGGER.error(exception)
                     errors["base"] = "exceeded"
                     placeholders[ERROR_DETAIL] = str(exception)
                 except (api_client.AnkerSolixApiClientError, Exception) as exception:  # pylint: disable=broad-except
-                    LOGGER.exception(exception)
+                    LOGGER.error(exception)
                     errors["base"] = "unknown"
                     placeholders[ERROR_DETAIL] = (
                         f"Exception {type(exception)}: {exception}"
@@ -156,8 +156,24 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders=placeholders,
         )
 
-    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+    async def async_step_reauth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Perform reauthentication upon an API authentication error."""
+
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
         """Add reconfigure step to allow to reconfigure a config entry."""
+
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Confirm reauthentication dialog."""
 
         errors: dict[str, str] = {}
         placeholders: dict[str, str] = {}
@@ -228,18 +244,17 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "connection"
                     placeholders[ERROR_DETAIL] = str(exception)
                 except api_client.AnkerSolixApiClientRetryExceededError as exception:
-                    LOGGER.exception(exception)
+                    LOGGER.error(exception)
                     errors["base"] = "exceeded"
                     placeholders[ERROR_DETAIL] = str(exception)
                 except (api_client.AnkerSolixApiClientError, Exception) as exception:  # pylint: disable=broad-except
-                    LOGGER.exception(exception)
+                    LOGGER.error(exception)
                     errors["base"] = "unknown"
                     placeholders[ERROR_DETAIL] = (
                         f"Exception {type(exception)}: {exception}"
                     )
-
         return self.async_show_form(
-            step_id="reconfigure",
+            step_id="reauth_confirm",
             data_schema=vol.Schema(cfg_schema),
             errors=errors,
             description_placeholders=placeholders,
@@ -567,4 +582,3 @@ async def async_check_and_remove_devices(
                 serial,
             )
     return None
-

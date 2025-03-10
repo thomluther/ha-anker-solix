@@ -19,7 +19,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryError
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
 
@@ -68,33 +68,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry=entry,
         update_interval=entry.options.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL_DEF),
     )
-    # set testmode for client and json test file folder for api
-    if coordinator and coordinator.client:
-        testmode = coordinator.client.testmode(entry.options.get(TESTMODE))
-        testfolder = entry.options.get(TESTFOLDER)
-        # load authentication info to get client nickname for coordinator
-        await coordinator.client.authenticate()
-        if testmode and testfolder:
-            # set json test file folder for api
-            coordinator.client.api.testDir(
-                str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
+    try:
+        # set testmode for client and json test file folder for api
+        if coordinator and coordinator.client:
+            testmode = coordinator.client.testmode(entry.options.get(TESTMODE))
+            testfolder = entry.options.get(TESTFOLDER)
+            # load authentication info to get client nickname for coordinator
+            await coordinator.client.authenticate()
+            if testmode and testfolder:
+                # set json test file folder for api
+                coordinator.client.api.testDir(
+                    str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
+                )
+            # set device detail refresh multiplier
+            coordinator.client.deviceintervals(
+                entry.options.get(INTERVALMULT, INTERVALMULT_DEF)
             )
-        # set device detail refresh multiplier
-        coordinator.client.deviceintervals(
-            entry.options.get(INTERVALMULT, INTERVALMULT_DEF)
-        )
-        # set Api request delay time
-        coordinator.client.delay_time(
-            entry.options.get(CONF_DELAY_TIME, DELAY_TIME_DEF)
-        )
-        # set Api request endpoint limit
-        coordinator.client.endpoint_limit(
-            entry.options.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF)
-        )
+            # set Api request delay time
+            coordinator.client.delay_time(
+                entry.options.get(CONF_DELAY_TIME, DELAY_TIME_DEF)
+            )
+            # set Api request endpoint limit
+            coordinator.client.endpoint_limit(
+                entry.options.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF)
+            )
 
-    # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
-    await coordinator.async_refresh_delay()
-    await coordinator.async_config_entry_first_refresh()
+        # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
+        await coordinator.async_refresh_delay()
+        await coordinator.async_config_entry_first_refresh()
+    except (
+        api_client.AnkerSolixApiClientAuthenticationError,
+        api_client.AnkerSolixApiClientRetryExceededError,
+    ) as exception:
+        raise ConfigEntryAuthFailed(exception) from exception
     # Registers update listener to update config entry when options are updated.
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 

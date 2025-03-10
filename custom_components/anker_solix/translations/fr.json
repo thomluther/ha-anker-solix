@@ -58,7 +58,7 @@
                     "accept_terms": "L'utilisateur supporte seul le risque d'une éventuelle perte de la garantie du fabricant ou de tout dommage causé par l'utilisation de l'intégration. Un consentement inclut automatiquement les mises à jour futures, qui peuvent étendre la fonctionnalité d'intégration.\nPlus d'informations : {terms_link}"
                 }
             },
-            "reconfigure": {
+            "reauth_confirm": {
                 "title": "Changez votre compte configuré",
                 "description": "Entrez les identifiants de votre compte cloud Anker",
                 "data": {

@@ -58,7 +58,7 @@
                     "accept_terms": "Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch Nutzung der Integration auftreten können. Eine Zustimmung inkludiert automatisch zukünftige Updates, welche den Funktionsumfang erweitern können.\nWeitere Informationen: {terms_link}"
                 }
             },
-            "reconfigure": {
+            "reauth_confirm": {
                 "title": "Ändere deinen konfigurierten Zugang",
                 "description": "Gib die Anmeldeinformationen für deinen Anker Cloud Zugang ein",
                 "data": {

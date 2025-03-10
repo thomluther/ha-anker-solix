@@ -58,7 +58,7 @@
                     "accept_terms": "The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration. A consent automatically includes future updates, which can extend the integration functionality.\nFurther information: {terms_link}"
                 }
             },
-            "reconfigure": {
+            "reauth_confirm": {
                 "title": "Change your configured account",
                 "description": "Enter credentials for your Anker cloud account",
                 "data": {

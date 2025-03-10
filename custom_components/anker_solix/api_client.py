@@ -139,7 +139,8 @@ class AnkerSolixApiClient:
             _LOGGER,
         )
         # Initialize the api nickname from config title
-        self.api.apisession.nickname = entry.title
+        if hasattr(entry,"title"):
+            self.api.apisession.nickname = entry.title
         self.api.apisession.requestDelay(
             float(data.get(CONF_DELAY_TIME, DEFAULT_DELAY_TIME))
         )
@@ -473,7 +474,7 @@ class AnkerSolixApiClient:
                 "Api Coordinator %s endpoint request limit was changed from %s to %s",
                 self.api.apisession.nickname,
                 self.api.apisession.endpointLimit(),
-                str(limit) + " requests" if limit else "disabled",
+                str(int(limit)) + " requests" if limit else "disabled",
             )
             self.api.apisession.endpointLimit(int(limit))
         return self.api.apisession.endpointLimit()
