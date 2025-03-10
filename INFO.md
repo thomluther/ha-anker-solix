@@ -36,7 +36,7 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Anker account limitation and usage recommendations](#anker-account-limitation-and-usage-recommendations)**
 1. **[Data refresh configuration options](#data-refresh-configuration-options)**
     * [Option considerations for Solarbank 2 systems](#option-considerations-for-solarbank-2-systems)
-    * [Default options as of version 2.0.0](#default-options-as-of-version-200)
+    * [Default options as of version 2.5.5](#default-options-as-of-version-255)
 1. **[Switching between different Anker Power accounts](#switching-between-different-anker-power-accounts)**
 1. **[How to create a second Anker Power account](#how-to-create-a-second-anker-power-account)**
 1. **[Automation to send and clear sticky, actionable notifications to your smart phone based on Api switch setting](#automation-to-send-and-clear-sticky-actionable-notifications-to-your-smart-phone-based-on-api-switch-setting)**
