@@ -181,7 +181,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN][entry.entry_id] = coordinator
 
         if do_reload:
-            await hass.config_entries.async_schedule_reload(entry.entry_id)
+            hass.config_entries.async_schedule_reload(entry.entry_id)
     return True
 
 

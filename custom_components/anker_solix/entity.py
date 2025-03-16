@@ -62,6 +62,8 @@ class AnkerSolixPicturePath:
     A17A0: str = str(Path(IMAGEPATH) / "PowerCooler30_A17A0_pub.png")
     A17A1: str = str(Path(IMAGEPATH) / "PowerCooler40_A17A1_pub.png")
     A17A2: str = str(Path(IMAGEPATH) / "PowerCooler50_A17A2_pub.png")
+    A17A4: str = str(Path(IMAGEPATH) / "Everfrost_2_40L_A17A4_pub.png")
+    A17A5: str = str(Path(IMAGEPATH) / "Everfrost_2_58L_A17A5_pub.png")
 
     A5101: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
     A5102: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")

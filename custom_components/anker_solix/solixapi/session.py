@@ -197,7 +197,8 @@ class AnkerSolixClientSession:
                     self._endpoint_limit,
                 )
             else:
-                self._logger.info("Disabled api %s request limit", self.nickname)
+                self._logger.info("Disabled api %s request limit and cleared %s throttled endpoints", self.nickname, len(self.request_count.throttled))
+                self.request_count.throttled.clear()
         return self._endpoint_limit
 
     async def _wait_delay(
@@ -218,7 +219,12 @@ class AnkerSolixClientSession:
             delay = self._request_delay
         # throttle requests to same endpoint
         throttle = 0
-        if endpoint and delay == self._request_delay and self._endpoint_limit:
+        if (
+            endpoint
+            and delay == self._request_delay
+            and self._endpoint_limit
+            and endpoint in self.request_count.throttled
+        ):
             same_requests = [
                 i
                 for i in self.request_count.last_minute(details=True)
@@ -473,8 +479,6 @@ class AnkerSolixClientSession:
 
             # Exception from ClientSession based on standard response status codes
             except ClientError as err:
-                self._logger.error("Api %s Request Error: %s", self.nickname, err)
-                self._logger.error("Response Text: %s", body_text)
                 # Prepare data dict for Api error lookup
                 if not data:
                     data = {}
@@ -484,6 +488,8 @@ class AnkerSolixClientSession:
                     data["msg"] = body_text
                 if resp.status in [401, 403]:
                     # Unauthorized or forbidden request
+                    self._logger.error("Api %s Request Error: %s", self.nickname, err)
+                    self._logger.error("Response Text: %s", body_text)
                     # reattempt authentication with same credentials if cached token was kicked out
                     # retry attempt is set if login response data were not cached to fail immediately
                     if not self._retry_attempt:
@@ -504,12 +510,37 @@ class AnkerSolixClientSession:
                         f"Login failed for user {self._email}"
                     ) from err
                 if resp.status in [429]:
+                    # Too Many Requests for endpoint, repeat once after throttle delay and add endpoint to throttle
+                    if not self._retry_attempt and self._endpoint_limit:
+                        self._retry_attempt = True
+                        self.request_count.add_throttle(endpoint=endpoint)
+                        self._logger.warning(
+                            "Api %s exceeded request limit with %s known requests in last minute, throttle will be enabled for endpoint: %s",
+                            self.nickname,
+                            len(
+                                [
+                                    i
+                                    for i in self.request_count.last_minute(
+                                        details=True
+                                    )
+                                    if endpoint in i[1]
+                                ]
+                            ),
+                            endpoint,
+                        )
+                        return await self.request(
+                            method, endpoint, headers=headers, json=json
+                        )
                     # Too Many Requests, add stats to message
+                    self._logger.error("Api %s Request Error: %s", self.nickname, err)
+                    self._logger.error("Response Text: %s", body_text)
                     errors.raise_error(
                         data, prefix=f"Too Many Requests: {self.request_count}"
                     )
                 else:
                     # raise Anker Solix error if code is known
+                    self._logger.error("Api %s Request Error: %s", self.nickname, err)
+                    self._logger.error("Response Text: %s", body_text)
                     errors.raise_error(data)
                 # raise Client error otherwise
                 raise ClientError(

@@ -232,6 +232,20 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                     admin = site_info.get("ms_type", 0) in [0, 1]
                     mysite["site_admin"] = admin
+                    # get currency list once if valid site found for account
+                    if "currency_list" not in self.account:
+                        data = await self.get_currency_list(fromFile=fromFile)
+                        self._update_account(
+                            {
+                                "currency_list": data.get("currency_list") or [],
+                                "default_currency": data.get("default_currency") or {},
+                            }
+                        )
+                    # Get product list once for device names if no admin and save it in account cache
+                    if not admin and "products" not in self.account:
+                        self._update_account(
+                            {"products": await self.get_products(fromFile=fromFile)}
+                        )
                     # query scene info if not provided in site Data
                     if not (scene := siteData):
                         self._logger.debug(
@@ -266,9 +280,40 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                         & exclude
                     ):
-                        await self.get_avg_power_from_energy(
+                        if avg_data := await self.get_avg_power_from_energy(
                             siteId=myid, fromFile=fromFile
-                        )
+                        ):
+                            # Add energy offset info to site cache
+                            mysite.update(
+                                {
+                                    "energy_offset_seconds": (avg_data.get(
+                                        "offset_seconds"
+                                    ) or 0)
+                                    - 10,
+                                    "energy_offset_check": avg_data.get("last_check"),
+                                    "energy_offset_tz": 1800
+                                    * round(
+                                        round(
+                                            avg_data.get(
+                                                "offset_seconds"
+                                            ) or 0
+                                        )
+                                        / 1800
+                                    ),
+                                }
+                            )
+                            # Update todays energy totals
+                            if intraday := avg_data.get("intraday"):
+                                energy = mysite.get("energy_details") or {}
+                                # add intraday entry to indicate latest data for energy details routine
+                                energy.update({"intraday": intraday})
+                                # update todays data if no date mismatch
+                                if (energy.get("today") or {}).get("date") in [
+                                    None,
+                                    intraday.get("date"),
+                                ]:
+                                    energy.update({"today": intraday})
+                                mysite["energy_details"] = energy
                     new_sites.update({myid: mysite})
 
         # Write back the updated sites
@@ -346,18 +391,23 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
                 data: dict = {}
+                skip_today: bool = False
+                # update todays data from existing intraday data if no date mismatch
+                if (intraday := energy.pop("intraday", {})).get("date") == today:
+                    data.update({today: intraday})
+                    skip_today = True
                 if yesterday != (energy.get("last_period") or {}).get("date"):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
                             startDay=datetime.fromisoformat(yesterday),
-                            numDays=2,
+                            numDays=1 if skip_today else 2,
                             dayTotals=True,
                             devTypes=query_types,
                             fromFile=fromFile,
                         )
                     )
-                else:
+                elif not skip_today:
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
@@ -463,6 +513,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 {
                     "statistics": stats,
                     "connect_infos": data.get("connect_infos") or {},
+                    "connected": data.get("connected"),
                 },
             )
             self.sites[siteId] = mysite
@@ -475,7 +526,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
 
         Example data:
         """
-        # get existing data first from device detals to check if requery must be done
+        # get existing data first from device details to check if requery must be done
         avg_data = next(
             iter(
                 [
@@ -487,6 +538,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             ),
             {},
         )
+        # Collect todays totals in new entry for re-use to avoid redundant daily energy polls
+        entry: dict = {}
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
             datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
@@ -499,6 +552,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             offset = timedelta(seconds=avg_data.get("offset_seconds") or 0)
             validtime = datetime.now() + offset
             validdata = {}
+            old_valid = avg_data.get("valid_time") or ""
             for source in ["hes", "solar", "home", "grid"]:
                 # check for initial or updated min offset, using SOC value in hes data because that should never be 0 for a valid timestamp
                 if source == "hes":
@@ -546,7 +600,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 future: datetime = last + timedelta(minutes=5)
                                 validdata = data
                                 break
-                    # get min offset to first invalid timestamp to find best check time (smallest delay after new statue value from cloud)
+                    # get min offset to first invalid timestamp to find best check time (smallest delay after new value from cloud)
                     if future:
                         offset = min(
                             # use default offset 2 days for first calculation
@@ -556,7 +610,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             or future - datetime.now() > offset + timedelta(minutes=6)
                             else offset,
                             # set offset few seconds before future invalid time if smaller than previous offset
-                            future - datetime.now() - timedelta(seconds=2),
+                            future - datetime.now() - timedelta(seconds=5),
                         )
                         validtime = datetime.now() + offset
                         # reuse last valid data from timestamp check to get values
@@ -592,13 +646,14 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         rangeType="day",
                         sourceType=source,
                         startDay=validtime,
+                        endDay=validtime,
                     )
                 # set last check time more into past to ensure each run verifies until offset no longer increases
                 if (
                     future
                     and not fromFile
                     and (
-                        future - datetime.now() - timedelta(seconds=2) < offset
+                        future - datetime.now() - timedelta(seconds=5) < offset
                         or offset.total_seconds == 0
                     )
                 ):
@@ -611,6 +666,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     )
                 avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
                 avg_data["offset_seconds"] = round(offset.total_seconds())
+                if avg_data["valid_time"] == old_valid:
+                    # Skip remaining queries if valid time did not change
+                    return avg_data
                 avg_data["power_unit"] = data.get("powerUnit")
                 # extract power values only if offset to last valid SOC entry was found
                 if offset.total_seconds() != 0 and (
@@ -620,6 +678,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         if (item.get("time") or "24:00") <= validtime.strftime("%H:%M")
                     ]
                 ):
+                    entry["date"] = validtime.strftime("%Y-%m-%d")
                     if source == "hes":
                         for idx, power in enumerate(
                             powerlist[-1].get("powerInfos") or [], start=1
@@ -639,6 +698,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             <= validtime.strftime("%H:%M")
                         ]:
                             avg_data["state_of_charge"] = soclist[-1].get("value") or ""
+                        # get todays totals from data to avoid redundant daily query for today
+                        entry.update(self.extract_energy(source=source, data=data))
                     elif source == "solar":
                         avg_data["solar_power_avg"] = (
                             next(
@@ -647,6 +708,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ).get("value")
                             or ""
                         )
+                        # get todays totals from data to avoid redundant daily query for today
+                        entry.update(self.extract_energy(source=source, data=data))
                     elif source == "home":
                         avg_data["home_usage_avg"] = (
                             next(
@@ -655,6 +718,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ).get("value")
                             or ""
                         )
+                        # get todays totals from data to avoid redundant daily query for today
+                        entry.update(self.extract_energy(source=source, data=data))
                     elif source == "grid":
                         avg_data["grid_import_avg"] = (
                             next(
@@ -663,6 +728,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ).get("value")
                             or ""
                         )
+                        # get todays totals from data to avoid redundant daily query for today
+                        entry.update(self.extract_energy(source=source, data=data))
             # update device dict with relevant info and with required structure
             if avg_data:
                 # Add average power to device details as work around if no other powerpanel usage data will be found in cloud
@@ -672,16 +739,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         and dev.get("site_id") == siteId
                     ):
                         self.devices[sn]["average_power"] = avg_data
-                # Add energy offset info to site cache
-                if site := self.sites.get(siteId):
-                    site.update(
-                        {
-                            "energy_offset_seconds": avg_data.get("offset_seconds"),
-                            "energy_offset_check": avg_data.get("last_check"),
-                        }
-                    )
-
-        return avg_data
+        # return also todays totals so they can be merged to system data
+        return avg_data | ({"intraday": entry} if entry else {})
 
     async def energy_statistics(
         self,
@@ -767,16 +826,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         table = {}
         if not devTypes or not isinstance(devTypes, set):
             devTypes = set()
-        today = datetime.today()
-        # check daily range and limit to 1 year max and avoid future days
-        if startDay > today:
-            startDay = today
+        future = datetime.today() + timedelta(days=7)
+        # check daily range and limit to 1 year max and avoid future days in more than 1 week
+        if startDay > future:
+            startDay = future
             numDays = 1
-        elif (startDay + timedelta(days=numDays)) > today:
-            numDays = (today - startDay).days + 1
+        elif (startDay + timedelta(days=numDays)) > future:
+            numDays = (future - startDay).days + 1
         numDays = min(366, max(1, numDays))
 
         # first get HES export
+        source = "hes"
         if SolixDeviceType.POWERPANEL.value in devTypes:
             # get first data period from file or api
             if fromFile:
@@ -795,7 +855,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     endDay=startDay
                     if dayTotals
                     else startDay + timedelta(days=numDays - 1),
-                    sourceType="hes",
+                    sourceType=source,
                 )
             fileNumDays = 0
             fileStartDay = None
@@ -837,7 +897,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             rangeType="week",
                             startDay=day,
                             endDay=day,
-                            sourceType="hes",
+                            sourceType=source,
                         )
                         # get first item from breakdown list for single day queries
                         item = next(iter(resp.get("energy") or []), {})
@@ -871,6 +931,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 )
 
         # Get home usage energy types
+        source = "home"
         if SolixDeviceType.POWERPANEL.value in devTypes:
             # get first data period from file or api
             if fromFile:
@@ -889,7 +950,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     endDay=startDay
                     if dayTotals
                     else startDay + timedelta(days=numDays - 1),
-                    sourceType="home",
+                    sourceType=source,
                 )
             fileNumDays = 0
             fileStartDay = None
@@ -931,7 +992,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             rangeType="week",
                             startDay=day,
                             endDay=day,
-                            sourceType="home",
+                            sourceType=source,
                         )
                         # get first item from breakdown list for single day queries
                         item = next(iter(resp.get("energy") or []), {})
@@ -943,56 +1004,12 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 ),
                             }
                         )
-                    for item in resp.get("aggregates") or []:
-                        itemtype = str(item.get("type") or "").lower()
-                        if itemtype == "hes":
-                            if (
-                                percent := str(item.get("percent") or "").replace(
-                                    "%", ""
-                                )
-                            ) and percent.isdigit():
-                                percent = str(float(percent) / 100)
-                            entry.update(
-                                {
-                                    "battery_to_home": convertToKwh(
-                                        val=item.get("value") or None,
-                                        unit=item.get("unit"),
-                                    ),
-                                    "battery_percentage": percent,
-                                }
-                            )
-                        elif itemtype == "solar":
-                            if (
-                                percent := str(item.get("percent") or "").replace(
-                                    "%", ""
-                                )
-                            ) and percent.isdigit():
-                                percent = str(float(percent) / 100)
-                            entry.update(
-                                {
-                                    "solar_to_home": convertToKwh(
-                                        val=item.get("value") or None,
-                                        unit=item.get("unit"),
-                                    ),
-                                    "solar_percentage": percent,
-                                }
-                            )
-                        elif itemtype == "grid":
-                            if (
-                                percent := str(item.get("percent") or "").replace(
-                                    "%", ""
-                                )
-                            ) and percent.isdigit():
-                                percent = str(float(percent) / 100)
-                            entry.update(
-                                {
-                                    "grid_to_home": convertToKwh(
-                                        val=item.get("value") or None,
-                                        unit=item.get("unit"),
-                                    ),
-                                    "other_percentage": percent,
-                                }
-                            )
+                    # get interval totals from aggregate
+                    entry.update(
+                        self.extract_energy(
+                            source=source, aggregate=resp.get("aggregates")
+                        )
+                    )
                     table.update({daystr: entry})
                     if showProgress:
                         self._logger.info(
@@ -1007,6 +1024,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 )
 
         # Add grid import, totals contain export and battery charging from grid for given interval
+        source = "grid"
         if SolixDeviceType.POWERPANEL.value in devTypes:
             # get first data period from file or api
             if fromFile:
@@ -1025,7 +1043,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     endDay=startDay
                     if dayTotals
                     else startDay + timedelta(days=numDays - 1),
-                    sourceType="grid",
+                    sourceType=source,
                 )
             fileNumDays = 0
             fileStartDay = None
@@ -1067,7 +1085,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             rangeType="week",
                             startDay=day,
                             endDay=day,
-                            sourceType="grid",
+                            sourceType=source,
                         )
                         # get first item from breakdown list for single day queries
                         item = next(iter(resp.get("energy") or []), {})
@@ -1087,17 +1105,12 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ),
                         }
                     )
-                    for item in resp.get("aggregates") or []:
-                        itemtype = str(item.get("type") or "").lower()
-                        if itemtype == "hes":
-                            entry.update(
-                                {
-                                    "grid_to_battery": convertToKwh(
-                                        val=item.get("value") or None,
-                                        unit=item.get("unit"),
-                                    ),
-                                }
-                            )
+                    # get interval totals from aggregate
+                    entry.update(
+                        self.extract_energy(
+                            source=source, aggregate=resp.get("aggregates")
+                        )
+                    )
                     table.update({daystr: entry})
                     if showProgress:
                         self._logger.info(
@@ -1112,6 +1125,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 )
 
         # Always Add solar production
+        source = "solar"
         # get first data period from file or api
         if fromFile:
             resp = (
@@ -1129,7 +1143,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 endDay=startDay
                 if dayTotals
                 else startDay + timedelta(days=numDays - 1),
-                sourceType="solar",
+                sourceType=source,
             )
         fileNumDays = 0
         fileStartDay = None
@@ -1169,7 +1183,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         rangeType="week",
                         startDay=day,
                         endDay=day,
-                        sourceType="solar",
+                        sourceType=source,
                     )
                     # get first item from breakdown list for single day queries
                     item = next(iter(resp.get("energy") or []), {})
@@ -1181,17 +1195,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ),
                         }
                     )
-                for item in resp.get("aggregates") or []:
-                    itemtype = str(item.get("type") or "").lower()
-                    if itemtype == "hes":
-                        entry.update(
-                            {
-                                "solar_to_battery": convertToKwh(
-                                    val=item.get("value") or None,
-                                    unit=item.get("unit"),
-                                ),
-                            }
-                        )
+                # get interval totals from aggregate
+                entry.update(
+                    self.extract_energy(source=source, aggregate=resp.get("aggregates"))
+                )
                 table.update({daystr: entry})
                 if showProgress:
                     self._logger.info(
@@ -1205,3 +1212,138 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 self.apisession.nickname,
             )
         return table
+
+    def extract_energy(
+        self,
+        source: str,
+        data: dict | None = None,
+        aggregate: list | None = None,
+    ) -> dict:
+        """Extract the daily totals from the provided aggregate list or full data dict depending on the data source.
+
+        If the full data dictionary is provided, the data totals as well as the aggregate data will be extracted (e.g. for intraday responses).
+        The aggregate parameter input will then be ignored.
+        If only the aggregate list is provided, only those totals will be extracted, since interval breakdown must be extracted individually.
+        """
+        data = data if isinstance(data, dict) else {}
+        aggregate = (
+            aggregate
+            if isinstance(aggregate, list) and not data
+            else data.get("aggregates") or []
+        )
+        source = source if isinstance(source, str) else ""
+        entry: dict = {}
+        if data:
+            # extract also required totals of interval breakdown if data provided
+            if source == "hes":
+                entry.update(
+                    {
+                        "battery_charge": convertToKwh(
+                            val=data.get("totalImportedEnergy") or None,
+                            unit=data.get("totalImportedEnergyUnit") or "",
+                        ),
+                        "battery_discharge": convertToKwh(
+                            val=data.get("totalExportedEnergy") or None,
+                            unit=data.get("totalExportedEnergyUnit") or "",
+                        ),
+                    }
+                )
+            elif source == "home":
+                entry.update(
+                    {
+                        "home_usage": convertToKwh(
+                            val=data.get("totalImportedEnergy") or None,
+                            unit=data.get("totalImportedEnergyUnit") or "",
+                        ),
+                    }
+                )
+            elif source == "grid":
+                entry.update(
+                    {
+                        "solar_to_grid": convertToKwh(
+                            val=data.get("totalExportedEnergy") or None,
+                            unit=data.get("totalExportedEnergyUnit") or "",
+                        ),
+                        "grid_import": convertToKwh(
+                            val=data.get("totalImportedEnergy") or None,
+                            unit=data.get("totalImportedEnergyUnit") or "",
+                        ),
+                    }
+                )
+            elif source == "solar":
+                entry.update(
+                    {
+                        "solar_production": convertToKwh(
+                            val=data.get("totalExportedEnergy") or None,
+                            unit=data.get("totalExportedEnergyUnit") or "",
+                        ),
+                    }
+                )
+        for item in aggregate:
+            itemtype = str(item.get("type") or "").lower()
+            if source == "hes":
+                pass
+            elif source == "home":
+                if itemtype == "hes":
+                    if (
+                        percent := str(item.get("percent") or "").replace("%", "")
+                    ) and percent.isdigit():
+                        percent = str(float(percent) / 100)
+                    entry.update(
+                        {
+                            "battery_to_home": convertToKwh(
+                                val=item.get("value") or None,
+                                unit=item.get("unit"),
+                            ),
+                            "battery_percentage": percent,
+                        }
+                    )
+                elif itemtype == "solar":
+                    if (
+                        percent := str(item.get("percent") or "").replace("%", "")
+                    ) and percent.isdigit():
+                        percent = str(float(percent) / 100)
+                    entry.update(
+                        {
+                            "solar_to_home": convertToKwh(
+                                val=item.get("value") or None,
+                                unit=item.get("unit"),
+                            ),
+                            "solar_percentage": percent,
+                        }
+                    )
+                elif itemtype == "grid":
+                    if (
+                        percent := str(item.get("percent") or "").replace("%", "")
+                    ) and percent.isdigit():
+                        percent = str(float(percent) / 100)
+                    entry.update(
+                        {
+                            "grid_to_home": convertToKwh(
+                                val=item.get("value") or None,
+                                unit=item.get("unit"),
+                            ),
+                            "other_percentage": percent,
+                        }
+                    )
+            elif source == "grid":
+                if itemtype == "hes":
+                    entry.update(
+                        {
+                            "grid_to_battery": convertToKwh(
+                                val=item.get("value") or None,
+                                unit=item.get("unit"),
+                            ),
+                        }
+                    )
+            elif source == "solar":
+                if itemtype == "hes":
+                    entry.update(
+                        {
+                            "solar_to_battery": convertToKwh(
+                                val=item.get("value") or None,
+                                unit=item.get("unit"),
+                            ),
+                        }
+                    )
+        return entry

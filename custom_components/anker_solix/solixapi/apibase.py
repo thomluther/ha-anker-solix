@@ -13,7 +13,12 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
-from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType
+from .apitypes import (
+    API_ENDPOINTS,
+    API_FILEPREFIXES,
+    API_HES_SVC_ENDPOINTS,
+    SolixDeviceType,
+)
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -612,7 +617,9 @@ class AnkerSolixBaseApi:
             deviceSns = [
                 s for s, device in self.devices.items() if device.get("is_admin")
             ]
-        if fromFile:
+        if not deviceSns:
+            resp = {}
+        elif fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(self.testDir()) / f"{API_FILEPREFIXES['get_ota_batch']}.json"
             )
@@ -734,6 +741,41 @@ class AnkerSolixBaseApi:
             )
         return (resp.get("data") or {}).get("data") or []
 
+    async def get_hes_platforms_list(self, fromFile: bool = False) -> list:
+        r"""Get the hes platform list. The response fields will show supported platforms categories with their products, some redundant but also some unique to product platform list.
+
+        Example data:
+        "data": {"productsInfo": [
+            {"category": "Balcony Solar Power System","code": "A5140","name": "MI60 Microinverter",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/2e60fc1a-f1c2-4574-8e00-a50689c87f72/picl_A5140_normal.png"},
+            {"category": "Balcony Solar Power System","code": "A17C1","name": "Solarbank 2 E1600 Pro",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png"},
+            {"category": "Residential Storage System","code": "A5101","name": "X1-P6K-US/S",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/KEwdxNejZq2tDXCX/picl_A5101_normal.png"},
+            {"category": "Residential Storage System","code": "A5150","name": "Microinverter",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/29/iot-admin/1VUzMEfFhzv4gopz/%E5%BE%AE%E9%80%86.png"},
+            {"category": "Residential Storage System","code": "A5341","name": "Backup Controller",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/09/24/iot-admin/ANJzf3AX8isPzNMI/picl_A5341_normal.png"},
+            {"category": "Residential Storage System","code": "A5450","name": "Zigbee Dongle",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/29/iot-admin/mp7s3FzbBXjRqIxV/ECU.png"},
+            {"category": "Residential Storage System","code": "A5102","name": "X1-H(3.68~6)K-S\t",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/BT8pMS9hrhg8IEob/picl_A5101_normal.png"},
+            {"category": "Residential Storage System","code": "A5103","name": "X1-H (5~12)K-T",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/NLxTngSOzIY49fX2/picl_A5101_normal.png"},
+            {"category": "Residential Storage System","code": "A5220","name": "Battery Module",
+            "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/QgLuazcQypTsCzvv/picl_A5220_normal.png"}]}
+        """
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['hes_get_product_info']}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_HES_SVC_ENDPOINTS["get_product_info"]
+            )
+        return (resp.get("data") or {}).get("productsInfo") or []
+
     async def get_products(self, fromFile: bool = False) -> dict:
         """Compose the supported Anker and third platform products into a condensed dictionary."""
 
@@ -746,22 +788,55 @@ class AnkerSolixBaseApi:
             plat_name = platform.get("name") or ""
             for prod in platform.get("products") or []:
                 products[prod.get("product_code") or ""] = {
-                    "name": prod.get("name"),
-                    "platform": plat_name,
+                    "name": str(prod.get("name" or "")).strip(),
+                    "platform": str(plat_name).strip(),
                     # "img_url": prod.get("img_url"),
                 }
         self._logger.debug(
-            "Getting api %s 3rd party platform list",
+            "Getting api %s HES product list",
             self.apisession.nickname,
         )
-        for platform in await self.get_third_platforms_list(fromFile=fromFile):
-            plat_name = platform.get("name") or ""
-            countries = platform.get("countries") or ""
-            for prod in platform.get("products") or []:
-                products[prod.get("product_code") or ""] = {
-                    "name": " ".join([plat_name, prod.get("name")]),
-                    "platform": plat_name,
-                    "countries": countries,
-                    # "img_url": prod.get("img_url"),
+        for platform in await self.get_hes_platforms_list(fromFile=fromFile):
+            if (pn := platform.get("code") or "") and pn not in products:
+                products[pn] = {
+                    "name": str(platform.get("name") or "").strip(),
+                    "platform": str(platform.get("category") or "").strip(),
+                    # "img_url": platform.get("imgUrl"),
                 }
+        # get_third_platforms_list does no longer show 3rd platform products, skip query until data provided again
+        # see https://github.com/thomluther/anker-solix-api/issues/172
+        # self._logger.debug(
+        #     "Getting api %s 3rd party platform list",
+        #     self.apisession.nickname,
+        # )
+        # for platform in await self.get_third_platforms_list(fromFile=fromFile):
+        #     plat_name = platform.get("name") or ""
+        #     countries = platform.get("countries") or ""
+        #     for prod in platform.get("products") or []:
+        #         products[prod.get("product_code") or ""] = {
+        #             "name": " ".join([plat_name, prod.get("name")]),
+        #             "platform": plat_name,
+        #             "countries": countries,
+        #             # "img_url": prod.get("img_url"),
+        #         }
         return products
+
+    async def get_currency_list(self, fromFile: bool = False) -> dict:
+        r"""Get the currency list for the power sites.
+
+        Example data:
+        "data": {"currency_list": [
+            {"symbol": "$","name": "USD"},
+            {"symbol": "\u20ac","name": "EUR"},
+            {"symbol": "z\u0142","name": "PLN"}],
+            "default_currency": {"symbol": "\u20ac","name": "EUR"}}
+        """
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir()) / f"{API_FILEPREFIXES['get_currency_list']}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_currency_list"]
+            )
+        return resp.get("data") or {}

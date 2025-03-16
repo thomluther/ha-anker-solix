@@ -13,6 +13,7 @@ class RequestCounter:
     ) -> None:
         """Initialize."""
         self.elements: list = []
+        self.throttled: set = set()
 
     def __str__(self) -> str:
         """Print the counters."""
@@ -30,9 +31,14 @@ class RequestCounter:
         """Remove oldest timestamps from beginning of counter until last_time is reached, default is 1 hour ago."""
         self.elements = [x for x in self.elements if x[0] > last_time]
 
+    def add_throttle(self, endpoint: str) -> None:
+        """Add and endpoint to the throttled endpoint set."""
+        if endpoint and isinstance(endpoint, str):
+            self.throttled.add(endpoint)
+
     def last_minute(self, details: bool = False) -> int | list:
         """Get number of timestamps or all details for last minute."""
-        last_time = datetime.now() - timedelta(minutes=1,seconds=2)
+        last_time = datetime.now() - timedelta(minutes=1, seconds=2)
         requests = [x for x in self.elements if x[0] > last_time]
         return requests if details else len(requests)
 
@@ -56,6 +62,9 @@ class RequestCounter:
                     else self.last_minute(details=True)
                 )
             ]
+            + ["Throttled Endpoints:"]
+            + list(self.throttled)
+            or ["None"]
         )
 
 

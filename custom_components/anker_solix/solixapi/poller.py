@@ -97,6 +97,15 @@ async def poll_sites(  # noqa: C901
                 siteInfo.get("ms_type", 0) in [0, 1]
             )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
             mysite["site_admin"] = admin
+            # get currency list once if valid site found for account
+            if "currency_list" not in api.account:
+                data = await api.get_currency_list(fromFile=fromFile)
+                api._update_account(
+                    {
+                        "currency_list": data.get("currency_list") or [],
+                        "default_currency": data.get("default_currency") or {},
+                    }
+                )
             # Get product list once for device names if no admin and save it in account cache
             if not admin and "products" not in api.account:
                 api._update_account(
@@ -104,9 +113,10 @@ async def poll_sites(  # noqa: C901
                 )
             # Routines for hes site type to get site statistic object (no values in scene info response)
             if (site_Type := mysite.get("site_type")) == SolixDeviceType.HES.value:
-                # initialize the HES Api if not done yet
+                # initialize the HES Api if not done yet and link the account cache
                 if not api.hesApi:
                     api.hesApi = AnkerSolixHesApi(apisession=api.apisession)
+                    api.hesApi.account = api.account
                 # pass the site ID and site info to avoid another site list query and merge site data
                 await api.hesApi.update_sites(
                     siteId=myid,
@@ -119,7 +129,7 @@ async def poll_sites(  # noqa: C901
                 for hes_device in [
                     h
                     for h in api.hesApi.devices.values()
-                    if h.get("dev_type") == SolixDeviceType.HES.value
+                    if h.get("type") == SolixDeviceType.HES.value
                     and h.get("site_id") == myid
                 ]:
                     if sn := hes_device.get("device_sn"):
@@ -175,13 +185,39 @@ async def poll_sites(  # noqa: C901
                             if data_valid or not oldstamp
                             else oldstamp
                         )
+                    else:
+                        # valid timestamp received from solarbank, calculate min offset to energy data in cloud
+                        offset: timedelta = timedelta(
+                            seconds=mysite.get("energy_offset_seconds") or 0
+                        )
+                        # get min offset to provided cloud update timestamps
+                        offset = min(
+                            # use default offset 1 day for first calculation
+                            timedelta(days=1)
+                            if offset.total_seconds() == 0
+                            else offset,
+                            # set offset few minutes before new data timestamp if smaller than previous offset and not aged more than one day
+                            timestamp - datetime.now() - timedelta(minutes=2)
+                            if (datetime.now() - timestamp) < timedelta(days=1)
+                            else timedelta(seconds=0),
+                        )
+                        #
+                        # Add energy offset info to site cache
+                        mysite.update(
+                            {
+                                "energy_offset_seconds": round(offset.total_seconds()),
+                                "energy_offset_check": datetime.now().strftime(fmt),
+                                "energy_offset_tz": 1800 * round(round(offset.total_seconds())/1800),
+                            }
+                        )
                 # check if power panel site type to maintain statistic object which will be updated and replaced only during site details refresh
                 if site_Type == SolixDeviceType.POWERPANEL.value:
-                    # initialize the powerpanel Api if not done yet
+                    # initialize the powerpanel Api if not done yet and link account cache
                     if not api.powerpanelApi:
                         api.powerpanelApi = AnkerSolixPowerpanelApi(
                             apisession=api.apisession
                         )
+                        api.powerpanelApi.account = api.account
                     # keep previous statistics since it should not overwrite stats updated by power panel site details update
                     if "statistics" in mysite:
                         scene["statistics"] = mysite.get("statistics")
@@ -593,12 +629,24 @@ async def poll_device_details(
         await api.get_ota_batch(fromFile=fromFile)
     # Get Power Panel device specific updates
     if api.powerpanelApi:
-        await api.powerpanelApi.update_device_details(
-            fromFile=fromFile, exclude=exclude
-        )
-    # Get HES device specific updates
+        for sn, device in dict(
+            await api.powerpanelApi.update_device_details(
+                fromFile=fromFile, exclude=exclude
+            )
+        ).items():
+            merged_dev = api.devices.get(sn) or {}
+            merged_dev.update(device)
+            api.devices[sn] = merged_dev
+            api.powerpanelApi.devices[sn] = merged_dev
+    # Get HES device specific updates and merge them
     if api.hesApi:
-        await api.hesApi.update_device_details(fromFile=fromFile, exclude=exclude)
+        for sn, device in dict(
+            await api.hesApi.update_device_details(fromFile=fromFile, exclude=exclude)
+        ).items():
+            merged_dev = api.devices.get(sn) or {}
+            merged_dev.update(device)
+            api.devices[sn] = merged_dev
+            api.hesApi.devices[sn] = merged_dev
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():
@@ -817,7 +865,9 @@ async def poll_device_energy(
                 energy = site.get("energy_details") or {}
                 # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
                 # Cloud server energy stat updates may be delayed by 2-3 minutes
-                time: datetime = datetime.now() - timedelta(minutes=5)
+                # min Offset to last energy data, reduce query time by 5 minutes to ensure last record is made
+                energy_offset = (site.get("energy_offset_seconds") or 0) - 300
+                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days

@@ -136,6 +136,7 @@ API_ENDPOINTS = {
     "get_third_platforms": "power_service/v1/app/third/platform/list",  # list supported third party device models
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
+    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
 }
@@ -174,7 +175,7 @@ API_HES_SVC_ENDPOINTS = {
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
-""" Other endpoints neither implemented nor explored: 40 + 39 used => 79
+""" Other endpoints neither implemented nor explored: 41 + 40 used => 81
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -187,7 +188,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/site/delete_site_devices',
     'power_service/v1/site/update_site_devices',
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
-    'power_service/v1/site/get_comb_addable_sites'
+    'power_service/v1/site/get_comb_addable_sites',
+    'power_service/v1/site/shift_power_site_type',
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -216,14 +218,21 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/add_message',
     'power_service/v1/del_message',
 
-App related: 7 + 2 used => 9 total
+App related: 10 + 2 used => 12 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
+    'app/cloudstor/get_app_up_token_without_login',
     'app/logging/get_device_logging',
+    'app/logging/upload',
     'app/devicerelation/up_alias_name',  # Update Alias name of device? Fails with (10003) Failed to request
     'app/devicerelation/un_relate_and_unbind_device',
     'app/devicerelation/relate_device',
     'app/push/clear_count',
+    'app/push/register_push_token',
+
+Passport related: 2 + 0 used => 2 total
+    'passport/get_user_param', # specify param_type which must be parsable as list of int, but does not show anything in response
+    'passport/get_subscriptions,  #  get user email, accept_survey, subscribe, phone_number, sms_subscribe
 
 PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/sync_installation_inspection", #Unknown at this time
@@ -233,7 +242,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
 
-Home Energy System related (X1): 36 + 14 used => 50 total
+Home Energy System related (X1): 37 + 14 used => 51 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -262,6 +271,7 @@ Home Energy System related (X1): 36 + 14 used => 50 total
     "charging_hes_svc/update_device_info_by_app",
     "charging_hes_svc/update_hes_utility_rate_plan",
     "charging_hes_svc/update_wifi_config",
+    "charging_hes_svc/upload_device_status",2
     "charging_hes_svc/user_event_alarm",
     "charging_hes_svc/user_fault_alarm",
     "charging_hes_svc/ota",
@@ -270,6 +280,25 @@ Home Energy System related (X1): 36 + 14 used => 50 total
     "charging_hes_svc/restart_peak_session",
     "charging_hes_svc/start",
     "charging_hes_svc/sync_back_up_history",
+
+related to what, seem to work with Power Panel sites: 5 + 0 used => 5 total
+    'charging_disaster_prepared/get_site_device_disaster', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
+    'charging_disaster_prepared/get_site_device_disaster_status', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
+    'charging_disaster_prepared/set_site_device_disaster',
+    'charging_disaster_prepared/quit_disaster_prepare',
+    'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
+
+related to what?: 10 + 0 used => 10 total
+    'mini_power/v1/app/charging/get_charging_mode_list',
+    'mini_power/v1/app/charging/update_charging_mode',
+    'mini_power/v1/app/charging/add_charging_mode',
+    'mini_power/v1/app/charging/delete_charging_mode',
+    'mini_power/v1/app/setting/set_charging_mode_status',
+    'mini_power/v1/app/egg/get_easter_egg_trigger_list',
+    'mini_power/v1/app/egg/add_easter_egg_trigger_record',
+    'mini_power/v1/app/egg/report_easter_egg_trigger_status',
+    'mini_power/v1/app/setting/get_device_setting',
+    'mini_power/v1/app/power/get_day_power_data',
 
 
 Structure of the JSON response for an API Login Request:
@@ -322,6 +351,7 @@ API_FILEPREFIXES = {
     "check_upgrade_record": "check_upgrade_record",
     "get_device_attributes": "device_attrs",
     "get_message_unread": "message_unread",
+    "get_currency_list": "currency_list",
     "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
@@ -502,6 +532,13 @@ class ApiCategories:
     powerpanel_energy: str = "powerpanel_energy"
     hes_energy: str = "hes_energy"
 
+@dataclass(frozen=True)
+class SolixDeviceNames:
+    """Dataclass for Anker Solix device names that are now provided via the various product list queries."""
+
+    SHEM3: str = "Shelly 3EM"
+    SHEMP3: str = "Shelly Pro 3EM"
+
 
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
@@ -626,6 +663,8 @@ class SolixDeviceCategory:
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
     A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50
+    A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
+    A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
 
 
 @dataclass(frozen=True)

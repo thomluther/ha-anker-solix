@@ -256,7 +256,7 @@ class AnkerSolixApiClient:
                             self.api.apisession.nickname,
                             str(self.min_device_refresh),
                         )
-                    elif self.active_device_refresh or self.startup:
+                    elif self.active_device_refresh:
                         _LOGGER.warning(
                             "Api Coordinator %s cannot enforce device update while another update is still running, using data from Api cache",
                             self.api.apisession.nickname,
@@ -286,10 +286,16 @@ class AnkerSolixApiClient:
                             exclude=set(self.exclude_categories),
                         )
                         # Fetch energy if not excluded via options
-                        await self.api.update_device_energy(
-                            fromFile=self._testmode,
-                            exclude=set(self.exclude_categories),
-                        )
+                        if self.startup:
+                            _LOGGER.info(
+                                "Api Coordinator %s is deferring energy updates",
+                                self.api.apisession.nickname,
+                            )
+                        else:
+                            await self.api.update_device_energy(
+                                fromFile=self._testmode,
+                                exclude=set(self.exclude_categories),
+                            )
                         self._intervalcount = self._deviceintervals
                         self.last_site_refresh = datetime.now().astimezone()
                         self.last_device_refresh = datetime.now().astimezone()

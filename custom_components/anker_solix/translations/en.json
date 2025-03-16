@@ -125,7 +125,7 @@
                 },
                 "data_description": {
                     "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
-                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate endpoint throttling.",
+                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling (once active) allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate and reset active endpoint throttling.",
                     "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
                     "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
                     "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."

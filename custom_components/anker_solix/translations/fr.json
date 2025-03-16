@@ -125,7 +125,7 @@
                 },
                 "data_description": {
                     "scan_interval": "Remarque: Les données sur le serveur cloud sont actualisées au maximum toutes les 60 à 300 secondes. Un intervalle de mise à jour inférieur à 60 secondes ne vous apporte donc aucun avantage.",
-                    "endpoint_limit": "Remarque: Une limite de demande d'api par minute est appliquée par Anker Cloud. La limitation par défaut autorise 10 requêtes pour le même point d'accès par minute afin d'éviter les erreurs d'api. Avec 0, vous pouvez désactiver l'étranglement des points de terminaison.",
+                    "endpoint_limit": "Remarque: Une limite de demande d'api par minute est appliquée par Anker Cloud. La limitation par défaut (une fois activée) autorise 10 requêtes pour le même point d'accès par minute afin d'éviter les erreurs d'api. Avec 0, vous pouvez désactiver et réinitialiser la limitation active des points de terminaison.",
                     "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues.",
                     "exclude": "En fonction des catégories d'entités exclues, le nombre de requêtes Api peut être réduit (en particulier pour les catégories d'énergie)",
                     "testmode": "En mode test, la configuration utilise uniquement les fichiers json du dossier sélectionné pour créer des appareils et des capteurs à des fins de test. La communication avec le serveur n'a alors plus lieu."

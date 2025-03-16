@@ -125,7 +125,7 @@
                 },
                 "data_description": {
                     "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
-                    "endpoint_limit": "Hinweis: Die Anker Cloud erzwingt ein Api Endpunkt Anfragelimit pro Minute. Standardmäßig werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, um Api Fehler zu vermeiden. Die Drosselung kann mit 0 deaktiviert werden.",
+                    "endpoint_limit": "Hinweis: Die Anker Cloud erzwingt ein Api Endpunkt Anfragelimit pro Minute. Standardmäßig werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt (sobald aktiviert), um Api Fehler zu vermeiden. Die Endpunkt Drosselung kann mit 0 deaktiviert und zurückgesetzt werden.",
                     "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
                     "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
                     "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."

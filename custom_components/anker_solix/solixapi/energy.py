@@ -28,13 +28,13 @@ async def energy_daily(  # noqa: C901
     table = {}
     if not devTypes or not isinstance(devTypes, set):
         devTypes = set()
-    today = datetime.today()
-    # check daily range and limit to 1 year max and avoid future days
-    if startDay > today:
-        startDay = today
+    future = datetime.today() + timedelta(days=7)
+    # check daily range and limit to 1 year max and avoid future days in more than 1 week
+    if startDay > future:
+        startDay = future
         numDays = 1
-    elif (startDay + timedelta(days=numDays)) > today:
-        numDays = (today - startDay).days + 1
+    elif (startDay + timedelta(days=numDays)) > future:
+        numDays = (future - startDay).days + 1
     numDays = min(366, max(1, numDays))
 
     # first get solarbank export
