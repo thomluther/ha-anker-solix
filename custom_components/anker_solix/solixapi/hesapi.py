@@ -233,15 +233,6 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # rebuild device list found in any site
             if not siteId:
                 self._site_devices = set()
-        # get currency list once
-        if "currency_list" not in self.account:
-            data = await self.get_currency_list(fromFile=fromFile)
-            self._update_account(
-                {
-                    "currency_list": data.get("currency_list") or [],
-                    "default_currency": data.get("default_currency") or {},
-                }
-            )
         for site in sites.get("site_list", []):
             if myid := site.get("site_id"):
                 # Update site info

@@ -243,6 +243,18 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     SolarbankUsageMode.backup.name,
                 }
             self._attr_options = list(options)
+        elif self._attribute_name == "system_price_unit":
+            options = set(self._attr_options) | {
+                item.get("symbol")
+                for item in (
+                    (
+                        coordinator.data.get(coordinator.client.api.apisession.email)
+                        or {}
+                    ).get("currency_list")
+                    or []
+                )
+            }
+            self._attr_options = list(options)
         elif self._attribute_name == "system_price_type":
             options = set(self._attr_options)
             if data.get("power_site_type") not in [11]:
