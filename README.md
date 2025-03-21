@@ -149,7 +149,7 @@ Notes:
 
 This coupling feature for 1st generation Solarbank devices was [announced in May 2024](https://www.ankersolix.com/de/blogs/balkonkraftwerk-mit-speicher/solarbank-der-ersten-generation-und-solarbank-2-pro-zusammen-fur-mehr-energiekontrolle) and [delivered in Dec 2024](https://www.ankersolix.com/de/blogs/balkonkraftwerk/die-1-generation-der-solarbank-vereint-sich-mit-dem-energiesystem-der-solarbank-2-pro-plus).
 It turns out that Anker implemented just the bare minimum to support such combined systems. As users noticed, the power totals and energy statistics for such systems reflect ONLY the SB2 data, but not any SB1 data. That means you don't see anymore the SB1 solar power / energy during the day, but the SB1 discharge at night counts as solar power/energy of the SB2 during the night. All reported charge or discharge data does not reflect anything of the SB1 devices in the system. So the SB1 is pretty much a black box for the Anker home page and the enery statistics, which can also be accessed by system members.
-Furthermore, the SB1 device(s) may have different schedules in combined systems. While the SB2 is running in an automatic mode, the SB1 has its own schedule with all known controls for any number of time intervals. When the SB2 is switched to manual mode however, it enforces another, minimalistic all day interval schedule to the SB1 devices which is not accessible via the mobile App. This schedule has no interval control elements. The output preset is the only value for the whole day interval and it is determined by the SB2, depending on its manual plan settings and SOC. When adding a SB1 device into a SB2 system, the 'Solarbank 2' will get configured as inverter type for the cascaded SB1 device. Therefore the output preset in this minimalistic schedule can also be 0 W for the SB1, without any 0 W output switch installed. To prevent any SB1 schedule modifications while the enforced schedule is active, the integration will make all affected control entities unavailable to prevent user changes. Therefore you may see unavailable controls in cascaded SB1 devices that cannot be modified any longer, otherwise this may screw up the presented values and schedule settings, which would always be applied to the real SB1 schedule, even if inactive.
+Furthermore, the SB1 device(s) may have different schedules in combined systems. While the SB2 is running in an automatic mode, the SB1 has its own schedule with all known controls for any number of time intervals. When the SB2 is switched to manual mode however, it enforces another, minimalistic all day interval schedule to the SB1 devices which is not accessible via the mobile App. This schedule has no interval control elements. The output preset is the only value for the whole day interval and it is determined by the SB2, depending on its manual plan settings and SOC. When adding a SB1 device into a SB2 system, the 'Solarbank 2' will get configured as inverter type for the cascaded SB1 device. Therefore the output preset in this minimalistic schedule can also be 0 W for the SB1, however the 0 W output will only be applied if the 0 W output switch accessory is installed between SB1 output and SB2 input. Otherwise the SB1 will still bypass a minimum of 100 W typically. To prevent any SB1 schedule modifications while the enforced schedule is active, the integration will make all affected control entities unavailable to prevent user changes. Therefore you may see unavailable controls in cascaded SB1 devices that cannot be modified any longer, otherwise this may screw up the presented values and schedule settings, which would always be applied to the real SB1 schedule, even if inactive.
 To present correct total values for the combined system, the Api library corrects also the solarbank totals in the Api system info response based on proper accumulation of individual solarbank device values:
   - Total solar power: SB1 device(s) solar power + SB2 device solar power - SB1 device(s) output power
   - Total output power: Remains SB2 device output power
@@ -180,16 +180,20 @@ To get additional Anker power devices/systems added, please review the [anker-so
 
 **Attention:**
 
-While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore the integration cannot be enhanced for more detailed entities of stand alone devices.
+While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore the integration cannot be enhanced with more detailed entities of stand alone devices.
 
 
 ## Installation via HACS (recommended)
 
-Use this button:
+The repository was added to HACS 🎉 You should find the Anker Solix integration when you search in HACS and you can install it from there.
+
+Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see [Optional entity pictures](#optional-entity-pictures) for instructions to copy the image files manually.
+
+If you don't find the integration in HACS, use this button to add the repository to your HACS custom repositories:
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.][hacs-repo-badge]][hacs-install]
 
-Or following procedure for HACS 2.0 or later:
+Or use following procedure for HACS 2.0 or later to add the custom repository:
 1. Open the [HACS](https://hacs.xyz) panel in your Home Assistant frontend.
 1. Click the three dots in the top-right corner and select "Custom Repositories."
 1. Add a new custom repository via the Popup dialog:
@@ -199,7 +203,6 @@ Or following procedure for HACS 2.0 or later:
 1. Close the Popup dialog and verify that `Anker Solix` integration is now listed in the Home Assistant Community Store.
 1. Install the integration
 
-Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which is located in your HA installation configuration folder. Please see [Optional entity pictures](#optional-entity-pictures) for instructions to copy the image files manually.
 
 ### Installation Notes
 - It was observed that when adding the repository to HACS via the button, an error may occur although it was added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
@@ -211,11 +214,11 @@ Unfortunately, HACS does not automatically install the optional entity images th
 
 ## Manual Installation
 
-1. Using the tool of choice to open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-1. If you do not have a `custom_components` directory (folder) there, you need to create it.
-1. In the `custom_components` directory (folder) create a new folder called `anker_solix`.
-1. Download _all_ the files from the `custom_components/anker_solix/` directory (folder) in this repository.
-1. Place the files you downloaded in the new directory (folder) you created.
+1. Using the tool of choice to open the directory (folder) for your HA configuration (where your `configuration.yaml` is located, e.g. `/homeassistant`)
+1. If you do not have a `custom_components` directory (folder) there, you need to create it
+1. In the `custom_components` directory (folder) create a new folder called `anker_solix`
+1. Download _all_ the files from the `custom_components/anker_solix/` directory (folder) in this repository
+1. Place the files you downloaded in the new directory (folder) you created
 1. Restart Home Assistant
 1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Anker Solix"
 
@@ -223,13 +226,16 @@ Unfortunately, HACS does not automatically install the optional entity images th
 ## Optional entity pictures
 
 If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation configuration folder. If you operate a Home Assistant OS device, you can preferably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
-1. Navigate to the `CONFIG` folder of your HA installation (where your configuration.yaml is located)
+1. Navigate to the configuration folder of your HA installation (where your `configuration.yaml` is located, e.g. `/homeassistant`)
 1. Navigate to `custom_components/anker_solix/` folder and copy the `images` subfolder containing the entity pictures
-1. Go back to your `CONFIG` folder and navigate to or create the `www/community/anker_solix` folder structure if not existing
+1. Go back to your configuration folder and navigate to or create the `www/community/anker_solix` folder structure if not existing
 1. Paste the `images` folder into the created `anker_solix` community subfolder
 
- Once the images are available in `www/community/anker_solix/images/`, they will be picked up when the integration is (re-)creating the entities, like on first creation or re-load of the configuration entry.
- Make sure to reload your HA UI browser window without cache to get the entity pictures displayed correctly.
+ Once the images are available in `www/community/anker_solix/images/`, they will be picked up when the integration is (re-)creating the entities, like on first creation or re-load of the configuration entry.  Make sure to reload your HA UI browser window without cache to get the entity pictures displayed correctly.
+
+**Important:**
+If you just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local` and allow the entity pictures to be displayed.
+
 
 
 ## Integration configuration and usage

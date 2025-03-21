@@ -943,6 +943,8 @@ In order to run the script interactively from the dashboard, you just need to ad
 
 ## Other integration actions
 
+Anker Solix actions can be used in automations or via the HA UI developper tool panel.
+
 ### Get system info action
 
 Starting with version 2.0.0, a new action was added for the system total yield entity in order to query the overall system information from the cloud Api, which contains the data that is presented on the Anker App home page screen. This data is used by the integration to represent most but not all of the entities. It may be helpful to debug what values are actually available on the Api cloud at the time requesting them. Following is an example screenshot showing only the top of the response:
@@ -953,8 +955,10 @@ Version 2.3.0 added an option to include cached data in the presented response, 
 
 ### Export systems action
 
-Starting with version 2.1.2, a new action was added to simplify an anonymized export of known Api information available for the configured account. The Api responses will be saved in JSON files and the folder will be zipped in your Home Assistant `/config` folder under `www/community/anker_solix/exports`. The `www` folder is the local file folder for the HA dashboard to access files directly via the browser. It is also used by custom dashboard cards. Home Assistant automatically maps this folder to `/local` in the URL path.
-The action response field `export_filename` will provide the zipped filename url path as response to the action. This allows easy download from your HA instance through your browser when navigating to that url path. Optionally you can download the zip file via Add Ons that provide file system access.
+Starting with version 2.1.2, a new action was added to simplify an anonymized export of known Api information available for the configured account. The Api responses will be saved in JSON files and the folder will be zipped in your Home Assistant configuration folder (where your `configuration.yaml` is located, e.g. `/homeassistant`), under `www/community/anker_solix/exports`. The `www` folder in your configuration folder is the local file folder for the HA dashboard to access files directly via the browser. It is also used by custom dashboard cards. Home Assistant automatically maps the `www` folder to `/local` in the URL path if the folder exists at HA startup. The action response field `export_filename` will provide the zipped filename url path as response to the action. This allows easy download from your HA instance through your browser when navigating to that url path. Optionally you can download the zip file via Add Ons that provide file system access.
+
+![Export systems service][export-systems-service-img]
+
 
 **Important:**
 If the system export just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local`.
@@ -1007,4 +1011,5 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [solarbank-2-pro-diag-img]: doc/Solarbank-2-pro-diag.png
 [smart-meter-device-img]: doc/Smart-Meter-device.png
 [get-system-info-service-img]: doc/get-system-info-service.png
+[export-systems-service-img]: doc/export-systems-service.png
 
