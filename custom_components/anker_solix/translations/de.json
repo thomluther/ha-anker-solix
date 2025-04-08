@@ -76,6 +76,16 @@
                 "off_peak": "Außerhalb Spitzenzeit",
                 "valley": "Nebenzeit"
             }
+        },
+        "request_method": {
+            "options": {
+                "get": "GET",
+                "post": "POST",
+                "put": "PUT"
+            }
+        },
+        "endpoint": {
+            "options": {}
         }
     },
     "config": {

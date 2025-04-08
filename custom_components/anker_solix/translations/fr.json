@@ -75,7 +75,17 @@
                 "mid_peak": "Temps de pointe moyen",
                 "off_peak": "Hors heures de pointe",
                     "valley": "Vallée"
-        }
+            }
+        },
+        "request_method": {
+            "options": {
+                "get": "GET",
+                "post": "POST",
+                "put": "PUT"
+            }
+        },
+        "endpoint": {
+            "options": {}
         }
     },
     "config": {
