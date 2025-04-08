@@ -122,7 +122,7 @@ Device type | Description
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W (No individual device setting supported)
 `powerpanel` | Anker Solix Power Panels configured in the system (only basic monitoring):<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
-`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system (only basic monitoring):<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68~6)K<br>- A5103: SOLIX X1 Energy module 3P H(5~12)K<br>- A5220: SOLIX X1 Battery module
+`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system (only basic monitoring):<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
 
