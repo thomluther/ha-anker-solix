@@ -55,6 +55,7 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Other integration actions](#other-integration-actions)**
     * [Get system info action](#get-system-info-action)
     * [Export systems action](#export-systems-action)
+    * [Api request action](#api-request-action)
 1. **[Showing Your Appreciation](#showing-your-appreciation)**
 
 
@@ -240,7 +241,7 @@ Make sure to replace the entities used in the example below with your own entiti
 
 ### Automation code for actionable notification
 
-```
+```yaml
 alias: Notify - Anker Solix Api Switch
 description: >
   Send or clear sticky mobile notification depending on Anker Solix Api Switch setting
@@ -573,7 +574,7 @@ Following markdown card code can be used to display the solarbank 1 schedule in 
 
 #### Markdown card code for Solarbank 1 schedules
 
-```
+```yaml
 type: markdown
 content: |
   ## Solarbank 1 Schedule
@@ -620,7 +621,7 @@ The markdown card is very sensitive for proper formatting of printed characters.
 
 #### Markdown card code for Solarbank 2 schedules
 
-```
+```yaml
 type: markdown
 content: >
   {% set entity = 'sensor.solarbank_2_e1600_ac_home_preset' %}
@@ -735,7 +736,7 @@ Below are example scripts which you can use for either Solarbank 1 or Solarbank 
 
 #### Script code to adjust Solarbank 1 schedules
 
-```
+```yaml
 alias: Change Solarbank 1 Schedule
 fields:
   action:
@@ -842,7 +843,7 @@ icon: mdi:sun-clock
 
 #### Script code to adjust Solarbank 2 schedules
 
-```
+```yaml
 alias: Change Solarbank 2 Schedule
 fields:
   action:
@@ -959,7 +960,6 @@ Starting with version 2.1.2, a new action was added to simplify an anonymized ex
 
 ![Export systems service][export-systems-service-img]
 
-
 **Important:**
 If the system export just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local`.
 
@@ -968,6 +968,55 @@ If the system export just created the `www` folder on your HA instance, it is no
 - **The UI button will only show green once the action is finished.** An error will be raised if the action is retriggered while there is still a previous action active.
 - There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
 - The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file (the `www` filesystem folder is accessible as `/local` in the url navigation path as given in the response).
+
+### Api request action
+
+Starting with version 2.6.0, a new action was added to simplify exploration of Anker Solix Api requests for your systems and devices. It allows you to place GET or POST requests to any endpoints you select or enter. It is recommended to use the action from the HA developer tools panel, either in the UI or YAML version. The request responses or errors will be shown in the action result window. Many endpoints require usage of an owner account due to permissions for device information. Weird and non-descriptive Anker Api error messages and codes may be returned if system owner permission is missing. Other queries may not list complete information if your Anker hub entry used for the Api request does not have owner permissions to the systems.
+
+Following is an example of such an Api request action:
+![Api request service][api-request-img]
+
+Example of a bad request with missing parameters:
+![Bad Api request][api-bad-request-img]
+
+Example of a valid request but missing system permissions (shared account only):
+![Missing Permission Api request][api-missing-permission-request-img]
+
+#### Hints and tips when using Api requests
+
+* There is no documentation which endpoints exist or which parameters and options or methods to be used for various endpoints
+* The known endpoints are documented in the [integration repo module apitypes.py](https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98)
+  - Example parameters for used endpoints can be found in the source code as well, especially the [export.py module](https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/export.py)
+* There are various endpoint categories listed:
+  - Account related endpoints:
+    - `passport/*`
+  - App related endpoints:
+    - `app/*`
+  - Generic Api or balcony power endpoints:
+    - `power_service/v1/*`
+  - Charging systems endpoints like Power Panels:
+    - `charging_energy_service/*`
+    - **NOTE:** Those endpoints are currently not supported on the EU cloud server
+  - Home Energy systems endpoints like X1:
+    - `charging_hes_svc/*`
+  - Unkown categories:
+    - `charging_disaster_prepared/*`
+    - `mini_power/v1/app/*`
+* Most endpoints use the POST method, only some need the GET method. The error typically refers to an unknown method if the wrong method was used
+* Some errors may show the missing mandatory parameters of the payload. If parameters are used in the wrong format, the error may also describe that.
+  - However, most of the time the parameter usage can be discovered only by trial and error until you got it right
+  - Unfortunately it will no allow to discover optional parameters and how they may change the response information
+* Standalone device information in the Anker cloud is pretty rare
+  - Typically you cannot find (all) device details as being presented in the Anker mobile App
+  - Some are only available via the Anker MQTT cloud server or via Bluetooth interface. Neither of them is supported by the integration and there are no plans to do so
+* If you find new requests or useful information in responses that are not available yet via the integration, open an [issue with a feature request][issues] and document them
+  - Implementation into the integration can then be considered
+  - You will have to provide detailed documentation of required parameters and various responses at different times, especially when it comes to proper interpretation of any status codes or conditions that are only present temporarily.
+  - Any abstract response codes will have to be mapped to meaningful descriptions by you before they can be implemented in the integration. I think nobody can make any use from a `connection_status` of `1` or `2`...
+
+#### Format of the payload
+
+The request payload must be a JSON object, which typically consists of named parameter value fields and/or lists. Values can be basic types like int, float or string values. But they can also be objects or lists and therefore be nested. Following is a basic guideline how you have to format your YAML input to have to properly converted to JSON structures.
 
 
 ## Showing Your Appreciation
@@ -980,6 +1029,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [anker-solix]: https://github.com/thomluther/ha-anker-solix
 [releases]: https://github.com/thomluther/ha-anker-solix/releases
 [releases-shield]: https://img.shields.io/github/release/thomluther/ha-anker-solix.svg?style=for-the-badge
+[issues]: https://github.com/thomluther/ha-anker-solix/issues
 [discussions]: https://github.com/thomluther/ha-anker-solix/discussions
 [discussions-shield]: https://img.shields.io/github/discussions/thomluther/ha-anker-solix.svg?style=for-the-badge
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
@@ -1012,4 +1062,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [smart-meter-device-img]: doc/Smart-Meter-device.png
 [get-system-info-service-img]: doc/get-system-info-service.png
 [export-systems-service-img]: doc/export-systems-service.png
+[api-request-img]: doc/api-request.png
+[api-bad-request-img]: doc/api-bad-request.png
+[api-missing-permission-request-img]: doc/api-missing-permission-request.png
 
