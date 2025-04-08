@@ -50,6 +50,7 @@ async def poll_sites(  # noqa: C901
     # define excluded categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
+    start_time = datetime.now()
     if siteId and (api.sites.get(siteId) or {}):
         # update only the provided site ID and get data from cache
         api._logger.debug(
@@ -207,7 +208,8 @@ async def poll_sites(  # noqa: C901
                             {
                                 "energy_offset_seconds": round(offset.total_seconds()),
                                 "energy_offset_check": datetime.now().strftime(fmt),
-                                "energy_offset_tz": 1800 * round(round(offset.total_seconds())/1800),
+                                "energy_offset_tz": 1800
+                                * round(round(offset.total_seconds()) / 1800),
                             }
                         )
                 # check if power panel site type to maintain statistic object which will be updated and replaced only during site details refresh
@@ -534,8 +536,14 @@ async def poll_sites(  # noqa: C901
 
     # Write back the updated sites
     api.sites = new_sites
-    # update account dictionary with number of requests
-    api._update_account({"use_files": fromFile})
+    # update account dictionary with Api metrics
+    api._update_account(
+        {
+            "use_files": fromFile,
+            "sites_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "sites_poll_seconds": round((datetime.now()-start_time).total_seconds(),3)
+        }
+    )
     return api.sites
 
 
@@ -587,7 +595,11 @@ async def poll_site_details(
                 )
                 await api.get_site_price(siteId=site_id, fromFile=fromFile)
     # update account dictionary with number of requests
-    api._update_account({"use_files": fromFile})
+    api._update_account(
+        {
+            "use_files": fromFile,
+        }
+    )
     return api.sites
 
 
@@ -603,6 +615,7 @@ async def poll_device_details(
     # define excluded device types or categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
+    start_time = datetime.now()
     api._logger.debug(
         "Updating api %s device details",
         api.apisession.nickname,
@@ -757,7 +770,13 @@ async def poll_device_details(
         api.devices.update({sn: device})
 
     # update account dictionary with number of requests
-    api._update_account({"use_files": fromFile})
+    api._update_account(
+        {
+            "use_files": fromFile,
+            "details_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "details_poll_seconds": round((datetime.now()-start_time).total_seconds(),3)
+        }
+    )
     return api.devices
 
 
@@ -773,6 +792,7 @@ async def poll_device_energy(
     # check exclusion list, default to all energy data
     if not exclude or not isinstance(exclude, set):
         exclude = set()
+    start_time = datetime.now()
     # First check if other api class sites available and use appropriate method to merge the energy stats at the end
     if api.powerpanelApi:
         await api.powerpanelApi.update_device_energy(fromFile=fromFile, exclude=exclude)
@@ -933,5 +953,11 @@ async def poll_device_energy(
                     )
 
     # update account dictionary with number of requests
-    api._update_account({"use_files": fromFile})
+    api._update_account(
+        {
+            "use_files": fromFile,
+            "energy_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "energy_poll_seconds": round((datetime.now()-start_time).total_seconds(),3)
+        }
+    )
     return api.sites

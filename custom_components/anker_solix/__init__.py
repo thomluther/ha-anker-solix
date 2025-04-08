@@ -39,10 +39,13 @@ from .const import (
     LOGGER,
     PLATFORMS,
     REGISTERED_EXCLUDES,
+    SERVICE_API_REQUEST,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
     SERVICE_EXPORT_SYSTEMS,
     SERVICE_GET_SOLARBANK_SCHEDULE,
     SERVICE_GET_SYSTEM_INFO,
+    SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
+    SERVICE_MODIFY_SOLIX_USE_TIME,
     SERVICE_SET_SOLARBANK_SCHEDULE,
     SERVICE_UPDATE_SOLARBANK_SCHEDULE,
     SHARED_ACCOUNT,
@@ -202,6 +205,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_remove(DOMAIN, SERVICE_CLEAR_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_SET_SOLARBANK_SCHEDULE)
         hass.services.async_remove(DOMAIN, SERVICE_UPDATE_SOLARBANK_SCHEDULE)
+        hass.services.async_remove(DOMAIN, SERVICE_MODIFY_SOLIX_BACKUP_CHARGE)
+        hass.services.async_remove(DOMAIN, SERVICE_MODIFY_SOLIX_USE_TIME)
+        hass.services.async_remove(DOMAIN, SERVICE_API_REQUEST)
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded

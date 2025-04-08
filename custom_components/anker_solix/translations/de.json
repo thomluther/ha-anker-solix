@@ -15,18 +15,22 @@
                 "pps": "Power Stationen",
                 "powerpanel": "Power Panels",
                 "powerpanel_energy": "Power Panel Energiestatistik",
+                "powerpanel_avg_power": "Power Panel ⌀-Leistung",
                 "powercooler": "Power Kühler",
                 "smartmeter": "Smart Meter",
                 "smartmeter_energy": "Smart Meter Energiestatistik",
                 "smartplug": "Smarte Steckdosen",
-                "smartplug_energy": "Smarte Steckdosen Energiestatistik"
+                "smartplug_energy": "Smarte Steckdosen Energiestatistik",
+                "hes": "Heim Energie Systeme",
+                "hes_energy": "HES Energiestatistik",
+                "hes_avg_power": "HES ⌀-Leistung"
             }
         },
         "plan": {
             "options": {
                 "custom_rate_plan": "Manueller Plan",
                 "blend_plan": "Mischungsplan",
-                "manual_backup": "Notfallladungsplan",
+                "manual_backup": "Notfallladeplan",
                 "use_time": "Nutzungszeitplan"
             }
         },
@@ -39,6 +43,38 @@
                 "thu": "Donnerstag",
                 "fri": "Freitag",
                 "sat": "Samstag"
+            }
+        },
+        "month": {
+            "options": {
+                "jan": "Januar",
+                "feb": "Februar",
+                "mar": "März",
+                "apr": "April",
+                "may": "Mai",
+                "jun": "Juni",
+                "jul": "Juli",
+                "aug": "August",
+                "sep": "September",
+                "oct": "Oktober",
+                "nov": "November",
+                "dec": "Dezember"
+            }
+        },
+        "daytype": {
+            "options": {
+                "weekday": "Werktag",
+                "weekend": "Wochenende",
+                "all": "Alle"
+            }
+        },
+        "tariff": {
+            "options": {
+                "none": "Kein",
+                "peak": "Spitzenzeit",
+                "mid_peak": "Mittlere Spitzenzeit",
+                "off_peak": "Außerhalb Spitzenzeit",
+                "valley": "Nebenzeit"
             }
         }
     },
@@ -167,6 +203,24 @@
                     }
                 }
             },
+            "connected": {
+                "name": "Verbindung",
+                "state": {
+                    "on": "Verbunden",
+                    "off": "Getrennt"
+                },
+                "state_attributes": {
+                    "network": {
+                        "name": "Netzwerk"
+                    },
+                    "network_code": {
+                        "name": "Netzwerk code"
+                    },
+                    "post_interval": {
+                        "name": "Aktualisierungszeitraum"
+                    }
+                }
+            },
             "ota_update": {
                 "name": "OTA Update",
                 "state": {
@@ -246,8 +300,8 @@
             "system_price": {
                 "name": "Festpreis kWh"
             },
-            "preset_plan_price": {
-                "name": "Plan Preis kWh"
+            "preset_tariff_price": {
+                "name": "Tarifpreis kWh"
             }
         },
         "select": {
@@ -262,6 +316,16 @@
                     "use_time": "Nutzungszeit",
                     "backup": "Notstromladung",
                     "manual": "Manuell"
+                }
+            },
+            "preset_tariff": {
+                "name": "Tarif Nutzungszeit",
+                "state": {
+                    "none": "Kein",
+                    "peak": "Spitzenzeit",
+                    "mid_peak": "Mittlere Spitzenzeit",
+                    "off_peak": "Außerhalb Spitzenzeit",
+                    "valley": "Nebenzeit"
                 }
             },
             "system_price_unit": {
@@ -291,6 +355,12 @@
                 "state_attributes": {
                     "status": {
                         "name": "Status Code"
+                    },
+                    "network": {
+                        "name": "Netzwerk"
+                    },
+                    "network_code": {
+                        "name": "Netzwerk code"
                     }
                 }
             },
@@ -308,12 +378,32 @@
                     "full_bypass": "Voller Bypass",
                     "wakeup": "Wachzustand",
                     "cold_wakeup": "Kalter Wachzustand",
+                    "fully_charged": "Vollgeladen",
                     "standby": "Ruhezustand",
                     "unknown": "Unbekannt"
                 },
                 "state_attributes": {
                     "charging_status": {
                         "name": "Status Code"
+                    }
+                }
+            },
+            "hes_station_role": {
+                "name": "Stationsrolle",
+                "state": {
+                    "primary": "Hauptrolle",
+                    "subordinate": "Untergeordnet",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "role_status": {
+                        "name": "Rollencode"
+                    },
+                    "station_id": {
+                        "name": "Station ID"
+                    },
+                    "station_type": {
+                        "name": "Station Typ"
                     }
                 }
             },
@@ -416,6 +506,12 @@
             "sub_package_num": {
                 "name": "Erweiterungakku"
             },
+            "battery_count": {
+                "name": "Batteriemodule"
+            },
+            "parallel_device_count": {
+                "name": "Parallele Geräte"
+            },
             "fittings": {
                 "name": "Zubehör",
                 "state_attributes": {
@@ -462,6 +558,9 @@
             },
             "smartplug_list": {
                 "name": "Smarte Steckdosen"
+            },
+            "hes_list": {
+                "name": "Heim Energie Systeme"
             },
             "solarbank_charging_power": {
                 "name": "SB Akkuleistung"
@@ -794,6 +893,30 @@
             },
             "discharge_power": {
                 "name": "Entladeleistung"
+            },
+            "sites_poll_time": {
+                "name": "Letzte Datenabfrage",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Laufzeit Sek"
+                    }
+                }
+            },
+            "details_poll_time": {
+                "name": "Letzte Detailabfrage",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Laufzeit Sek"
+                    }
+                }
+            },
+            "energy_poll_time": {
+                "name": "Letzte Energieabfrage",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Laufzeit Sek"
+                    }
+                }
             }
         },
         "switch": {
@@ -979,6 +1102,84 @@
                     "description": "Bis zum eingestellten Ladestand wird bei definiertem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
                 }
             }
+        },
+        "modify_solix_backup_charge": {
+            "name": "Notfallladeplan Einstellungen ändern",
+            "description": "Einstellen der Ladezeit für die AC-Notladung des Akkus (mit maximaler AC-Ladeleistung)",
+            "fields": {
+                "backup_start": {
+                    "name": "Notladung Start",
+                    "description": "Startdatum und Zeit der AC-Notladung im Format JJJJ-MM-TT HH:MM:SS. Standard ist der Beginn des aktiven Zeitraums oder jetzt."
+                },
+                "backup_end": {
+                    "name": "Notladung Ende",
+                    "description": "Enddatum und Zeit der AC-Notladung im Format JJJJ-MM-TT HH:MM:SS. Standard ist der Beginn des aktiven Zeitraums oder jetzt + 3 Stunden."
+                },
+                "backup_duration": {
+                    "name": "Notladung Dauer",
+                    "description": "Dauer der AC-Notladung im Format HH:MM:SS. Wird nur verwendet, wenn kein Notladungsende angegeben ist, anstelle der Standarddauer von 3 Stunden."
+                },
+                "enable_backup": {
+                    "name": "Aktivieren des Notladungszeitraums",
+                    "description": "Aktivieren oder Deaktivieren des definierten oder aktiven Notladungszeitraums"
+                }
+            }
+        },
+        "modify_solix_use_time": {
+            "name": "Nutzungszeitplan ändern",
+            "description": "Anpassung des Nutzungszeitplans für Anker Solix Geräte, die AC-Ladung und einen Nutzungszeitmodus mit verschiedenen Stromtarifen unterstützen",
+            "fields": {
+                "start_month": {
+                    "name": "Anfangsmonat",
+                    "description": "Anfangsmonat der zu ändernden Saison"
+                },
+                "end_month": {
+                    "name": "Endmonat",
+                    "description": "Endmonat der zu ändernden Saison"
+                },
+                "day_type": {
+                    "name": "Tagesart",
+                    "description": "Tagesart der in der Saison zu ändernden Tage"
+                },
+                "start_hour": {
+                    "name": "Anfangsstunde",
+                    "description": "Anfangsstunde der zu ändernden Tagesart (Minuten und Sekunden werden ignoriert)"
+                },
+                "end_hour": {
+                    "name": "Endstunde",
+                    "description": "Endstunde der zu ändernden Tagesart (Minuten und Sekunden werden ignoriert). Für 24:00 muss 23:59 eingeben werden"
+                },
+                "tariff": {
+                    "name": "Tarifsart",
+                    "description": "Zu verwendende Tarifsart für den ausgewählten oder aktiven Zeitraum"
+                },
+                "tariff_price": {
+                    "name": "Tarifpreis pro kWh",
+                    "description": "Tarifpreis pro kWh für den ausgewählten oder aktiven Zeitraum"
+                },
+                "delete": {
+                    "name": "Ausgewählte Optionen aus dem Plan löschen",
+                    "description": "Wenn diese Option aktiviert ist, werden die ausgewählten Optionen aus dem Plan entfernt, anstatt erstellt oder geändert zu werden. Beim Löschen werden die Bereiche im jeweiligen Geltungsbereich immer zusammengeführt, um Lücken zu vermeiden. Wenn keine Option ausgewählt ist, wird der gesamte Plan gelöscht."
+                }
+            }
+        },
+        "api_request": {
+            "name": "Api Anfrage",
+            "description": "Anfrage an einen Anker Solix Api Endpunkt mit optionalen Nutzdatenparametern.\nERINNERUNG: Der Nutzer trägt das alleinige Risiko für einen eventuellen Verlust der Hersteller-Garantie oder entstandene Schäden, die durch Nutzung der Integration oder dieser Anker Solix Api Anfrage Aktion auftreten können.",
+            "fields": {
+                "method": {
+                    "name": "Methode",
+                    "description": "Wähle die Art der Anfrage aus (die meisten Endpunkte erfordern die post-Methode)"
+                },
+                "endpoint": {
+                    "name": "Endpunkt",
+                    "description": "Wähle oder definiere den Endpunkt, an den die Anfrage gesendet werden soll (bekannte Endpunkte sind in https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98 dokumentiert)"
+                },
+                "payload": {
+                    "name": "Nutzdaten",
+                    "description": "Optionales Objekt mit Parameter Wertepaaren oder Listen je nach Endpunkt. Typische Parameter sind `site_id` oder `device_sn`, aber Parameternamen können variieren. Manche Anfrage-Fehlermeldungen können die erforderlichen Parameternamen und das Format aufzeigen."
+                }
+            }
         }
     },
     "exceptions": {
@@ -989,10 +1190,10 @@
             "message": "{entity_id} kann nicht auf {value} geändert werden weil es ausserhalb des erlaubten Bereiches von {min}-{max} liegt"
         },
         "active_testmode": {
-            "message": "{entity_id} kann nicht geändert werden solange die Konfiguration im Testmodus ist"
+            "message": "{entity_id} kann nicht benutzt werden solange die Konfiguration im Testmodus ist"
         },
         "apiusage_deactivated": {
-            "message": "{entity_id} kann nicht für die angeforderte Aktion benutzt werden solange die Api Nutzung ausgeschaltet ist"
+            "message": "{entity_id} kann nicht für die angeforderte Aktion {action_name} benutzt werden solange die Api Nutzung ausgeschaltet ist"
         },
         "shared_devices": {
             "message": "{username} kann nicht geladen werden weil sie Geräte mit der Konfiguration {shared_account} teilt"

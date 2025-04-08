@@ -70,7 +70,7 @@
             "system_price": {
                 "default": "mdi:cash-edit"
             },
-            "preset_plan_price": {
+            "preset_tariff_price": {
                 "default": "mdi:cash-edit"
             }
         },
@@ -86,6 +86,9 @@
                     "backup": "mdi:power-plug-battery-outline",
                     "use_time": "mdi:battery-clock"
                 }
+            },
+            "preset_tariff": {
+                "default": "mdi:cash-clock"
             },
             "system_price_unit": {
                 "default": "mdi:cash-edit"
@@ -110,7 +113,7 @@
             "charging_status_desc": {
                 "default": "mdi:battery-alert-variant",
                 "state": {
-                    "detection": "mdi:battery-clock",
+                    "detection": "mdi:battery-sync",
                     "protection_charge": "mdi:home-battery-outline",
                     "bypass": "mdi:battery-remove",
                     "bypass_discharge": "mdi:home-battery",
@@ -118,11 +121,20 @@
                     "charge": "mdi:battery-plus",
                     "charge_bypass": "mdi:home-battery",
                     "charge_priority":  "mdi:home-battery-outline",
-                    "wakeup": "mdi:battery-sync",
-                    "cold_wakeup": "mdi:battery-sync",
+                    "wakeup": "mdi:battery-clock",
+                    "cold_wakeup": "mdi:battery-clock",
+                    "fully_charged": "mdi:battery-check",
                     "full_bypass": "mdi:battery-remove-outline",
                     "standby": "mdi:battery-off",
                     "unknown": "mdi:battery-unknown"
+                }
+            },
+            "hes_station_role": {
+                "default": "mdi:server-network-off",
+                "state": {
+                    "primary": "mdi:router-network",
+                    "subordinate": "mdi:server-network",
+                    "unknown": "mdi:help-network-outline"
                 }
             },
             "charging_power": {
@@ -271,6 +283,9 @@
             "smartplug_list": {
                 "default": "mdi:counter"
             },
+            "hes_list": {
+                "default": "mdi:counter"
+            },
             "set_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"
             },
@@ -299,6 +314,12 @@
                     "4": "mdi:package-check",
                     "5": "mdi:package-check"
                 }
+            },
+            "battery_count": {
+                "default": "mdi:package"
+            },
+            "parallel_device_count": {
+                "default": "mdi:server"
             },
             "total_co2_saving": {
                 "default": "mdi:sprout"
@@ -329,6 +350,15 @@
             },
             "discharge_power": {
                 "default": "mdi:battery-minus-variant"
+            },
+            "sites_poll_time": {
+                "default": "mdi:weather-cloudy-clock"
+            },
+            "details_poll_time": {
+                "default": "mdi:clipboard-text-clock-outline"
+            },
+            "energy_poll_time": {
+                "default": "mdi:sun-clock-outline"
             }
         },
         "switch": {
@@ -392,6 +422,10 @@
                 "sb1_fields": "mdi:numeric-1-box-outline",
                 "sb2_fields": "mdi:numeric-2-box-outline"
               }
-        }
+        },
+        "modify_solix_backup_charge": {"service": "mdi:battery-clock"},
+        "modify_solix_use_time": {"service": "mdi:cash-clock"},
+        "api_request": {"service": "mdi:cloud-braces"}
+
     }
 }

@@ -171,7 +171,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_system_running_time": "charging_hes_svc/get_system_running_time",  # no shared account access, needs HES site?
     "get_mi_layout": "charging_hes_svc/get_mi_layout",  # no shared account access, needs HES site?
     "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips",  # no shared account access, needs HES site?
-    "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info",  # no shared account access, needs HES site?
+    "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info",  # works with shared account, lists hes device structure and SNs
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
@@ -271,7 +271,7 @@ Home Energy System related (X1): 37 + 14 used => 51 total
     "charging_hes_svc/update_device_info_by_app",
     "charging_hes_svc/update_hes_utility_rate_plan",
     "charging_hes_svc/update_wifi_config",
-    "charging_hes_svc/upload_device_status",2
+    "charging_hes_svc/upload_device_status",
     "charging_hes_svc/user_event_alarm",
     "charging_hes_svc/user_fault_alarm",
     "charging_hes_svc/ota",
@@ -477,20 +477,31 @@ class SolarbankUsageMode(IntEnum):
     use_time = 5  # Use Time plan with SB2 AC and smart meter
 
 
-class SolarbankTariffTypes(IntEnum):
+class SolixTariffTypes(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
 
-    PEEK = 1
-    MID_PEEK = 2
-    OFF_PEEK = 3
-    OTHER = 4
+    NONE = 0  # Pseudo type to reflect no tariff defined
+    PEAK = 1  # maximize PV and Battery usage, no AC charge
+    MID_PEAK = 2  # maximize PV and Battery usage, no AC charge
+    OFF_PEAK = 3  # maximize PV and Battery usage, no AC charge, discharge only above 80% SOC, Reserve charge utilized only for PEAK & MID PEAK times
+    VALLEY = (
+        4  # AC charge allowed, charge power depends on SOC and available VALLEY time
+    )
 
 
-class SolarbankPriceTypes(StrEnum):
+class SolixPriceTypes(StrEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
 
     FIXED = "fixed"
     USE_TIME = "use_time"
+
+
+class SolixDayTypes(StrEnum):
+    """Enumeration for Anker Solix Solarbank 2 AC Use Time Day Types."""
+
+    WEEKDAY = "weekday"
+    WEEKEND = "weekend"
+    ALL = "all"
 
 
 @dataclass(frozen=True)
@@ -530,7 +541,10 @@ class ApiCategories:
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
     powerpanel_energy: str = "powerpanel_energy"
+    powerpanel_avg_power: str = "powerpanel_avg_power"
     hes_energy: str = "hes_energy"
+    hes_avg_power: str = "hes_avg_power"
+
 
 @dataclass(frozen=True)
 class SolixDeviceNames:
@@ -741,10 +755,8 @@ class SolixDefaults:
     # Discharge Priority preset for Solarbank schedule timeslot settings
     DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
     # AC tariff settings for Use Time plan
-    TARIFF_MIN: int = SolarbankTariffTypes.PEEK.value
-    TARIFF_MAX: int = SolarbankTariffTypes.OTHER.value
-    TARIFF_DEF: int = SolarbankTariffTypes.MID_PEEK.value
-    TARIFF_PRICE_DEF: float = 0.0
+    TARIFF_DEF: int = SolixTariffTypes.OFF_PEAK.value
+    TARIFF_PRICE_DEF: str = "0.00"
     TARIFF_WE_SAME: bool = True
     CURRENCY_DEF: str = "€"
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
@@ -755,7 +767,7 @@ class SolixDefaults:
     ENDPOINT_LIMIT_DEF: int = 10
 
 
-class SolixDeviceStatus(Enum):
+class SolixDeviceStatus(StrEnum):
     """Enumeration for Anker Solix Device status."""
 
     # The device status code seems to be used for cloud connection status.
@@ -764,7 +776,7 @@ class SolixDeviceStatus(Enum):
     unknown = "unknown"
 
 
-class SolarbankStatus(Enum):
+class SolarbankStatus(StrEnum):
     """Enumeration for Anker Solix Solarbank status."""
 
     detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
@@ -779,21 +791,46 @@ class SolarbankStatus(Enum):
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
     cold_wakeup = "116"  # At cold temperatures, 116 was observed instead of 4. Not sure why this state is different at low temps?
-    # TODO(3): Add descriptions once status code usage is observed/known
-    # code 5 was not observed yet
+    fully_charged = "5"  # Seen for SB2 when SOC is 100%
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
     # TODO(AC): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
-class SmartmeterStatus(Enum):
+class SmartmeterStatus(StrEnum):
     """Enumeration for Anker Solix Smartmeter status."""
 
     # TODO(#106) Update Smartmeter grid status description once known
     ok = "0"  # normal grid state when smart meter is measuring
-    unknown_1 = "1"  # does it exist?
-    unknown_2 = "2"  # does it exist?
+    unknown = "unknown"
+
+
+class SolixGridStatus(StrEnum):
+    """Enumeration for Anker Solix grid status."""
+
+    # TODO Update grid status description once known
+    ok = "0"  # normal grid state when hes pcu grid status is ok
+    unknown = "unknown"
+
+
+class SolixRoleStatus(StrEnum):
+    """Enumeration for Anker Solix role status of devices."""
+
+    # The device role status codes as used for HES devices
+    # TODO: The proper description of those codes has to be confirmed
+    primary = "1"  # Master role in Api
+    subordinate = "2"  # Slave role in Api, to be confirmed!!!
+    unknown = "unknown"
+
+
+class SolixNetworkStatus(StrEnum):
+    """Enumeration for Anker Solix HES network status."""
+
+    # TODO: The proper description of those codes has to be confirmed
+    wifi = "1"  # to be confirmed
+    lan = "2"  # this was seen on LAN connected systems
+    mobile = "3"  # HES systems support also 5G connections, code to be confirmed
     unknown = "unknown"
 
 

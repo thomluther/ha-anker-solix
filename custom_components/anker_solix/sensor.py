@@ -12,7 +12,6 @@ from typing import Any
 
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
-import homeassistant.helpers.config_validation as cv
 import json
 
 from .config_flow import _SCAN_INTERVAL_MIN
@@ -83,6 +82,8 @@ from .solixapi.apitypes import (
     SolarbankTimeslot,
     SolarbankUsageMode,
     Solarbank2Timeslot,
+    SolixGridStatus,
+    SolixRoleStatus,
 )
 from .entity import (
     AnkerSolixPicturePath,
@@ -90,6 +91,7 @@ from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
     get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
+    get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
     AnkerSolixEntityFeature,
 )
@@ -116,6 +118,7 @@ class AnkerSolixSensorDescription(
 
 DEVICE_SENSORS = [
     AnkerSolixSensorDescription(
+        # Balcony power device status
         key="status_desc",
         translation_key="status_desc",
         json_key="status_desc",
@@ -128,6 +131,23 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
+        # HES device status
+        key="status_desc",
+        translation_key="status_desc",
+        json_key="status_desc",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=[status.name for status in SolixDeviceStatus],
+        value_fn=lambda d, jk, _: (d.get("hes_data") or {}).get(jk),
+        attrib_fn=lambda d, _: {
+            "status": (d.get("hes_data") or {}).get("online_status"),
+            "network": (d.get("hes_data") or {}).get("network_status_desc"),
+            "network_code": (d.get("hes_data") or {}).get("network_status"),
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
+        # Balcony device charging status
         key="charging_status_desc",
         translation_key="charging_status_desc",
         json_key="charging_status_desc",
@@ -136,6 +156,22 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: {"charging_status": d.get("charging_status")},
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
         check_invalid=True,
+    ),
+    AnkerSolixSensorDescription(
+        # HES station status
+        key="hes_station_role",
+        translation_key="hes_station_role",
+        json_key="role_status_desc",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=[status.name for status in SolixRoleStatus],
+        value_fn=lambda d, jk, _: (d.get("hes_data") or {}).get(jk),
+        attrib_fn=lambda d, _: {
+            "role_status": (d.get("hes_data") or {}).get("master_slave_status"),
+            "station_id": (d.get("hes_data") or {}).get("station_id"),
+            "station_type": (d.get("hes_data") or {}).get("type"),
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
         key="charging_power",
@@ -490,6 +526,7 @@ DEVICE_SENSORS = [
         check_invalid=True,
     ),
     AnkerSolixSensorDescription(
+        # balcony systems grid status
         key="grid_status_desc",
         translation_key="grid_status_desc",
         json_key="grid_status_desc",
@@ -499,6 +536,20 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: {"grid_status": d.get("grid_status")},
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTMETER.value} - s),
         check_invalid=True,
+    ),
+    AnkerSolixSensorDescription(
+        # HES systems grid status
+        key="grid_status_desc",
+        translation_key="grid_status_desc",
+        json_key="grid_status_desc",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=[status.name for status in SolixGridStatus],
+        value_fn=lambda d, jk, _: (d.get("hes_data") or {}).get(jk),
+        attrib_fn=lambda d, _: {
+            "grid_status": (d.get("hes_data") or {}).get("grid_status")
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
         key="tag",
@@ -527,13 +578,15 @@ DEVICE_SENSORS = [
         unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
         .lower()
         .replace("w", "W"),
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: None
         if not (avg := d.get("average_power"))
         else avg.get(jk),
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -543,13 +596,15 @@ DEVICE_SENSORS = [
         unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
         .lower()
         .replace("w", "W"),
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: None
         if not (avg := d.get("average_power"))
         else avg.get(jk),
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -559,13 +614,15 @@ DEVICE_SENSORS = [
         unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
         .lower()
         .replace("w", "W"),
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: None
         if not (avg := d.get("average_power"))
         else avg.get(jk),
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -575,13 +632,15 @@ DEVICE_SENSORS = [
         unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
         .lower()
         .replace("w", "W"),
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: None
         if not (avg := d.get("average_power"))
         else avg.get(jk),
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -591,13 +650,33 @@ DEVICE_SENSORS = [
         unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
         .lower()
         .replace("w", "W"),
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: None
         if not (avg := d.get("average_power"))
         else avg.get(jk),
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="grid_export_avg",
+        translation_key="photovoltaic_to_grid_power",
+        json_key="grid_export_avg",
+        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
+        .lower()
+        .replace("w", "W"),
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (avg := d.get("average_power"))
+        else avg.get(jk),
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -612,12 +691,12 @@ DEVICE_SENSORS = [
         if not (avg := d.get("average_power"))
         else avg.get(jk),
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
         ),
     ),
     AnkerSolixSensorDescription(
-        # timestamp of powerpanel average data, round down valid time to 5 minutes to match energy data timestamp
+        # timestamp of average power data, round down valid time to 5 minutes to match energy data timestamp
         key="data_timestamp",
         translation_key="data_timestamp",
         json_key="valid_time",
@@ -635,8 +714,8 @@ DEVICE_SENSORS = [
             else datetime.strptime(tm, "%Y-%m-%d %H:%M:%S").isoformat(sep=" "),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
         ),
     ),
 ]
@@ -648,21 +727,20 @@ SITE_SENSORS = [
         json_key="solarbank_list",
         picture_path=AnkerSolixPicturePath.SOLARBANK,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: len(
-            list((d.get("solarbank_info") or {}).get(jk) or [])
-        ),
-        force_creation_fn=lambda d: True,
+        value_fn=lambda d, jk, _: count
+        if (count := len(list((d.get("solarbank_info") or {}).get(jk) or []))) > 0
+        else None,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="pps_list",
         translation_key="pps_list",
         json_key="pps_list",
-        # entity_registry_enabled_default=False,
         picture_path=AnkerSolixPicturePath.PPS,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: len(list((d.get("pps_info") or {}).get(jk) or [])),
-        force_creation_fn=lambda d: True,
+        value_fn=lambda d, jk, _: count
+        if (count := len(list((d.get("pps_info") or {}).get(jk) or []))) > 0
+        else None,
         exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -671,44 +749,54 @@ SITE_SENSORS = [
         json_key="solar_list",
         picture_path=AnkerSolixPicturePath.INVERTER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: len(list(d.get(jk) or [])),
-        force_creation_fn=lambda d: True,
+        value_fn=lambda d, jk, _: count
+        if (count := len(list(d.get(jk) or []))) > 0
+        else None,
         exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="powerpanel_list",
         translation_key="powerpanel_list",
         json_key="powerpanel_list",
-        # entity_registry_enabled_default=False,
         picture_path=AnkerSolixPicturePath.POWERPANEL,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: len(list(d.get(jk) or [])),
-        force_creation_fn=lambda d: True,
+        value_fn=lambda d, jk, _: count
+        if (count := len(list(d.get(jk) or []))) > 0
+        else None,
         exclude_fn=lambda s, _: not ({SolixDeviceType.POWERPANEL.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="smartmeter_list",
         translation_key="smartmeter_list",
         json_key="grid_list",
-        # entity_registry_enabled_default=False,
         picture_path=AnkerSolixPicturePath.SMARTMETER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: len(list((d.get("grid_info") or {}).get(jk) or [])),
-        force_creation_fn=lambda d: True,
+        value_fn=lambda d, jk, _: count
+        if (count := len(list((d.get("grid_info") or {}).get(jk) or []))) > 0
+        else None,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTMETER.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="smartplug_list",
         translation_key="smartplug_list",
         json_key="smartplug_list",
-        # entity_registry_enabled_default=False,
         picture_path=AnkerSolixPicturePath.SMARTPLUG,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: len(
-            list((d.get("smart_plug_info") or {}).get(jk) or [])
-        ),
-        force_creation_fn=lambda d: True,
+        value_fn=lambda d, jk, _: count
+        if (count := len(list((d.get("smart_plug_info") or {}).get(jk) or []))) > 0
+        else None,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTPLUG.value} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="hes_list",
+        translation_key="hes_list",
+        json_key="hes_list",
+        picture_path=AnkerSolixPicturePath.HES,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: count
+        if (count := len(list((d.get("hes_info") or {}).get(jk) or []))) > 0
+        else None,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.HES.value} - s),
     ),
     AnkerSolixSensorDescription(
         # Summary of all solarbank charing power on site
@@ -1000,7 +1088,7 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        # ensure backward compatability to old key in json files
+        # ensure backward compatibility to old key in json files
         value_fn=lambda d, jk, _: None
         if not (items := (d.get("energy_details") or {}).get("today") or {})
         else items.get(jk) or items.get("solarbank_discharge"),
@@ -1015,11 +1103,13 @@ SITE_SENSORS = [
             {
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
                 ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1032,7 +1122,7 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        # ensure backward compatability to old key in json files
+        # ensure backward compatibility to old key in json files
         value_fn=lambda d, jk, _: None
         if not (items := (d.get("energy_details") or {}).get("today") or {})
         else items.get(jk) or items.get("solarbank_charge"),
@@ -1047,11 +1137,13 @@ SITE_SENSORS = [
             {
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
                 ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1077,11 +1169,13 @@ SITE_SENSORS = [
             {
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
                 ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1214,8 +1308,18 @@ SITE_SENSORS = [
             ).get("solar_to_home"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1236,8 +1340,18 @@ SITE_SENSORS = [
             ).get("solar_to_battery"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
+            }
+            - s
+            and {
+                ApiCategories.solarbank_energy,
+                ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1285,6 +1399,7 @@ SITE_SENSORS = [
                 SolixDeviceType.SMARTMETER.value,
                 SolixDeviceType.SMARTPLUG.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
@@ -1292,6 +1407,7 @@ SITE_SENSORS = [
                 ApiCategories.smartmeter_energy,
                 ApiCategories.smartplug_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1317,11 +1433,13 @@ SITE_SENSORS = [
             {
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
                 ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1366,8 +1484,18 @@ SITE_SENSORS = [
             ).get("grid_import"),
         },
         exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value} - s
-            and {ApiCategories.powerpanel_energy} - s
+            {
+                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
+            }
+            - s
+            and {
+                ApiCategories.smartmeter_energy,
+                ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
+            }
+            - s
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1389,13 +1517,15 @@ SITE_SENSORS = [
         },
         exclude_fn=lambda s, _: not (
             {
-                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
-                ApiCategories.smartmeter_energy,
+                ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1421,11 +1551,13 @@ SITE_SENSORS = [
             {
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
                 ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1449,13 +1581,15 @@ SITE_SENSORS = [
         },
         exclude_fn=lambda s, _: not (
             {
-                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
-                ApiCategories.smartmeter_energy,
+                ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1479,11 +1613,13 @@ SITE_SENSORS = [
             {
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
                 ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1507,11 +1643,13 @@ SITE_SENSORS = [
             {
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
                 ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
@@ -1533,20 +1671,74 @@ SITE_SENSORS = [
         },
         exclude_fn=lambda s, _: not (
             {
-                SolixDeviceType.SMARTMETER.value,
+                SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
+                SolixDeviceType.HES.value,
             }
             - s
             and {
-                ApiCategories.smartmeter_energy,
+                ApiCategories.solarbank_energy,
                 ApiCategories.powerpanel_energy,
+                ApiCategories.hes_energy,
             }
             - s
         ),
     ),
+    AnkerSolixSensorDescription(
+        # HES battery count
+        key="battery_count",
+        translation_key="battery_count",
+        json_key="batCount",
+        picture_path=AnkerSolixPicturePath.A5220,
+        suggested_display_precision=0,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: (d.get("hes_info") or {}).get(jk),
+        exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
+    ),
+    AnkerSolixSensorDescription(
+        # HES parallel devices
+        key="parallel_device_count",
+        translation_key="parallel_device_count",
+        json_key="numberOfParallelDevice",
+        suggested_display_precision=0,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: (d.get("hes_info") or {}).get(jk),
+        exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
+    ),
 ]
 
-ACCOUNT_SENSORS = []
+ACCOUNT_SENSORS = [
+    AnkerSolixSensorDescription(
+        key="sites_poll_time",
+        translation_key="sites_poll_time",
+        json_key="sites_poll_time",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        attrib_fn=lambda d, _: {
+            "runtime_seconds": d.get("sites_poll_seconds"),
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="details_poll_time",
+        translation_key="details_poll_time",
+        json_key="details_poll_time",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        attrib_fn=lambda d, _: {
+            "runtime_seconds": d.get("details_poll_seconds"),
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="energy_poll_time",
+        translation_key="energy_poll_time",
+        json_key="energy_poll_time",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        attrib_fn=lambda d, _: {
+            "runtime_seconds": d.get("energy_poll_seconds"),
+        },
+    ),
+]
 
 
 async def async_setup_entry(
@@ -1671,6 +1863,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "solar_model",
             "solar_sn",
             "fittings",
+            "status",
+            "network",
+            "network_code",
+            "role_status",
+            "station_id",
+            "station_type",
         }
     )
 
@@ -1714,9 +1912,14 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(self._context_base) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(
-                data, self._context_base, coordinator.client.api.apisession.email
-            )
+            if data.get("is_subdevice"):
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
+                    data, self._context_base, data.get("main_sn")
+                )
+            else:
+                self._attr_device_info = get_AnkerSolixDeviceInfo(
+                    data, self._context_base, coordinator.client.api.apisession.email
+                )
             # add service attribute for managble devices
             self._attr_supported_features: AnkerSolixEntityFeature = (
                 description.feature if data.get("is_admin", False) else None
@@ -1933,7 +2136,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             SERVICE_GET_SYSTEM_INFO
         ]:
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be used for requested action while running in testmode",
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -1943,11 +2146,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         # When Api refresh is deactivated, do not run action to avoid kicking off other client Api token
         if not self.coordinator.client.allow_refresh():
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be used for requested action while Api usage is deactivated",
+                f"{self.entity_id} cannot be used for requested action {service_name} while Api usage is deactivated",
                 translation_domain=DOMAIN,
                 translation_key="apiusage_deactivated",
                 translation_placeholders={
                     "entity_id": self.entity_id,
+                    "action_name": service_name,
                 },
             )
         if (
@@ -1957,12 +2161,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         ):
             if service_name in [SERVICE_GET_SYSTEM_INFO]:
                 LOGGER.debug("%s action will be applied", service_name)
-                include_cache = kwargs.get(INCLUDE_CACHE)
-                if include_cache == cv.ENTITY_MATCH_NONE:
-                    include_cache = None
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
-                if include_cache:
+                if kwargs.get(INCLUDE_CACHE):
                     result = (
                         await self.coordinator.client.api.update_sites(
                             siteId=self._context_base,
@@ -1988,7 +2189,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             )
         return None
 
-    async def _solarbank_schedule_service(  # noqa: C901
+    async def _solarbank_schedule_service(
         self, service_name: str, **kwargs: Any
     ) -> dict | None:
         """Execute the defined solarbank schedule action."""
@@ -2011,7 +2212,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             SERVICE_GET_SOLARBANK_SCHEDULE,
         ]:
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -2021,11 +2222,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         # When Api refresh is deactivated, do not run action to avoid kicking off other client Api token
         if not self.coordinator.client.allow_refresh():
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be used for requested action while Api usage is deactivated",
+                f"{self.entity_id} cannot be used for requested action {service_name} while Api usage is deactivated",
                 translation_domain=DOMAIN,
                 translation_key="apiusage_deactivated",
                 translation_placeholders={
                     "entity_id": self.entity_id,
+                    "action_name": service_name,
                 },
             )
         if (
@@ -2040,8 +2242,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 SERVICE_SET_SOLARBANK_SCHEDULE,
                 SERVICE_UPDATE_SOLARBANK_SCHEDULE,
             ]:
-                if (plan := kwargs.get(PLAN)) in [cv.ENTITY_MATCH_NONE]:
-                    plan = None
+                plan = kwargs.get(PLAN)
                 # Raise error if selected (active) plan not usable for the service
                 if plan not in {
                     SolarbankRatePlan.smartplugs,
@@ -2057,33 +2258,19 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             + str(plan)
                             + "] of ["
                             + self.entity_id
-                            + "]not usable for this action",
+                            + "] not usable for this action",
                         },
                     )
-                if START_TIME in kwargs and END_TIME in kwargs:
-                    if (start_time := kwargs.get(START_TIME)) < (
-                        end_time := kwargs.get(END_TIME)
-                    ):
-                        if (weekdays := kwargs.get(WEEK_DAYS)) == cv.ENTITY_MATCH_NONE:
-                            weekdays = None
-                        if (load := kwargs.get(APPLIANCE_LOAD)) == cv.ENTITY_MATCH_NONE:
-                            load = None
-                        if (
-                            dev_load := kwargs.get(DEVICE_LOAD)
-                        ) == cv.ENTITY_MATCH_NONE:
-                            dev_load = None
-                        if (
-                            allow_export := kwargs.get(ALLOW_EXPORT)
-                        ) == cv.ENTITY_MATCH_NONE:
-                            allow_export = None
-                        if (
-                            discharge_prio := kwargs.get(DISCHARGE_PRIORITY)
-                        ) == cv.ENTITY_MATCH_NONE:
-                            discharge_prio = None
-                        if (
-                            prio := kwargs.get(CHARGE_PRIORITY_LIMIT)
-                        ) == cv.ENTITY_MATCH_NONE:
-                            prio = None
+                start_time = kwargs.get(START_TIME)
+                end_time = kwargs.get(END_TIME)
+                if start_time and end_time:
+                    if start_time < end_time:
+                        weekdays = kwargs.get(WEEK_DAYS)
+                        load = kwargs.get(APPLIANCE_LOAD)
+                        dev_load = kwargs.get(DEVICE_LOAD)
+                        allow_export = kwargs.get(ALLOW_EXPORT)
+                        discharge_prio = kwargs.get(DISCHARGE_PRIORITY)
+                        prio = kwargs.get(CHARGE_PRIORITY_LIMIT)
                         # check if now is in given time range and ensure preset increase is limited by min interval
                         now = datetime.now().astimezone()
                         start_time.astimezone()
@@ -2153,9 +2340,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         deviceSn=self._context_base,
                                         set_slot=slot,
                                         plan_name=plan,
-                                        test_schedule=data.get("schedule") or {}
-                                        if self.coordinator.client.testmode()
-                                        else None,
+                                        toFile=self.coordinator.client.testmode(),
                                     )
                                 )
                             elif service_name == SERVICE_UPDATE_SOLARBANK_SCHEDULE:
@@ -2165,9 +2350,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         deviceSn=self._context_base,
                                         insert_slot=slot,
                                         plan_name=plan,
-                                        test_schedule=data.get("schedule") or {}
-                                        if self.coordinator.client.testmode()
-                                        else None,
+                                        toFile=self.coordinator.client.testmode(),
                                     )
                                 )
                             else:
@@ -2206,9 +2389,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         siteId=siteId,
                                         deviceSn=self._context_base,
                                         set_slot=slot,
-                                        test_schedule=data.get("schedule") or {}
-                                        if self.coordinator.client.testmode()
-                                        else None,
+                                        toFile=self.coordinator.client.testmode(),
                                     )
                                 )
                             elif service_name == SERVICE_UPDATE_SOLARBANK_SCHEDULE:
@@ -2217,9 +2398,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         siteId=siteId,
                                         deviceSn=self._context_base,
                                         insert_slot=slot,
-                                        test_schedule=data.get("schedule") or {}
-                                        if self.coordinator.client.testmode()
-                                        else None,
+                                        toFile=self.coordinator.client.testmode(),
                                     )
                                 )
                             else:
@@ -2231,8 +2410,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             and self.coordinator.client.testmode()
                         ):
                             LOGGER.info(
-                                "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                                json.dumps(result, indent=2),
+                                "TESTMODE: Applied schedule for action %s:\n%s",
+                                service_name,
+                                json.dumps(
+                                    result,
+                                    indent=2 if len(json.dumps(result)) < 200 else None,
+                                ),
                             )
                         # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                         # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
@@ -2272,7 +2455,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
-                if generation > 1 and (schedule := data.get("schedule") or {}):
+                if generation > 1 and (data.get("schedule") or {}):
                     # get SB2 schedule
                     result = (
                         await self.coordinator.client.api.get_device_parm(
@@ -2281,6 +2464,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             deviceSn=self._context_base,
                             fromFile=self.coordinator.client.testmode(),
                         )
+                        or {}
                     ).get("param_data")
                 else:
                     result = (
@@ -2289,6 +2473,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             deviceSn=self._context_base,
                             fromFile=self.coordinator.client.testmode(),
                         )
+                        or {}
                     ).get("home_load_data")
                 # trigger coordinator update with api dictionary data
                 await self.coordinator.async_refresh_data_from_apidict()
@@ -2300,13 +2485,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 await self.coordinator.client.validate_cache()
                 if generation > 1:
                     # Clear SB2 schedule
-                    if schedule := data.get("schedule") or {}:
+                    if data.get("schedule") or {}:
                         plan = kwargs.get(PLAN)
-                        if plan in [cv.ENTITY_MATCH_NONE]:
-                            plan = None
                         weekdays = kwargs.get(WEEK_DAYS)
-                        if weekdays == cv.ENTITY_MATCH_NONE:
-                            weekdays = None
                         result = await self.coordinator.client.api.set_sb2_home_load(
                             siteId=siteId,
                             deviceSn=self._context_base,
@@ -2316,9 +2497,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 end_time=None,
                                 weekdays=set(weekdays) if weekdays else None,
                             ),
-                            test_schedule=schedule
-                            if self.coordinator.client.testmode()
-                            else None,
+                            toFile=self.coordinator.client.testmode(),
                         )
                         # log resulting schedule if testmode returned dict
                         if (
@@ -2326,24 +2505,35 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             and self.coordinator.client.testmode()
                         ):
                             LOGGER.info(
-                                "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                                json.dumps(result, indent=2),
+                                "TESTMODE: Applied schedule for action %s:\n%s",
+                                service_name,
+                                json.dumps(
+                                    result,
+                                    indent=2 if len(json.dumps(result)) < 200 else None,
+                                ),
                             )
                 else:
                     # clear SB 1 schedule
+                    # Wait until client cache is valid
+                    await self.coordinator.client.validate_cache()
                     # No need to Raise error if cascaded, since clearing will directly be done against correct Api device param for custom SB1 schedule
-                    schedule = {"ranges": []}
-                    if self.coordinator.client.testmode():
+                    result = await self.coordinator.client.api.set_device_parm(
+                        siteId=siteId,
+                        paramData={"ranges": []},
+                        deviceSn=self._context_base,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    # log resulting schedule if testmode returned dict
+                    if isinstance(result, dict) and self.coordinator.client.testmode():
                         LOGGER.info(
-                            "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                            json.dumps(schedule, indent=2),
+                            "TESTMODE: Applied schedule for action %s:\n%s",
+                            service_name,
+                            json.dumps(
+                                result,
+                                indent=2 if len(json.dumps(result)) < 200 else None,
+                            ),
                         )
-                    else:
-                        await self.coordinator.client.api.set_device_parm(
-                            siteId=siteId,
-                            paramData=schedule,
-                            deviceSn=self._context_base,
-                        )
+
                 # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                 # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
                 # await self.coordinator.client.api.update_sites(

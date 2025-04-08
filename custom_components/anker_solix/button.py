@@ -23,6 +23,7 @@ from .entity import (
     AnkerSolixPicturePath,
     get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
+    get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
 )
 from .solixapi.apitypes import SolixDeviceType
@@ -145,9 +146,14 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            if data.get("is_subdevice"):
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
+                    data, context, data.get("main_sn")
+                )
+            else:
+                self._attr_device_info = get_AnkerSolixDeviceInfo(
+                    data, context, coordinator.client.api.apisession.email
+                )
             if self._attribute_name == "refresh_device":
                 # set the correct device type picture for the device refresh entity, which is available for any device and account type
                 if (pn := str(data.get("device_pn") or "").upper()) and hasattr(
@@ -191,7 +197,10 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                         ),
                     },
                 )
-            if self.coordinator.client.active_device_refresh or self.coordinator.client.startup:
+            if (
+                self.coordinator.client.active_device_refresh
+                or self.coordinator.client.startup
+            ):
                 raise ServiceValidationError(
                     f"Devices for {self.coordinator.client.api.apisession.nickname} cannot be updated while another update is still running",
                     translation_domain=DOMAIN,

@@ -2,13 +2,16 @@
 
 from datetime import datetime
 from logging import Logger, getLogger
+from typing import Any
+import urllib.parse
 
 import voluptuous as vol
 
-from homeassistant.const import Platform
+from homeassistant.const import CONF_METHOD, CONF_PAYLOAD, Platform
 import homeassistant.helpers.config_validation as cv
 
 from .solixapi import api
+from .solixapi.apitypes import SolixDayTypes, SolixTariffTypes
 
 LOGGER: Logger = getLogger(__package__)
 
@@ -56,6 +59,10 @@ SERVICE_GET_SOLARBANK_SCHEDULE = "get_solarbank_schedule"
 SERVICE_CLEAR_SOLARBANK_SCHEDULE = "clear_solarbank_schedule"
 SERVICE_SET_SOLARBANK_SCHEDULE = "set_solarbank_schedule"
 SERVICE_UPDATE_SOLARBANK_SCHEDULE = "update_solarbank_schedule"
+SERVICE_MODIFY_SOLIX_BACKUP_CHARGE = "modify_solix_backup_charge"
+SERVICE_MODIFY_SOLIX_USE_TIME = "modify_solix_use_time"
+SERVICE_API_REQUEST = "api_request"
+
 
 START_TIME = "start_time"
 END_TIME = "end_time"
@@ -67,53 +74,111 @@ CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
 ALLOW_EXPORT = "allow_export"
 DISCHARGE_PRIORITY = "discharge_priority"
 INCLUDE_CACHE = "include_cache"
+BACKUP_START = "backup_start"
+BACKUP_END = "backup_end"
+BACKUP_DURATION = "backup_duration"
+ENABLE_BACKUP = "enable_backup"
+START_MONTH = "start_month"
+END_MONTH = "end_month"
+DAY_TYPE = "day_type"
+START_HOUR = "start_hour"
+END_HOUR = "end_hour"
+TARIFF = "tariff"
+TARIFF_PRICE = "tariff_price"
+DELETE = "delete"
+ENDPOINT = "endpoint"
+
+
+def extractNone(value: Any) -> None:
+    """Validate if value to be considered as None."""
+    if value is None or (
+        isinstance(value, str)
+        and (value == "" or value.isspace() or value.lower() == "none")
+    ):
+        return None
+    return value
 
 
 VALID_DAYTIME = vol.All(
     lambda v: datetime.strptime(":".join(str(v).split(":")[:2]), "%H:%M"),
 )
-VALID_APPLIANCE_LOAD = vol.Any(
-    None,
-    cv.ENTITY_MATCH_NONE,
-    vol.All(
-        vol.Coerce(int),
-        vol.Range(
-            # min=api.SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
-            min=0,
-            max=api.SolixDefaults.PRESET_MAX * 2,
+VALID_APPLIANCE_LOAD = vol.All(
+    extractNone,
+    vol.Any(
+        None,
+        vol.All(
+            vol.Coerce(int),
+            vol.Range(
+                # min=api.SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
+                min=0,
+                max=api.SolixDefaults.PRESET_MAX * 2,
+            ),
         ),
     ),
 )
-VALID_DEVICE_LOAD = vol.Any(
-    None,
-    cv.ENTITY_MATCH_NONE,
-    vol.All(
-        vol.Coerce(int),
-        vol.Range(
-            min=int(api.SolixDefaults.PRESET_MIN / 2),
-            max=api.SolixDefaults.PRESET_MAX,
+VALID_DEVICE_LOAD = vol.All(
+    extractNone,
+    vol.Any(
+        None,
+        vol.All(
+            vol.Coerce(int),
+            vol.Range(
+                min=int(api.SolixDefaults.PRESET_MIN / 2),
+                max=api.SolixDefaults.PRESET_MAX,
+            ),
         ),
     ),
 )
-VALID_CHARGE_PRIORITY = vol.Any(
-    None,
-    cv.ENTITY_MATCH_NONE,
-    vol.All(
-        vol.Coerce(int),
-        vol.Range(
-            min=api.SolixDefaults.CHARGE_PRIORITY_MIN,
-            max=api.SolixDefaults.CHARGE_PRIORITY_MAX,
+VALID_CHARGE_PRIORITY = vol.All(
+    extractNone,
+    vol.Any(
+        None,
+        vol.All(
+            vol.Coerce(int),
+            vol.Range(
+                min=api.SolixDefaults.CHARGE_PRIORITY_MIN,
+                max=api.SolixDefaults.CHARGE_PRIORITY_MAX,
+            ),
         ),
     ),
 )
-VALID_SWITCH = vol.Any(None, cv.ENTITY_MATCH_NONE, vol.Coerce(bool))
-VALID_WEEK_DAYS = vol.Any(None, cv.ENTITY_MATCH_NONE, cv.weekdays)
-VALID_PLAN = vol.Any(
-    None,
-    cv.ENTITY_MATCH_NONE,
-    vol.Any(api.SolarbankRatePlan.manual, api.SolarbankRatePlan.smartplugs),
+VALID_SWITCH = vol.All(extractNone, vol.Any(None, vol.Coerce(bool)))
+VALID_WEEK_DAYS = vol.All(extractNone, vol.Any(None, cv.weekdays))
+VALID_PLAN = vol.All(
+    extractNone,
+    vol.Any(
+        None,
+        vol.In(api.SolarbankRatePlan.manual, api.SolarbankRatePlan.smartplugs),
+    ),
 )
-EXTRA_PLAN_AC = vol.Any(api.SolarbankRatePlan.backup, api.SolarbankRatePlan.use_time)
+EXTRA_PLAN_AC = vol.In(api.SolarbankRatePlan.backup, api.SolarbankRatePlan.use_time)
+MONTHS: list = [
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
+]
+VALID_MONTH = vol.All(
+    extractNone,
+    vol.Any(
+        None,
+        vol.All(
+            vol.Lower,
+            vol.In(MONTHS),
+        ),
+        vol.All(vol.Coerce(int), vol.Range(min=1, max=12)),
+        msg=f"not in {MONTHS + list(range(1, 13))}",
+    ),
+)
+
 
 SOLARBANK_TIMESLOT_DICT: dict = {
     vol.Required(START_TIME): VALID_DAYTIME,
@@ -153,7 +218,7 @@ SOLIX_WEEKDAY_SCHEMA: vol.Schema = vol.All(
             **cv.TARGET_SERVICE_FIELDS,
             vol.Optional(
                 PLAN,
-            ): vol.Any(VALID_PLAN,EXTRA_PLAN_AC),
+            ): vol.Any(VALID_PLAN, EXTRA_PLAN_AC),
             vol.Optional(
                 WEEK_DAYS,
             ): VALID_WEEK_DAYS,
@@ -168,6 +233,111 @@ SOLIX_ENTITY_SCHEMA: vol.Schema = vol.All(
             vol.Optional(
                 INCLUDE_CACHE,
             ): VALID_SWITCH,
+        }
+    ),
+)
+
+SOLIX_BACKUP_CHARGE_SCHEMA: vol.Schema = vol.All(
+    cv.make_entity_service_schema(
+        {
+            **cv.TARGET_SERVICE_FIELDS,
+            vol.Optional(BACKUP_START): vol.All(
+                extractNone, vol.Any(None, cv.datetime)
+            ),
+            vol.Optional(BACKUP_END): vol.All(extractNone, vol.Any(None, cv.datetime)),
+            vol.Optional(BACKUP_DURATION): vol.All(
+                extractNone,
+                vol.Any(
+                    None,
+                    vol.All(
+                        vol.Any(
+                            cv.time_period_dict,
+                            cv.time_period_str,
+                            msg="no time period object or string",
+                        ),
+                        cv.positive_timedelta,
+                    ),
+                ),
+            ),
+            vol.Optional(ENABLE_BACKUP): VALID_SWITCH,
+        }
+    ),
+)
+
+SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
+    cv.make_entity_service_schema(
+        {
+            **cv.TARGET_SERVICE_FIELDS,
+            vol.Optional(START_MONTH): VALID_MONTH,
+            vol.Optional(END_MONTH): VALID_MONTH,
+            vol.Optional(START_HOUR): vol.All(
+                extractNone,
+                vol.Any(
+                    None,
+                    cv.time,
+                    vol.Range(min=0, max=23, msg="no time and not in range 0-23"),
+                ),
+            ),
+            vol.Optional(END_HOUR): vol.All(
+                extractNone,
+                vol.Any(
+                    None,
+                    cv.time,
+                    vol.Range(min=1, max=24),
+                    msg="no time and not in range 1-24",
+                ),
+            ),
+            vol.Optional(DAY_TYPE): vol.All(
+                extractNone,
+                vol.Any(
+                    None,
+                    vol.All(
+                        vol.Lower,
+                        vol.In(
+                            [item.value for item in SolixDayTypes],
+                        ),
+                    ),
+                msg=f"not in {[item.value for item in SolixDayTypes]}"),
+            ),
+            vol.Optional(TARIFF): vol.All(
+                extractNone,
+                vol.Any(
+                    None,
+                    vol.In(
+                        [item.value for item in SolixTariffTypes],
+                    ),
+                    vol.All(
+                        vol.Lower,
+                        vol.In(
+                            [item.name.lower() for item in SolixTariffTypes],
+                        ),
+                    ),
+                    msg=f"not in {[item.value for item in SolixTariffTypes] + [item.name.lower() for item in SolixTariffTypes]}",
+                ),
+            ),
+            vol.Optional(TARIFF_PRICE): vol.All(
+                extractNone, vol.Any(None, cv.positive_float)
+            ),
+            vol.Optional(DELETE): VALID_SWITCH,
+        }
+    ),
+)
+
+SOLIX_REQUEST_SCHEMA: vol.Schema = vol.All(
+    cv.make_entity_service_schema(
+        {
+            **cv.TARGET_SERVICE_FIELDS,
+            vol.Required(CONF_METHOD): vol.All(vol.Lower, vol.In(["post", "get"])),
+            vol.Required(ENDPOINT): vol.All(
+                extractNone,
+                vol.NotIn([None]),
+                cv.string,
+                vol.Strip,
+                urllib.parse.quote,
+            ),
+            vol.Optional(
+                CONF_PAYLOAD,
+            ): vol.All(extractNone, vol.Any(None, vol.Coerce(dict))),
         }
     ),
 )

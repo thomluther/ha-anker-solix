@@ -788,7 +788,7 @@ class AnkerSolixBaseApi:
             plat_name = platform.get("name") or ""
             for prod in platform.get("products") or []:
                 products[prod.get("product_code") or ""] = {
-                    "name": str(prod.get("name" or "")).strip(),
+                    "name": str(prod.get("name") or "").strip(),
                     "platform": str(plat_name).strip(),
                     # "img_url": prod.get("img_url"),
                 }

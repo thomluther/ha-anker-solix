@@ -14,7 +14,7 @@ import urllib.parse
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE, EntityCategory
+from homeassistant.const import CONF_EXCLUDE, CONF_METHOD, CONF_PAYLOAD, EntityCategory
 from homeassistant.core import HomeAssistant, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
@@ -22,14 +22,24 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import UTC
 
+from .api_client import AnkerSolixApiClientCommunicationError, AnkerSolixApiClientError
 from .const import (
     ATTRIBUTION,
+    BACKUP_DURATION,
+    BACKUP_END,
+    BACKUP_START,
     CREATE_ALL_ENTITIES,
     DOMAIN,
+    ENABLE_BACKUP,
+    ENDPOINT,
     EXPORTFOLDER,
     LOGGER,
+    SERVICE_API_REQUEST,
     SERVICE_EXPORT_SYSTEMS,
+    SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
+    SOLIX_BACKUP_CHARGE_SCHEMA,
     SOLIX_ENTITY_SCHEMA,
+    SOLIX_REQUEST_SCHEMA,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -39,6 +49,7 @@ from .entity import (
     AnkerSolixPicturePath,
     get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
+    get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
 )
 from .solixapi import export
@@ -84,6 +95,7 @@ DEVICE_SWITCHES = [
         key="preset_backup_option",
         translation_key="preset_backup_option",
         json_key="preset_backup_option",
+        feature=AnkerSolixEntityFeature.AC_CHARGE,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
@@ -165,6 +177,19 @@ async def async_setup_entry(
         required_features=[AnkerSolixEntityFeature.ACCOUNT_INFO],
         supports_response=SupportsResponse.ONLY,
     )
+    platform.async_register_entity_service(
+        name=SERVICE_API_REQUEST,
+        schema=SOLIX_REQUEST_SCHEMA,
+        func=SERVICE_API_REQUEST,
+        required_features=[AnkerSolixEntityFeature.ACCOUNT_INFO],
+        supports_response=SupportsResponse.ONLY,
+    )
+    platform.async_register_entity_service(
+        name=SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
+        schema=SOLIX_BACKUP_CHARGE_SCHEMA,
+        func=SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
+        required_features=[AnkerSolixEntityFeature.AC_CHARGE],
+    )
 
 
 class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
@@ -201,8 +226,17 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(
-                data, context, coordinator.client.api.apisession.email
+            if data.get("is_subdevice"):
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
+                    data, context, data.get("main_sn")
+                )
+            else:
+                self._attr_device_info = get_AnkerSolixDeviceInfo(
+                    data, context, coordinator.client.api.apisession.email
+                )
+            # add service attribute for manageable devices
+            self._attr_supported_features: AnkerSolixEntityFeature = (
+                description.feature if data.get("is_admin", False) else None
             )
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
@@ -216,6 +250,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             self._attr_device_info = get_AnkerSolixSystemInfo(
                 data, context, coordinator.client.api.apisession.email
             )
+            # add service attribute for site entities
+            self._attr_supported_features: AnkerSolixEntityFeature = description.feature
 
         self._attr_is_on = None
         self.update_state_value()
@@ -241,6 +277,24 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 )
         return self._attr_extra_state_attributes
 
+    async def export_systems(self, **kwargs: Any) -> dict | None:
+        """Export the actual api responses for accessible systems and devices into zipped JSON files."""
+        return await self._solix_account_service(
+            service_name=SERVICE_EXPORT_SYSTEMS, **kwargs
+        )
+
+    async def api_request(self, **kwargs: Any) -> dict | None:
+        """Submit the api request to selected entity account."""
+        return await self._solix_account_service(
+            service_name=SERVICE_API_REQUEST, **kwargs
+        )
+
+    async def modify_solix_backup_charge(self, **kwargs: Any) -> dict | None:
+        """Modify the backup charge settings of devices supporting AC charge."""
+        return await self._solix_ac_charge_service(
+            service_name=SERVICE_MODIFY_SOLIX_BACKUP_CHARGE, **kwargs
+        )
+
     def update_state_value(self):
         """Update the state value of the switch based on the coordinator data."""
         if self.coordinator and not (hasattr(self.coordinator, "data")):
@@ -256,12 +310,6 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
 
         # Mark availability based on value
         self._attr_available = self._attr_is_on is not None
-
-    async def export_systems(self, **kwargs: Any) -> dict | None:
-        """Export the actual api responses for accessible systems and devices into zipped JSON files."""
-        return await self._solix_account_service(
-            service_name=SERVICE_EXPORT_SYSTEMS, **kwargs
-        )
 
     async def async_turn_on(self, **_: any) -> None:
         """Turn on the switch."""
@@ -279,7 +327,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -317,9 +365,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                             data.get("preset_manual_backup_end") or 0, UTC
                         ).astimezone(),
                         backup_switch=True,
-                        test_schedule=data.get("schedule") or {}
-                        if self.coordinator.client.testmode()
-                        else None,
+                        toFile=self.coordinator.client.testmode(),
                     )
                 else:
                     # SB1 schedule options
@@ -332,14 +378,16 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         discharge_prio=True
                         if self._attribute_name == "preset_discharge_priority"
                         else None,
-                        test_schedule=data.get("schedule") or {}
-                        if self.coordinator.client.testmode()
-                        else None,
+                        toFile=self.coordinator.client.testmode(),
                     )
                 if isinstance(resp, dict) and self.coordinator.client.testmode():
                     LOGGER.info(
-                        "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                        json.dumps(resp, indent=2),
+                        "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                        self.entity_id,
+                        "ON",
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
                     )
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
@@ -364,7 +412,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -394,9 +442,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         siteId=data.get("site_id") or "",
                         deviceSn=self.coordinator_context,
                         backup_switch=False,
-                        test_schedule=data.get("schedule") or {}
-                        if self.coordinator.client.testmode()
-                        else None,
+                        toFile=self.coordinator.client.testmode(),
                     )
                 else:
                     # SB1 schedule options
@@ -409,14 +455,16 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         discharge_prio=False
                         if self._attribute_name == "preset_discharge_priority"
                         else None,
-                        test_schedule=data.get("schedule") or {}
-                        if self.coordinator.client.testmode()
-                        else None,
+                        toFile=self.coordinator.client.testmode(),
                     )
                 if isinstance(resp, dict) and self.coordinator.client.testmode():
                     LOGGER.info(
-                        "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                        json.dumps(resp, indent=2),
+                        "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                        self.entity_id,
+                        "OFF",
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
                     )
                 await self.coordinator.async_refresh_data_from_apidict()
             else:
@@ -443,7 +491,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         # When running in Test mode do not run services that are not supporting a testmode
         if self.coordinator.client.testmode() and service_name not in []:
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be used for requested action while running in testmode",
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -453,11 +501,12 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         # When Api refresh is deactivated, do not run action to avoid kicking off other client Api token
         if not self.coordinator.client.allow_refresh():
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be used for requested action while Api usage is deactivated",
+                f"{self.entity_id} cannot be used for requested action {service_name} while Api usage is deactivated",
                 translation_domain=DOMAIN,
                 translation_key="apiusage_deactivated",
                 translation_placeholders={
                     "entity_id": self.entity_id,
+                    "action_name": service_name,
                 },
             )
         # Ensure Export can be triggered only once
@@ -494,7 +543,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     Path(wwwroot) / "community" / DOMAIN / EXPORTFOLDER
                 )
                 # Toogle coordinator client cache invalid during the cache export randomization of the randomized system export
-                if await myexport.export_data(export_path=exportpath,toggle_cache=self.coordinator.client.toggle_cache):
+                if await myexport.export_data(
+                    export_path=exportpath,
+                    toggle_cache=self.coordinator.client.toggle_cache,
+                ):
                     # convert path to public available url folder and filename
                     result = urllib.parse.quote(
                         myexport.zipfilename.replace(
@@ -508,6 +560,44 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 # reset action blocker
                 self.last_run = None
                 return {"export_filename": result}
+            if service_name in [SERVICE_API_REQUEST]:
+                LOGGER.debug("%s action will be applied", service_name)
+                self.last_run = datetime.now().astimezone()
+                # Wait until client cache is valid
+                await self.coordinator.client.validate_cache()
+                try:
+                    result = await self.coordinator.client.request(
+                        method=kwargs.get(CONF_METHOD),
+                        endpoint=kwargs.get(ENDPOINT),
+                        payload=kwargs.get(CONF_PAYLOAD),
+                    )
+                except (
+                    AnkerSolixApiClientError,
+                    AnkerSolixApiClientCommunicationError,
+                ) as exception:
+                    return {
+                        "request": {
+                            "method": kwargs.get(CONF_METHOD),
+                            "endpoint": kwargs.get(ENDPOINT),
+                            "payload": kwargs.get(CONF_PAYLOAD),
+                        },
+                        "error": str(exception),
+                    }
+                else:
+                    # only when no exception occurs
+                    return {
+                        "request": {
+                            "server": self.coordinator.client.api.apisession.server,
+                            "method": kwargs.get(CONF_METHOD),
+                            "endpoint": kwargs.get(ENDPOINT),
+                            "payload": kwargs.get(CONF_PAYLOAD),
+                        },
+                        "response": result,
+                    }
+                finally:
+                    # always executed even upon return in except block
+                    # reset action blocker
+                    self.last_run = None
 
             raise ServiceValidationError(
                 f"The entity {self.entity_id} does not support the action {service_name}",
@@ -518,4 +608,82 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     "service": service_name,
                 },
             )
+        return None
+
+    async def _solix_ac_charge_service(
+        self, service_name: str, **kwargs: Any
+    ) -> dict | None:
+        """Execute the defined solix ac charge action."""
+        # Raise alerts to frontend
+        if not (self.supported_features & AnkerSolixEntityFeature.AC_CHARGE):
+            raise ServiceValidationError(
+                f"The entity {self.entity_id} does not support the action {service_name}",
+                translation_domain=DOMAIN,
+                translation_key="service_not_supported",
+                translation_placeholders={
+                    "entity": self.entity_id,
+                    "service": service_name,
+                },
+            )
+        # When running in Test mode do not run services that are not supporting a testmode
+        if self.coordinator.client.testmode() and service_name not in [
+            SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
+        ]:
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
+                translation_domain=DOMAIN,
+                translation_key="active_testmode",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                },
+            )
+        # When Api refresh is deactivated, do not run action to avoid kicking off other client Api token
+        if not self.coordinator.client.allow_refresh():
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be used for requested action {service_name} while Api usage is deactivated",
+                translation_domain=DOMAIN,
+                translation_key="apiusage_deactivated",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                    "action_name": service_name,
+                },
+            )
+        if self.coordinator and hasattr(self.coordinator, "data"):
+            result = False
+            data: dict = self.coordinator.data.get(self.coordinator_context) or {}
+            if service_name in [SERVICE_MODIFY_SOLIX_BACKUP_CHARGE]:
+                LOGGER.debug("%s action will be applied", service_name)
+                # backup_start = None if not isinstance(kwargs.get(BACKUP_START), datetime) else kwargs.get(BACKUP_START)
+                # backup_end = None if not isinstance(kwargs.get(BACKUP_END), datetime) else kwargs.get(BACKUP_END)
+                # duration = None if not isinstance(kwargs.get(BACKUP_DURATION), timedelta) else kwargs.get(BACKUP_DURATION)
+                result = await self.coordinator.client.api.set_sb2_ac_charge(
+                    siteId=data.get("site_id") or "",
+                    deviceSn=self.coordinator_context,
+                    backup_start=kwargs.get(BACKUP_START),
+                    backup_end=kwargs.get(BACKUP_END),
+                    backup_duration=kwargs.get(BACKUP_DURATION),
+                    backup_switch=kwargs.get(ENABLE_BACKUP),
+                    toFile=self.coordinator.client.testmode(),
+                )
+                await self.coordinator.async_refresh_data_from_apidict()
+            else:
+                raise ServiceValidationError(
+                    f"The entity {self.entity_id} does not support the action {service_name}",
+                    translation_domain=DOMAIN,
+                    translation_key="service_not_supported",
+                    translation_placeholders={
+                        "entity": self.entity_id,
+                        "service": service_name,
+                    },
+                )
+            # log resulting schedule if testmode returned dict
+            if isinstance(result, dict) and self.coordinator.client.testmode():
+                LOGGER.info(
+                    "TESTMODE: Applied result for action %s:\n%s",
+                    service_name,
+                    json.dumps(
+                        result, indent=2 if len(json.dumps(result)) < 200 else None
+                    ),
+                )
+            await self.coordinator.async_refresh_data_from_apidict()
         return None

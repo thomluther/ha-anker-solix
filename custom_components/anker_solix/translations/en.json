@@ -15,11 +15,15 @@
                 "pps": "Portable power stations",
                 "powerpanel": "Power panels",
                 "powerpanel_energy": "Power panel energy stats",
+                "powerpanel_avg_power": "Power panel ⌀-power",
                 "powercooler": "Power cooler",
                 "smartmeter": "Smart meter",
                 "smartmeter_energy": "Smart meter energy stats",
                 "smartplug": "Smart plugs",
-                "smartplug_energy": "Smart plug energy stats"
+                "smartplug_energy": "Smart plug energy stats",
+                "hes": "Home energy systems",
+                "hes_energy": "HES energy stats",
+                "hes_avg_power": "HES ⌀-power"
             }
         },
         "plan": {
@@ -28,7 +32,7 @@
                 "blend_plan": "Blend plan",
                 "manual_backup": "Backup charge plan",
                 "use_time": "Usage time plan"
-        }
+            }
         },
         "weekday": {
             "options": {
@@ -39,6 +43,38 @@
                 "thu": "Thursday",
                 "fri": "Friday",
                 "sat": "Saturday"
+            }
+        },
+        "month": {
+            "options": {
+                "jan": "January",
+                "feb": "February",
+                "mar": "March",
+                "apr": "April",
+                "may": "May",
+                "jun": "June",
+                "jul": "July",
+                "aug": "August",
+                "sep": "September",
+                "oct": "October",
+                "nov": "November",
+                "dec": "December"
+            }
+        },
+        "daytype": {
+            "options": {
+                "weekday": "Weekday",
+                "weekend": "Weekend",
+                "all": "All"
+            }
+        },
+        "tariff": {
+            "options": {
+                "none": "None",
+                "peak": "Peak",
+                "mid_peak": "Medium peak",
+                "off_peak": "Off peak",
+                "valley": "Valley"
             }
         }
     },
@@ -167,6 +203,24 @@
                     }
                 }
             },
+            "connected": {
+                "name": "Connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                },
+                "state_attributes": {
+                    "network": {
+                        "name": "Network"
+                    },
+                    "network_code": {
+                        "name": "Network code"
+                    },
+                    "post_interval": {
+                        "name": "Post interval"
+                    }
+                }
+            },
             "ota_update": {
                 "name": "OTA Update",
                 "state": {
@@ -246,8 +300,8 @@
             "system_price": {
                 "name": "Fixed price kWh"
             },
-            "preset_plan_price": {
-                "name": "Plan price kWh"
+            "preset_tariff_price": {
+                "name": "Tariff price kWh"
             }
         },
         "select": {
@@ -262,6 +316,16 @@
                     "use_time": "Usage time",
                     "backup": "Backup charge",
                     "manual": "Manual"
+                }
+            },
+            "preset_tariff": {
+                "name": "Tariff usage time",
+                "state": {
+                    "none": "None",
+                    "peak": "Peak",
+                    "mid_peak": "Medium peak",
+                    "off_peak": "Off peak",
+                    "valley": "Valley"
                 }
             },
             "system_price_unit": {
@@ -291,6 +355,12 @@
                 "state_attributes": {
                     "status": {
                         "name": "Status code"
+                    },
+                    "network": {
+                        "name": "Network"
+                    },
+                    "network_code": {
+                        "name": "Network code"
                     }
                 }
             },
@@ -308,12 +378,32 @@
                     "full_bypass": "Full bypass",
                     "wakeup": "Wakeup",
                     "cold_wakeup": "Cold wakeup",
+                    "fully_charged": "Fully charged",
                     "standby": "Standby",
                     "unknown": "Unknown"
                 },
                 "state_attributes": {
                     "charging_status": {
                         "name": "Status code"
+                    }
+                }
+            },
+            "hes_station_role": {
+                "name": "Station role",
+                "state": {
+                    "primary": "Primary",
+                    "subordinate": "Subordinate",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "role_status": {
+                        "name": "Role code"
+                    },
+                    "station_id": {
+                        "name": "Station ID"
+                    },
+                    "station_type": {
+                        "name": "Station type"
                     }
                 }
             },
@@ -416,6 +506,12 @@
             "sub_package_num": {
                 "name": "Expansion battery"
             },
+            "battery_count": {
+                "name": "Battery modules"
+            },
+            "parallel_device_count": {
+                "name": "Parallel devices"
+            },
             "fittings": {
                 "name": "Accessory",
                 "state_attributes": {
@@ -462,6 +558,9 @@
             },
             "smartplug_list": {
                 "name": "Smart plugs"
+            },
+            "hes_list": {
+                "name": "Home energy systems"
             },
             "solarbank_charging_power": {
                 "name": "SB battery power"
@@ -794,6 +893,30 @@
             },
             "discharge_power": {
                 "name": "Discharge power"
+            },
+            "sites_poll_time": {
+                "name": "Last data poll",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Runtime sec"
+                    }
+                }
+            },
+            "details_poll_time": {
+                "name": "Last details poll",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Runtime sec"
+                    }
+                }
+            },
+            "energy_poll_time": {
+                "name": "Last energy poll",
+                "state_attributes": {
+                    "runtime_seconds": {
+                        "name": "Runtime sec"
+                    }
+                }
             }
         },
         "switch": {
@@ -853,7 +976,7 @@
             "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This action can run 10 seconds or several minutes if endpoint throttling is being applied! The Execute button toggles just green once finished."
         },
         "get_solarbank_schedule": {
-            "name": "Request the actual Solarbank schedule",
+            "name": "Request actual Solarbank schedule",
             "description": "The actual Solarbank schedule will be provided as response to this action"
         },
         "clear_solarbank_schedule": {
@@ -979,6 +1102,84 @@
                     "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2."
                 }
             }
+        },
+        "modify_solix_backup_charge": {
+            "name": "Modify backup charge settings",
+            "description": "Adjust the backup time for emergency AC charge of the battery (using max. AC charge power)",
+            "fields": {
+                "backup_start": {
+                    "name": "Backup start",
+                    "description": "Start date and time of the backup period in the form YYYY-MM-DD HH:MM:SS. Default is active period start or now."
+                },
+                "backup_end": {
+                    "name": "Backup end",
+                    "description": "End date and time of the backup period in the form YYYY-MM-DD HH:MM:SS. Default is active period end or now + 3 hours."
+                },
+                "backup_duration": {
+                    "name": "Backup duration",
+                    "description": "Duration of the backup period in the form HH:MM:SS. Used only if no backup end is specified instead of default duration of 3 hours."
+                },
+                "enable_backup": {
+                    "name": "Enable backup period",
+                    "description": "Enable or disable the defined or active backup period"
+                }
+            }
+        },
+        "modify_solix_use_time": {
+            "name": "Modify usage time plan",
+            "description": "Adjust the usage time plan for Anker Solix devices that support AC charge and a usage time mode with various power tariffs",
+            "fields": {
+                "start_month": {
+                    "name": "Start month",
+                    "description": "Start month for the season to be modified"
+                },
+                "end_month": {
+                    "name": "End month",
+                    "description": "End month for the season to be modified"
+                },
+                "day_type": {
+                    "name": "Day type",
+                    "description": "Type of the days to be modified in the season"
+                },
+                "start_hour": {
+                    "name": "Start hour",
+                    "description": "Start hour of the days to be modified (minutes and seconds are ignored)"
+                },
+                "end_hour": {
+                    "name": "End hour",
+                    "description": "End hour of the days to be modified (minutes and seconds are ignored). For 24:00 you must enter 23:59"
+                },
+                "tariff": {
+                    "name": "Tariff",
+                    "description": "Tariff to be used for the selected or active period"
+                },
+                "tariff_price": {
+                    "name": "Tariff price per kWh",
+                    "description": "Tariff price per kWh for the selected or active period"
+                },
+                "delete": {
+                    "name": "Delete selected options from plan",
+                    "description": "If activated, the selected options will be removed from the plan instead of being created or modified. Deletions will always merge ranges in the applicable scope to avoid any gaps. If no option is selected, the whole plan will be deleted."
+                }
+            }
+        },
+        "api_request": {
+            "name": "Api request",
+            "description": "Issue a request to an Anker Solix Api endpoint with optional payload parameters.\nREMINDER: The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage caused by use of the integration or this Anker Solix Api request action.",
+            "fields": {
+                "method": {
+                    "name": "Method",
+                    "description": "Select type of request to be issued (most endpoints require the post method)"
+                },
+                "endpoint": {
+                    "name": "Endpoint",
+                    "description": "Select or define the endpoint where the request should be sent to (known endpoints are documented in https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98)"
+                },
+                "payload": {
+                    "name": "Payload",
+                    "description": "Optional object with parameter value pairs or list depending on endpoint. Typical parameters are `site_id` or `device_sn`, but parameter names can vary. Some request error messages may reveal required parameter names and format."
+                }
+            }
         }
     },
     "exceptions": {
@@ -989,10 +1190,10 @@
             "message": "{entity_id} cannot be set to {value} because it is outsite of allowed range {min}-{max}"
         },
         "active_testmode": {
-            "message": "{entity_id} cannot be changed while configuration is running in testmode"
+            "message": "{entity_id} cannot be used while configuration is running in testmode"
         },
         "apiusage_deactivated": {
-            "message": "{entity_id} cannot be used for requested action while Api usage is deactivated"
+            "message": "{entity_id} cannot be used for requested action {entity_id} while Api usage is deactivated"
         },
         "shared_devices": {
             "message": "{username} cannot be loaded because it shares devices with active configuration {shared_account}"

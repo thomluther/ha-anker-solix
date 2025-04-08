@@ -27,6 +27,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
 
     config_entry: ConfigEntry
     client: AnkerSolixApiClient
+    details_delayed: datetime | None
 
     def __init__(
         self,
@@ -38,6 +39,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize."""
         self.config_entry = config_entry
         self.client = client
+        self.details_delayed = None
 
         super().__init__(
             hass=hass,
@@ -55,8 +57,9 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             ):
                 # return existing data if cache stays invalid during systems export randomization or manual update still active
                 return self.data
-            # stagger non-initial device details updates if required
+            # stagger non-initial updates if required
             if not self.client.startup:
+                await self.async_refresh_delay()
                 await self.async_details_delay()
             data = await self.client.async_get_data()
             # make sure deferred data will create additional entities
@@ -124,7 +127,9 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         """Introduce a refresh delay for staggered data collection."""
 
         # stagger interval for sites update cycle
-        sites_shift = timedelta(seconds=10)
+        sites_shift = timedelta(
+            seconds=5
+        )  # if self.client.startup else timedelta(seconds=10)
         # get all defined config entries
         cfg_ids: list[str] = [
             cfg.entry_id
@@ -139,11 +144,12 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         ]
         # determine a staggered delay based on last data collections of active coordinators or configuration index if none active yet
         next_refreshes: list[datetime] = [
-            c.client.last_site_refresh + c.update_interval for c in active_crds
+            c.client.last_site_refresh + c.update_interval + timedelta(seconds=5)
+            for c in active_crds
         ]
         next_refreshes.sort()
         # find next 10 sec gap in active clients
-        delay = 0
+        delay = None
         time_now = datetime.now().astimezone()
         start_time = time_now
         for x in next_refreshes:
@@ -151,7 +157,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                 delay = int(max(0, (start_time - time_now).total_seconds()))
                 break
             start_time = x + sites_shift
-        if not delay:
+        if delay is None:
             # set delay according config index or next possible start time
             delay = (
                 int(
@@ -163,39 +169,71 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             )
         # set client last sites refresh to previous interval for initial run
         if not self.client.last_site_refresh:
-            self.client.last_site_refresh = (
-                time_now - self.update_interval + timedelta(seconds=delay)
-            )
+            self.client.last_site_refresh = time_now - self.update_interval
         if delay:
             LOGGER.info(
                 "Delaying coordinator %s for %s seconds to stagger data refresh",
                 self.client.api.apisession.nickname,
                 int(delay),
             )
+            # delay also last refresh to allow other clients proper next refresh check
+            self.client.last_site_refresh = self.client.last_site_refresh + timedelta(
+                seconds=delay
+            )
             await sleep(delay)
 
     async def async_details_delay(self) -> None:
         """Delay next details refresh for staggered data collection."""
 
-        if (count := self.client.intervalcount()) > 1:
+        if self.client.intervalcount() >= self.client.deviceintervals():
+            # reset delayed time once device details refresh was done
+            self.details_delayed = None
+        elif self.details_delayed:
+            # Adjust projected starttime
+            self.details_delayed = (
+                datetime.now().astimezone()
+                + (self.client.intervalcount() - 1) * self.update_interval
+            )
+        # return if delay should be skipped
+        if (
+            (count := self.client.intervalcount()) > 1
+            or self.client.deviceintervals() <= 2
+            or self.details_delayed
+        ):
             return
-        # exclude own coordinator from active coordinators
+        # ignore own and short interval coordinators for active coordinators
         active_crds: list[AnkerSolixDataUpdateCoordinator] = [
             c
             for c in (self.hass.data.get(DOMAIN) or {}).values()
             if c.config_entry.entry_id != self.config_entry.entry_id
+            and c.client.deviceintervals() > 2
         ]
-        # determine a staggered delay based on other active client min intervals
+        # determine a staggered delay based on running or delayed clients that cannot be delayed further
         durations: list[timedelta] = [
-            max(0, c.client.intervalcount() - 1) * self.update_interval
+            c.details_delayed - datetime.now().astimezone()
+            if c.details_delayed
+            else max(0, c.client.intervalcount() - 1) * c.update_interval
             for c in active_crds
+            if c.client.active_device_refresh or c.details_delayed
         ]
-        if durations and min(durations) < timedelta(seconds=60):
-            # stagger interval for details update cycle, delay at least 2 min
-            details_shift = round(timedelta(seconds=110) / self.update_interval + 0.5)
+        if durations and min(durations) < timedelta(seconds=70):
+            # stagger interval for details update cycle, delay at least 2 min and 1 minute of largest delay remaining
+            details_shift = round(
+                max(
+                    timedelta(seconds=110),
+                    max(durations) + timedelta(seconds=110),
+                )
+                / self.update_interval
+                + 0.5
+            )
             LOGGER.info(
                 "Delaying coordinator %s for %s intervals to stagger device details update",
                 self.client.api.apisession.nickname,
                 int(details_shift),
             )
             self.client.intervalcount(count + details_shift)
+            # calculate projected start time
+            self.details_delayed = (
+                datetime.now().astimezone()
+                + (count + details_shift - 1) * self.update_interval
+            )

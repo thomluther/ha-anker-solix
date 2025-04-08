@@ -427,6 +427,8 @@ async def energy_daily(  # noqa: C901
                     "date": daystr,
                     "battery_charge": resp.get("charge_total") or None,
                     "solar_to_grid": resp.get("solar_to_grid_total") or None,
+                    "solar_to_battery": resp.get("solar_to_battery_total") or None,
+                    "solar_to_home": resp.get("solar_to_home_total") or None,
                     "battery_percentage": resp.get("charging_pre") or None,
                     "solar_percentage": resp.get("electricity_pre") or None,
                     "other_percentage": resp.get("others_pre") or None,
@@ -473,15 +475,15 @@ async def energy_analysis(
     'trend_unit': '', 'battery_to_home_total': '', 'smart_plug_info': {'smartplug_list': [],'total_power': '0.00'}}
 
     Responses for solar_production:
-    Daily: Solar Energy, Extra Totals: charge, discharge, overall stats (Energy, CO2, Money), 3 x percentage share, solar_to_grid
+    Daily: Solar Energy, Extra Totals: charge, discharge, overall stats (Energy, CO2, Money), 3 x percentage share, solar_to_grid, solar_to_home, solar_to_battery
     Responses for solar_production_*:
     Daily: Solar Energy
     Responses for solarbank:
     Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home, grid_to_battery
     Responses for home_usage:
-    Daily: Home Usage Energy, Extra Totals: discharge, grid_to_home, battery_to_home, smart_plugs
+    Daily: Home Usage Energy, Extra Totals: discharge, grid_to_home, battery_to_home, smart_plugs, solar_to_home
     Responses for grid:
-    Daily: solar_to_grid, grid_to_home, Extra Totals: grid_to_battery
+    Daily: solar_to_grid, grid_to_home, Extra Totals: grid_to_battery, grid_imported
     """
     data = {
         "site_id": siteId,

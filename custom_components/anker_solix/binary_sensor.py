@@ -38,9 +38,10 @@ from .entity import (
     AnkerSolixEntityType,
     get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
+    get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.apitypes import SolixDeviceType
+from .solixapi.apitypes import SolixDeviceType, SolixNetworkStatus
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,29 @@ SITE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
     ),
+    AnkerSolixBinarySensorDescription(
+        key="connected",
+        translation_key="connected",
+        json_key="connected",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        value_fn=lambda d, jk: (d.get("hes_info") or {}).get(jk),
+        attrib_fn=lambda d: {
+            "network": next(
+                iter(
+                    [
+                        item.name
+                        for item in SolixNetworkStatus
+                        if item.value == str((d.get("hes_info") or {}).get("net"))
+                    ]
+                ),
+                SolixNetworkStatus.unknown.name,
+            ),
+            "network_code": (d.get("hes_info") or {}).get("net"),
+            "post_interval": (d.get("hes_info") or {}).get("rePostTime"),
+        },
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
+    ),
 ]
 
 ACCOUNT_SENSORS = [
@@ -184,14 +208,16 @@ async def async_setup_entry(
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_SENSORS
-                device_registry.async_get_or_create(
-                    config_entry_id=entry.entry_id,
-                    identifiers=(
-                        get_AnkerSolixDeviceInfo(
-                            data, context, coordinator.client.api.apisession.email
-                        )
-                    ).get("identifiers"),
-                )
+                # create device upfront only if not subdevice
+                if not data.get("is_subdevice"):
+                    device_registry.async_get_or_create(
+                        config_entry_id=entry.entry_id,
+                        identifiers=(
+                            get_AnkerSolixDeviceInfo(
+                                data, context, coordinator.client.api.apisession.email
+                            )
+                        ).get("identifiers"),
+                    )
 
             for description in (
                 desc
@@ -230,6 +256,9 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "site_admin",
             "rssi",
             "ota_components",
+            "network",
+            "network_code",
+            "post_interval",
         }
     )
 
@@ -259,9 +288,14 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            if data.get("is_subdevice"):
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
+                    data, context, data.get("main_sn")
+                )
+            else:
+                self._attr_device_info = get_AnkerSolixDeviceInfo(
+                    data, context, coordinator.client.api.apisession.email
+                )
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}

@@ -276,7 +276,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     if not (
                         {
                             SolixDeviceType.POWERPANEL.value,
-                            ApiCategories.powerpanel_energy,
+                            ApiCategories.powerpanel_avg_power,
                         }
                         & exclude
                     ):
@@ -286,24 +286,22 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             # Add energy offset info to site cache
                             mysite.update(
                                 {
-                                    "energy_offset_seconds": (avg_data.get(
-                                        "offset_seconds"
-                                    ) or 0)
+                                    "energy_offset_seconds": (
+                                        avg_data.get("offset_seconds") or 0
+                                    )
                                     - 10,
                                     "energy_offset_check": avg_data.get("last_check"),
                                     "energy_offset_tz": 1800
                                     * round(
-                                        round(
-                                            avg_data.get(
-                                                "offset_seconds"
-                                            ) or 0
-                                        )
+                                        round(avg_data.get("offset_seconds") or 0)
                                         / 1800
                                     ),
                                 }
                             )
-                            # Update todays energy totals
-                            if intraday := avg_data.get("intraday"):
+                            # Update todays energy totals if not excluded
+                            if (intraday := avg_data.get("intraday")) and not (
+                                {ApiCategories.powerpanel_energy} & exclude
+                            ):
                                 energy = mysite.get("energy_details") or {}
                                 # add intraday entry to indicate latest data for energy details routine
                                 energy.update({"intraday": intraday})
@@ -314,6 +312,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 ]:
                                     energy.update({"today": intraday})
                                 mysite["energy_details"] = energy
+                        elif not (avg_data or {}).get("intraday"):
+                            # remove avg data from energy details to indicate no update was done for energy details routine
+                            (mysite.get("energy_details") or {}).pop("intraday", None)
                     new_sites.update({myid: mysite})
 
         # Write back the updated sites

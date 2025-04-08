@@ -505,11 +505,13 @@ async def async_check_and_remove_devices(
             SolixDeviceType.POWERPANEL.value,
             SolixDeviceType.SMARTMETER.value,
             SolixDeviceType.SMARTPLUG.value,
+            SolixDeviceType.HES.value,
             ApiCategories.solarbank_energy,
             ApiCategories.smartmeter_energy,
             ApiCategories.smartplug_energy,
             ApiCategories.solar_energy,
             ApiCategories.powerpanel_energy,
+            ApiCategories.hes_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SYSTEM.value}
         # Subcategories for Solarbank only
@@ -526,9 +528,14 @@ async def async_check_and_remove_devices(
             excluded = excluded | {SolixDeviceType.SMARTPLUG.value}
         # Subcategories for Power Panels only
         if {
-            ApiCategories.powerpanel_energy,
+            ApiCategories.powerpanel_avg_power,
         } & excluded:
             excluded = excluded | {SolixDeviceType.POWERPANEL.value}
+        # Subcategories for HES only
+        if {
+            ApiCategories.hes_avg_power,
+        } & excluded:
+            excluded = excluded | {SolixDeviceType.HES.value}
         # Subcategories for all managed Devices
         if {
             ApiCategories.device_auto_upgrade,
@@ -541,6 +548,7 @@ async def async_check_and_remove_devices(
                 SolixDeviceType.POWERPANEL.value,
                 SolixDeviceType.SMARTMETER.value,
                 SolixDeviceType.SMARTPLUG.value,
+                SolixDeviceType.HES.value,
             }
 
     # get all device entries for a domain

@@ -21,7 +21,6 @@ from .apitypes import (
     API_FILEPREFIXES,
     SmartmeterStatus,
     SolarbankDeviceMetrics,
-    SolarbankPriceTypes,
     SolarbankRatePlan,
     SolarbankStatus,
     SolarbankUsageMode,
@@ -31,6 +30,11 @@ from .apitypes import (
     SolixDeviceNames,
     SolixDeviceStatus,
     SolixDeviceType,
+    SolixGridStatus,
+    SolixNetworkStatus,
+    SolixPriceTypes,
+    SolixRoleStatus,
+    SolixTariffTypes,
 )
 from .hesapi import AnkerSolixHesApi
 from .poller import (
@@ -62,6 +66,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_home_load,
         set_sb2_ac_charge,
         set_sb2_home_load,
+        set_sb2_use_time,
     )
 
     def __init__(
@@ -143,7 +148,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         (self.account.get("products") or {}).get(pn)
                                         or {}
                                     ).get("name")
-                                    or getattr(SolixDeviceNames,pn,"")
+                                    or getattr(SolixDeviceNames, pn, "")
                                     or str(value)
                                 }
                             )
@@ -166,7 +171,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in [
                         # keys with string values
                         "wireless_type",
-                        "bt_ble_mac",
                         "charging_power",
                         "output_power",
                         "power_unit",
@@ -181,12 +185,16 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         in [
                             # keys with string values that should only updated if value returned
                             "wifi_name",
+                            "bt_ble_mac",
                             "energy_today",
                             "energy_last_period",
                         ]
                         and value
                     ):
                         device.update({key: str(value)})
+                    elif key in ["bt_ble_id"] and value and not devData.get("bt_ble_mac"):
+                        # Make sure that BT ID is added if mac not in data
+                        device.update({"bt_ble_mac": str(value).replace(":","")})
                     elif key in ["wifi_signal"]:
                         # Make sure that key is added, but update only if new value provided to avoid deletion of value from rssi calculation
                         if value or device.get(key) is None:
@@ -276,22 +284,35 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 }
                             )
                     elif key in ["status"]:
-                        device.update({key: str(value)})
-                        # decode the status into a description
-                        description = SolixDeviceStatus.unknown.name
-                        for status in SolixDeviceStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
-                        device.update({"status_desc": description})
+                        # decode the device status into a description
+                        device.update(
+                            {
+                                key: str(value),
+                                "status_desc": next(
+                                    iter(
+                                        [
+                                            item.name
+                                            for item in SolixDeviceStatus
+                                            if item.value == str(value)
+                                        ]
+                                    ),
+                                    SolixDeviceStatus.unknown.name,
+                                ),
+                            }
+                        )
                     elif key in ["charging_status"]:
                         device.update({key: str(value)})
-                        # decode the status into a description
-                        description = SolarbankStatus.unknown.name
-                        for status in SolarbankStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
+                        # decode the charging status into a description
+                        description = next(
+                            iter(
+                                [
+                                    item.name
+                                    for item in SolarbankStatus
+                                    if item.value == str(value)
+                                ]
+                            ),
+                            SolarbankStatus.unknown.name,
+                        )
                         # check if battery has bypass during charge (if output during charge)
                         # This key can be passed separately, make sure the other values are looked up in provided data first, then in device details
                         # NOTE: charging power may be updated after initial device details update
@@ -424,7 +445,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_manual_backup_start": 0,
                                         "preset_manual_backup_end": 0,
                                         "preset_backup_option": False,
-                                        "preset_tariff": SolixDefaults.TARIFF_DEF,
+                                        "preset_tariff": SolixTariffTypes.NONE.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
                                         "preset_tariff_currency": SolixDefaults.CURRENCY_DEF,
                                     }
@@ -573,7 +594,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     device.update(
                                         {
                                             "preset_tariff": tariff
-                                            or SolixDefaults.TARIFF_DEF,
+                                            or SolixTariffTypes.NONE.value,
                                             "preset_tariff_price": price
                                             or SolixDefaults.TARIFF_PRICE_DEF,
                                             "preset_tariff_currency": season.get("unit")
@@ -714,14 +735,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
                     # smartmeter specific keys
                     elif key in ["grid_status"]:
-                        device.update({key: str(value)})
                         # decode the grid status into a description
-                        description = SmartmeterStatus.unknown.name
-                        for status in SmartmeterStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
-                        device.update({"grid_status_desc": description})
+                        device.update(
+                            {
+                                key: str(value),
+                                "grid_status_desc": next(
+                                    iter(
+                                        [
+                                            item.name
+                                            for item in SmartmeterStatus
+                                            if item.value == str(value)
+                                        ]
+                                    ),
+                                    SmartmeterStatus.unknown.name,
+                                ),
+                            }
+                        )
                     elif key in [
                         "photovoltaic_to_grid_power",
                         "grid_to_home_power",
@@ -729,7 +758,57 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({key: str(value)})
 
                     # hes specific keys
-                    elif key in ["hes_data"] and value:
+                    elif key in ["hes_data"] and isinstance(value, dict):
+                        # decode the status into a description
+                        if "online_status" in value:
+                            code = str(value.get("online_status"))
+                            # use same field name as for balcony power devices
+                            value["status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixDeviceStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixDeviceStatus.unknown.name,
+                            )
+                        if "master_slave_status" in value:
+                            code = str(value.get("master_slave_status"))
+                            value["role_status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixRoleStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixRoleStatus.unknown.name,
+                            )
+                        if "grid_status" in value:
+                            code = str(value.get("grid_status"))
+                            value["grid_status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixGridStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixGridStatus.unknown.name,
+                            )
+                        if "network_status" in value:
+                            code = str(value.get("network_status"))
+                            value["network_status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixNetworkStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixNetworkStatus.unknown.name,
+                            )
                         device.update({key: value})
 
                     # generate extra values when certain conditions are met
@@ -1026,10 +1105,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
-            )
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
+                )
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_site_price"], json=data
@@ -1049,7 +1135,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         unit: str | None = None,
         co2: float | None = None,
         price_type: str | None = None,  # "fixed" | "use_time"
-        cache_only: bool = False,
+        toFile: bool = False,
     ) -> bool | dict:
         """Set the power price, the unit, CO2 and price type for a site.
 
@@ -1059,17 +1145,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "fixed"}
         """
         # First get the old settings from api dict or Api call to update only requested parameter
-        if (
-            not (details := (self.sites.get(siteId) or {}).get("site_details") or {})
-            and not cache_only
-        ):
-            details = await self.get_site_price(siteId=siteId)
+        if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
+            details = await self.get_site_price(siteId=siteId, fromFile=toFile)
         if not details or not isinstance(details, dict):
             return False
         # Validate parameters
         price_type = (
             str(price_type).lower()
-            if str(price_type).lower() in [item.value for item in SolarbankPriceTypes]
+            if str(price_type).lower() in {item.value for item in SolixPriceTypes}
             else None
         )
         # Prepare payload from details
@@ -1088,21 +1171,30 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if "price_type" in details or price_type:
             data["price_type"] = price_type if price_type else details.get("price_type")
 
-        if cache_only:
-            ((self.sites.get(siteId) or {}).get("site_details") or {}).update(data)
-            return data
-
         # Make the Api call and check for return code
         data["site_id"] = siteId
-        code = (
-            await self.apisession.request(
-                "post", API_ENDPOINTS["update_site_price"], json=data
-            )
-        ).get("code")
-        if not isinstance(code, int) or int(code) != 0:
-            return False
+        if toFile:
+            # Write updated response to file for testing purposes
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": data | {"current_mode": details.get("current_mode")},
+                },
+            ):
+                return False
+        else:
+            code = (
+                await self.apisession.request(
+                    "post", API_ENDPOINTS["update_site_price"], json=data
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return False
         # update the data in api dict and return active data
-        return await self.get_site_price(siteId=siteId)
+        return await self.get_site_price(siteId=siteId, fromFile=toFile)
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False

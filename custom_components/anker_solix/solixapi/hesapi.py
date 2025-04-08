@@ -22,7 +22,6 @@ from .apitypes import (
     ApiCategories,
     SolixDeviceCategory,
     SolixDeviceNames,
-    SolixDeviceStatus,
     SolixDeviceType,
     SolixSiteType,
 )
@@ -136,15 +135,6 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             )
                     elif key in ["alias_name"] and value:
                         device.update({"alias": str(value)})
-                    elif key in ["status"]:
-                        device.update({"status": str(value)})
-                        # decode the status into a description
-                        description = SolixDeviceStatus.unknown.name
-                        for status in SolixDeviceStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
-                        device.update({"status_desc": description})
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",
@@ -160,10 +150,15 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             # Example for key with string values that should only be updated if value returned
                             "wifi_name",
                             "main_sn",
+                            "ssid",
+                            "encryption",
                         ]
                         and value
                     ):
                         device.update({key: str(value)})
+                    elif key in ["rssi"] and value:
+                        # For HES this is actually not a relative rssi value (0-255), but signal strength 0-100 %
+                        device.update({"wifi_signal": str(value)})
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -324,7 +319,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     if not (
                         {
                             SolixDeviceType.HES.value,
-                            ApiCategories.hes_energy,
+                            ApiCategories.hes_avg_power,
                         }
                         & exclude
                     ):
@@ -334,24 +329,22 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             # Add energy offset info to site cache
                             mysite.update(
                                 {
-                                    "energy_offset_seconds": (avg_data.get(
-                                        "offset_seconds"
-                                    ) or 0)
+                                    "energy_offset_seconds": (
+                                        avg_data.get("offset_seconds") or 0
+                                    )
                                     - 10,
                                     "energy_offset_check": avg_data.get("last_check"),
                                     "energy_offset_tz": 1800
                                     * round(
-                                        round(
-                                            avg_data.get(
-                                                "offset_seconds"
-                                            ) or 0
-                                        )
+                                        round(avg_data.get("offset_seconds") or 0)
                                         / 1800
                                     ),
                                 }
                             )
-                            # Update todays energy totals
-                            if intraday := avg_data.get("intraday"):
+                            # Update todays energy totals if not excluded
+                            if (intraday := avg_data.get("intraday")) and not (
+                                {ApiCategories.hes_energy} & exclude
+                            ):
                                 energy = mysite.get("energy_details") or {}
                                 # add intraday entry to indicate latest data for energy details routine
                                 energy.update({"intraday": intraday})
@@ -362,6 +355,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 ]:
                                     energy.update({"today": intraday})
                                 mysite["energy_details"] = energy
+                        elif not (avg_data or {}).get("intraday"):
+                            # remove avg data from energy details to indicate no update was done for energy details routine
+                            (mysite.get("energy_details") or {}).pop("intraday", None)
                     new_sites.update({myid: mysite})
 
         # Write back the updated sites
@@ -511,10 +507,25 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "Updating api %s HES Device details",
             self.apisession.nickname,
         )
-        #
-        # Implement required queries according to exclusion set
-        #
-
+        for sn, device in self.devices.items():
+            site_id = device.get("site_id", "")
+            dev_Type = device.get("type", "")
+            # Fetch details that work for shared accounts
+            if (
+                site_id
+                and dev_Type in ({SolixDeviceType.HES.value} - exclude)
+            ):
+                # Fetch device wifi info if not found yet with bind_devices
+                self._logger.debug(
+                    "Getting api %s wifi info for device",
+                    self.apisession.nickname,
+                )
+                await self.get_hes_wifi_info(deviceSn=sn, fromFile=fromFile)
+                # Fetch details that only work for site admins
+                if (
+                    device.get("is_admin", False)
+                ):
+                    pass
         return self.devices
 
     async def get_system_running_info(
@@ -742,14 +753,15 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             powerlist[-1].get("powerInfos") or [], start=1
                         ):
                             if idx == 1:
-                                # Currently the intraday data contain only one element with discharge power
-                                avg_data["discharge_power_avg"] = str(
-                                    power.get("value") or ""
-                                ).replace("-", "")
-                            else:
-                                avg_data["charge_power_avg"] = str(
-                                    power.get("value") or ""
-                                ).replace("-", "")
+                                # Currently the intraday data contain only one element with positive discharge power and negative charge power
+                                pwr = str(power.get("value") or "")
+                                if pwr and pwr[0] == "-":
+                                    # use positive values also for charge
+                                    avg_data["charge_power_avg"] = pwr.replace("-", "")
+                                    avg_data["discharge_power_avg"] = "0.00"
+                                else:
+                                    avg_data["discharge_power_avg"] = pwr
+                                    avg_data["charge_power_avg"] = "0.00"
                         if soclist := [
                             item
                             for item in (data.get("chargeLevel") or [])
@@ -780,13 +792,21 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # get interval totals from aggregate to avoid redundant daily query for today
                         entry.update(self.extract_energy(source=source, data=data))
                     elif source == "grid":
-                        avg_data["grid_import_avg"] = (
+                        pwr = (
                             next(
                                 iter(powerlist[-1].get("powerInfos") or []),
                                 {},
                             ).get("value")
                             or ""
                         )
+                        # Currently the intraday data contain only one element with positive import power and negative export power
+                        if pwr and pwr[0] == "-":
+                            # use positive values also for export
+                            avg_data["grid_export_avg"] = pwr.replace("-", "")
+                            avg_data["grid_import_avg"] = "0.00"
+                        else:
+                            avg_data["grid_import_avg"] = pwr
+                            avg_data["grid_export_avg"] = "0.00"
                         # get interval totals from aggregate to avoid redundant daily query for today
                         entry.update(self.extract_energy(source=source, data=data))
             # Add average power to main device details as work around if no other hes device usage data will be found in cloud
@@ -1432,3 +1452,34 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         }
                     )
         return entry
+
+    async def get_hes_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
+        """Get the wifi info of a hes device with admin access.
+
+        Example data:
+        {"ssid": "","rssi": 100,"wifiInfos": [
+            {"sn": "Y9ILYOUZI2LXRN62","pn": "A5220","type": "ats","ssid": "","rssi": 100,"encryption": ""}]}
+        """
+        data = {"sn": deviceSn}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['hes_get_wifi_info']}_{deviceSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_HES_SVC_ENDPOINTS["get_wifi_info"], json=data
+            )
+        # update device data if device_sn found in wifi list
+        if data := resp.get("data") or {}:
+            for wifi_info in data.get("wifiInfos") or []:
+                if sn := wifi_info.get("sn"):
+                    self._update_dev(
+                        {
+                            "device_sn": sn,
+                            "ssid": wifi_info.get("ssid"),
+                            "rssi": wifi_info.get("rssi"),
+                            "encryption": wifi_info.get("encryption"),
+                        }
+                    )
+        return data

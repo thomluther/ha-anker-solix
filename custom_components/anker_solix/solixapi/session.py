@@ -63,8 +63,8 @@ class AnkerSolixClientSession:
             Path(Path(__file__).parent) / ".." / "examples" / "example1"
         )
 
-        # Flag for retry after any token error
-        self._retry_attempt: bool = False
+        # Flag for retry of any or certain error
+        self._retry_attempt: bool | int = False
         # ensure folder for authentication caching exists
         Path(Path(Path(__file__).parent) / "authcache").mkdir(
             parents=True, exist_ok=True
@@ -197,7 +197,11 @@ class AnkerSolixClientSession:
                     self._endpoint_limit,
                 )
             else:
-                self._logger.info("Disabled api %s request limit and cleared %s throttled endpoints", self.nickname, len(self.request_count.throttled))
+                self._logger.info(
+                    "Disabled api %s request limit and cleared %s throttled endpoints",
+                    self.nickname,
+                    len(self.request_count.throttled),
+                )
                 self.request_count.throttled.clear()
         return self._endpoint_limit
 
@@ -336,6 +340,8 @@ class AnkerSolixClientSession:
         if data.get("user_id"):
             # gtoken is MD5 hash of user_id from login response
             self._gtoken = md5(data.get("user_id"))
+            # reset retry flag upon valid authentication response for normal request retry attempts
+            self._retry_attempt = False
         else:
             self._gtoken = None
             self._loggedIn = False
@@ -511,8 +517,8 @@ class AnkerSolixClientSession:
                     ) from err
                 if resp.status in [429]:
                     # Too Many Requests for endpoint, repeat once after throttle delay and add endpoint to throttle
-                    if not self._retry_attempt and self._endpoint_limit:
-                        self._retry_attempt = True
+                    if self._retry_attempt not in [True, 429] and self._endpoint_limit:
+                        self._retry_attempt = resp.status
                         self.request_count.add_throttle(endpoint=endpoint)
                         self._logger.warning(
                             "Api %s exceeded request limit with %s known requests in last minute, throttle will be enabled for endpoint: %s",
@@ -551,8 +557,8 @@ class AnkerSolixClientSession:
                     # Api fails to respond to standard query, repeat once after delay
                     self._logger.error("Api %s Busy Error: %s", self.nickname, err)
                     self._logger.error("Response Text: %s", body_text)
-                    if not self._retry_attempt:
-                        self._retry_attempt = True
+                    if self._retry_attempt not in [True, 21105]:
+                        self._retry_attempt = 21105
                         delay = randrange(2, 6)  # random wait time 2-5 seconds
                         self._logger.warning(
                             "Server busy, retrying request of api %s after delay of %s seconds for endpoint %s",

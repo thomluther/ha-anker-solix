@@ -1,5 +1,6 @@
 # Service description for Anker Solix custom integration
 
+# Service to query system info from Api
 get_system_info:
   target:
     entity:
@@ -16,6 +17,8 @@ get_system_info:
       default: false
       selector:
         boolean:
+
+# Service to export all systems data from account
 export_systems:
   target:
     entity:
@@ -25,6 +28,8 @@ export_systems:
       # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
       supported_features:
         - update.UpdateEntityFeature.SPECIFIC_VERSION
+
+# Service to query solarbank schedule from Api
 get_solarbank_schedule:
   target:
     entity:
@@ -34,6 +39,8 @@ get_solarbank_schedule:
       # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
       supported_features:
         - calendar.CalendarEntityFeature.CREATE_EVENT
+
+# Service to clear a plan in the solarbank schedule
 clear_solarbank_schedule:
   target:
     entity:
@@ -79,6 +86,8 @@ clear_solarbank_schedule:
                 - thu
                 - fri
                 - sat
+
+# Service to set a new solarbank schedule
 set_solarbank_schedule:
   target:
     entity:
@@ -176,6 +185,8 @@ set_solarbank_schedule:
               max: 100
               step: 5
               unit_of_measurement: "%"
+
+# Service to update the solarbank schedule
 update_solarbank_schedule:
   target:
     entity:
@@ -273,3 +284,189 @@ update_solarbank_schedule:
               max: 100
               step: 5
               unit_of_measurement: "%"
+
+# Service to define backup charge timeframe for devices supporting AC charge
+modify_solix_backup_charge:
+  target:
+    entity:
+      integration: anker_solix
+      domain: switch
+      # anker_solix.AnkerSolixEntityFeature.AC_CHARGE is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - update.UpdateEntityFeature.BACKUP
+  fields:
+    backup_start:
+      required: false
+      example: "2025-02-24 13:00:00"
+      selector:
+        datetime:
+    backup_end:
+      required: false
+      example: "2025-02-24 17:00:00"
+      selector:
+        datetime:
+    backup_duration:
+      required: false
+      example: "04:00:00"
+      selector:
+        duration:
+    enable_backup:
+      required: false
+      example: true
+      selector:
+        boolean:
+
+# Service to modify or clear usage time plan in the schedule for devices supporting AC charge
+modify_solix_use_time:
+  target:
+    entity:
+      integration: anker_solix
+      domain: select
+      # anker_solix.AnkerSolixEntityFeature.AC_CHARGE is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - update.UpdateEntityFeature.BACKUP
+  fields:
+    start_month:
+      required: false
+      example: "jan"
+      default: "jan"
+      selector:
+        select:
+          mode: dropdown
+          multiple: false
+          translation_key: month
+          options:
+            - jan
+            - feb
+            - mar
+            - apr
+            - may
+            - jun
+            - jul
+            - aug
+            - sep
+            - oct
+            - nov
+            - dec
+    end_month:
+      required: false
+      example: "dec"
+      default: "dec"
+      selector:
+        select:
+          mode: dropdown
+          multiple: false
+          translation_key: month
+          options:
+            - jan
+            - feb
+            - mar
+            - apr
+            - may
+            - jun
+            - jul
+            - aug
+            - sep
+            - oct
+            - nov
+            - dec
+    day_type:
+      required: false
+      example: "all"
+      selector:
+        select:
+          mode: dropdown
+          multiple: false
+          translation_key: daytype
+          options:
+            - weekday
+            - weekend
+            - all
+    start_hour:
+      required: false
+      example: "00:00:00"
+      default: "00:00:00"
+      selector:
+        time:
+    end_hour:
+      required: false
+      example: "23:59:00"
+      default: "23:59:00"
+      selector:
+        time:
+    tariff:
+      required: false
+      example: "off_peak"
+      selector:
+        select:
+          mode: dropdown
+          multiple: false
+          translation_key: tariff
+          options:
+            - peak
+            - mid_peak
+            - off_peak
+            - valley
+    tariff_price:
+      required: false
+      example: 0.27
+      default: 0.00
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.01
+          unit_of_measurement: "per kWh"
+    delete:
+      required: false
+      example: false
+      selector:
+        boolean:
+
+# Service to issue any Api request for the connected account to explore Api capabilities
+api_request:
+  target:
+    entity:
+      integration: anker_solix
+      domain: switch
+      # anker_solix.AnkerSolixEntityFeature.ACCOUNT_INFO is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - update.UpdateEntityFeature.SPECIFIC_VERSION
+  fields:
+    method:
+      required: true
+      example: "post"
+      default: "post"
+      selector:
+        select:
+          mode: dropdown
+          multiple: false
+          translation_key: request_method
+          options:
+            - post
+            - get
+    endpoint:
+      required: true
+      example: "power_service/v1/site/get_site_list"
+      selector:
+        select:
+          mode: dropdown
+          multiple: false
+          custom_value: true
+          translation_key: endpoint
+          options:
+            - power_service/v1/site/get_site_list
+            - power_service/v1/site/get_scen_info
+            - power_service/v1/site/get_site_price
+            - power_service/v1/app/get_relate_and_bind_devices
+            - charging_energy_service/get_system_running_info
+            - charging_hes_svc/get_system_running_info
+            - charging_hes_svc/get_hes_dev_info
+    payload:
+      required: false
+      example: "site_id: \"{{device_attr('sensor.system_bkw_yield_total','serial_number')}}\""
+      selector:
+        object:

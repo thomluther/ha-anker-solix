@@ -31,6 +31,7 @@ from .entity import (
     AnkerSolixEntityType,
     get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
+    get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
 )
 from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
@@ -93,6 +94,18 @@ DEVICE_NUMBERS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
         force_creation_fn=lambda d, jk: jk in d,
     ),
+    AnkerSolixNumberDescription(
+        # Defined tariff price for energy saving calculations by cloud
+        key="preset_tariff_price",
+        translation_key="preset_tariff_price",
+        json_key="preset_tariff_price",
+        unit_fn=lambda d: d.get("preset_tariff_currency"),
+        device_class=NumberDeviceClass.MONETARY,
+        native_min_value=0,
+        native_max_value=1000,
+        native_step=0.01,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
 ]
 
 SITE_NUMBERS = [
@@ -101,19 +114,6 @@ SITE_NUMBERS = [
         key="system_price",
         translation_key="system_price",
         json_key="price",
-        unit_fn=lambda d: (d.get("site_details") or {}).get("site_price_unit"),
-        device_class=NumberDeviceClass.MONETARY,
-        value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
-        native_min_value=0,
-        native_max_value=1000,
-        native_step=0.01,
-        exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
-    ),
-    AnkerSolixNumberDescription(
-        # Defined Site price for energy saving calculations by cloud
-        key="preset_plan_price",
-        translation_key="preset_plan_price",
-        json_key="preset_plan_price",
         unit_fn=lambda d: (d.get("site_details") or {}).get("site_price_unit"),
         device_class=NumberDeviceClass.MONETARY,
         value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
@@ -208,9 +208,14 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            if data.get("is_subdevice"):
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
+                    data, context, data.get("main_sn")
+                )
+            else:
+                self._attr_device_info = get_AnkerSolixDeviceInfo(
+                    data, context, coordinator.client.api.apisession.email
+                )
             # update number limits based on solarbank count in system
             if self._attribute_name == "preset_system_output_power":
                 if (data.get("generation") or 0) > 1:
@@ -303,11 +308,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             "preset_system_output_power",
             "preset_device_output_power",
             "preset_charge_priority",
+            "preset_tariff_price",
             "system_price",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -353,17 +359,22 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 siteId=siteId,
                                 deviceSn=self.coordinator_context,
                                 preset=int(value),
-                                test_schedule=data.get("schedule") or {}
-                                if self.coordinator.client.testmode()
-                                else None,
+                                toFile=self.coordinator.client.testmode(),
                             )
                             if (
                                 isinstance(resp, dict)
                                 and self.coordinator.client.testmode()
                             ):
                                 LOGGER.info(
-                                    "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                                    json.dumps(resp, indent=2),
+                                    "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                                    self.entity_id,
+                                    value,
+                                    json.dumps(
+                                        resp,
+                                        indent=2
+                                        if len(json.dumps(resp)) < 200
+                                        else None,
+                                    ),
                                 )
                         else:
                             # SB1 preset change
@@ -376,17 +387,22 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 dev_preset=int(value)
                                 if self._attribute_name == "preset_device_output_power"
                                 else None,
-                                test_schedule=data.get("schedule") or {}
-                                if self.coordinator.client.testmode()
-                                else None,
+                                toFile=self.coordinator.client.testmode(),
                             )
                             if (
                                 isinstance(resp, dict)
                                 and self.coordinator.client.testmode()
                             ):
                                 LOGGER.info(
-                                    "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                                    json.dumps(resp, indent=2),
+                                    "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                                    self.entity_id,
+                                    value,
+                                    json.dumps(
+                                        resp,
+                                        indent=2
+                                        if len(json.dumps(resp)) < 200
+                                        else None,
+                                    ),
                                 )
                         # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                         # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
@@ -421,14 +437,38 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         siteId=data.get("site_id") or "",
                         deviceSn=self.coordinator_context,
                         charge_prio=int(value),
-                        test_schedule=data.get("schedule") or {}
-                        if self.coordinator.client.testmode()
-                        else None,
+                        toFile=self.coordinator.client.testmode(),
                     )
                     if isinstance(resp, dict) and self.coordinator.client.testmode():
                         LOGGER.info(
-                            "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                            json.dumps(resp, indent=2),
+                            "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                            self.entity_id,
+                            value,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+                elif self._attribute_name == "preset_tariff_price":
+                    LOGGER.debug(
+                        "%s change to %s will be applied", self.entity_id, value
+                    )
+                    resp = await self.coordinator.client.api.set_sb2_use_time(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        tariff_price=value,
+                        # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
+                        merge_tariff_slots=False,
+                        clear_unused_tariff=False,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    if isinstance(resp, dict) and self.coordinator.client.testmode():
+                        LOGGER.info(
+                            "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                            self.entity_id,
+                            value,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
                         )
                 elif self._attribute_name == "system_price":
                     LOGGER.debug(
@@ -437,12 +477,14 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     resp = await self.coordinator.client.api.set_site_price(
                         siteId=self.coordinator_context,
                         price=float(value),
-                        cache_only=self.coordinator.client.testmode(),
+                        toFile=self.coordinator.client.testmode(),
                     )
                     if isinstance(resp, dict) and self.coordinator.client.testmode():
                         LOGGER.info(
-                            "Applied site price settings:\n%s",
-                            json.dumps(resp, indent=2),
+                            "TESTMODE: Applied site price settings:\n%s",
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
                         )
             else:
                 LOGGER.debug(

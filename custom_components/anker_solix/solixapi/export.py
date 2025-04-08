@@ -1029,6 +1029,13 @@ class AnkerSolixApiExport:
                         },
                         replace=[(siteId, "<siteId>")],
                     )
+                self._logger.info("Exporting HES device info...")
+                response = await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_hes_dev_info"],
+                    filename=f"{API_FILEPREFIXES['hes_get_hes_dev_info']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"siteId": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
 
                 # Export site infos requiring owner accounts
                 # Following will show sensitive information and addresses of installer
@@ -1060,14 +1067,6 @@ class AnkerSolixApiExport:
                 response = await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_conn_net_tips"],
                     filename=f"{API_FILEPREFIXES['hes_get_conn_net_tips']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"siteId": siteId},
-                    replace=[(siteId, "<siteId>")],
-                    admin=admin,
-                )
-                self._logger.info("Exporting HES device info...")
-                response = await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["get_hes_dev_info"],
-                    filename=f"{API_FILEPREFIXES['hes_get_hes_dev_info']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"siteId": siteId},
                     replace=[(siteId, "<siteId>")],
                     admin=admin,

@@ -51,12 +51,16 @@ API_CATEGORIES: list = [
     SolixDeviceType.SOLARBANK.value,
     SolixDeviceType.SMARTMETER.value,
     SolixDeviceType.SMARTPLUG.value,
+    SolixDeviceType.HES.value,
     # SolixDeviceType.POWERCOOLER.value,
     ApiCategories.solarbank_energy,
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
     ApiCategories.powerpanel_energy,
+    ApiCategories.powerpanel_avg_power,
+    ApiCategories.hes_energy,
+    ApiCategories.hes_avg_power,
     ApiCategories.solarbank_cutoff,
     ApiCategories.solarbank_fittings,
     ApiCategories.solarbank_solar_info,
@@ -69,6 +73,8 @@ DEFAULT_EXCLUDE_CATEGORIES: list = [
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
+    ApiCategories.powerpanel_energy,
+    ApiCategories.hes_energy,
 ]
 
 
@@ -110,10 +116,10 @@ class AnkerSolixApiClient:
     exclude_categories: list
     deferred_data: bool
     cache_valid: bool
+    active_device_refresh: bool
     _intervalcount: int
     _allow_refresh: bool
     _startup: bool
-    _active_device_refresh: bool
 
     def __init__(
         self,
@@ -139,7 +145,7 @@ class AnkerSolixApiClient:
             _LOGGER,
         )
         # Initialize the api nickname from config title
-        if hasattr(entry,"title"):
+        if hasattr(entry, "title"):
             self.api.apisession.nickname = entry.title
         self.api.apisession.requestDelay(
             float(data.get(CONF_DELAY_TIME, DEFAULT_DELAY_TIME))
@@ -193,6 +199,37 @@ class AnkerSolixApiClient:
         """Get (chached) login response from api, if restart is True, the login will be refreshed from server to test credentials."""
         try:
             return await self.api.async_authenticate(restart=restart) or not restart
+        except TimeoutError as exception:
+            raise AnkerSolixApiClientCommunicationError(
+                f"Timeout error fetching information: {exception}",
+            ) from exception
+        except (aiohttp.ClientError, socket.gaierror, errors.ConnectError) as exception:
+            raise AnkerSolixApiClientCommunicationError(
+                f"Api Connection Error: {exception}",
+            ) from exception
+        except (errors.AuthorizationError, errors.InvalidCredentialsError) as exception:
+            raise AnkerSolixApiClientAuthenticationError(
+                f"Authentication failed: {exception}",
+            ) from exception
+        except errors.RetryExceeded as exception:
+            raise AnkerSolixApiClientRetryExceededError(
+                f"Login Retries exceeded: {exception}",
+            ) from exception
+        except Exception as exception:  # pylint: disable=broad-except
+            raise AnkerSolixApiClientError(
+                f"Api Request Error: {type(exception)}: {exception}"
+            ) from exception
+
+    async def request(
+        self, method: str, endpoint: str, payload: dict | None = None
+    ) -> dict:
+        """Issue request to Api client and return response or raise error."""
+        try:
+            return await self.api.apisession.request(
+                method=method,
+                endpoint=endpoint,
+                json=payload,
+            )
         except TimeoutError as exception:
             raise AnkerSolixApiClientCommunicationError(
                 f"Timeout error fetching information: {exception}",
@@ -464,7 +501,7 @@ class AnkerSolixApiClient:
                 "Api Coordinator %s request delay time was changed from %.3f to %.3f seconds",
                 self.api.apisession.nickname,
                 self.api.apisession.requestDelay(),
-                float(seconds)
+                float(seconds),
             )
             self.api.apisession.requestDelay(float(seconds))
         return self.api.apisession.requestDelay()

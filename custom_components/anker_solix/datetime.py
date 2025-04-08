@@ -26,6 +26,7 @@ from .entity import (
     AnkerSolixEntityType,
     get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
+    get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
 )
 from .solixapi.apitypes import SolixDeviceType
@@ -147,9 +148,14 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixDeviceInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            if data.get("is_subdevice"):
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
+                    data, context, data.get("main_sn")
+                )
+            else:
+                self._attr_device_info = get_AnkerSolixDeviceInfo(
+                    data, context, coordinator.client.api.apisession.email
+                )
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -226,7 +232,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be changed while configuration is running in testmode",
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -253,6 +259,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             ):
                 LOGGER.debug("%s change to %s will be applied", self.entity_id, value)
                 siteId = data.get("site_id") or ""
+                resp = None
                 # Note: Each field change in UI triggers value update. To avoid to many Api requests are sent for start and end time changes,
                 # those changes will only be done in the Api cache and the backup switch will be disabled. Just when the backup switch entity
                 # is enabled, the cached start and end times will be sent to the Api for enabling backup option (similar to App behavior)
@@ -263,20 +270,28 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                         deviceSn=self.coordinator_context,
                         backup_start=value,
                         backup_switch=False,
+                        # Use test schedule to ensure change is done in cache only
                         test_schedule=data.get("schedule") or {},
+                        toFile=self.coordinator.client.testmode(),
                     )
-                else:
+                elif self._attribute_name == "preset_manual_backup_end":
                     resp = await self.coordinator.client.api.set_sb2_ac_charge(
                         siteId=siteId,
                         deviceSn=self.coordinator_context,
                         backup_end=value,
                         backup_switch=False,
+                        # Use test schedule to ensure change is done in cache only
                         test_schedule=data.get("schedule") or {},
+                        toFile=self.coordinator.client.testmode(),
                     )
                 if isinstance(resp, dict) and self.coordinator.client.testmode():
                     LOGGER.info(
-                        "TESTMODE ONLY: Resulting schedule to be applied:\n%s",
-                        json.dumps(resp, indent=2),
+                        "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                        self.entity_id,
+                        value,
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
                     )
         # trigger coordinator update with api dictionary data
         await self.coordinator.async_refresh_data_from_apidict()

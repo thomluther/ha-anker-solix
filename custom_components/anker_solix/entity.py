@@ -68,6 +68,10 @@ class AnkerSolixPicturePath:
     A5101: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
     A5102: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
     A5103: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
+    A5220: str = str(Path(IMAGEPATH) / "HES_A5220_pub.png")
+    A5150: str = str(Path(IMAGEPATH) / "HES_A5150_pub.png")
+    A5341: str = str(Path(IMAGEPATH) / "HES_A5341_pub.png")
+    A5450: str = str(Path(IMAGEPATH) / "HES_A5450_pub.png")
 
     A2345: str = str(Path(IMAGEPATH) / "Prime_Charger_250W_A2345.png")
     A91B2: str = str(Path(IMAGEPATH) / "Charging_Station_240W_A91B2.png")
@@ -95,14 +99,14 @@ class AnkerSolixEntityFeature(IntFlag):
     SOLARBANK_SCHEDULE = 1
     ACCOUNT_INFO = 2
     SYSTEM_INFO = 4
+    AC_CHARGE = 8
 
 
-def get_AnkerSolixDeviceInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
-    """Return an Anker Solix End Device DeviceInfo."""
+def get_AnkerSolixSubdeviceInfo(
+    data: dict, identifier: str, maindevice: str
+) -> DeviceInfo:
+    """Return an Anker Solix Sub Device DeviceInfo."""
 
-    # Get model id to add it to model name
-    # if pn := data.get("device_pn"):
-    #     pn = f"({pn})"
     return DeviceInfo(
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
@@ -110,7 +114,24 @@ def get_AnkerSolixDeviceInfo(data: dict, identifier: str, account: str) -> Devic
         # Use new model_id attribute supported since core 2024.8.0
         model_id=data.get("device_pn"),
         serial_number=data.get("device_sn"),
-        name=data.get("alias"),
+        name=data.get("alias") or data.get("name"),
+        sw_version=data.get("sw_version"),
+        # map to main device
+        via_device=(DOMAIN, maindevice),
+    )
+
+
+def get_AnkerSolixDeviceInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
+    """Return an Anker Solix End Device DeviceInfo."""
+
+    return DeviceInfo(
+        identifiers={(DOMAIN, identifier)},
+        manufacturer=MANUFACTURER,
+        model=data.get("name") or data.get("device_pn"),
+        # Use new model_id attribute supported since core 2024.8.0
+        model_id=data.get("device_pn"),
+        serial_number=data.get("device_sn"),
+        name=data.get("alias") or data.get("name"),
         sw_version=data.get("sw_version"),
         # map to site, or map standalone devices to account device
         via_device=(DOMAIN, data.get("site_id") or account),
@@ -121,19 +142,15 @@ def get_AnkerSolixSystemInfo(data: dict, identifier: str, account: str) -> Devic
     """Return an Anker Solix System DeviceInfo."""
 
     power_site_type = data.get("power_site_type")
-    site_type = (
-        getattr(SolixSiteType, "t_" + str(power_site_type))
-        if hasattr(SolixSiteType, "t_" + str(power_site_type))
-        else ""
-    )
+    site_type = getattr(SolixSiteType, "t_" + str(power_site_type), "")
     if account:
         return DeviceInfo(
             identifiers={(DOMAIN, identifier)},
             manufacturer=MANUFACTURER,
             serial_number=data.get("site_id"),
             model=(str(site_type).capitalize() + " Site").strip(),
-            model_id=f'Type {data.get("power_site_type")}',
-            name=f'System {data.get("site_name")}',
+            model_id=f"Type {data.get('power_site_type')}",
+            name=f"System {data.get('site_name')}",
             via_device=(DOMAIN, account),
         )
     return DeviceInfo(
@@ -141,8 +158,8 @@ def get_AnkerSolixSystemInfo(data: dict, identifier: str, account: str) -> Devic
         manufacturer=MANUFACTURER,
         serial_number=data.get("site_id"),
         model=(str(site_type).capitalize() + " Site").strip(),
-        model_id=f'Type {data.get("power_site_type")}',
-        name=f'System {data.get("site_name")}',
+        model_id=f"Type {data.get('power_site_type')}",
+        name=f"System {data.get('site_name')}",
     )
 
 
@@ -158,5 +175,5 @@ def get_AnkerSolixAccountInfo(
         serial_number=identifier,
         model=str(data.get("type")).capitalize(),
         model_id=data.get("server"),
-        name=f'{data.get("nickname")} ({str(data.get("country") or "--").upper()})',
+        name=f"{data.get('nickname')} ({str(data.get('country') or '--').upper()})",
     )
