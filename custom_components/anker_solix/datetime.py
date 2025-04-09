@@ -19,7 +19,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import UTC
 
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
+from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER, TESTMODE
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -284,9 +284,12 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                         test_schedule=data.get("schedule") or {},
                         toFile=self.coordinator.client.testmode(),
                     )
-                if isinstance(resp, dict) and self.coordinator.client.testmode():
+                if isinstance(resp, dict) and TESTMODE:
                     LOGGER.info(
-                        "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                        "%s: Applied schedule for %s change to %s:\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
                         self.entity_id,
                         value,
                         json.dumps(

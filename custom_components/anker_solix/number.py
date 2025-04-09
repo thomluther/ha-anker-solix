@@ -24,7 +24,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .config_flow import _SCAN_INTERVAL_MIN
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
+from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER, TESTMODE
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -361,12 +361,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 preset=int(value),
                                 toFile=self.coordinator.client.testmode(),
                             )
-                            if (
-                                isinstance(resp, dict)
-                                and self.coordinator.client.testmode()
-                            ):
+                            if isinstance(resp, dict) and TESTMODE:
                                 LOGGER.info(
-                                    "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                                    "%s: Applied schedule for %s change to %s:\n%s",
+                                    "TESTMODE"
+                                    if self.coordinator.client.testmode()
+                                    else "LIVEMODE",
                                     self.entity_id,
                                     value,
                                     json.dumps(
@@ -389,12 +389,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 else None,
                                 toFile=self.coordinator.client.testmode(),
                             )
-                            if (
-                                isinstance(resp, dict)
-                                and self.coordinator.client.testmode()
-                            ):
+                            if isinstance(resp, dict) and TESTMODE:
                                 LOGGER.info(
-                                    "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                                    "%s: Applied schedule for %s change to %s:\n%s",
+                                    "TESTMODE"
+                                    if self.coordinator.client.testmode()
+                                    else "LIVEMODE",
                                     self.entity_id,
                                     value,
                                     json.dumps(
@@ -439,9 +439,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         charge_prio=int(value),
                         toFile=self.coordinator.client.testmode(),
                     )
-                    if isinstance(resp, dict) and self.coordinator.client.testmode():
+                    if isinstance(resp, dict) and TESTMODE:
                         LOGGER.info(
-                            "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                            "%s: Applied schedule for %s change to %s:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
                             self.entity_id,
                             value,
                             json.dumps(
@@ -461,9 +464,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         clear_unused_tariff=False,
                         toFile=self.coordinator.client.testmode(),
                     )
-                    if isinstance(resp, dict) and self.coordinator.client.testmode():
+                    if isinstance(resp, dict) and TESTMODE:
                         LOGGER.info(
-                            "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                            "%s: Applied schedule for %s change to %s:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
                             self.entity_id,
                             value,
                             json.dumps(
@@ -479,9 +485,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         price=float(value),
                         toFile=self.coordinator.client.testmode(),
                     )
-                    if isinstance(resp, dict) and self.coordinator.client.testmode():
+                    if isinstance(resp, dict) and TESTMODE:
                         LOGGER.info(
-                            "TESTMODE: Applied site price settings:\n%s",
+                            "%s: Applied site price settings:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
                             json.dumps(
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),

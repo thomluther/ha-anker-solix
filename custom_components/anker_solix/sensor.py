@@ -47,6 +47,7 @@ from .const import (
     ATTRIBUTION,
     CREATE_ALL_ENTITIES,
     TEST_NUMBERVARIANCE,
+    TESTMODE,
     LAST_PERIOD,
     LAST_RESET,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
@@ -2405,12 +2406,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 result = False
 
                         # log resulting schedule if testmode returned dict
-                        if (
-                            isinstance(result, dict)
-                            and self.coordinator.client.testmode()
-                        ):
+                        if isinstance(result, dict) and TESTMODE:
                             LOGGER.info(
-                                "TESTMODE: Applied schedule for action %s:\n%s",
+                                "%s: Applied schedule for action %s:\n%s",
+                                "TESTMODE"
+                                if self.coordinator.client.testmode()
+                                else "LIVEMODE",
                                 service_name,
                                 json.dumps(
                                     result,
@@ -2499,13 +2500,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             ),
                             toFile=self.coordinator.client.testmode(),
                         )
-                        # log resulting schedule if testmode returned dict
-                        if (
-                            isinstance(result, dict)
-                            and self.coordinator.client.testmode()
-                        ):
+                        # log resulting schedule if in testmode
+                        if isinstance(result, dict) and TESTMODE:
                             LOGGER.info(
-                                "TESTMODE: Applied schedule for action %s:\n%s",
+                                "%s: Applied schedule for action %s:\n%s",
+                                "TESTMODE"
+                                if self.coordinator.client.testmode()
+                                else "LIVEMODE",
                                 service_name,
                                 json.dumps(
                                     result,
@@ -2524,9 +2525,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         toFile=self.coordinator.client.testmode(),
                     )
                     # log resulting schedule if testmode returned dict
-                    if isinstance(result, dict) and self.coordinator.client.testmode():
+                    if isinstance(result, dict) and TESTMODE:
                         LOGGER.info(
-                            "TESTMODE: Applied schedule for action %s:\n%s",
+                            "%s: Applied schedule for action %s:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
                             service_name,
                             json.dumps(
                                 result,

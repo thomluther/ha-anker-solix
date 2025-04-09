@@ -625,7 +625,8 @@ Along with the system entities to control the price type, the fixed tariff price
 ![AC Usage Time service][ac-tariff-control-img]
 
 The Tariff and Tariff price entities are device entities that reflect the settings from the actual interval of the Usage Time plan, depending on season, day type and hour of the day. In order to ensure the current Usage Time plan setting is reflected correctly in the control entities, your AC system and HA instance must be time synchronized and in the same time zone. The Usage Time plan control entities allow toggling of the actual tariff or changing the actual tariff price directly. Following rules have to be considered when using the control entities:
-- Toggling to a tariff that had no previous price defined yet in the actual day type will apply your actual system fixed price as default for the selected tariff and may have to be changed afterwards.
+- Toggling to a tariff that had no previous price defined yet in the actual day type will apply your actual system fixed price as default for the selected tariff and may have to be changed afterwards
+  - The default price will be adjusted to be inline with existing tariff prices
 - Toggling the tariff or changing tariff prices will not cause any sanitation of the Usage Time plan, which is typically applied when modifying the Usage Time plan via the corresponding Anker Solix action
   - This avoids that daily time intervals are merged if same tariff exists already in adjacent intervals
   - This avoids that tariff prices are cleared if the tariff is no longer used in the daily intervals
@@ -653,7 +654,7 @@ All fields of the action are optional. Following rules will be applied when the 
   - Adjacent intervals will be adopted accordingly to avoid overlays or gaps
   - If adjacent intervals use the same tariff type they will be merged into a single interval
   - If no tariff is provided for a new interval range, the off peak tariff will be used as default
-  - If no price is provided, the active system fixed price will be used as default for selected tariff
+  - If no price is provided, the active system fixed price will be used as default for selected tariff and will be adjusted to be inline with existing tariff prices
 - Specifying only a price will change the active tariff price for the selected season and day type
 - Specifying a tariff will modify the tariff for the selected season and day type
   - An optional price will be set or changed as well for the provided tariff
@@ -802,7 +803,7 @@ content: >
       {% set switch = plan.switch|default(false) %}
     {{ "%s | %s | %s"|format('Start Time', 'End Time', 'Switch: ' + ('ON' if switch else 'OFF') + ' ('+plan_name+')') }}
     {{ ":---|:---|:---" }}
-      {%- for idx in plan.ranges|default([]) %}
+      {%- for idx in (plan.ranges or [])|default([]) %}
         {%- set start = idx.start_time|as_datetime|as_local -%}
         {%- set end = idx.end_time|as_datetime|as_local -%}
         {%- set bs = '_**' if switch and start.time() <= isnow.time() < end.time() else '' -%}

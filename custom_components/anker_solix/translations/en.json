@@ -1203,7 +1203,7 @@
             "message": "{entity_id} cannot be used while configuration is running in testmode"
         },
         "apiusage_deactivated": {
-            "message": "{entity_id} cannot be used for requested action {entity_id} while Api usage is deactivated"
+            "message": "{entity_id} cannot be used for requested action {action_name} while Api usage is deactivated"
         },
         "shared_devices": {
             "message": "{username} cannot be loaded because it shares devices with active configuration {shared_account}"

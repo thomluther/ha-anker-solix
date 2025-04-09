@@ -40,6 +40,7 @@ from .const import (
     SOLIX_BACKUP_CHARGE_SCHEMA,
     SOLIX_ENTITY_SCHEMA,
     SOLIX_REQUEST_SCHEMA,
+    TESTMODE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -380,9 +381,12 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         else None,
                         toFile=self.coordinator.client.testmode(),
                     )
-                if isinstance(resp, dict) and self.coordinator.client.testmode():
+                if isinstance(resp, dict) and TESTMODE:
                     LOGGER.info(
-                        "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                        "%s: Applied schedule for %s change to %s:\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
                         self.entity_id,
                         "ON",
                         json.dumps(
@@ -457,9 +461,12 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         else None,
                         toFile=self.coordinator.client.testmode(),
                     )
-                if isinstance(resp, dict) and self.coordinator.client.testmode():
+                if isinstance(resp, dict) and TESTMODE:
                     LOGGER.info(
-                        "TESTMODE: Applied schedule for %s change to %s:\n%s",
+                        "%s: Applied schedule for %s change to %s:\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
                         self.entity_id,
                         "OFF",
                         json.dumps(
@@ -677,9 +684,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     },
                 )
             # log resulting schedule if testmode returned dict
-            if isinstance(result, dict) and self.coordinator.client.testmode():
+            if isinstance(result, dict) and TESTMODE:
                 LOGGER.info(
-                    "TESTMODE: Applied result for action %s:\n%s",
+                    "%s: Applied result for action %s:\n%s",
+                    "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
                     service_name,
                     json.dumps(
                         result, indent=2 if len(json.dumps(result)) < 200 else None

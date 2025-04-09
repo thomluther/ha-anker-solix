@@ -209,7 +209,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/get_phonecode_list',
     'power_service/v1/app/get_annual_report',  # new report starting Jan 2025?
     'power_service/v1/app/device/remove_param_config_key'
-    'power_service/v1/app/device/set_device_attrs', # for solarbank 2 and/or smart meter?
+    'power_service/v1/app/device/set_device_attrs', # attributes must be list of strings, only 'rssi' found working so far
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings

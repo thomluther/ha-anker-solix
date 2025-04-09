@@ -1,5 +1,6 @@
 """Constants for Anker Solix."""
 
+from dataclasses import fields
 from datetime import datetime
 from logging import Logger, getLogger
 from typing import Any
@@ -10,8 +11,12 @@ import voluptuous as vol
 from homeassistant.const import CONF_METHOD, CONF_PAYLOAD, Platform
 import homeassistant.helpers.config_validation as cv
 
-from .solixapi import api
-from .solixapi.apitypes import SolixDayTypes, SolixTariffTypes
+from .solixapi.apitypes import (
+    SolarbankRatePlan,
+    SolixDayTypes,
+    SolixDefaults,
+    SolixTariffTypes,
+)
 
 LOGGER: Logger = getLogger(__package__)
 
@@ -109,9 +114,9 @@ VALID_APPLIANCE_LOAD = vol.All(
         vol.All(
             vol.Coerce(int),
             vol.Range(
-                # min=api.SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
+                # min=SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
                 min=0,
-                max=api.SolixDefaults.PRESET_MAX * 2,
+                max=SolixDefaults.PRESET_MAX * 2,
             ),
         ),
     ),
@@ -123,8 +128,8 @@ VALID_DEVICE_LOAD = vol.All(
         vol.All(
             vol.Coerce(int),
             vol.Range(
-                min=int(api.SolixDefaults.PRESET_MIN / 2),
-                max=api.SolixDefaults.PRESET_MAX,
+                min=int(SolixDefaults.PRESET_MIN / 2),
+                max=SolixDefaults.PRESET_MAX,
             ),
         ),
     ),
@@ -136,8 +141,8 @@ VALID_CHARGE_PRIORITY = vol.All(
         vol.All(
             vol.Coerce(int),
             vol.Range(
-                min=api.SolixDefaults.CHARGE_PRIORITY_MIN,
-                max=api.SolixDefaults.CHARGE_PRIORITY_MAX,
+                min=SolixDefaults.CHARGE_PRIORITY_MIN,
+                max=SolixDefaults.CHARGE_PRIORITY_MAX,
             ),
         ),
     ),
@@ -148,10 +153,10 @@ VALID_PLAN = vol.All(
     extractNone,
     vol.Any(
         None,
-        vol.In(api.SolarbankRatePlan.manual, api.SolarbankRatePlan.smartplugs),
+        vol.In([SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs]),
     ),
 )
-EXTRA_PLAN_AC = vol.In(api.SolarbankRatePlan.backup, api.SolarbankRatePlan.use_time)
+EXTRA_PLAN_AC = vol.In([SolarbankRatePlan.backup, SolarbankRatePlan.use_time])
 MONTHS: list = [
     "jan",
     "feb",
@@ -218,7 +223,17 @@ SOLIX_WEEKDAY_SCHEMA: vol.Schema = vol.All(
             **cv.TARGET_SERVICE_FIELDS,
             vol.Optional(
                 PLAN,
-            ): vol.Any(VALID_PLAN, EXTRA_PLAN_AC),
+            ): vol.Any(
+                VALID_PLAN,
+                EXTRA_PLAN_AC,
+                msg=f"not in {
+                    [
+                        field.default
+                        for field in fields(SolarbankRatePlan)
+                        if field.default
+                    ]
+                }",
+            ),
             vol.Optional(
                 WEEK_DAYS,
             ): VALID_WEEK_DAYS,
@@ -297,7 +312,8 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
                             [item.value for item in SolixDayTypes],
                         ),
                     ),
-                msg=f"not in {[item.value for item in SolixDayTypes]}"),
+                    msg=f"not in {[item.value for item in SolixDayTypes]}",
+                ),
             ),
             vol.Optional(TARIFF): vol.All(
                 extractNone,
