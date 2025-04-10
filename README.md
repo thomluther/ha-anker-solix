@@ -120,9 +120,9 @@ Device type | Description
 `solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC
 `inverter` | Anker Solix inverter configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
-`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W (No individual device setting supported)
-`powerpanel` | Anker Solix Power Panels configured in the system (only basic monitoring):<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
-`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system (only basic monitoring):<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
+`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No individual device setting supported)**
+`powerpanel` | Anker Solix Power Panels configured in the system **(only basic monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
+`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(only basic monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
 
@@ -145,7 +145,6 @@ The Solarbank 2 AC model comes with new and unique features and initial support 
 **Notes:**
 
 * The Solarbank 2 AC devices still have issues and may stop updating some values in the cloud after active use of the mobile app with the system owner. See issue [#211](https://github.com/thomluther/ha-anker-solix/issues/211#issuecomment-2692936285).
-* Furthermore there may be issues when toggling the usage modes or output preset in the manual usage mode since not all changes may be applied by the Solarbank AC device for unknown reasons. This still has to be investigated and validated by YOU, the AC device owner. See issue [#198](https://github.com/thomluther/ha-anker-solix/issues/198). Api testing and exploration may be required and can be done via the new Api request action directly from your HA instance, see [Api request action](INFO.md#api-request-action) for more details.
 
 
 ### Combined Solarbank 2 systems containing cascaded Solarbank 1 devices
