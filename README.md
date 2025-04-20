@@ -21,9 +21,8 @@
 
 This Home Assistant custom integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker power cloud. It was specifically developed to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80), Solarbank 2 E1600 and the Anker smart meter has been added to the Api library and is available through the integration. The Anker power cloud also supports portable power stations (PPS), home Power Panels or home energy systems (HES) which are not or only partially supported by the api library. They may be added in the future once Api data structures for those devices are known and regular consumption data will be sent to the Anker Power cloud.
 
-**Notes:**
-
-Anker power devices which are not configured into a power system in your Anker mobile app typically do **NOT** provide any consumption data to the Anker power cloud. Likewise it has turned out, that portable power stations (PPS), power banks or power cooler do not send data to the Anker power cloud either since they are not configurable as a main power system device.Therefore, the Api library cannot get consumption data of standalone devices.
+> [!NOTE]
+> Anker power devices which are not configured into a power system in your Anker mobile app typically do **NOT** provide any consumption data to the Anker power cloud. Likewise it has turned out, that portable power stations (PPS), power banks or power cooler do not send data to the Anker power cloud either since they are not configurable as a main power system device.Therefore, the Api library cannot get consumption data of standalone devices.
 
 Please refer to [supported sensors and devices](#supported-sensors-and-devices) for a list of supported Anker Solix devices.
 
@@ -71,9 +70,8 @@ This integration utilizes an unofficial Python library to communicate with the A
 
 Because of the way the Anker cloud Api works, one account with e-mail/password cannot be used for the Anker mobile app and the cloud Api in parallel. The Anker cloud allows only one user request token per account at any time for security reasons. Each new authentication request by a client will create a new token and drop a previous token on the server. Therefore, usage of this integration with your mobile app account will kick out your login in the mobile App. However, starting with Anker mobile app release 2.0, you can share your defined power system(s) with 'family members'. It is recommended to create a second Anker account with a different e-mail address and share your defined power system(s) with the second account.
 
-**Attention:**
-
-System members cannot manage any devices of the shared system or view any device details. You can only see the system overview in the app. Likewise you have the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
+> [!IMPORTANT]
+> System members cannot manage any devices of the shared system or view any device details. You can only see the system overview in the app. Likewise you have the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
 
 Since the initial version of this integration did not support many setting capabilities, it was advised to use a shared account for the HA integration to monitor your power system values and integrate them into your home energy dashboards. The system owner account could be used in the Anker mobile app to maintain full control capabilities of your devices.
 Starting with version 1.1.0, the integration supports most of the relevant parameter changes for your balcony power system and your solarbank, including modifications of the solarbank schedule. To utilize those capabilities, you must use an owner account in the HA integration. Likewise you can use the shared account in the Anker mobile app for system home page monitoring.
@@ -92,10 +90,8 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 - The integration can support only Solix power devices which are defined in a power system via the Anker mobile app. While it may present also standalone devices that are not defined in a system, those standalone devices do not provide any usage or consumption data via the cloud Api and therefore will not present any power entities.
 - Further devices which can be added to a power system and managed by the Anker Power cloud may be added in future once examples of Api response data can be provided to the developer.
 
-**Note:**
-
-To export randomized example data of your Anker power system configuration, please refer to the [anker-solix Python library][anker-solix-api] and the tool [export_system.py](https://github.com/thomluther/anker-solix-api#export_systempy). A new [HA service/action to export anonymized Api response data](INFO.md#export-systems-action) was added to the integration to simplify data collection in a downloadable zip file.
-You can open a new [issue as feature request](https://github.com/thomluther/ha-anker-solix/issues) and upload the zip file with the exported json files, together with a short description of your setup. Make sure to add your device to a power system via the Anker mobile app before exporting the configuration. Standalone devices will barely provide data through the cloud Api.
+> [!NOTE]
+> To export randomized example data of your Anker power system configuration, please refer to the [anker-solix Python library][anker-solix-api] and the tool [export_system.py](https://github.com/thomluther/anker-solix-api#export_systempy). A new [HA service/action to export anonymized Api response data](INFO.md#export-systems-action) was added to the integration to simplify data collection in a downloadable zip file. You can open a new [issue as feature request](https://github.com/thomluther/ha-anker-solix/issues) and upload the zip file with the exported json files, together with a short description of your setup. Make sure to add your device to a power system via the Anker mobile app before exporting the configuration. Standalone devices will barely provide data through the cloud Api.
 
 
 ## Supported sensors and devices
@@ -133,18 +129,16 @@ For more details on the Anker Solix device hierarchy and how the integration wil
 
 Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transfer their power values every 60 seconds to the cloud, Solarbank 2 systems seem to use different intervals for their data updates to the cloud, which may result in **invalid data responses and unavailable entities**. Please see the [configuration option considerations for Solarbank 2 systems](INFO.md#option-considerations-for-solarbank-2-systems) in the [INFO](INFO.md) for more details and how you can avoid unavailable entities.
 
-**Important:**
-
-Any change of the control entities is typically applied immediately to Solarbank devices. However, since all Solarbank 2 devices have only a cloud update frequency of 5 minutes, it may take up to 6 minutes until you see the effect of an applied change in other integration entities (e.g. various power sensors).
+> [!IMPORTANT]
+> Any change of the control entities is typically applied immediately to Solarbank devices. However, since all Solarbank 2 devices have only a cloud update frequency of 5 minutes, it may take up to 6 minutes until you see the effect of an applied change in other integration entities (e.g. various power sensors).
 
 
 ### Solarbank 2 AC devices
 
 The Solarbank 2 AC model comes with new and unique features and initial support has been implemented with version 2.5.0. Version 2.6.0 added support for missing capabilities like modifications of the Usage Time plan via control entities or actions.
 
-**Notes:**
-
-* The Solarbank 2 AC devices still have issues and may stop updating some values in the cloud after active use of the mobile app with the system owner. See issue [#211](https://github.com/thomluther/ha-anker-solix/issues/211#issuecomment-2692936285).
+> [!NOTE]
+> The Solarbank 2 AC devices still have issues and may stop updating some values in the cloud after active use of the mobile app with the system owner. See issue [#211](https://github.com/thomluther/ha-anker-solix/issues/211#issuecomment-2692936285).
 
 
 ### Combined Solarbank 2 systems containing cascaded Solarbank 1 devices
@@ -163,9 +157,10 @@ To present correct total values for the combined system, the Api library correct
     - The total battery power simply accumulates each device's battery power, and thus reflecting the total NET battery power
     - However, this total NET battery power of multiple devices cannot reflect the total charge or discharge power at any given time, since a SB1 discharge of 100 W and a charge of those 100 W by the SB2 will result in 0 W NET battery power. So neither the 100 W charge power nor the 100 W discharge power are reflected in the total (NET) battery power value.
 
-**Important:**
+> [!IMPORTANT]
+> If you derived your HA energy integral sensors or other helpers from a positive/negative value split of the system battery power, your charge and discharge energy calculations will not be accurate anymore in combined systems.
 
-If you derived your HA energy integral sensors or other helpers from a positive/negative value split of the system battery power, your charge and discharge energy calculations will not be accurate anymore in combined systems. To achieve a correct charge and discharge energy calculation for your energy dashboard, you need to separate the charge and discharge power individually from each device battery power value. Then you can accumulate correct energies in following 2 ways:
+To achieve a correct charge and discharge energy calculation for your energy dashboard, you need to separate the charge and discharge power individually from each device battery power value. Then you can accumulate correct energies in following 2 ways:
   - Accumulate charge and discharge energy individually for each device and add them all to the energy dashboard. This allows granular energy tracking per Solarbank, since the dashboard will automatically accumulate energies of same type, but display each in a different color. This is the recommended option.
   - Create total charge and discharge power helper entities, that summarize the device power values separately. Then you can accumulate the total charge and discharge energies from those new summary helper entities.
 
@@ -191,9 +186,8 @@ Other devices not listed in the support table are neither supported nor tested w
 To get additional Anker power devices/systems added, please review the [anker-solix Python library][anker-solix-api] and contribute to [open issues](https://github.com/thomluther/anker-solix-api/issues) or Api exploration. Most devices can neither be tested by the developer, nor can they be added to the HA integration before their Api usage, parameters, structures and fields are fully understood, interpreted and implemented into the Api library.
 You can also explore the Anker Solix cloud Api directly within your HA instance via the integration's [Api request action](INFO.md#api-request-action).
 
-**Attention:**
-
-While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore the integration cannot be enhanced with more detailed entities of stand alone devices.
+> [!IMPORTANT]
+> While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore the integration cannot be enhanced with more detailed entities of stand alone devices.
 
 
 ## Installation via HACS (recommended)
@@ -220,7 +214,8 @@ Or use following procedure for HACS 2.0 or later to add the custom repository:
 
 
 ### Installation Notes
-- It was observed that when adding the repository to HACS via the button, an error may occur although it was added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
+
+- It was observed that adding the repository to HACS via the button, an error may occur although it was added. You may check if you can find Anker Solix listed as possible HACS integration to be installed. If not, try to add the repository again.
 - After adding the custom repository and installing the integration under HACS, you must restart Home Assistant to pick up the changes in your custom integration folder
    - HA 2024.02 will report the required restart automatically under problems
 - After HA restart, you can install and configure the integration like a normal core integration via the HA frontend:
@@ -248,8 +243,8 @@ If you want to use the optional entity pictures that are shown in the example sc
 
  Once the images are available in `www/community/anker_solix/images/`, they will be picked up when the integration is (re-)creating the entities, like on first creation or re-load of the configuration entry.  Make sure to reload your HA UI browser window without cache to get the entity pictures displayed correctly.
 
-**Important:**
-If you just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local` and allow the entity pictures to be displayed.
+> [!IMPORTANT]
+> If you just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local` and allow the entity pictures to be displayed.
 
 
 ## Integration configuration and usage
