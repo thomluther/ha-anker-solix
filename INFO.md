@@ -253,7 +253,11 @@ Following automation can be used to send a sticky actionable notification to you
 
 ![notification][notification-img]
 
-Make sure to replace the entities used in the example below with your own entities. The system variable is automatically generated based on the device name of the entity that triggered the state change.
+Make sure to replace following entities used in the example below with your own entities:
+- `switch.accountalias_country_api_usage` (This is your integration hub switch for the api usage, the entity is part of the 'account' device of the integration devices)
+- `notify.my_smartphone` (This is your mobile notification entity, you can find your notify entities in the developer tab or your HA entities panel)
+
+The system variable is automatically generated based on the device name of the entity that triggered the state change.
 
 **Note:** If you want to modify the notification to work with your iPhone, please refer to the [HA companion App documentation](https://companion.home-assistant.io/docs/notifications/notifications-basic/) for IOS capabilities.
 
