@@ -72,6 +72,9 @@
             },
             "preset_tariff_price": {
                 "default": "mdi:cash-edit"
+            },
+            "preset_inverter_limit": {
+                "default": "mdi:speedometer"
             }
         },
         "select": {

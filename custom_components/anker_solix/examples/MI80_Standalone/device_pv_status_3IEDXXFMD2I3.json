@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "pvStatuses": [
+      {
+        "sn": "3IEDXXFMD2I3",
+        "power": 302,
+        "status": 1
+      }
+    ]
+  },
+  "trace_id": "9df1d0fdf4b50d0a4eed7a4b6fd106bd"
+}

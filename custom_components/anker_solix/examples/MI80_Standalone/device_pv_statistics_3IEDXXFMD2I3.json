@@ -1,0 +1,28 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "curve": [],
+    "energy": [
+      {
+        "money": 0,
+        "energy": 2.58,
+        "index": 1
+      },
+      {
+        "money": 0,
+        "energy": 0.33,
+        "index": 2
+      }
+    ],
+    "energyUnit": "kWh",
+    "solarGeneraion": 2.9,
+    "money": 1.2,
+    "moneyUnit": "\u20ac",
+    "loadPercent": "",
+    "ppsPercent": "",
+    "generationTime": 0,
+    "maxPower": 0
+  },
+  "trace_id": "c2c4dffb47ade86ad95bfc8948aaaaee"
+}

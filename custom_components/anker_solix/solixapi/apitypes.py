@@ -139,6 +139,12 @@ API_ENDPOINTS = {
     "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
+    "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
+    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
+    "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
+    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -218,6 +224,9 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/add_message',
     'power_service/v1/del_message',
 
+related to micro inverter without system: 1 + 6 used => 7 total
+    'charging_pv_svc/getMiStatus',
+
 App related: 10 + 2 used => 12 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
@@ -241,6 +250,8 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/preprocess_utility_rate_plan",
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
+    "charging_common_svc/location/get",  # Get default and identifier location for identifier_id, identifier_type, business_type with longitude, latitude, country_code, place_id, display_name, formatted_address
+    "charging_common_svc/location/set",  # Set default and identifier location
 
 Home Energy System related (X1): 37 + 14 used => 51 total
     "charging_hes_svc/adjust_station_price_unit",
@@ -281,14 +292,15 @@ Home Energy System related (X1): 37 + 14 used => 51 total
     "charging_hes_svc/start",
     "charging_hes_svc/sync_back_up_history",
 
-related to what, seem to work with Power Panel sites: 5 + 0 used => 5 total
+related to what, seem to work with Power Panel sites: 6 + 0 used => 6 total
     'charging_disaster_prepared/get_site_device_disaster', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/get_site_device_disaster_status', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/set_site_device_disaster',
     'charging_disaster_prepared/quit_disaster_prepare',
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
+    'charging_disaster_prepared/disaster_detail',
 
-related to what?: 10 + 0 used => 10 total
+related to Prime charger models: 11 + 0 used => 11 total
     'mini_power/v1/app/charging/get_charging_mode_list',
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
@@ -299,7 +311,7 @@ related to what?: 10 + 0 used => 10 total
     'mini_power/v1/app/egg/report_easter_egg_trigger_status',
     'mini_power/v1/app/setting/get_device_setting',
     'mini_power/v1/app/power/get_day_power_data',
-
+    'mini_power/v1/app/style/get_clock_screensavers',  # works for {'product_code': 'A2345'} => Prime charger
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -355,6 +367,11 @@ API_FILEPREFIXES = {
     "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
+    # charging_pv_svc endpoint file prefixes
+    "get_device_pv_status": "device_pv_status",
+    "get_device_pv_total_statistics": "device_pv_total_statistics",
+    "get_device_pv_statistics": "device_pv_statistics",
+    "get_device_pv_price": "device_pv_price",
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
@@ -435,6 +452,7 @@ class SolixDeviceType(Enum):
 
     ACCOUNT = "account"
     SYSTEM = "system"
+    VIRTUAL = "virtual"
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
     SMARTMETER = "smartmeter"
@@ -475,6 +493,7 @@ class SolarbankUsageMode(IntEnum):
     manual = 3  # manual time plan for home load output
     backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
     use_time = 5  # Use Time plan with SB2 AC and smart meter
+    # smartmode = 6   # TODO(SB3) update code once known
 
 
 class SolixTariffTypes(IntEnum):
@@ -494,6 +513,7 @@ class SolixPriceTypes(StrEnum):
 
     FIXED = "fixed"
     USE_TIME = "use_time"
+    # DYNAMIC = "dynamic" # TODO(SB3) update code once known
 
 
 class SolixDayTypes(StrEnum):
@@ -514,6 +534,7 @@ class SolarbankRatePlan:
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
     use_time: str = "use_time"
+    # smartmode: str = "smart_plan" # TODO(SB3) update code once known
 
 
 @dataclass(frozen=True)
@@ -552,16 +573,18 @@ class SolixDeviceNames:
 
     SHEM3: str = "Shelly 3EM"
     SHEMP3: str = "Shelly Pro 3EM"
+    SHPPS: str = "Shelly Plus Plug S"
 
 
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
     """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
 
-    A17C0: int = 1600  # SOLIX E1600 Solarbank
-    A17C1: int = 1600  # SOLIX E1600 Solarbank 2 Pro
-    A17C2: int = 1600  # SOLIX E1600 Solarbank 2 AC
-    A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
+    A17C0: int = 1600  # SOLIX Solarbank E1600
+    A17C1: int = 1600  # SOLIX Solarbank 2 E1600 Pro
+    A17C2: int = 1600  # SOLIX Solarbank 2 E1600 AC
+    A17C3: int = 1600  # SOLIX Solarbank 2 E1600 Plus
+    A17C5: int = 2688  # SOLIX Solarbank 3 E2700 Pro
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
     A1723: int = 230  # SOLIX C200 Portable Power Station
@@ -592,7 +615,8 @@ class SolixDeviceCapacity:
 class SolixSiteType:
     """Dataclass for Anker Solix System/Site types according to the main device in site rules."""
 
-    t_1 = SolixDeviceType.INVERTER.value  # Main A5143
+    t_0 = SolixDeviceType.VIRTUAL.value  # Virtual site, only standalone inverter A5143
+    t_1 = SolixDeviceType.PPS.value  # Main A5143 + FS1200
     t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0 SB1
     t_3 = SolixDeviceType.HES.value  # Main A5103, Note: This is not listed in actual site rules, but X1 export showing type 3 instead of 9 as site rules say
     t_4 = SolixDeviceType.POWERPANEL.value  # Main A17B1
@@ -603,6 +627,7 @@ class SolixSiteType:
     t_9 = SolixDeviceType.HES.value  # Main A5103
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
+    t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
 
 
 @dataclass(frozen=True)
@@ -612,16 +637,19 @@ class SolixDeviceCategory:
     # Solarbanks
     A17C0: str = (
         SolixDeviceType.SOLARBANK.value + "_1"
-    )  # SOLIX E1600 Solarbank, generation 1
+    )  # SOLIX Solarbank E1600, generation 1
     A17C1: str = (
         SolixDeviceType.SOLARBANK.value + "_2"
-    )  # SOLIX E1600 Solarbank 2 Pro, generation 2
+    )  # SOLIX Solarbank 2 E1600 Pro, generation 2
     A17C2: str = (
         SolixDeviceType.SOLARBANK.value + "_2"
-    )  # SOLIX E1600 Solarbank 2 AC, generation 2
+    )  # SOLIX Solarbank 2 E1600 AC, generation 2
     A17C3: str = (
         SolixDeviceType.SOLARBANK.value + "_2"
-    )  # SOLIX E1600 Solarbank 2 Plus, generation 2
+    )  # SOLIX Solarbank 2 E1600 Plus, generation 2
+    A17C5: str = (
+        SolixDeviceType.SOLARBANK.value + "_3"
+    )  # SOLIX Solarbank 3 E2700 Pro, generation 3
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
@@ -631,6 +659,7 @@ class SolixDeviceCategory:
     SHEMP3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Pro Smart Meter
     # Smart Plug
     A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug
+    SHPPS: str = SolixDeviceType.SMARTPLUG.value  # Shelly Smart Plug
     # Portable Power Stations (PPS)
     A1720: str = (
         SolixDeviceType.PPS.value
@@ -677,6 +706,7 @@ class SolixDeviceCategory:
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
     A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50
+    A17A3: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 23L
     A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
 
@@ -685,9 +715,9 @@ class SolixDeviceCategory:
 class SolarbankDeviceMetrics:
     """Dataclass for Anker Solarbank metrics which should be tracked in device details cache depending on model type."""
 
-    # SOLIX E1600 Solarbank, single MPPT without channel reporting
+    # SOLIX Solarbank E1600, single MPPT without channel reporting
     A17C0: ClassVar[set[str]] = set()
-    # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
+    # SOLIX Solarbank 2 E1600 Pro, with 4 MPPT channel reporting and AC socket
     A17C1: ClassVar[set[str]] = {
         "sub_package_num",
         "solar_power_1",
@@ -703,7 +733,7 @@ class SolarbankDeviceMetrics:
         # "micro_inverter_low_power_limit",
         # "other_input_power",
     }
-    # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
+    # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
         "sub_package_num",
         "bat_charge_power",
@@ -718,7 +748,7 @@ class SolarbankDeviceMetrics:
         "grid_to_battery_power",
         "other_input_power",
     }
-    # SOLIX E1600 Solarbank 2 Plus, with 2 MPPT
+    # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
         "sub_package_num",
         "solar_power_1",
@@ -730,6 +760,23 @@ class SolarbankDeviceMetrics:
         # "micro_inverter_power_limit",
         # "micro_inverter_low_power_limit",
         # "other_input_power",
+    }
+    # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
+    A17C5: ClassVar[set[str]] = {
+        "sub_package_num",
+        "bat_charge_power",
+        "solar_power_1",
+        "solar_power_2",
+        "solar_power_3",
+        "solar_power_4",
+        "ac_power",
+        "to_home_load",
+        "pei_heating_power",
+        "micro_inverter_power",  # This is external inverter input, counts to Solar power
+        "micro_inverter_power_limit",
+        "micro_inverter_low_power_limit",
+        "grid_to_battery_power",
+        "other_input_power",
     }
 
 
@@ -765,6 +812,9 @@ class SolixDefaults:
     REQUEST_DELAY_DEF: float = 0.3
     # Request limit per endpoint per minute
     ENDPOINT_LIMIT_DEF: int = 10
+    # Inverter limit
+    MICRO_INVERTER_LIMIT_MIN: int = 0
+    MICRO_INVERTER_LIMIT_MAX: int = 800
 
 
 class SolixDeviceStatus(StrEnum):

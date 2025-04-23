@@ -489,7 +489,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             stats.append(
                 {
                     "type": "1",
-                    "total": str(data.get("total_system_power_generation") or ""),
+                    "total": ""
+                    if data.get("total_system_power_generation") is None
+                    else str(data.get("total_system_power_generation")),
                     "unit": str(data.get("system_power_generation_unit") or "").lower(),
                 }
             )
@@ -497,7 +499,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             stats.append(
                 {
                     "type": "2",
-                    "total": str(data.get("save_carbon_footprint") or ""),
+                    "total": ""
+                    if data.get("save_carbon_footprint") is None
+                    else str(data.get("save_carbon_footprint")),
                     "unit": str(data.get("save_carbon_unit") or "").lower(),
                 }
             )
@@ -505,7 +509,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             stats.append(
                 {
                     "type": "3",
-                    "total": str(data.get("total_system_savings") or ""),
+                    "total": ""
+                    if data.get("total_system_savings") is None
+                    else str(data.get("total_system_savings")),
                     "unit": str(data.get("system_savings_price_unit") or ""),
                 }
             )

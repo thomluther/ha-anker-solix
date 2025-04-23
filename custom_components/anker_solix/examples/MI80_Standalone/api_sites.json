@@ -1,0 +1,59 @@
+{
+  "virtual-3IEDXXFMD2I3": {
+    "type": "system",
+    "site_info": {
+      "site_id": "virtual-3IEDXXFMD2I3",
+      "site_name": "Standalone inverter",
+      "ms_type": 1,
+      "power_site_type": 0,
+      "support_device_models": [
+        "A5143"
+      ],
+      "current_site_device_models": [
+        "A5143"
+      ]
+    },
+    "site_type": "virtual",
+    "site_admin": true,
+    "solar_list": [
+      {
+        "device_pn": "A5143",
+        "device_sn": "3IEDXXFMD2I3"
+      }
+    ],
+    "solar_info": {
+      "micro_inverter_power_limit": "800W"
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "76.61",
+        "unit": "kwh"
+      },
+      {
+        "type": "2",
+        "total": "77",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "30.6",
+        "unit": "\u20ac"
+      }
+    ],
+    "site_details": {
+      "price": 0.4,
+      "site_price_unit": "\u20ac"
+    },
+    "energy_details": {
+      "last_period": {
+        "date": "2025-04-22",
+        "solar_production": "2.58"
+      },
+      "today": {
+        "date": "2025-04-23",
+        "solar_production": "0.33"
+      }
+    }
+  }
+}

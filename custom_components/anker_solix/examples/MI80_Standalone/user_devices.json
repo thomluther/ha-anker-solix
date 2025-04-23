@@ -1,0 +1,26 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "solar_list": [
+      {
+        "device_sn": "3IEDXXFMD2I3",
+        "device_name": "MI80 Microinverter(BLE)",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
+        "bind_site_status": "0",
+        "generate_power": "",
+        "power_unit": "",
+        "status": "0",
+        "wireless_type": "2",
+        "device_pn": "A5143",
+        "main_version": ""
+      }
+    ],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "grid_list": [],
+    "smartplug_list": []
+  },
+  "trace_id": "7d54ac54d6ef5c764c1c330e6cceaccf"
+}

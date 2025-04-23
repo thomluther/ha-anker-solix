@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "currencyUnit": "\u20ac",
+    "tieredElecPrices": [
+      {
+        "from": "12:00",
+        "to": "23:59",
+        "price": 0.4
+      }
+    ]
+  },
+  "trace_id": "a96b8bf04b626a75b2bd9e91312e212d"
+}

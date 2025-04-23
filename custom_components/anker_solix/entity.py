@@ -32,6 +32,7 @@ class AnkerSolixPicturePath:
     A17C1: str = str(Path(IMAGEPATH) / "Solarbank_2_pro_A17C1_pub.png")
     A17C2: str = str(Path(IMAGEPATH) / "Solarbank_2_A17C2_pub.png")
     A17C3: str = str(Path(IMAGEPATH) / "Solarbank_2_plus_A17C3_pub.png")
+    A17C5: str = str(Path(IMAGEPATH) / "Solarbank_3_pro_A17C5_pub.png")
     A17Y0: str = str(Path(IMAGEPATH) / "Fitting_A17Y0_pub.png")
 
     A5140: str = str(Path(IMAGEPATH) / "MI60_A5140_pub.png")
@@ -40,6 +41,9 @@ class AnkerSolixPicturePath:
     A17X7: str = str(Path(IMAGEPATH) / "Smartmeter_A17X7_pub.png")
     SHEM3: str = str(Path(IMAGEPATH) / "Shelly_Pro_3EM.png")
     SHEMP3: str = str(Path(IMAGEPATH) / "Shelly_Pro_3EM.png")
+
+    A17X8: str = str(Path(IMAGEPATH) / "Smart_plug_A17X8.png")
+    SHPPS: str = str(Path(IMAGEPATH) / "Shelly_plus_plug_s_black.png")
 
     A1722: str = str(Path(IMAGEPATH) / "PPS_C300_A1722_pub.png")
     A1723: str = str(Path(IMAGEPATH) / "PPS_C200_A1723_A1725_pub.png")
@@ -62,6 +66,7 @@ class AnkerSolixPicturePath:
     A17A0: str = str(Path(IMAGEPATH) / "PowerCooler30_A17A0_pub.png")
     A17A1: str = str(Path(IMAGEPATH) / "PowerCooler40_A17A1_pub.png")
     A17A2: str = str(Path(IMAGEPATH) / "PowerCooler50_A17A2_pub.png")
+    A17A3: str = str(Path(IMAGEPATH) / "Everfrost_2_23L_A17A3_pub.png")
     A17A4: str = str(Path(IMAGEPATH) / "Everfrost_2_40L_A17A4_pub.png")
     A17A5: str = str(Path(IMAGEPATH) / "Everfrost_2_58L_A17A5_pub.png")
 

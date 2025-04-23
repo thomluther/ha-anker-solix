@@ -51,6 +51,12 @@ async def poll_sites(  # noqa: C901
     if not exclude or not isinstance(exclude, set):
         exclude = set()
     start_time = datetime.now()
+    virtual_sites = [
+        key
+        for key, s in api.sites.items()
+        if s.get("site_type") == SolixDeviceType.VIRTUAL.value
+        and (not siteId or key == siteId)
+    ]
     if siteId and (api.sites.get(siteId) or {}):
         # update only the provided site ID and get data from cache
         api._logger.debug(
@@ -71,12 +77,20 @@ async def poll_sites(  # noqa: C901
             "Getting api %s site list",
             api.apisession.nickname,
         )
-        # get site object list and filter selected site if provided
+        # get site object list and virtual sites and filter selected site if provided
         sites: dict = {
             "site_list": [
                 s
-                for s in (await api.get_site_list(fromFile=fromFile)).get("site_list")
-                or []
+                for s in (
+                    (
+                        (await api.get_site_list(fromFile=fromFile)).get("site_list")
+                        or []
+                    )
+                    + [
+                        (api.sites.get(vs) or {}).get("site_info") or {}
+                        for vs in virtual_sites
+                    ]
+                )
                 if not siteId or s.get("site_id") == siteId
             ]
         }
@@ -135,6 +149,12 @@ async def poll_sites(  # noqa: C901
                 ]:
                     if sn := hes_device.get("device_sn"):
                         api._site_devices.add(sn)
+            # Routines for virtual site types
+            elif site_Type == SolixDeviceType.VIRTUAL.value:
+                # Add device SN of virtual site id if still in device list and maintain virtual site
+                if (sn := myid.split("-")[1]) in api.devices:
+                    api._site_devices.add(sn)
+                    new_sites.update({myid: mysite})
             # Update scene info for other site types and extract values for device updates
             else:
                 api._logger.debug(
@@ -533,15 +553,25 @@ async def poll_sites(  # noqa: C901
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
-
     # Write back the updated sites
     api.sites = new_sites
+    # actions for all filtered virtual sites that represent standalone inverters
+    if inverters := [
+        sn
+        for sn, dev in api.devices.items()
+        if dev.get("site_id") in virtual_sites
+        and dev.get("type") == SolixDeviceType.INVERTER.value
+        and {SolixDeviceType.INVERTER.value} - exclude
+    ]:
+        await api.get_device_pv_status(devices=inverters, fromFile=fromFile)
     # update account dictionary with Api metrics
     api._update_account(
         {
             "use_files": fromFile,
             "sites_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "sites_poll_seconds": round((datetime.now()-start_time).total_seconds(),3)
+            "sites_poll_seconds": round(
+                (datetime.now() - start_time).total_seconds(), 3
+            ),
         }
     )
     return api.sites
@@ -585,8 +615,29 @@ async def poll_site_details(
             api.sites[site_id]["statistics"] = (
                 (api.hesApi.sites.get(site_id) or {}).get("statistics") or {}
             ).copy()
-        # Fetch details that only work for site admins
-        if site.get("site_admin", False):
+        # Fetch details for virtual sites
+        if site.get("site_type") == SolixDeviceType.VIRTUAL.value:
+            deviceSn = site_id.split("-")[1]
+            # Fetch information of stand alone inverters
+            if (api.devices.get(deviceSn) or {}).get(
+                "type"
+            ) == SolixDeviceType.INVERTER.value:
+                # Fetch overall statistic totals that should not be excluded since merged to overall site cache
+                api._logger.debug(
+                    "Getting api %s PV total statistics for site",
+                    api.apisession.nickname,
+                )
+                await api.get_device_pv_total_statistics(
+                    deviceSn=deviceSn, fromFile=fromFile
+                )
+                if {ApiCategories.site_price} - exclude:
+                    api._logger.debug(
+                        "Getting api %s PV price for site",
+                        api.apisession.nickname,
+                    )
+                    await api.get_device_pv_price(deviceSn=deviceSn, fromFile=fromFile)
+        # Fetch details that only work for site admins and real sites
+        elif site.get("site_admin", False):
             # Fetch site price and CO2 settings
             if {ApiCategories.site_price} - exclude:
                 api._logger.debug(
@@ -595,11 +646,7 @@ async def poll_site_details(
                 )
                 await api.get_site_price(siteId=site_id, fromFile=fromFile)
     # update account dictionary with number of requests
-    api._update_account(
-        {
-            "use_files": fromFile,
-        }
-    )
+    api._update_account({"use_files": fromFile})
     return api.sites
 
 
@@ -663,11 +710,44 @@ async def poll_device_details(
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():
-        site_id = device.get("site_id", "")
-        dev_Type = device.get("type", "")
-
-        # Fetch details that only work for site admins
-        if device.get("is_admin", False) and site_id:
+        site_id: str = device.get("site_id") or ""
+        dev_Type: str = device.get("type") or ""
+        # create a virtual site for any stand alone admin device that may track more details in the cloud without site
+        if dev_Type == SolixDeviceType.INVERTER.value and not site_id:
+            # create virtual site for stand alone inverters (MI80)
+            site_id = f"{SolixDeviceType.VIRTUAL.value}-{sn}"
+            device["site_id"] = site_id
+            api.sites[site_id] = {
+                "type": SolixDeviceType.SYSTEM.value,
+                "site_info": {
+                    "site_id": site_id,
+                    "site_name": f"Standalone {SolixDeviceType.INVERTER.value}",
+                    "ms_type": 1,  # admin
+                    "power_site_type": 0,  # virtual type
+                    "support_device_models": [device.get("device_pn")],
+                    "current_site_device_models": [device.get("device_pn")],
+                },
+                "site_id": site_id,
+                "power_site_type": 0,  # virtual type
+                "site_type": SolixDeviceType.VIRTUAL.value,
+                "site_admin": True,
+                "solar_list": [
+                    {
+                        "device_pn": device.get("device_pn"),
+                        "device_sn": sn,
+                    }
+                ],
+                "solar_info": {},
+            }
+            # query power if inverter not excluded
+            if {SolixDeviceType.INVERTER.value} - exclude:
+                await api.get_device_pv_status(devices=sn, fromFile=fromFile)
+        # Fetch details that only work for site admins and real sites
+        elif (
+            device.get("is_admin", False)
+            and site_id
+            and not site_id.startswith(SolixDeviceType.VIRTUAL.value)
+        ):
             # Fetch site wifi list if not queried yet with wifi networks and signal strengths
             if site_id not in site_wifi:
                 api._logger.debug(
@@ -774,13 +854,15 @@ async def poll_device_details(
         {
             "use_files": fromFile,
             "details_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "details_poll_seconds": round((datetime.now()-start_time).total_seconds(),3)
+            "details_poll_seconds": round(
+                (datetime.now() - start_time).total_seconds(), 3
+            ),
         }
     )
     return api.devices
 
 
-async def poll_device_energy(
+async def poll_device_energy(  # noqa: C901
     api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the site energy statistics from today and yesterday.
@@ -811,8 +893,67 @@ async def poll_device_energy(
                 api.hesApi.sites[site_id].get("energy_details") or {}
             )
             api.sites[site_id] = site
+        elif site_id.startswith(SolixDeviceType.VIRTUAL.value):
+            # get stand alone inverter energy
+            if (
+                {SolixDeviceType.INVERTER.value} - exclude
+                and (dev_list := site.get("solar_list") or [])
+                and isinstance(dev_list, list)
+                and (sn := dev_list[0].get("device_sn"))
+            ):
+                api._logger.debug(
+                    "Getting api %s PV energy details for inverter",
+                    api.apisession.nickname,
+                )
+                # obtain previous energy details to check if yesterday must be queried as well
+                energy = site.get("energy_details") or {}
+                # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
+                # Cloud server energy stat updates may be delayed by 2-3 minutes
+                # min Offset to last energy data, reduce query time by 5 minutes to ensure last record is made
+                energy_offset = (site.get("energy_offset_seconds") or 0) - 300
+                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
+                today = time.strftime("%Y-%m-%d")
+                yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
+                # Fetch energy from today or both days
+                data: dict = {}
+                if yesterday != (energy.get("last_period") or {}).get("date"):
+                    data.update(
+                        await api.device_pv_energy_daily(
+                            deviceSn=sn,
+                            startDay=datetime.fromisoformat(yesterday),
+                            numDays=2,
+                            fromFile=fromFile,
+                        )
+                    )
+                else:
+                    data.update(
+                        await api.device_pv_energy_daily(
+                            deviceSn=sn,
+                            startDay=datetime.fromisoformat(today),
+                            numDays=1,
+                            fromFile=fromFile,
+                        )
+                    )
+                if fromFile:
+                    # get last date entries from file and replace date with yesterday and today for testing
+                    days = len(data)
+                    if len(data) > 1:
+                        entry: dict = list(data.values())[days - 2]
+                        entry.update({"date": yesterday})
+                        energy["last_period"] = entry
+                    if len(data) > 0:
+                        entry: dict = list(data.values())[days - 1]
+                        entry.update({"date": today})
+                        energy["today"] = entry
+                else:
+                    energy["today"] = data.get(today) or {}
+                    if data.get(yesterday):
+                        energy["last_period"] = data.get(yesterday) or {}
+                # save energy stats with sites dictionary
+                site["energy_details"] = energy
+                api.sites[site_id] = site
         else:
-            # build device types set for daily energy query, depending on device types found for site
+            # build device types set for daily energy query, depending on device types found for balcony power sites
             # solarinfo will always be queried by daily energy and required for general site statistics
             # However, daily energy should not be queried for solarbank, smartmeter or smart plug devices when they or their energy category is explicitly excluded
             query_types: set = set()
@@ -957,7 +1098,9 @@ async def poll_device_energy(
         {
             "use_files": fromFile,
             "energy_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "energy_poll_seconds": round((datetime.now()-start_time).total_seconds(),3)
+            "energy_poll_seconds": round(
+                (datetime.now() - start_time).total_seconds(), 3
+            ),
         }
     )
     return api.sites

@@ -46,6 +46,8 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Limitations](#limitations)**
 1. **[Supported sensors and devices](#supported-sensors-and-devices)**
 1. **[Special device notes](#special-device-notes)**
+   * [Standalone inverters (MI80)](#standalone-inverters-mi80)
+   * [Solarbank 1 devices](#solarbank-1-devices)
    * [Solarbank 2 devices and Smart Meters](#solarbank-2-devices-and-smart-meters)
    * [Solarbank 2 AC devices](#solarbank-2-ac-devices)
    * [Combined Solarbank 2 systems containing cascaded Solarbank 1 devices](#combined-solarbank-2-systems-containing-cascaded-solarbank-1-devices)
@@ -114,7 +116,7 @@ Device type | Description
 `account` | Anker Solix user account used for the configured hub entry. It collects all common entities belonging to the account or api connection.
 `system` | Anker Solix 'Power System' as defined in the Anker app. It collects all entities belonging to the defined system and is referred as 'site' in the cloud api.
 `solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC
-`inverter` | Anker Solix inverter configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
+`inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No individual device setting supported)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(only basic monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
@@ -125,12 +127,25 @@ For more details on the Anker Solix device hierarchy and how the integration wil
 
 ## Special device notes
 
-### Solarbank 2 devices and Smart Meters
+### Standalone inverters (MI80)
 
-Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transfer their power values every 60 seconds to the cloud, Solarbank 2 systems seem to use different intervals for their data updates to the cloud, which may result in **invalid data responses and unavailable entities**. Please see the [configuration option considerations for Solarbank 2 systems](INFO.md#option-considerations-for-solarbank-2-systems) in the [INFO](INFO.md) for more details and how you can avoid unavailable entities.
+Anker does not support the creation of a power system with their MI80 inverter as main and only device. However, the solar power and energy yields are still reported and tracked in the cloud and can be monitored in the mobile app. Version 2.7.0 added support for such standalone inverters. Even the persistent inverter limit can be changed via the cloud api. In order to merge entities for standalone inverters with the [common integration device hierarchy](https://github.com/thomluther/ha-anker-solix/discussions/239), a virtual system (site) will be created by the api library as home for the data polling and all entities that are typically related to a system device. The cloud update interval is approximately every 60 seconds if the inverter is online. The api however does a false reporting of the inverter Wifi state, which is always reported offline independent of its real Wifi state. The cloud connection state is a better indicator whether the inverter is On or Off. Since standalone inverters cannot be added to a real Anker power system, their monitoring cannot be shared with other accounts and their usage is limited to the Anker account that owns the device.
 
 > [!IMPORTANT]
-> Any change of the control entities is typically applied immediately to Solarbank devices. However, since all Solarbank 2 devices have only a cloud update frequency of 5 minutes, it may take up to 6 minutes until you see the effect of an applied change in other integration entities (e.g. various power sensors).
+> It is assumed that any inverter limit change will be applied to persistent memory in the hardware. Write cycles are limited by the hardware, therefore it is **NOT recommended to modify the limit permanently** for any kind of output regulation. The limit change is currently not supported if the inverter is part of a solarbank system since the [api functionality still has to be verified by such system owners](https://github.com/thomluther/ha-anker-solix/discussions/255).
+
+
+### Solarbank 1 devices
+
+Solarbank 1 systems transfer their power values every 60 seconds to the cloud while there is PV generation or battery discharge. Once the Solarbank 1 goes into standby mode, there is only a cloud state check/update once per hour to save standby energy consumption.
+
+
+### Solarbank 2 devices and Smart Meters
+
+Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 systems transfer their power values every 60 seconds to the cloud, Solarbank 2 systems seem to use different intervals for their data updates to the cloud which is either 5 minutes or few seconds. Originally this resulted in **invalid data responses and unavailable entities** for shared accounts or api connections. This problem was resolved by Anker, but the regular cloud update interval remains at 5 minutes. Please see the [configuration option considerations for Solarbank 2 systems](INFO.md#option-considerations-for-solarbank-2-systems) in the [INFO](INFO.md) for more details and how you can avoid unavailable entities if this problem should occur again.
+
+> [!IMPORTANT]
+> Any change of the control entities is typically applied immediately to Solarbank devices. However, since all Solarbank 2 devices have only a cloud update frequency of 5 minutes, it may take up to 6 minutes until you see the effect of an applied change in other integration entities (e.g. in various power sensors).
 
 
 ### Solarbank 2 AC devices

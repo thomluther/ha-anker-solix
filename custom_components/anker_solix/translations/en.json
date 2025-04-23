@@ -279,6 +279,22 @@
                 "state": {
                     "on": "Yes",
                     "off": "No"
+                },
+                "state_attributes": {
+                    "system_msg": {
+                        "name": "System msg",
+                        "state": {
+                            "on": "Yes",
+                            "off": "No"
+                        }
+                    },
+                    "device_msg": {
+                        "name": "Device msg",
+                        "state": {
+                            "on": "Yes",
+                            "off": "No"
+                        }
+                    }
                 }
             },
             "use_files": {
@@ -312,6 +328,9 @@
             },
             "preset_tariff_price": {
                 "name": "Tariff price kWh"
+            },
+            "preset_inverter_limit": {
+                "name": "Inverter limit"
             }
         },
         "select": {

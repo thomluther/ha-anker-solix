@@ -564,11 +564,20 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     option,
                 )
                 with suppress(ValueError, TypeError):
-                    resp = await self.coordinator.client.api.set_site_price(
-                        siteId=self.coordinator_context,
-                        unit=option,
-                        toFile=self.coordinator.client.testmode(),
-                    )
+                    if str(self.coordinator_context).startswith(SolixDeviceType.VIRTUAL.value):
+                        # change standalone inverter price of virtual system
+                        resp = await self.coordinator.client.api.set_device_pv_price(
+                            deviceSn=str(self.coordinator_context).split("-")[1],
+                            unit=option,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    else:
+                        # change real system price
+                        resp = await self.coordinator.client.api.set_site_price(
+                            siteId=self.coordinator_context,
+                            unit=option,
+                            toFile=self.coordinator.client.testmode(),
+                        )
                     if isinstance(resp, dict) and TESTMODE:
                         LOGGER.info(
                             "%s: Applied site price settings for %s change to %s:\n%s",

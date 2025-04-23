@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "conf_list": [],
+    "start_config_id": 0,
+    "last": false
+  },
+  "trace_id": "ae21c9d8f729f1e4b7e7c9e8c67a2f71"
+}

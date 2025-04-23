@@ -483,7 +483,7 @@ class AnkerSolixBaseApi:
                 self._update_account(
                     {"products": await self.get_products(fromFile=fromFile)}
                 )
-            if sn := self._update_dev(device):
+            if sn := self._update_dev(device, isAdmin=True):
                 active_devices.add(sn)
         # recycle api device list and remove devices no longer used in sites or bind devices
         self.recycleDevices(extraDevices=active_devices)
@@ -668,7 +668,7 @@ class AnkerSolixBaseApi:
         """Get the unread messages for account.
 
         Example data:
-        {"has_unread_msg": false}
+        {"has_unread_msg": false,"system_msg": false,"device_msg": false}
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(

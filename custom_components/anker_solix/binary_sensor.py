@@ -154,6 +154,18 @@ ACCOUNT_SENSORS = [
         translation_key="has_unread_msg",
         json_key="has_unread_msg",
         # entity_category=EntityCategory.DIAGNOSTIC,
+        attrib_fn=lambda d: {
+            "system_msg": None
+            if (val := d.get("system_msg")) is None
+            else "on"
+            if bool(val)
+            else "off",
+            "device_msg": None
+            if (val := d.get("device_msg")) is None
+            else "on"
+            if bool(val)
+            else "off",
+        },
     ),
     # This should be shown only when testmode is active
     AnkerSolixBinarySensorDescription(
@@ -181,6 +193,7 @@ async def async_setup_entry(
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         # manually register parent devices to avoid core warning while processing first component setup with account via device that may not exist yet
         device_registry = dr.async_get(hass)
+        excluded = set(entry.options.get(CONF_EXCLUDE, []))
         for context, data in coordinator.data.items():
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
@@ -208,8 +221,8 @@ async def async_setup_entry(
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_SENSORS
-                # create device upfront only if not subdevice
-                if not data.get("is_subdevice"):
+                # create device upfront only if not subdevice and not excluded to avoid empty device
+                if not data.get("is_subdevice") and {data.get("type") or ""} - excluded:
                     device_registry.async_get_or_create(
                         config_entry_id=entry.entry_id,
                         identifiers=(
@@ -224,7 +237,7 @@ async def async_setup_entry(
                 for desc in entity_list
                 if bool(CREATE_ALL_ENTITIES)
                 or (
-                    not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
+                    not desc.exclude_fn(excluded, data)
                     and (
                         desc.force_creation
                         or desc.value_fn(data, desc.json_key) is not None

@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "currencyUnit": "\u20ac",
+    "tieredElecPrices": [
+      {
+        "from": "00:00",
+        "to": "23:59",
+        "price": 0.42
+      }
+    ]
+  }
+}

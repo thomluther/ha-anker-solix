@@ -312,13 +312,14 @@ class AnkerSolixApiClient:
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )
-                        # Fetch site details without excluded types or categories
-                        await self.api.update_site_details(
+                        # Fetch device details without excluded types or categories
+                        await self.api.update_device_details(
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )
-                        # Fetch device details without excluded types or categories
-                        await self.api.update_device_details(
+                        # Fetch site details without excluded types or categories
+                        # This must be run after the device details, which may create virtual sites for standalone devices
+                        await self.api.update_site_details(
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )
@@ -366,13 +367,14 @@ class AnkerSolixApiClient:
                             if self._testmode
                             else "",
                         )
-                        # Fetch site details without excluded types or categories
-                        await self.api.update_site_details(
+                        # Fetch device details without excluded types or categories
+                        await self.api.update_device_details(
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )
-                        # Fetch device details without excluded types or categories
-                        await self.api.update_device_details(
+                        # Fetch site details without excluded types or categories
+                        # This must be run after the device details, which may create virtual sites for standalone devices
+                        await self.api.update_site_details(
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )

@@ -1,0 +1,26 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "3IEDXXFMD2I3",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "",
+        "children": null
+      }
+    ]
+  },
+  "trace_id": "e1266c43ddd8ac21c26bf68b6ca5afff"
+}

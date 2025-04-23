@@ -106,6 +106,20 @@ DEVICE_NUMBERS = [
         native_step=0.01,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
+    AnkerSolixNumberDescription(
+        # Inverter limit
+        key="preset_inverter_limit",
+        translation_key="preset_inverter_limit",
+        json_key="preset_inverter_limit",
+        mode=NumberMode.SLIDER,
+        native_min_value=SolixDefaults.MICRO_INVERTER_LIMIT_MIN,
+        native_max_value=SolixDefaults.MICRO_INVERTER_LIMIT_MAX,
+        native_step=10,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=NumberDeviceClass.POWER,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
+        force_creation_fn=lambda d, jk: jk in d,
+    ),
 ]
 
 SITE_NUMBERS = [
@@ -218,7 +232,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 )
             # update number limits based on solarbank count in system
             if self._attribute_name == "preset_system_output_power":
-                if (data.get("generation") or 0) > 1:
+                if (data.get("generation") or 0) >= 2:
                     # SB2 has min limit of 0W, they are typically correctly set in the schedule depending on device settings
                     self.native_min_value = (data.get("schedule") or {}).get(
                         "min_load"
@@ -353,7 +367,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             "%s change to %s will be applied", self.entity_id, value
                         )
                         siteId = data.get("site_id") or ""
-                        if (data.get("generation") or 0) > 1:
+                        if (data.get("generation") or 0) >= 2:
                             # SB2 preset change
                             resp = await self.coordinator.client.api.set_sb2_home_load(
                                 siteId=siteId,
@@ -480,11 +494,20 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     LOGGER.debug(
                         "%s change to %s will be applied", self.entity_id, value
                     )
-                    resp = await self.coordinator.client.api.set_site_price(
-                        siteId=self.coordinator_context,
-                        price=float(value),
-                        toFile=self.coordinator.client.testmode(),
-                    )
+                    if str(self.coordinator_context).startswith(SolixDeviceType.VIRTUAL.value):
+                        # change standalone inverter price of virtual system
+                        resp = await self.coordinator.client.api.set_device_pv_price(
+                            deviceSn=str(self.coordinator_context).split("-")[1],
+                            price=round(float(value),2),
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    else:
+                        # change real system price
+                        resp = await self.coordinator.client.api.set_site_price(
+                            siteId=self.coordinator_context,
+                            price=round(float(value),2),
+                            toFile=self.coordinator.client.testmode(),
+                        )
                     if isinstance(resp, dict) and TESTMODE:
                         LOGGER.info(
                             "%s: Applied site price settings:\n%s",
@@ -495,6 +518,14 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
+                elif self._attribute_name == "preset_inverter_limit":
+                    LOGGER.debug(
+                        "%s change to %s will be applied", self.entity_id, value
+                    )
+                    resp = await self.coordinator.client.api.set_device_pv_power(
+                        deviceSn=self.coordinator_context,
+                        limit=int(value),
+                    )
             else:
                 LOGGER.debug(
                     "%s cannot be set because the value %s is out of range %s-%s",

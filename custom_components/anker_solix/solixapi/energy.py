@@ -42,7 +42,7 @@ async def energy_daily(  # noqa: C901
         # get first data period from file or api
         justify_daytotals = bool(
             dayTotals
-            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
+            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2
         )
         if fromFile:
             resp = (
@@ -134,7 +134,7 @@ async def energy_daily(  # noqa: C901
     # Get home usage energy types if device is solarbank generation 2 or smart meter or smart plugs
     if (
         SolixDeviceType.SOLARBANK.value in devTypes
-        and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
+        and ((self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2
     ) or (
         {SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} & devTypes
     ):
@@ -490,7 +490,7 @@ async def energy_analysis(
         "device_sn": deviceSn,
         "type": rangeType if rangeType in ["day", "week", "year"] else "day",
         "start_time": startDay.strftime("%Y-%m-%d")
-        if startDay
+        if isinstance(startDay, datetime)
         else datetime.today().strftime("%Y-%m-%d"),
         "device_type": devType
         if (
@@ -498,7 +498,7 @@ async def energy_analysis(
             or "solar_production_" in devType
         )
         else "solar_production",
-        "end_time": endDay.strftime("%Y-%m-%d") if endDay else "",
+        "end_time": endDay.strftime("%Y-%m-%d") if isinstance(endDay, datetime) else "",
     }
     resp = await self.apisession.request(
         "post", API_ENDPOINTS["energy_analysis"], json=data
@@ -517,5 +517,106 @@ async def home_load_chart(self, siteId: str, deviceSn: str | None = None) -> dic
         data.update({"device_sn": deviceSn})
     resp = await self.apisession.request(
         "post", API_ENDPOINTS["home_load_chart"], json=data
+    )
+    return resp.get("data") or {}
+
+
+async def device_pv_energy_daily(
+    self,
+    deviceSn: str,
+    startDay: datetime = datetime.today(),
+    numDays: int = 1,
+    fromFile: bool = False,
+    showProgress: bool = False,
+) -> dict:
+    """Fetch daily Energy data for given interval and provide it in a table format dictionary.
+
+    Example data:
+    {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21"},
+    "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07"}}
+    """
+    table = {}
+    future = datetime.today() + timedelta(days=7)
+    # check daily range and limit to 1 year max and avoid future days in more than 1 week
+    if startDay > future:
+        startDay = future
+        numDays = 1
+    elif (startDay + timedelta(days=numDays)) > future:
+        numDays = (future - startDay).days + 1
+    numDays = min(366, max(1, numDays))
+
+    # get first data period from file or api
+    if fromFile:
+        resp = (
+            await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_device_pv_statistics']}_{deviceSn}.json"
+            )
+        ).get("data", {})
+    else:
+        resp = await self.get_device_pv_statistics(
+            deviceSn=deviceSn,
+            rangeType="week",
+            startDay=startDay,
+            endDay=startDay + timedelta(days=numDays - 1),
+        )
+    for idx, item in enumerate(resp.get("energy", [])):
+        daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+        entry = table.get(daystr, {"date": daystr})
+        entry.update(
+            {
+                "date": daystr,
+                "solar_production": None
+                if item.get("energy") is None
+                else str(item.get("energy")),
+            }
+        )
+        table.update({daystr: entry})
+    if showProgress:
+        self._logger.info(
+            "Received api %s device PV energy for period",
+            self.apisession.nickname,
+        )
+    return table
+
+
+async def get_device_pv_statistics(
+    self,
+    deviceSn: str,
+    rangeType: str | None = None,
+    startDay: datetime | None = None,
+    endDay: datetime | None = None,
+    version: str = "1",
+) -> dict:
+    """Get pv statistics data for an inverter device on a daily, weekly, monthly or yearly basis.
+
+    - type is either day, week, month or year
+    - start is the day (YYYY-MM-DD), month (YYYY-MM) or year (YYYY) in question
+    - end is the last day of a week (YYYY-MM-DD), if the type is week
+    - version seems to be always '1'
+
+    Example data (type year):
+    {'curve': [], 'energy':[
+        {'money': 0, 'energy': 0, 'index': 1}, {'money': 0, 'energy': 0, 'index': 2},
+        {'money': 0, 'energy': 15.35, 'index': 3}, {'money': 0, 'energy': 50.81, 'index': 4},
+        {'money': 0, 'energy': 0, 'index': 5}, {'money': 0, 'energy': 0, 'index': 6},
+        {'money': 0, 'energy': 0, 'index': 7}, {'money': 0, 'energy': 0, 'index': 8},
+        {'money': 0, 'energy': 0, 'index': 9}, {'money': 0, 'energy': 0, 'index': 10},
+        {'money': 0, 'energy': 0, 'index': 11}, {'money': 0, 'energy': 0, 'index': 12}],
+    'energyUnit': 'kWh', 'solarGeneraion': 66.15, 'money': 0, 'moneyUnit': '', 'loadPercent': '',
+    'ppsPercent': '', 'generationTime': 0, 'maxPower': 0}
+    """
+
+    data = {
+        "sn": deviceSn,
+        "type": rangeType if rangeType in ["day", "week", "month", "year"] else "day",
+        "start": startDay.strftime("%Y-%m-%d")
+        if isinstance(startDay, datetime)
+        else datetime.today().strftime("%Y-%m-%d"),
+        "end": endDay.strftime("%Y-%m-%d") if isinstance(endDay, datetime) else "",
+        "version": version,
+    }
+    resp = await self.apisession.request(
+        "post", API_ENDPOINTS["get_device_pv_statistics"], json=data
     )
     return resp.get("data") or {}

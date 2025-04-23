@@ -557,7 +557,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             stats.append(
                 {
                     "type": "1",
-                    "total": str(data.get("totalSystemPowerGeneration") or ""),
+                    "total": ""
+                    if data.get("totalSystemPowerGeneration") is None
+                    else str(data.get("totalSystemPowerGeneration")),
                     "unit": str(data.get("systemPowerGenerationUnit") or "").lower(),
                 }
             )
@@ -565,7 +567,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             stats.append(
                 {
                     "type": "2",
-                    "total": str(data.get("saveCarbonFootprint") or ""),
+                    "total": ""
+                    if data.get("saveCarbonFootprint") is None
+                    else str(data.get("saveCarbonFootprint")),
                     "unit": str(data.get("saveCarbonUnit") or "").lower(),
                 }
             )
@@ -573,7 +577,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             stats.append(
                 {
                     "type": "3",
-                    "total": str(data.get("totalSystemSavings") or ""),
+                    "total": ""
+                    if data.get("totalSystemSavings") is None
+                    else str(data.get("totalSystemSavings")),
                     "unit": str(data.get("systemSavingsPriceUnit") or ""),
                 }
             )

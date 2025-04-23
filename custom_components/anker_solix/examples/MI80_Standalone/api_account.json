@@ -1,0 +1,19 @@
+{
+  "type": "account",
+  "email": "anonymous-1@domain.com",
+  "nickname": "******",
+  "country": "DE",
+  "server": "https://ankerpower-api-eu.anker.com",
+  "use_files": true,
+  "sites_poll_time": "2025-04-23 08:43:49",
+  "sites_poll_seconds": 0.001,
+  "requests_last_min": 40,
+  "requests_last_hour": 40,
+  "details_poll_time": "2025-04-23 08:43:49",
+  "details_poll_seconds": 0.002,
+  "has_unread_msg": false,
+  "system_msg": false,
+  "device_msg": false,
+  "energy_poll_time": "2025-04-23 08:43:49",
+  "energy_poll_seconds": 0.001
+}

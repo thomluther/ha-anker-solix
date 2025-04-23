@@ -255,7 +255,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                 ]
                 and isinstance(value, datetime)
                 and self._native_value != value
-                and (data.get("generation") or 0) > 1
+                and (data.get("generation") or 0) >= 2
             ):
                 LOGGER.debug("%s change to %s will be applied", self.entity_id, value)
                 siteId = data.get("site_id") or ""

@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": false,
+    "device_list": null
+  },
+  "trace_id": "30569d19adfcbbefb1ecd07efbc07344"
+}

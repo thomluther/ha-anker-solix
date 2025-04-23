@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": []
+  },
+  "trace_id": "f5ad67dbb1a1efbd2ebd91bb6ec1bb5a"
+}

@@ -279,6 +279,22 @@
                 "state": {
                     "on": "Oui",
                     "off": "Non"
+                },
+                "state_attributes": {
+                    "system_msg": {
+                        "name": "Message système",
+                        "state": {
+                            "on": "Oui",
+                            "off": "Non"
+                        }
+                    },
+                    "device_msg": {
+                        "name": "Message d'appareil",
+                        "state": {
+                            "on": "Oui",
+                            "off": "Non"
+                        }
+                    }
                 }
             },
             "use_files": {
@@ -312,6 +328,9 @@
             },
             "preset_tariff_price": {
                 "name": "Prix du tarif kWh"
+            },
+            "preset_inverter_limit": {
+                "name": "Limite de l'onduleur"
             }
         },
         "select": {

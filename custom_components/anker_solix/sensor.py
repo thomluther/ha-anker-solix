@@ -1168,6 +1168,7 @@ SITE_SENSORS = [
         },
         exclude_fn=lambda s, _: not (
             {
+                SolixDeviceType.INVERTER.value,
                 SolixDeviceType.SOLARBANK.value,
                 SolixDeviceType.POWERPANEL.value,
                 SolixDeviceType.HES.value,
@@ -1603,12 +1604,16 @@ SITE_SENSORS = [
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: None
         if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else 100 * float(items.get(jk)),
+        else 100 * float(items.get(jk))
+        if str(items.get(jk)).replace(".", "", 1).isdigit()
+        else None,
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
             if not (items := (d.get("energy_details") or {}).get("last_period") or {})
-            else 100 * float(items.get("solar_percentage")),
+            else 100 * float(items.get("solar_percentage"))
+            if str(items.get("solar_percentage")).replace(".", "", 1).isdigit()
+            else None,
         },
         exclude_fn=lambda s, _: not (
             {
@@ -1633,12 +1638,16 @@ SITE_SENSORS = [
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: None
         if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else 100 * float(items.get(jk)),
+        else 100 * float(items.get(jk))
+        if str(items.get(jk)).replace(".", "", 1).isdigit()
+        else None,
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
             if not (items := (d.get("energy_details") or {}).get("last_period") or {})
-            else 100 * float(items.get("battery_percentage")),
+            else 100 * float(items.get("battery_percentage"))
+            if str(items.get("battery_percentage")).replace(".", "", 1).isdigit()
+            else None,
         },
         exclude_fn=lambda s, _: not (
             {
@@ -1663,12 +1672,16 @@ SITE_SENSORS = [
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: None
         if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else 100 * float(items.get(jk)),
+        else 100 * float(items.get(jk))
+        if str(items.get(jk)).replace(".", "", 1).isdigit()
+        else None,
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
             if not (items := (d.get("energy_details") or {}).get("last_period") or {})
-            else 100 * float(items.get("other_percentage")),
+            else 100 * float(items.get("other_percentage"))
+            if str(items.get("other_percentage")).replace(".", "", 1).isdigit()
+            else None,
         },
         exclude_fn=lambda s, _: not (
             {
@@ -2325,7 +2338,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         LOGGER.debug("%s action will be applied", service_name)
                         # Wait until client cache is valid
                         await self.coordinator.client.validate_cache()
-                        if generation > 1:
+                        if generation >= 2:
                             # SB2 schedule action
                             # Map action keys to api slot keys
                             slot = Solarbank2Timeslot(
@@ -2456,7 +2469,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
-                if generation > 1 and (data.get("schedule") or {}):
+                if generation >= 2 and (data.get("schedule") or {}):
                     # get SB2 schedule
                     result = (
                         await self.coordinator.client.api.get_device_parm(
@@ -2484,7 +2497,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
-                if generation > 1:
+                if generation >= 2:
                     # Clear SB2 schedule
                     if data.get("schedule") or {}:
                         plan = kwargs.get(PLAN)
