@@ -1418,10 +1418,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         data = {"sn": deviceSn}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_device_pv_total_statistics']}_{deviceSn}.json"
-            )
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_pv_total_statistics']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_pv_total_statistics']}_{deviceSn}.json"
+                )
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_pv_total_statistics"], json=data
@@ -1581,7 +1588,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         self,
         deviceSn: str,
         limit: int,
-    ) -> bool:
+        toFile: bool = False,
+    ) -> bool | dict:
         """Set the PV device power limit in Watt.
 
         It is assumed, this is the persistant inverter limit which has limited write cycles in the inverter HW
@@ -1591,14 +1599,32 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         # validate parameter
         if not (isinstance(limit, float | int) and limit >= 0):
             return False
-        # Prepare payload from details
-        data = {"sn": deviceSn, "power": int(limit)}
-        # Make the Api call and check for return code
-        code = (
-            await self.apisession.request(
-                "post", API_ENDPOINTS["set_device_pv_power"], json=data
-            )
-        ).get("code")
-        if not isinstance(code, int) or int(code) != 0:
-            return False
-        return True
+        if toFile:
+            # Get last data of file to be modified
+            if not (data := await self.get_device_pv_total_statistics(deviceSn=deviceSn, fromFile=toFile)):
+                return False
+            data["powerConfig"] = f"{int(limit)}W"
+            # Write updated response to file for testing purposes
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_device_pv_total_statistics']}_modified_{deviceSn}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": data,
+                },
+            ):
+                return False
+        else:
+            # Prepare payload from details
+            data = {"sn": deviceSn, "power": int(limit)}
+            # Make the Api call and check for return code
+            code = (
+                await self.apisession.request(
+                    "post", API_ENDPOINTS["set_device_pv_power"], json=data
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return False
+        # update the data in api dict and return active data
+        return await self.get_device_pv_total_statistics(deviceSn=deviceSn, fromFile=toFile)

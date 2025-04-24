@@ -324,6 +324,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             "preset_charge_priority",
             "preset_tariff_price",
             "system_price",
+            "preset_inverter_limit",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -494,18 +495,20 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     LOGGER.debug(
                         "%s change to %s will be applied", self.entity_id, value
                     )
-                    if str(self.coordinator_context).startswith(SolixDeviceType.VIRTUAL.value):
+                    if str(self.coordinator_context).startswith(
+                        SolixDeviceType.VIRTUAL.value
+                    ):
                         # change standalone inverter price of virtual system
                         resp = await self.coordinator.client.api.set_device_pv_price(
                             deviceSn=str(self.coordinator_context).split("-")[1],
-                            price=round(float(value),2),
+                            price=round(float(value), 2),
                             toFile=self.coordinator.client.testmode(),
                         )
                     else:
                         # change real system price
                         resp = await self.coordinator.client.api.set_site_price(
                             siteId=self.coordinator_context,
-                            price=round(float(value),2),
+                            price=round(float(value), 2),
                             toFile=self.coordinator.client.testmode(),
                         )
                     if isinstance(resp, dict) and TESTMODE:
@@ -525,7 +528,18 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     resp = await self.coordinator.client.api.set_device_pv_power(
                         deviceSn=self.coordinator_context,
                         limit=int(value),
+                        toFile=self.coordinator.client.testmode(),
                     )
+                    if isinstance(resp, dict) and TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied inverter limit setting:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
             else:
                 LOGGER.debug(
                     "%s cannot be set because the value %s is out of range %s-%s",
