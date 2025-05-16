@@ -24,7 +24,8 @@
 
 This integration utilizes an unofficial Python library to communicate with the Anker Power cloud server Api that is also used by the official Anker mobile app. The Api access or communication may change or break any time without notice and therefore also change or break the integration functionality. Furthermore, the usage for the unofficial Api library may impose risks, such as device damage by improper settings or loss of manufacturer's warranty, whether is caused by improper usage, library failures, Api changes or other reasons.
 
-🚨 **The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.** 🚨
+> [!WARNING]
+>  **The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.** 🚨
 
 
 # Table of contents
@@ -131,7 +132,8 @@ Following are anonymized examples how the Anker power devices will be presented 
   ![Smart Meter Device][smart-meter-device-img]
 
 
-**Note:** When using a shared system account for the integration, device detail information is limited and changes are not permitted. Therefore shared system account users may get presented no changeable and only a subset of entities by the integration.
+> [!NOTE]
+> When using a shared system account for the integration, device detail information is limited and changes are not permitted. Therefore shared system account users may get presented no changeable and only a subset of entities by the integration.
 
 
 ## Anker account limitation and usage recommendations
@@ -155,7 +157,8 @@ To simplify usage of this workaround, please see [Automation to send and clear s
 
 The data in the cloud which can be retrieved via the Api is typically refreshed only once per minute at most. Most of the device types refresh cloud data only in 5 minute intervals. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further if no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the received data.
 
-**Note:** The solarbank seems to be the only Anker system device category that provides valid timestamp data (inverter or power panel data timestamps are not updated by the cloud).
+> [!NOTE]
+> The solarbank seems to be the only Anker system device category that provides valid timestamp data (inverter or power panel data timestamps are not updated by the cloud).
 
 During each Api refresh interval, the power sensor values of the systems and their devices will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut-off, auto-upgrade, schedule, system energy statistics etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 60 seconds ago and there is no device refresh ongoing to avoid unnecessary Api traffic.
 
@@ -168,13 +171,11 @@ The cloud Api also enforces a request limit. This request limit is applied by th
 ```
 If those errors occur during setup or reload of the configuration entry, you may see your configuration entry flagged with error `429: Too many requests`. Upon such errors, some or all entities may become unknown, unavailable or show stale data until further Api requests are permitted. To avoid hitting the request limit, starting with release 2.5.5 a new endpoint throttling capability was implemented to the Api client session. A default endpoint limit of 10 will be used for the throttle, which can be adjusted as required. With release 2.5.7 the throttling is no longer activate for each endpoint, but activated only upon first `429: Too many requests` error. This avoids throttling loops for endpoints that may have a higher limit. Setting the endpoint limit to 0 will disable and reset the active throttling and provide the former client session behavior.
 
-**Note:**
+> [!NOTE]
+> In order to avoid that potential endpoint throttling loops occurs during (re)load of the configuration or re-activation of the Api refresh switch, while doing the initial data poll for entity creation, the initial poll of energy details is now deferred to the next data refresh cycle. This ensures fast configuration (re)loads and avoids that this process may be elongated for minute(s). This change however has the disadvantage, that energy entity creation will be delayed by one or more minutes. **So be calm and allow the integration a few minutes after restart or Api refresh re-activation to poll initial energy data and create or reactivate the corresponding entities.**
 
-In order to avoid that potential endpoint throttling loops occurs during (re)load of the configuration or re-activation of the Api refresh switch, while doing the initial data poll for entity creation, the initial poll of energy details is now deferred to the next data refresh cycle. This ensures fast configuration (re)loads and avoids that this process may be elongated for minute(s). This change however has the disadvantage, that energy entity creation will be delayed by one or more minutes. **So be calm and allow the integration a few minutes after restart or Api refresh re-activation to poll initial energy data and create or reactivate the corresponding entities.**
-
-**Important:**
-
-The endpoint limit throttle is applied only for a single Api session. Other Api clients may query the same endpoints within same minute and therefore the integration may still exceed the endpoint limit. If you create multiple Anker configuration hub entries, you need to distribute the allowed endpoint limit (10) accordingly across all hub entries since their Api requests can run in parallel. Another client like your Anker app using another account will contribute to the limit as well if that is connected to the cloud through your same router IP address.
+> [!IMPORTANT]
+> The endpoint limit throttle is applied only for a single Api session. Other Api clients may query the same endpoints within same minute and therefore the integration may still exceed the endpoint limit. If you create multiple Anker configuration hub entries, you need to distribute the allowed endpoint limit (10) accordingly across all hub entries since their Api requests can run in parallel. Another client like your Anker app using another account will contribute to the limit as well if that is connected to the cloud through your same router IP address.
 
 Due to the enforced Anker Cloud Api endpoint limit, it is recommended to exclude the energy categories from your hub configuration entry if you want to avoid such request errors or the throttling delays, which aim to avoid exceeding the endpoint limit for larger or multiple systems configurations. The daily energy entities require by far the most queries to the same endpoint, and therefore may cause one or more minute throttle delays for data refreshes even in small system configurations.
 Furthermore, all energy statistic entities are excluded from new configuration entries per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/ha-anker-solix/discussions/32). Desired energy statistics can be re-enabled by removing them from the exclusion list in the configuration options.
@@ -206,15 +207,16 @@ Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 powe
 
 In consequence, before the cloud change in July 2024, the HA integration typically received 1 response with valid data and another 4 responses with invalid data when using the default refresh interval of 60 seconds. **There is nothing the integration or the underlying Api library can do to trigger more frequent cloud data updates for Solarbank 2 systems**. Per default, the HA integration switched all relevant entities to unavailable while invalid data is returned. Optionally, you can change your integration configuration options to **Skip invalid data responses**, which will maintain the previous entity value until valid data is received again. While this means your entities will not become unavailable most of the time, they may present obsolete/stale data without your awareness. It is your choice how entities should reflect data that are marked invalid in the Api response, but neither of the options makes the data more current or reliable. The SB data time entity in the system device will reflect when the last data was provided by the Solarbank 2, or when the last valid data was read through the Api, since also that timestamp in the response is not always valid even if the data itself is valid. A new [action was implemented to get query system information](#get-system-info-action) that provides you a manual verification capability of available system data and power values in the cloud. Following [Anker article contains more information why data for Solarbank 2 may be inaccurate](https://support.ankersolix.com/de/s/article/Warum-ist-die-Datenanzeige-der-Solarbank-2-E1600-Pro-Plus-ungenau) (DE).
 
-Note:
-
-The cloud change in July 2024 did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
+> [!NOTE]
+> The cloud change in July 2024 did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
 
 ### Default options as of version 2.5.5
 
 ![Options][options-img]
 
-**Note:** Prior version 1.2.0, once you added categories to the exclusion list, the affected entities were removed from the HA registry during integration reload but they still showed up in the UI as entities no longer provided by the integration. You had to remove those UI entities manually from the entity details dialog.
+> [!NOTE]
+> Prior version 1.2.0, once you added categories to the exclusion list, the affected entities were removed from the HA registry during integration reload but they still showed up in the UI as entities no longer provided by the integration. You had to remove those UI entities manually from the entity details dialog.
+
 Starting with version 1.2.0, a change in the exclusion list that added more exclusions will completely remove the affected devices and re-register them with remaining entities as necessary. This avoids manual cleanup of excluded entities. It has the disadvantage however, that manual entity deactivation or activation must be re-applied because re-registration will create the entities with their integration defined default activation.
 
 
@@ -226,9 +228,8 @@ Up to release 2.1.0, if you wanted to switch between your main and shared accoun
 Starting with HA 2024.04, there is a new option to 'Reconfigure' an active integration hub configuration. This integration reconfiguration capability has been implemented with integration version 2.1.0 and allows a simplified, direct account reconfiguration from the integration's menu as shown in following example:
 ![Reconfigure][reconfigure-img]
 
-**Note:**
-
-While changing your active configuration to another account, the same actions and validations will be performed in background as via configuration entry deletion and re-creation. Using another account that shares any system or device with any active configuration except the modified one is not allowed. Once the configuration change is confirmed for the new or same account, all devices and entities will be unregistered and therefore removed, and afterwards recreated to adjust for the manageable entities of that modified account. Confirming a reconfiguration to the same account can therefore be used as workaround to clear orphaned entities. Those can occur when you recreate or reconfigure your power systems in the Anker app or change alias names for existing devices, since that alias name is used for automated entity_id generation.
+> [!NOTE]
+> While changing your active configuration to another account, the same actions and validations will be performed in background as via configuration entry deletion and re-creation. Using another account that shares any system or device with any active configuration except the modified one is not allowed. Once the configuration change is confirmed for the new or same account, all devices and entities will be unregistered and therefore removed, and afterwards recreated to adjust for the manageable entities of that modified account. Confirming a reconfiguration to the same account can therefore be used as workaround to clear orphaned entities. Those can occur when you recreate or reconfigure your power systems in the Anker app or change alias names for existing devices, since that alias name is used for automated entity_id generation.
 
 
 ## How to create a second Anker Power account
@@ -259,7 +260,8 @@ Make sure to replace following entities used in the example below with your own 
 
 The system variable is automatically generated based on the device name of the entity that triggered the state change.
 
-**Note:** If you want to modify the notification to work with your iPhone, please refer to the [HA companion App documentation](https://companion.home-assistant.io/docs/notifications/notifications-basic/) for IOS capabilities.
+> [!NOTE]
+> If you want to modify the notification to work with your iPhone, please refer to the [HA companion App documentation](https://companion.home-assistant.io/docs/notifications/notifications-basic/) for IOS capabilities.
 
 ### Automation code for actionable notification
 
@@ -370,17 +372,16 @@ Version 2.2.0 added support for the smart plug usage mode. When this mode is act
 The Solarbank 2 AC model has pretty much the same setting capabilities as the other SB2 device models, and it comes with new and AC charge unique features.
 Version 2.5.0 of the integration provided initial support for the additional features that are unique to the AC models, like manual backup charge and usage time modes. For more details on these unique modes refer to
 
-Important:
-  - The schedule in the Api cache is refreshed automatically with each device details refresh interval (10 minutes by default hub option settings). It may reset any temporary Api cache changes that have been made with the backup mode controls before they have been applied via an Api call.
-  - The Usage Mode selector extracts the supposed active state from the schedule object, based on actual HA server time. That means it represents the supposed active mode when system time falls into an enabled backup interval. If there are time offsets between your HA server and the Solarbank, the supposed state in the Usage Mode selector entity may be wrong.
-  - The Solarbank 2 also reports the active usage mode as system sensor which has been added with version 2.5.0. However, due to the large delay of up to 5 minutes until the solarbank reports data updates to the cloud, you can observe significant delays of applied usage mode changes.
+> [!IMPORTANT]
+>   - The schedule in the Api cache is refreshed automatically with each device details refresh interval (10 minutes by default hub option settings). It may reset any temporary Api cache changes that have been made with the backup mode controls before they have been applied via an Api call.
+>   - The Usage Mode selector extracts the supposed active state from the schedule object, based on actual HA server time. That means it represents the supposed active mode when system time falls into an enabled backup interval. If there are time offsets between your HA server and the Solarbank, the supposed state in the Usage Mode selector entity may be wrong.
+>   - The Solarbank 2 also reports the active usage mode as system sensor which has been added with version 2.5.0. However, due to the large delay of up to 5 minutes until the solarbank reports data updates to the cloud, you can observe significant delays of applied usage mode changes.
 
 
 ### Care must be taken when modifying Solarbank 1 home load settings
 
-**Attention:**
-
-**Setting the Solarbank 1 output power for the house is not as straight forward as you might think and applying changed settings may give you a different result as expected or as represented by the output preset sensor.**
+> [!WARNING]
+> **Setting the Solarbank 1 output power for the house is not as straight forward as you might think and applying changed settings may give you a different result as expected or as represented by the output preset sensor.**
 
 Following is some more background on this to explain the complexity. The home load power cannot be set directly for the Solarbank. It can only be set indirectly by a time schedule, which typically covers a full day from 00:00 to 24:00h. There cannot be different schedules on various days for Solarbank 1, it's only a single schedule that is shared by all solarbanks configured into the system. Typically for single solarbank systems, the solarbank covers the full home load that is defined for the time interval. For dual solarbank setups, both share 50% of the home load power preset per default. This share was fixed and could not be changed so far. Starting with the Anker App 2.2.1 and new solarbank firmware 1.5.6, the share between both solarbanks can also be modified. Starting with integration version 1.3.0, this capability is also supported with additional entities that will be created for dual solarbank systems supporting individual device presets. It is a new preset mode that was implemented in the schedule structure. Integration version 2.4.0 added support for a new discharge priority switch, which is supported for solarbank 1 with firmware 2.0.9 or higher. This allows to prioritize discharge over PV production for the power export to the house. When the Solarbank 1 will discharge, no PV production or direct bypass is possible anymore, but the requested load power according to the schedule will be discharged from the battery.
 
@@ -433,9 +434,8 @@ Furthermore you can automate the manual appliance output preset, however this wi
 The same is possible with the additional base power that should be added to smart plug power while `Smart plug` usage mode is active.
 The integration has built-in the same cool down of 30 seconds for subsequent increases of the output preset in order to limit the number of Api requests and schedule changes pushed by HA automation.
 
-**Important:**
-
-It may take up to 5-6 minutes until you can seen the effect of usage plan or control changes via the integration. This is not a slow reaction of the device or the integration, but the 5 minute interval used by Solarbank 2 to report its latest data to the cloud.
+> [!IMPORTANT]
+> It may take up to 5-6 minutes until you can seen the effect of usage plan or control changes via the integration. This is not a slow reaction of the device or the integration, but the 5 minute interval used by Solarbank 2 to report its latest data to the cloud.
 
 ---
 **At this point be warned again:**
@@ -448,9 +448,8 @@ It may take up to 5-6 minutes until you can seen the effect of usage plan or con
 
 Following 3 methods are implemented to modify the home load, the schedule and/or the usage mode of your Solarbank.
 
-**Important:**
-
-All methods require that the HA integration is configured with the owner account of your system, otherwise the defined schedule for system devices cannot be accessed.
+> [!IMPORTANT]
+> All methods require that the HA integration is configured with the owner account of your system, otherwise the defined schedule for system devices cannot be accessed.
 
 #### 1. Direct parameter changes via entity modifications
 
@@ -533,9 +532,8 @@ For combined Solarbank 2 and Solarbank 1 systems, following schedule rules will 
   - When SB2 mode is an automatic mode, the normal SB1 schedule will be used and you should even be able to set different device output power for dual SB1 device attached to a single SB2
   - While the SB2 is active in manual mode, it will enforce another SB1 schedule and always control the SB1 output preset, with a fixed share of 50% in dual SB1 setups
 
-Note:
-
-Usage of Solarbank 1 advanced preset mode is determined by existing schedule structure. When no schedule is defined and the set schedule action is used with a device preset requiring the advanced power preset mode, but both solarbank 1 are not on required firmware level to accept the new schedule structure, the action call may fail with an Api request error.
+> [!NOTE]
+> Usage of Solarbank 1 advanced preset mode is determined by existing schedule structure. When no schedule is defined and the set schedule action is used with a device preset requiring the advanced power preset mode, but both solarbank 1 are not on required firmware level to accept the new schedule structure, the action call may fail with an Api request error.
 
 #### 3. Interactive solarbank schedule modification via a parameterized script
 
@@ -707,9 +705,8 @@ Well, fortunately the added Usage Time plan action of the Anker Solix integratio
 
 Prior to the release of the Solarbank 2 AC model, only a single fixed price could be defined for your Solarbank system, which is used by the Anker Cloud to calculate your overall savings. Once you have defined a Usage Time plan with different tariffs for your system, the system price type can be toggled to the defined Usage Time plan tariffs. This is supposed to make more accurate total saving calculations by the cloud, but it is difficult to validate. It turned out, that enabling the Usage Time mode in the Anker App will automatically toggle the system price type to Usage Time price. However, toggling away from Usage Time mode does not automatically revert system price type back to fixed price. And it also might not make sense to use a fixed price once you have defined a Usage Time plan with your 'well known' prices for each tariff type.
 
-**Note:**
-
- If you toggle your system price currency entity via the integration, the currency change will also be applied to all currency definitions in an existing Usage Time plan. The Anker App will not do that automatically. Likewise the system price type is not toggled back to fixed price by the mobile App after the Usage Time plan was deleted. This will be done also automatically by the integration to ensure the cloud price saving calculations can continue most accurately.
+> [!NOTE]
+> If you toggle your system price currency entity via the integration, the currency change will also be applied to all currency definitions in an existing Usage Time plan. The Anker App will not do that automatically. Likewise the system price type is not toggled back to fixed price by the mobile App after the Usage Time plan was deleted. This will be done also automatically by the integration to ensure the cloud price saving calculations can continue most accurately.
 
 
 ## Markdown card to show the defined Solarbank schedule
@@ -1342,9 +1339,8 @@ Starting with version 2.1.2, a new action was added to simplify an anonymized ex
 
 ![Export systems service][export-systems-service-img]
 
-**Important:**
-
-If the system export just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local`.
+> [!IMPORTANT]
+> If the system export just created the `www` folder on your HA instance, it is not mapped yet to the `/local` folder and cannot be accessed through the browser. You have to restart your HA instance to have the new `www` folder mapped to `/local`.
 
 **Notes:**
 
