@@ -886,7 +886,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
-                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
+                        "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",
                         self.apisession.nickname,
                         type(err),
                         key,

@@ -1,20 +1,15 @@
 """Sensor platform for anker_solix."""
 
-from __future__ import annotations  # noqa: I001
+from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timedelta
 from collections.abc import Callable
 from contextlib import suppress
-from pathlib import Path
-from random import randrange, choice
-from typing import Any
-
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_platform
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 import json
-
-from .config_flow import _SCAN_INTERVAL_MIN
+from pathlib import Path
+from random import choice, randrange
+from typing import Any
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -23,78 +18,77 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    EntityCategory,
-    UnitOfPower,
-    UnitOfEnergy,
-    UnitOfTemperature,
-    PERCENTAGE,
     CONF_EXCLUDE,
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
 )
-
 from homeassistant.core import HomeAssistant, SupportsResponse, callback
-
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import device_registry as dr, entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.typing import StateType
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .config_flow import _SCAN_INTERVAL_MIN
 from .const import (
-    DOMAIN,
-    LOGGER,
+    ALLOW_EXPORT,
+    ALLOW_TESTMODE,
+    APPLIANCE_LOAD,
     ATTRIBUTION,
+    CHARGE_PRIORITY_LIMIT,
+    CONF_SKIP_INVALID,
     CREATE_ALL_ENTITIES,
-    TEST_NUMBERVARIANCE,
-    TESTMODE,
+    DEVICE_LOAD,
+    DISCHARGE_PRIORITY,
+    DOMAIN,
+    END_TIME,
+    INCLUDE_CACHE,
     LAST_PERIOD,
     LAST_RESET,
+    LOGGER,
+    PLAN,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
     SERVICE_GET_SOLARBANK_SCHEDULE,
     SERVICE_GET_SYSTEM_INFO,
     SERVICE_SET_SOLARBANK_SCHEDULE,
     SERVICE_UPDATE_SOLARBANK_SCHEDULE,
+    SOLARBANK_TIMESLOT_SCHEMA,
     SOLIX_ENTITY_SCHEMA,
     SOLIX_WEEKDAY_SCHEMA,
-    SOLARBANK_TIMESLOT_SCHEMA,
     START_TIME,
-    END_TIME,
-    ALLOW_EXPORT,
-    APPLIANCE_LOAD,
-    DEVICE_LOAD,
-    CHARGE_PRIORITY_LIMIT,
-    DISCHARGE_PRIORITY,
-    PLAN,
+    TEST_NUMBERVARIANCE,
     WEEK_DAYS,
-    CONF_SKIP_INVALID,
-    INCLUDE_CACHE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
-from .solixapi.apitypes import (
-    ApiCategories,
-    SmartmeterStatus,
-    SolarbankStatus,
-    SolarbankPowerMode,
-    SolixDeviceStatus,
-    SolixDeviceType,
-    SolixParmType,
-    SolarbankRatePlan,
-    SolarbankTimeslot,
-    SolarbankUsageMode,
-    Solarbank2Timeslot,
-    SolixGridStatus,
-    SolixRoleStatus,
-)
 from .entity import (
-    AnkerSolixPicturePath,
-    AnkerSolixEntityType,
+    AnkerSolixEntityFeature,
     AnkerSolixEntityRequiredKeyMixin,
+    AnkerSolixEntityType,
+    AnkerSolixPicturePath,
     get_AnkerSolixAccountInfo,
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
-    AnkerSolixEntityFeature,
+)
+from .solixapi.apitypes import (
+    ApiCategories,
+    SmartmeterStatus,
+    Solarbank2Timeslot,
+    SolarbankPowerMode,
+    SolarbankRatePlan,
+    SolarbankStatus,
+    SolarbankTimeslot,
+    SolarbankUsageMode,
+    SolixDeviceStatus,
+    SolixDeviceType,
+    SolixGridStatus,
+    SolixParmType,
+    SolixRoleStatus,
 )
 
 
@@ -1069,7 +1063,7 @@ SITE_SENSORS = [
         translation_key="active_scene_mode",
         json_key="scene_mode",
         device_class=SensorDeviceClass.ENUM,
-        options=[m.name for m in SolarbankUsageMode],
+        options=list({m.name for m in SolarbankUsageMode} | {"unknown"}),
         value_fn=lambda d, jk, _: None
         if not ((mode := d.get(jk)) and str(mode).isdigit())
         else next(
@@ -2419,7 +2413,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 result = False
 
                         # log resulting schedule if testmode returned dict
-                        if isinstance(result, dict) and TESTMODE:
+                        if isinstance(result, dict) and ALLOW_TESTMODE:
                             LOGGER.info(
                                 "%s: Applied schedule for action %s:\n%s",
                                 "TESTMODE"
@@ -2514,7 +2508,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             toFile=self.coordinator.client.testmode(),
                         )
                         # log resulting schedule if in testmode
-                        if isinstance(result, dict) and TESTMODE:
+                        if isinstance(result, dict) and ALLOW_TESTMODE:
                             LOGGER.info(
                                 "%s: Applied schedule for action %s:\n%s",
                                 "TESTMODE"
@@ -2538,7 +2532,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         toFile=self.coordinator.client.testmode(),
                     )
                     # log resulting schedule if testmode returned dict
-                    if isinstance(result, dict) and TESTMODE:
+                    if isinstance(result, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied schedule for action %s:\n%s",
                             "TESTMODE"

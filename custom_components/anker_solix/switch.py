@@ -24,6 +24,7 @@ from homeassistant.util.dt import UTC
 
 from .api_client import AnkerSolixApiClientCommunicationError, AnkerSolixApiClientError
 from .const import (
+    ALLOW_TESTMODE,
     ATTRIBUTION,
     BACKUP_DURATION,
     BACKUP_END,
@@ -40,7 +41,6 @@ from .const import (
     SOLIX_BACKUP_CHARGE_SCHEMA,
     SOLIX_ENTITY_SCHEMA,
     SOLIX_REQUEST_SCHEMA,
-    TESTMODE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -314,7 +314,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **_: any) -> None:
         """Turn on the switch."""
-        if self._attr_is_on is None:
+        # Skip Api calls if entity does not change
+        if self._attr_is_on in [None, True]:
             return
         if self._attribute_name == "allow_refresh":
             await self.coordinator.async_execute_command(
@@ -381,7 +382,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         else None,
                         toFile=self.coordinator.client.testmode(),
                     )
-                if isinstance(resp, dict) and TESTMODE:
+                if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
                         "%s: Applied schedule for %s change to %s:\n%s",
                         "TESTMODE"
@@ -402,7 +403,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_off(self, **_: any) -> None:
         """Turn off the switch."""
-        if self._attr_is_on is None:
+        # Skip Api calls if entity does not change
+        if self._attr_is_on in [None, False]:
             return
         if self._attribute_name == "allow_refresh":
             await self.coordinator.async_execute_command(
@@ -461,7 +463,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         else None,
                         toFile=self.coordinator.client.testmode(),
                     )
-                if isinstance(resp, dict) and TESTMODE:
+                if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
                         "%s: Applied schedule for %s change to %s:\n%s",
                         "TESTMODE"
@@ -684,7 +686,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     },
                 )
             # log resulting schedule if testmode returned dict
-            if isinstance(result, dict) and TESTMODE:
+            if isinstance(result, dict) and ALLOW_TESTMODE:
                 LOGGER.info(
                     "%s: Applied result for action %s:\n%s",
                     "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",

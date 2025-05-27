@@ -554,7 +554,7 @@ class AnkerSolixApiExport:
                     admin=admin,
                 )
 
-                for parmtype in ["4", "6", "9"]:
+                for parmtype in ["4", "6", "9", "12", "13"]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
                     )
@@ -713,6 +713,7 @@ class AnkerSolixApiExport:
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                    admin=admin,
                 )
 
                 # export device pv status and statistics for inverters

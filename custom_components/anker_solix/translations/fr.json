@@ -328,9 +328,6 @@
             },
             "preset_tariff_price": {
                 "name": "Prix du tarif kWh"
-            },
-            "preset_inverter_limit": {
-                "name": "Limite de l'onduleur"
             }
         },
         "select": {
@@ -371,6 +368,9 @@
                         "name": "Mode d'utilisation actif"
                     }
                 }
+            },
+            "preset_inverter_limit": {
+                "name": "Limite de l'onduleur"
             }
         },
         "sensor": {

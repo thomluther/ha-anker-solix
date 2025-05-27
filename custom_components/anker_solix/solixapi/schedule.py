@@ -160,6 +160,7 @@ async def get_device_parm(
     r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId responded in the site_list query.
 
     Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, 9 for enforced SB1 schedules when in coupled SB2 system, but can be modified if necessary.
+    SB3 also supports 12 and 13 to list various options/settings for Smart mode and dynamic tariff plans
     Example data for provided site_id with param_type 4 for SB1:
     {"param_data": "{\"ranges\":[
         {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
@@ -254,8 +255,8 @@ async def set_device_parm(
 ) -> bool | dict:
     r"""Set device parameters (e.g. solarbank schedule).
 
-    command: Must be 17 for SB1 and SB2 solarbank schedules. Maybe for the new AC models this has to be different to apply custom_rate_plan changes?
-    paramType: was always string "4" for SB1, SB2 needs "6" and a different structure.
+    command: Must be 17 for SB1, SB2 and SB3 solarbank schedules. Maybe new models require other command value?
+    paramType: was always string "4" for SB1, SB2 needs "6" and a different structure. SB3 may need 12 or 13 depending on settings
     Example paramData for type "4":
     {"param_data": '{"ranges":['
         '{"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},'
@@ -1293,8 +1294,15 @@ async def set_sb2_home_load(  # noqa: C901
             and ((self.sites.get(siteId) or {}).get("site_info") or {}).get(
                 "power_site_type"
             )
-            not in [11]
+            not in [11,12]
         )
+        # and not (
+        #     usage_mode in [SolarbankUsageMode.time_slot.value,SolarbankUsageMode.smart.value]
+        #     and ((self.sites.get(siteId) or {}).get("site_info") or {}).get(
+        #         "power_site_type"
+        #     )
+        #     not in [12]
+        # )
         else None
     )
     if (
@@ -1802,6 +1810,7 @@ async def set_sb2_home_load(  # noqa: C901
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
+    # TODO(SB3): This may need updates once plan names for SB3 are known
     new_schedule = {"mode_type": schedule.get("mode_type")}
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
         new_schedule.update({
@@ -1824,6 +1833,7 @@ async def set_sb2_home_load(  # noqa: C901
     )
     # Make also the price type change if required by usage mode change
     # The mobile App only activates use_time price automatically with use_time mode, but may not toggle back to fixed price automatically
+    # TODO(SB3): This may need updates once price types for SB3 are known
     price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get("price_type")
     new_type = None
     if (mode := schedule.get("mode_type")) in iter(SolarbankUsageMode):
@@ -1967,6 +1977,7 @@ async def set_sb2_ac_charge(
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
+    # TODO(SB3): This may need updates once plan names for SB3 are known
     new_schedule = {"mode_type": schedule.get("mode_type")}
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
         new_schedule.update({
@@ -2691,6 +2702,7 @@ async def set_sb2_use_time(  # noqa: C901
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
+    # TODO(SB3): This may need updates once plan names for SB3 are known
     new_schedule = {"mode_type": schedule.get("mode_type")}
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
         new_schedule.update({
@@ -2715,6 +2727,7 @@ async def set_sb2_use_time(  # noqa: C901
     # The mobile App only activates use_time price automatically with use_time mode, but may not toggle back to fixed price automatically
     price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get("price_type")
     new_type = None
+    # TODO(SB3): This may need updates if price types for SB3 are known
     if (mode := schedule.get("mode_type")) in iter(SolarbankUsageMode):
         if price_type in [SolixPriceTypes.FIXED.value] and mode in [SolarbankUsageMode.use_time.value] and schedule.get(SolarbankRatePlan.use_time):
             new_type = SolixPriceTypes.USE_TIME.value

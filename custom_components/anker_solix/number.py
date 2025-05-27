@@ -24,7 +24,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .config_flow import _SCAN_INTERVAL_MIN
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER, TESTMODE
+from .const import ALLOW_TESTMODE, ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -105,20 +105,6 @@ DEVICE_NUMBERS = [
         native_max_value=1000,
         native_step=0.01,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
-    ),
-    AnkerSolixNumberDescription(
-        # Inverter limit
-        key="preset_inverter_limit",
-        translation_key="preset_inverter_limit",
-        json_key="preset_inverter_limit",
-        mode=NumberMode.SLIDER,
-        native_min_value=SolixDefaults.MICRO_INVERTER_LIMIT_MIN,
-        native_max_value=SolixDefaults.MICRO_INVERTER_LIMIT_MAX,
-        native_step=10,
-        native_unit_of_measurement=UnitOfPower.WATT,
-        device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
-        force_creation_fn=lambda d, jk: jk in d,
     ),
 ]
 
@@ -324,7 +310,6 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             "preset_charge_priority",
             "preset_tariff_price",
             "system_price",
-            "preset_inverter_limit",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -345,6 +330,11 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 # round the number to the defined steps if set via service call
                 if self.step:
                     value = self.step * round(value / self.step)
+                # Skip Api calls if value does not change
+                if str(self._native_value).replace(".", "", 1).isdigit() and float(
+                    value
+                ) == float(self._native_value):
+                    return
                 # Wait until client cache is valid before applying any api change
                 await self.coordinator.client.validate_cache()
                 if self._attribute_name in [
@@ -354,10 +344,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     # for increasing load value, change only if min delay passed
                     if (
                         (
-                            (
-                                str(self._native_value).isdigit()
-                                or isinstance(self._native_value, int | float)
-                            )
+                            (str(self._native_value).replace(".", "", 1).isdigit())
                             and value < int(self._native_value)
                         )
                         or not self.last_changed
@@ -376,7 +363,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 preset=int(value),
                                 toFile=self.coordinator.client.testmode(),
                             )
-                            if isinstance(resp, dict) and TESTMODE:
+                            if isinstance(resp, dict) and ALLOW_TESTMODE:
                                 LOGGER.info(
                                     "%s: Applied schedule for %s change to %s:\n%s",
                                     "TESTMODE"
@@ -404,7 +391,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 else None,
                                 toFile=self.coordinator.client.testmode(),
                             )
-                            if isinstance(resp, dict) and TESTMODE:
+                            if isinstance(resp, dict) and ALLOW_TESTMODE:
                                 LOGGER.info(
                                     "%s: Applied schedule for %s change to %s:\n%s",
                                     "TESTMODE"
@@ -454,7 +441,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         charge_prio=int(value),
                         toFile=self.coordinator.client.testmode(),
                     )
-                    if isinstance(resp, dict) and TESTMODE:
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied schedule for %s change to %s:\n%s",
                             "TESTMODE"
@@ -479,7 +466,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         clear_unused_tariff=False,
                         toFile=self.coordinator.client.testmode(),
                     )
-                    if isinstance(resp, dict) and TESTMODE:
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied schedule for %s change to %s:\n%s",
                             "TESTMODE"
@@ -511,28 +498,9 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             price=round(float(value), 2),
                             toFile=self.coordinator.client.testmode(),
                         )
-                    if isinstance(resp, dict) and TESTMODE:
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied site price settings:\n%s",
-                            "TESTMODE"
-                            if self.coordinator.client.testmode()
-                            else "LIVEMODE",
-                            json.dumps(
-                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
-                            ),
-                        )
-                elif self._attribute_name == "preset_inverter_limit":
-                    LOGGER.debug(
-                        "%s change to %s will be applied", self.entity_id, value
-                    )
-                    resp = await self.coordinator.client.api.set_device_pv_power(
-                        deviceSn=self.coordinator_context,
-                        limit=int(value),
-                        toFile=self.coordinator.client.testmode(),
-                    )
-                    if isinstance(resp, dict) and TESTMODE:
-                        LOGGER.info(
-                            "%s: Applied inverter limit setting:\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",

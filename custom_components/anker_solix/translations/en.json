@@ -328,9 +328,6 @@
             },
             "preset_tariff_price": {
                 "name": "Tariff price kWh"
-            },
-            "preset_inverter_limit": {
-                "name": "Inverter limit"
             }
         },
         "select": {
@@ -371,6 +368,9 @@
                         "name": "Active usage mode"
                     }
                 }
+            },
+            "preset_inverter_limit": {
+                "name": "Inverter limit"
             }
         },
         "sensor": {

@@ -72,9 +72,6 @@
             },
             "preset_tariff_price": {
                 "default": "mdi:cash-edit"
-            },
-            "preset_inverter_limit": {
-                "default": "mdi:speedometer"
             }
         },
         "select": {
@@ -102,6 +99,9 @@
                     "fixed": "mdi:cash-lock",
                     "use_time": "mdi:cash-clock"
                 }
+            },
+            "preset_inverter_limit": {
+                "default": "mdi:speedometer"
             }
         },
         "sensor": {

@@ -19,7 +19,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import UTC
 
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER, TESTMODE
+from .const import ALLOW_TESTMODE, ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -245,6 +245,9 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             and self._native_value is not None
         ):
             data = self.coordinator.data.get(self.coordinator_context) or {}
+            # Skip Api calls if entity does not change
+            if value == self._native_value:
+                return
             # Wait until client cache is valid before applying any api change
             await self.coordinator.client.validate_cache()
             if (
@@ -284,7 +287,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                         test_schedule=data.get("schedule") or {},
                         toFile=self.coordinator.client.testmode(),
                     )
-                if isinstance(resp, dict) and TESTMODE:
+                if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
                         "%s: Applied schedule for %s change to %s:\n%s",
                         "TESTMODE"

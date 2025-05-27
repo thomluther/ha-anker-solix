@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
-from typing import ClassVar
+from typing import Any, ClassVar
 
 # API servers per region. Country assignment not clear, defaulting to EU server
 API_SERVERS = {
@@ -11,11 +11,14 @@ API_SERVERS = {
     "com": "https://ankerpower-api.anker.com",
 }
 API_LOGIN = "passport/login"
+API_KEY_EXCHANGE = "openapi/oauth/key/exchange"
 API_HEADERS = {
-    "Content-Type": "application/json",
-    "Model-Type": "DESKTOP",
-    "App-Name": "anker_power",
-    "Os-Type": "android",
+    "content-type": "application/json",
+    "model-type": "DESKTOP",
+    # "model-type": "PHONE",
+    # "app-version": "3.6.0",
+    "app-name": "anker_power",
+    "os-type": "android",
 }
 API_COUNTRIES = {
     "com": [
@@ -104,8 +107,8 @@ API_ENDPOINTS = {
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules)
-    "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules), NOT IMPLEMENTED YET
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 9 12 13]
+    "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "wifi_list": "power_service/v1/site/get_wifi_info_list",  # List of available networks for provided site id
     "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owner account
     "update_site_price": "power_service/v1/site/update_site_price",  # Update power price and CO2 for given site, works only for site owner account
@@ -436,14 +439,17 @@ LOGIN_RESPONSE: dict = {
     "token_id": int,
     "geo_key": str,
     "privilege": int,
+    "phone_code": str,
     "phone": str,
     "phone_number": str,
-    "phone_code": str,
+    "phone_code_2fa": str,
+    "phone_2fa": str,
     "server_secret_info": {"public_key": str},
     "params": list,
     "trust_list": list,
     "fa_info": {"step": int, "info": str},
     "country_code": str,
+    "ap_cloud_user_id": str,
 }
 
 
@@ -461,6 +467,7 @@ class SolixDeviceType(Enum):
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
     HES = "hes"
+    SOLARBANK_PPS = "solarbank_pps"
 
 
 class SolixParmType(Enum):
@@ -485,19 +492,8 @@ class SolarbankDischargePriorityMode(IntEnum):
     on = 1
 
 
-class SolarbankUsageMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2 Power Usage modes."""
-
-    smartmeter = 1  # AC output based on measured smart meter power
-    smartplugs = 2  # AC output based on measured smart plug power
-    manual = 3  # manual time plan for home load output
-    backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
-    use_time = 5  # Use Time plan with SB2 AC and smart meter
-    # smartmode = 6   # TODO(SB3) update code once known
-
-
 class SolixTariffTypes(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
     NONE = 0  # Pseudo type to reflect no tariff defined
     PEAK = 1  # maximize PV and Battery usage, no AC charge
@@ -509,24 +505,37 @@ class SolixTariffTypes(IntEnum):
 
 
 class SolixPriceTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
     FIXED = "fixed"
     USE_TIME = "use_time"
-    # DYNAMIC = "dynamic" # TODO(SB3) update code once known
+    # DYNAMIC = "dynamic"
 
 
 class SolixDayTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC Use Time Day Types."""
+    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Day Types."""
 
     WEEKDAY = "weekday"
     WEEKEND = "weekend"
     ALL = "all"
 
 
+class SolarbankUsageMode(IntEnum):
+    """Enumeration for Anker Solix Solarbank 2/3 Power Usage modes."""
+
+    smartmeter = 1  # AC output based on measured smart meter power
+    smartplugs = 2  # AC output based on measured smart plug power
+    manual = 3  # manual time plan for home load output
+    backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
+    use_time = 5  # Use Time plan with AC types and smart meter
+    # unknown = 6  # Not clear yet what this stands for
+    # smart = 7   # Smart mode for AI based charging and discharging
+    # time_slot = 8  # Time slot mode for dynamic tariffs
+
+
 @dataclass(frozen=True)
 class SolarbankRatePlan:
-    """Dataclass for Anker Solix Solarbank 2 rate plan types."""
+    """Dataclass for Anker Solix Solarbank 2/3 rate plan types per usage mode."""
 
     # rate plan per usage mode
     smartmeter: str = ""  # does not use a plan
@@ -534,7 +543,8 @@ class SolarbankRatePlan:
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
     use_time: str = "use_time"
-    # smartmode: str = "smart_plan" # TODO(SB3) update code once known
+    # smart: str = ""  # does not use a plan "ai_ems"
+    # time_slot: str = ""  # does not use a plan ? "time_slot"
 
 
 @dataclass(frozen=True)
@@ -628,6 +638,9 @@ class SolixSiteType:
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
     t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
+    t_13 = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # Main A1782, PPS solarbank with Smart Meter support for US market?
 
 
 @dataclass(frozen=True)
@@ -772,11 +785,19 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        "micro_inverter_power",  # This is external inverter input, counts to Solar power
-        "micro_inverter_power_limit",
-        "micro_inverter_low_power_limit",
+        # "micro_inverter_power",  # external inverter input not supported by SB3
+        # "micro_inverter_power_limit",  # external inverter input not supported by SB3
+        # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
         "other_input_power",
+    }
+    # Inverter Output Settings
+    INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
+        "A5143": ["600", "800"],
+        "A17C1": ["350", "600", "800"],
+        "A17C2": ["350", "600", "800"],
+        "A17C3": ["350", "600", "800"],
+        "A17C5": ["350", "600", "800", "1200"],
     }
 
 
@@ -859,7 +880,7 @@ class SmartmeterStatus(StrEnum):
 class SolixGridStatus(StrEnum):
     """Enumeration for Anker Solix grid status."""
 
-    # TODO Update grid status description once known
+    # TODO(X1) Update grid status description once known
     ok = "0"  # normal grid state when hes pcu grid status is ok
     unknown = "unknown"
 
@@ -868,7 +889,7 @@ class SolixRoleStatus(StrEnum):
     """Enumeration for Anker Solix role status of devices."""
 
     # The device role status codes as used for HES devices
-    # TODO: The proper description of those codes has to be confirmed
+    # TODO(X1): The proper description of those codes has to be confirmed
     primary = "1"  # Master role in Api
     subordinate = "2"  # Slave role in Api, to be confirmed!!!
     unknown = "unknown"
@@ -877,7 +898,7 @@ class SolixRoleStatus(StrEnum):
 class SolixNetworkStatus(StrEnum):
     """Enumeration for Anker Solix HES network status."""
 
-    # TODO: The proper description of those codes has to be confirmed
+    # TODO(X1): The proper description of those codes has to be confirmed
     wifi = "1"  # to be confirmed
     lan = "2"  # this was seen on LAN connected systems
     mobile = "3"  # HES systems support also 5G connections, code to be confirmed
@@ -903,7 +924,7 @@ class SolarbankTimeslot:
 
 @dataclass
 class Solarbank2Timeslot:
-    """Dataclass to define customizable attributes of an Anker Solix Solarbank 2 time slot as used for the schedule definition, update or deletion."""
+    """Dataclass to define customizable attributes of an Anker Solix Solarbank 2/3 time slot as used for the schedule definition, update or deletion."""
 
     start_time: datetime | None
     end_time: datetime | None
