@@ -140,6 +140,14 @@ API_ENDPOINTS = {
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
     "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
+    "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
+    "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
+    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
+    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn, works as member, {"device_pn": "A5102"}
+    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "2025-05-31", "device_sn": deviceSn})) # may only work for admin?
+    "get_device_income": "power_service/v1/app/device/get_device_income",  # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
+    "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
+    "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
     "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
@@ -184,7 +192,7 @@ API_HES_SVC_ENDPOINTS = {
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
-""" Other endpoints neither implemented nor explored: 41 + 40 used => 81
+""" Other endpoints neither implemented nor explored: 45 + 48 used => 93
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -199,6 +207,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
     'power_service/v1/site/get_comb_addable_sites',
     'power_service/v1/site/shift_power_site_type',
+    'power_service/v1/site/local_net',
+    'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]})
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -220,6 +230,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/device/remove_param_config_key'
     'power_service/v1/app/device/set_device_attrs', # attributes must be list of strings, only 'rssi' found working so far
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
+    'power_service/v1/app/shelly_ctrl_device', # {"device_sn": deviceSn, "op_type": "parameter", "value": value})) # Control shelly device settings, may require owner, usage known
+    'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list object e.g. {"check_list": [{"enable_timeslot": True}]}
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
@@ -230,7 +242,7 @@ API_HES_SVC_ENDPOINTS = {
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
 
-App related: 10 + 2 used => 12 total
+App related: 12 + 2 used => 14 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/cloudstor/get_app_up_token_without_login',
@@ -242,9 +254,11 @@ App related: 10 + 2 used => 12 total
     'app/push/clear_count',
     'app/push/register_push_token',
 
-Passport related: 2 + 0 used => 2 total
+Passport related: 4 + 0 used => 4 total
     'passport/get_user_param', # specify param_type which must be parsable as list of int, but does not show anything in response
     'passport/get_subscriptions,  #  get user email, accept_survey, subscribe, phone_number, sms_subscribe
+    '/passport/subscription_configs',  # get show_sms
+    '/passport/discount_desc',  # get title, sub_title, button and sub_button
 
 PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/sync_installation_inspection", #Unknown at this time
@@ -253,16 +267,19 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/preprocess_utility_rate_plan",
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
+
     "charging_common_svc/location/get",  # Get default and identifier location for identifier_id, identifier_type, business_type with longitude, latitude, country_code, place_id, display_name, formatted_address
     "charging_common_svc/location/set",  # Set default and identifier location
+    "charging_common_svc/location/support",
 
-Home Energy System related (X1): 37 + 14 used => 51 total
+Home Energy System related (X1): 38 + 14 used => 52 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
     "charging_hes_svc/check_device_bluetooth_password",
     "charging_hes_svc/check_function",
     "charging_hes_svc/device_command",
+    "charging_hes_svc/deal_share_data",
     "charging_hes_svc/download_energy_statistics",
     "charging_hes_svc/get_auto_disaster_prepare_status",
     "charging_hes_svc/get_auto_disaster_prepare_detail",
@@ -367,6 +384,14 @@ API_FILEPREFIXES = {
     "get_device_attributes": "device_attrs",
     "get_message_unread": "message_unread",
     "get_currency_list": "currency_list",
+    "get_co2_ranking": "co2_ranking",
+    "get_forecast_schedule": "forecast_schedule",
+    "get_dynamic_price_sites": "dynamic_price_sites",
+    "get_dynamic_price_providers": "dynamic_price_providers",
+    "get_dynamic_price_details": "dynamic_price_details",
+    "get_device_income": "device_income",
+    "get_ai_ems_status": "ai_ems_status",
+    "get_ai_ems_profit": "ai_ems_profit",
     "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
