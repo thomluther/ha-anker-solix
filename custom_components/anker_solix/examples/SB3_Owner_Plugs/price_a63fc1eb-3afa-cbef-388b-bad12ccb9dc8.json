@@ -1,0 +1,67 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "a63fc1eb-3afa-cbef-388b-bad12ccb9dc8",
+    "price": 0.33,
+    "site_co2": 0,
+    "site_price_unit": "\u20ac",
+    "price_type": "fixed",
+    "current_mode": 3,
+    "use_time": [
+      {
+        "sea": {
+          "start_month": 1,
+          "end_month": 12
+        },
+        "weekday": [
+          {
+            "start_time": 0,
+            "end_time": 24,
+            "type": 2
+          }
+        ],
+        "weekend": [
+          {
+            "start_time": 0,
+            "end_time": 24,
+            "type": 2
+          }
+        ],
+        "weekday_price": [
+          {
+            "price": "0.00",
+            "type": 3
+          },
+          {
+            "price": "0.3",
+            "type": 1
+          },
+          {
+            "price": "0.3",
+            "type": 2
+          }
+        ],
+        "weekend_price": [
+          {
+            "price": "0.00",
+            "type": 3
+          },
+          {
+            "price": "0.3",
+            "type": 1
+          },
+          {
+            "price": "0.3",
+            "type": 2
+          }
+        ],
+        "unit": "\u20ac",
+        "is_same": true
+      }
+    ],
+    "dynamic_price": null,
+    "accuracy": 2
+  },
+  "trace_id": "f620d7cfc2ac2f4a2d36c85ecbedbea4"
+}

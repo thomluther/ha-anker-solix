@@ -79,6 +79,7 @@ from .solixapi.apitypes import (
     ApiCategories,
     SmartmeterStatus,
     Solarbank2Timeslot,
+    SolarbankAiemsRuntimeStatus,
     SolarbankPowerMode,
     SolarbankRatePlan,
     SolarbankStatus,
@@ -101,11 +102,11 @@ class AnkerSolixSensorDescription(
     reset_at_midnight: bool = False
     picture_path: str = None
     # Use optionally to provide function for value calculation or lookup of nested values
-    value_fn: Callable[[dict, str, str], StateType] = lambda d, jk, _: d.get(jk)
-    attrib_fn: Callable[[dict, str], dict | None] = lambda d, _: None
-    unit_fn: Callable[[dict, str], dict | None] = lambda d, _: None
+    value_fn: Callable[[dict, str, str], StateType] = lambda d, jk, ctx: d.get(jk)
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, ctx: None
+    unit_fn: Callable[[dict, str], dict | None] = lambda d, ctx: None
     force_creation_fn: Callable[[dict], bool] = lambda d: False
-    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
+    exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
     nested_sensor: bool = False
     feature: AnkerSolixEntityFeature | None = None
     check_invalid: bool = False
@@ -268,16 +269,6 @@ DEVICE_SENSORS = [
         check_invalid=True,
     ),
     AnkerSolixSensorDescription(
-        key="home_load_power",
-        translation_key="home_load_power",
-        json_key="home_load_power",
-        native_unit_of_measurement=UnitOfPower.WATT,
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTMETER.value} - s),
-    ),
-    AnkerSolixSensorDescription(
         key="ac_generate_power",
         translation_key="ac_generate_power",
         json_key="generate_power",
@@ -410,24 +401,26 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY_STORAGE,
         suggested_display_precision=0,
-        attrib_fn=lambda d, _: {
-            "capacity": " ".join(
-                [str(d.get("battery_capacity") or "----"), UnitOfEnergy.WATT_HOUR]
-            )
-        },
+        # Capacity moved to number entities to allow customization
+        # attrib_fn=lambda d, _: {
+        #     "capacity": " ".join(
+        #         [str(d.get("battery_capacity") or "----"), UnitOfEnergy.WATT_HOUR]
+        #     )
+        # },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
-    AnkerSolixSensorDescription(
-        key="bws_surplus",
-        translation_key="bws_surplus",
-        json_key="bws_surplus",
-        entity_registry_enabled_default=False,
-        native_unit_of_measurement=UnitOfPower.WATT,
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        check_invalid=True,
-    ),
+    # This value does not seem to be used by any device
+    # AnkerSolixSensorDescription(
+    #     key="bws_surplus",
+    #     translation_key="bws_surplus",
+    #     json_key="bws_surplus",
+    #     entity_registry_enabled_default=False,
+    #     native_unit_of_measurement=UnitOfPower.WATT,
+    #     device_class=SensorDeviceClass.POWER,
+    #     state_class=SensorStateClass.MEASUREMENT,
+    #     exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    #     check_invalid=True,
+    # ),
     AnkerSolixSensorDescription(
         key="temperature",
         translation_key="temperature",
@@ -927,11 +920,26 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d, jk, _: d.get(jk),
         suggested_display_precision=0,
         # exclude sensor of main site structure when no smart plugs installed since this should only be used for blend plan in smart plug mode
         exclude_fn=lambda s, d: not ({SolixDeviceType.SMARTPLUG.value} - s)
         or not list((d.get("smart_plug_info") or {}).get("smartplug_list") or []),
+    ),
+    AnkerSolixSensorDescription(
+        # house demand as calculated by cloud
+        key="home_load_power",
+        translation_key="home_load_power",
+        json_key="home_load_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda d, jk, _: d.get(jk) or None
+        if (
+            ((d.get("grid_info") or {}).get("grid_list") or [])
+            or ((d.get("smart_plug_info") or {}).get("smartplug_list") or [])
+        )
+        else None,
     ),
     AnkerSolixSensorDescription(
         key="total_co2_saving",
@@ -947,6 +955,13 @@ SITE_SENSORS = [
             ]
             or [None]
         )[0],
+        attrib_fn=lambda d, _: {
+            "rank": rank.get("ranking"),
+            "trees": rank.get("tree"),
+            "message": rank.get("content"),
+        }
+        if (rank := (d.get("site_details") or {}).get("co2_ranking") or {})
+        else None,
         # device_class=SensorDeviceClass.WEIGHT,
         state_class=SensorStateClass.MEASUREMENT,
         force_creation_fn=lambda d: True,
@@ -1029,6 +1044,99 @@ SITE_SENSORS = [
                 ]
                 or [None]
             )[0]
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="total_aiems_profit",
+        translation_key="total_aiems_profit",
+        json_key="aiems_profit_total",
+        unit_fn=lambda d, _: (d.get("aiems_profit") or {}).get("unit"),
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (d.get("aiems_profit") or {}).get(jk) or None,
+        attrib_fn=lambda d, _: {
+            "advantage": (d.get("aiems_profit") or {}).get("aiems_self_use_diff"),
+            "percentage": (d.get("aiems_profit") or {}).get("percentage"),
+        },
+        exclude_fn=lambda s, d: not ({ApiCategories.site_price} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="aiems_runtime_status",
+        translation_key="aiems_runtime_status",
+        json_key="status_desc",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=[status.name for status in SolarbankAiemsRuntimeStatus],
+        value_fn=lambda d, jk, _: (
+            (d.get("site_details") or {}).get("ai_ems_runtime") or {}
+        ).get(jk)
+        or None,
+        attrib_fn=lambda d, _: {
+            "status": (
+                col := (d.get("site_details") or {}).get("ai_ems_runtime") or {}
+            ).get("status"),
+            # seconds are negative once training completed, format duration as positive string and add negative only for training phase
+            "runtime": (
+                ("-" if int(sec) > 0 else "") + str(timedelta(seconds=abs(int(sec))))
+            )
+            if str(sec := col.get("left_time"))
+            .replace("-", "")
+            .replace(".", "")
+            .isdigit()
+            else None,
+        },
+    ),
+    AnkerSolixSensorDescription(
+        key="dynamic_price_total",
+        translation_key="dynamic_price_total",
+        json_key="dynamic_price_total",
+        unit_fn=lambda d, _: (
+            (d.get("site_details") or {}).get("dynamic_price_details") or {}
+        ).get("spot_price_unit"),
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            (d.get("site_details") or {}).get("dynamic_price_details") or {}
+        ).get(jk)
+        or None,
+        attrib_fn=lambda d, _: {
+            "price_calc": (
+                dp := (d.get("site_details") or {}).get("dynamic_price_details") or {}
+            ).get("dynamic_price_calc_time"),
+            "price_time": dp.get("spot_price_time"),
+            "forecast": list(dp.get("dynamic_price_forecast") or []),
+        },
+        exclude_fn=lambda s, d: not ({ApiCategories.site_price} - s),
+        force_creation_fn=lambda d: bool(
+            "dynamic_price_details" in (d.get("site_details") or {})
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="spot_price_mwh",
+        translation_key="spot_price_mwh",
+        json_key="spot_price_mwh",
+        unit_fn=lambda d, _: str(
+            ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(
+                "spot_price_unit"
+            )
+            or ""
+        )
+        + "/"
+        + UnitOfEnergy.MEGA_WATT_HOUR,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            (d.get("site_details") or {}).get("dynamic_price_details") or {}
+        ).get(jk)
+        or None,
+        attrib_fn=lambda d, _: {
+            "provider": (
+                dp := (d.get("site_details") or {}).get("dynamic_price_details") or {}
+            ).get("dynamic_price_provider"),
+            "poll_time": dp.get("dynamic_price_poll_time"),
+            "avg_today": dp.get("spot_price_mwh_avg_today"),
+            "avg_tomorrow": dp.get("spot_price_mwh_avg_tomorrow"),
+        },
+        exclude_fn=lambda s, d: not ({ApiCategories.site_price} - s),
+        force_creation_fn=lambda d: bool(
+            "dynamic_price_details" in (d.get("site_details") or {})
         ),
     ),
     # Following sensor delivers meaningless values if any, home_info charging_power reports same value as inverter generated_power?!?
@@ -1863,20 +1971,33 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
     _last_schedule_service_value: str = None
     _unrecorded_attributes = frozenset(
         {
-            "sw_version",
+            "advantage",
+            "avg_today",
+            "avg_tomorrow",
             "device_sn",
-            "schedule",
+            "fittings",
+            "forecast",
             "inverter_info",
+            "message",
+            "network",
+            "network_code",
+            "percentage",
+            "provider",
+            "poll_time",
+            "price_calc",
+            "price_time",
+            "rank",
+            "role_status",
+            "runtime",
+            "schedule",
+            "station_id",
+            "station_type",
+            "status",
             "solar_brand",
             "solar_model",
             "solar_sn",
-            "fittings",
-            "status",
-            "network",
-            "network_code",
-            "role_status",
-            "station_id",
-            "station_type",
+            "sw_version",
+            "trees",
         }
     )
 

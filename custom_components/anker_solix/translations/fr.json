@@ -31,7 +31,7 @@
                 "custom_rate_plan": "Plan personnalisé",
                 "blend_plan": "Plan de mixage",
                 "manual_backup": "Plan de charge d'urgence",
-                "use_time": "Plan de temps d'utilisation"
+                "use_time": "Plan d'heure d'utilisation"
             }
         },
         "weekday": {
@@ -213,6 +213,13 @@
                     }
                 }
             },
+            "wired_connection": {
+                "name": "Connexion câblée",
+                "state": {
+                    "on": "Connecté",
+                    "off": "Déconnecté"
+                }
+            },
             "connected": {
                 "name": "Connexion",
                 "state": {
@@ -243,6 +250,42 @@
                     },
                     "ota_components": {
                         "name": "Composants OTA"
+                    }
+                }
+            },
+            "ai_ems_enabled": {
+                "name": "L'IA en action",
+                "state": {
+                    "on": "Oui",
+                    "off": "Non"
+                },
+                "state_attributes": {
+                    "status_code": {
+                        "name": "Code de statut"
+                    },
+                    "status": {
+                        "name": "Statut",
+                        "state": {
+                            "unknown": "Inconnu",
+                            "untrained": "Non formé",
+                            "learning": "Apprentissage",
+                            "trained": "Formé"
+                        }
+                    }
+                }
+            },
+            "auto_switch": {
+                "name": "Contrôlé par l'IA",
+                "state": {
+                    "on": "Oui",
+                    "off": "Non"
+                },
+                "state_attributes": {
+                    "priority": {
+                        "name": "Priorité"
+                    },
+                    "running_time": {
+                        "name": "Temps d'exécution"
                     }
                 }
             },
@@ -328,6 +371,23 @@
             },
             "preset_tariff_price": {
                 "name": "Prix du tarif kWh"
+            },
+            "battery_capacity": {
+                "name": "Capacité de la batterie",
+                "state_attributes": {
+                    "expansions": {
+                        "name": "Extensions"
+                    },
+                    "calculated": {
+                        "name": "Calculé"
+                    }
+                }
+            },
+            "dynamic_price_fee": {
+                "name": "Redevance de prix dynamique"
+            },
+            "dynamic_price_vat": {
+                "name": "Taxe sur les prix dynamique"
             }
         },
         "select": {
@@ -337,21 +397,32 @@
             "preset_usage_mode": {
                 "name": "Mode d'utilisation",
                 "state": {
-                    "smartmeter": "Compteur intelligent",
+                    "smartmeter": "Autoconsommation",
                     "smartplugs": "Prises intelligentes",
-                    "use_time": "Temps d'utilisation",
+                    "manual": "Personnalisé",
                     "backup": "Charge de secours",
-                    "manual": "Manuel"
+                    "use_time": "Heure d'utilisation",
+                    "smart": "Intelligent",
+                    "time_slot": "Créneaux horaires"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
+                    }
                 }
             },
             "preset_tariff": {
-                "name": "Tarif temps d'utilisation",
+                "name": "Tarif heure d'utilisation",
                 "state": {
-                    "none": "Aucun",
-                    "peak": "Temps de pointe",
-                    "mid_peak": "Temps de pointe moyen",
-                    "off_peak": "Hors heures de pointe",
+                    "peak": "Pic",
+                    "mid_peak": "Mi-pic",
+                    "off_peak": "Heures creuses",
                     "valley": "Vallée"
+                },
+                "state_attributes": {
+                    "tariff": {
+                        "name": "Tarif"
+                    }
                 }
             },
             "system_price_unit": {
@@ -361,11 +432,32 @@
                 "name": "Type de prix",
                 "state": {
                     "fixed": "Fixe",
-                    "use_time": "Temps d'utilisation"
+                    "use_time": "Heure d'utilisation",
+                    "dynamic": "Dynamique"
                 },
                 "state_attributes": {
+                    "type": {
+                        "name": "Type"
+                    },
                     "current_mode": {
                         "name": "Mode d'utilisation actif"
+                    }
+                }
+            },
+            "dynamic_price_provider": {
+                "name": "Prix fournisseur",
+                "state": {
+                    "none": "Aucun"
+                },
+                "state_attributes": {
+                    "country": {
+                        "name": "Pays"
+                    },
+                    "company": {
+                        "name": "Entreprise"
+                    },
+                    "area": {
+                        "name": "Zone"
                     }
                 }
             },
@@ -379,7 +471,7 @@
                 "state": {
                     "offline": "Hors ligne",
                     "online": "En ligne",
-                    "unknown": "Pas disponible"
+                    "unknown": "Inconnue"
                 },
                 "state_attributes": {
                     "status": {
@@ -493,7 +585,8 @@
                 "name": "Mode puissance de sortie",
                 "state": {
                     "normal": "Normal",
-                    "advanced": "Avancé"
+                    "advanced": "Avancé",
+                    "unknown": "Inconnue"
                 },
                 "state_attributes": {
                     "mode": {
@@ -609,12 +702,14 @@
             "active_scene_mode": {
                 "name": "Mode d'utilisation actif",
                 "state": {
-                    "smartmeter": "Compteur intelligent",
+                    "unknown": "Inconnue",
+                    "smartmeter": "Autoconsommation",
                     "smartplugs": "Prises intelligentes",
-                    "manual": "Manuel",
+                    "manual": "Personnalisé",
                     "backup": "Charge de secours",
-                    "use_time": "Temps d'utilisation",
-                    "unknown": "Inconnu"
+                    "use_time": "Heure d'utilisation",
+                    "smart": "Intelligent",
+                    "time_slot": "Créneaux horaires"
                 },
                 "state_attributes": {
                     "mode_type": {
@@ -638,13 +733,83 @@
                 "name": "Puissance des autres charges"
             },
             "total_co2_saving": {
-                "name": "Economies de CO₂"
+                "name": "Economies de CO₂",
+                "state_attributes": {
+                    "rank": {
+                        "name": "Rang"
+                    },
+                    "trees": {
+                        "name": "Arbres"
+                    },
+                    "message": {
+                        "name": "Message"
+                    }
+                }
             },
             "total_saved_money": {
                 "name": "Economies €"
             },
             "total_output_energy": {
                 "name": "Rendement total"
+            },
+            "total_aiems_profit": {
+                "name": "Profit de l'IA",
+                "state_attributes": {
+                    "advantage": {
+                        "name": "Avantage"
+                    },
+                    "percentage": {
+                        "name": "Pourcentage"
+                    }
+                }
+            },
+            "aiems_runtime_status": {
+                "name": "Surveillance de l'IA",
+                "state": {
+                    "unknown": "Inconnue",
+                    "inactive": "Inactif",
+                    "running": "En marche",
+                    "failure": "Échec"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code statut"
+                    },
+                    "runtime": {
+                        "name": "Temps d'exécution"
+                    }
+                }
+            },
+            "dynamic_price_total": {
+                "name": "Prix total dynamique",
+                "state_attributes": {
+                    "price_calc": {
+                        "name": "Calcul du prix"
+                    },
+                    "price_time": {
+                        "name": "Temps de prix"
+                    },
+                    "forecast": {
+                        "name": "Prévision"
+                    }
+                }
+            },
+            "spot_price_mwh": {
+                "name": "Prix spot dynamique",
+                "state_attributes": {
+                    "provider": {
+                        "name": "Fournisseur"
+                    },
+                    "poll_time": {
+                        "name": "Temps de requête"
+                    },
+                    "avg_today": {
+                        "name": "Moy. aujourd'hui"
+                    },
+                    "avg_tomorrow": {
+                        "name": "Moy. demain"
+                    }
+                }
             },
             "set_system_output_power": {
                 "name": "Réglage puissance de sortie du système"
@@ -656,7 +821,7 @@
                 "name": "État du réseau",
                 "state": {
                     "ok": "Ok",
-                    "unknown": "Inconnu"
+                    "unknown": "Inconnue"
                 },
                 "state_attributes": {
                     "grid_status": {
@@ -985,7 +1150,7 @@
             "state": {
                 "off": "Off",
                 "on": "On",
-                "unknown": "Pas disponible"
+                "unknown": "Inconnue"
             }
         }
     },
@@ -1013,8 +1178,8 @@
             "description": "L'horaire de solarbank sera effacé",
             "sections": {
                 "sb2_fields": {
-                    "name": "Options de Solarbank 2",
-                    "description": "Pour les systèmes Solarbank 2, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                    "name": "Options de Solarbank 2+",
+                    "description": "Pour les systèmes Solarbank 2+, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
                 }
             },
             "fields": {
@@ -1034,11 +1199,11 @@
             "sections": {
                 "sb1_fields": {
                     "name": "Options de Solarbank 1",
-                    "description": "Pour les systèmes Solarbank 1, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 2)"
+                    "description": "Pour les systèmes Solarbank 1, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 2+)"
                 },
                 "sb2_fields": {
-                    "name": "Options de Solarbank 2",
-                    "description": "Pour les systèmes Solarbank 2, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                    "name": "Options de Solarbank 2+",
+                    "description": "Pour les systèmes Solarbank 2+, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
                 }
             },
             "fields": {
@@ -1064,19 +1229,19 @@
                 },
                 "device_load": {
                     "name": "Réglage puissance de sortie de l'appareil",
-                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils (ignoré pour solarbank 2)"
+                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils (ignoré pour solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Autoriser l'exportation",
-                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2)"
+                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2+)"
                 },
                 "discharge_priority": {
                     "name": "Décharge prioritaire",
-                    "description": "Si activé, la décharge de la batterie sera prioritaire pour l'exportation et la production photovoltaïque éventuelle sera interrompue (ignoré pour solarbank 2)"
+                    "description": "Si activé, la décharge de la batterie sera prioritaire pour l'exportation et la production photovoltaïque éventuelle sera interrompue (ignoré pour solarbank 2+)"
                 },
                 "charge_priority_limit": {
                     "name": "Limite de la priorité de charge",
-                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé ou il s'agit d'un solarbank 2"
+                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé ou il s'agit d'un solarbank 2+"
                 }
             }
         },
@@ -1086,11 +1251,11 @@
             "sections": {
                 "sb1_fields": {
                     "name": "Options de Solarbank 1",
-                    "description": "Pour les systèmes Solarbank 1, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 2)"
+                    "description": "Pour les systèmes Solarbank 1, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 2+)"
                 },
                 "sb2_fields": {
-                    "name": "Options de Solarbank 2",
-                    "description": "Pour les systèmes Solarbank 2, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                    "name": "Options de Solarbank 2+",
+                    "description": "Pour les systèmes Solarbank 2+, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
                 }
             },
             "fields": {
@@ -1116,19 +1281,19 @@
                 },
                 "device_load": {
                     "name": "Réglage puissance de sortie de l'appareil",
-                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils (ignoré pour solarbank 2)"
+                    "description": "Watt à fournir par le dispositif. En option pour les systèmes à double solarbank avec préréglages individuels des appareils (ignoré pour solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Autoriser l'exportation",
-                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2)"
+                    "description": "Si désactivé, la batterie n'est pas déchargée, ou si l'onduleur MI80 est présent ou si l'interrupteur 0 W est installé, la priorité de charge est utilisée sans livraison à la maison (ignoré pour solarbank 2+)"
                 },
                 "discharge_priority": {
                     "name": "Décharge prioritaire",
-                    "description": "Si activé, la décharge de la batterie sera prioritaire pour l'exportation et la production photovoltaïque éventuelle sera interrompue (ignoré pour solarbank 2)"
+                    "description": "Si activé, la décharge de la batterie sera prioritaire pour l'exportation et la production photovoltaïque éventuelle sera interrompue (ignoré pour solarbank 2+)"
                 },
                 "charge_priority_limit": {
                     "name": "Limite de la priorité de charge",
-                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé ou il s'agit d'un solarbank 2"
+                    "description": "Jusqu'au niveau de charge défini, la priorité de charge est utilisée si l'onduleur MI80 est réglé. Le réglage est ignoré si aucun commutateur 0 W n'est installé ou si aucun onduleur MI80 n'est réglé ou il s'agit d'un solarbank 2+"
                 }
             }
         },
@@ -1155,16 +1320,16 @@
             }
         },
         "modify_solix_use_time": {
-            "name": "Modifier le plan d'utilisation",
-            "description": "Ajustez le plan de durée d'utilisation pour les appareils Anker Solix qui prennent en charge la charge CA et un mode de durée d'utilisation avec différents tarifs d'électricité.",
+            "name": "Modifier le plan d'heure d'utilisation",
+            "description": "Ajustez le plan d'heure d'utilisation pour les appareils Anker Solix qui prennent en charge la charge CA et un mode heure d'utilisation avec différents tarifs d'électricité.",
             "fields": {
                 "start_month": {
                     "name": "Mois de début",
-                    "description": "Start month for the season to be modified"
+                    "description": "Mois de début de la saison à modifier"
                 },
                 "end_month": {
-                    "name": "Fin du mois",
-                    "description": "End month for the season to be modified"
+                    "name": "Mois de fin",
+                    "description": "Mois de fin de la saison à modifier"
                 },
                 "day_type": {
                     "name": "Type de jours",
@@ -1172,7 +1337,7 @@
                 },
                 "start_hour": {
                     "name": "Heure de début",
-                    "description": "Heure de début du jour à modifier (les minutes et les secondes sont ignorées)"
+                    "description": "Heure de début de journée à modifier (les minutes et les secondes sont ignorées)"
                 },
                 "end_hour": {
                     "name": "Heure de fin",

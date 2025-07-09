@@ -1,0 +1,69 @@
+{
+  "type": "account",
+  "email": "anonymous-1@domain.com",
+  "nickname": "dir***",
+  "country": "DE",
+  "server": "https://ankerpower-api-eu.anker.com",
+  "currency_list": [
+    {
+      "symbol": "$",
+      "name": "AUD, CAD, USD"
+    },
+    {
+      "symbol": "\u043b\u0432",
+      "name": "BGN"
+    },
+    {
+      "symbol": "CHF",
+      "name": "CHF"
+    },
+    {
+      "symbol": "K\u010d",
+      "name": "CZK"
+    },
+    {
+      "symbol": "\u20ac",
+      "name": "EUR"
+    },
+    {
+      "symbol": "\u00a3",
+      "name": "GBP"
+    },
+    {
+      "symbol": "Ft",
+      "name": "HUF"
+    },
+    {
+      "symbol": "kr",
+      "name": "ISK, NOK, SEK"
+    },
+    {
+      "symbol": "\u00a5",
+      "name": "JPY"
+    },
+    {
+      "symbol": "z\u0142",
+      "name": "PLN"
+    },
+    {
+      "symbol": "Lei",
+      "name": "RON"
+    }
+  ],
+  "default_currency": {
+    "symbol": "\u20ac",
+    "name": "EUR"
+  },
+  "requests_last_min": 70,
+  "requests_last_hour": 378,
+  "use_files": true,
+  "sites_poll_time": "2025-07-05 11:45:26",
+  "sites_poll_seconds": 0.012,
+  "details_poll_time": "2025-07-05 11:45:26",
+  "details_poll_seconds": 0.033,
+  "has_unread_msg": false,
+  "system_msg": false,
+  "device_msg": false,
+  "energy_poll_time": "2025-07-05 11:45:26",
+  "energy_poll_seconds": 0.051
+}

@@ -8,8 +8,10 @@ pip install aiofiles
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 import logging
 from pathlib import Path
+from typing import Any
 
 from aiohttp import ClientSession
 
@@ -17,7 +19,10 @@ from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
+    SolixDefaults,
     SolixDeviceType,
+    SolixPriceProvider,
+    SolixPriceTypes,
 )
 from .session import AnkerSolixClientSession
 
@@ -85,9 +90,78 @@ class AnkerSolixBaseApi:
         return self.sites | self.devices | {self.apisession.email: self.account}
 
     def clearCaches(self) -> None:
-        """Clear the api cache dictionaries except the account cache."""
+        """Clear the api cache dictionaries."""
         self.sites = {}
         self.devices = {}
+        self.account = {}
+
+    def customizeCacheId(self, id: str, key: str, value: Any) -> None:
+        """Customize a cache identifier with a key and value pair."""
+        if isinstance(id, str) and isinstance(key, str):
+            if id in self.sites:
+                data = self.sites.get(id)
+                customized = data.get("customized") or {}
+                customized[key] = value
+                data["customized"] = customized
+                # trigger an update of cached data depending on customized value
+                # customized keys that are used as alternate value must be handled separately since they may not exist in cache
+                if (
+                    key in ["dynamic_price_vat", "dynamic_price_fee", "dynamic_price"]
+                    and value
+                ):
+                    # dynamic price related updates should always be triggered if customized, independent of existing keys
+                    if key in ["dynamic_price"]:
+                        # convert a provider string to dict
+                        if isinstance(value, str):
+                            customized[key] = SolixPriceProvider(
+                                provider=value
+                            ).asdict()
+                    # update whole dynamic price forecast
+                    self._update_site(
+                        siteId=id,
+                        details={
+                            "dynamic_price_details": self.extractPriceData(
+                                siteId=id, forceCalc=True
+                            )
+                        },
+                    )
+                elif key in (data.get("site_details") or {}):
+                    # trigger dependent updates by rewriting old value to cache update method
+                    self._update_site(
+                        siteId=id, details={key: data["site_details"][key]}
+                    )
+                elif key in data:
+                    pass
+            elif id in self.devices:
+                data = self.devices.get(id)
+                customized = data.get("customized") or {}
+                customized[key] = value
+                data["customized"] = customized
+                # trigger dependent updates by rewriting old value to cache update method
+                # customized keys that are used as alternate value must be handled separately since they may not exist in cache
+                if key in data:
+                    self._update_dev(devData={"device_sn": id, key: data[key]})
+                    # Ensure to update main device capacity as well if sub device was customized
+                    if (
+                        key in ["battery_capacity"]
+                        and value
+                        and data.get("is_subdevice")
+                        and (main := data.get("main_sn"))
+                        and (cap := (self.devices.get(main) or {}).get(key))
+                    ):
+                        # first remove any previous customization on main device
+                        (self.devices[main].get("customized") or {}).pop(key, None)
+                        # trigger calculation update
+                        self._update_dev(devData={"device_sn": main, key: cap})
+            elif id == self.apisession.email:
+                data = self.account
+                customized = data.get("customized") or {}
+                customized[key] = value
+                data["customized"] = customized
+                # trigger dependent updates by rewriting old value to cache update method
+                # customized keys that are used as alternate value must be handled separately since they may not exist in cache
+                if key in data:
+                    self._update_account(details={key: data.get(key)})
 
     def recycleDevices(
         self, extraDevices: set | None = None, activeDevices: set | None = None
@@ -166,13 +240,14 @@ class AnkerSolixBaseApi:
 
         This method is used to consolidate site details from various less frequent requests that are not covered with the update_sites poller method.
         """
-        # lookup old site details if any
-        if siteId in self.sites:
-            site_details = (self.sites[siteId]).get("site_details") or {}
-            site_details.update(details)
-        else:
-            site_details = details
-            self.sites[siteId] = {}
+        # get existing site details
+        site_details = (self.sites.get(siteId) or {}).get("site_details") or {}
+        # Implement site details update code with key filtering, conversion, consolidation, calculation or dependency updates
+        for key, value in details.items():
+            if key in [] and value:
+                pass
+            else:
+                site_details[key] = value
         self.sites[siteId]["site_details"] = site_details
 
     def _update_dev(
@@ -483,7 +558,7 @@ class AnkerSolixBaseApi:
                 self._update_account(
                     {"products": await self.get_products(fromFile=fromFile)}
                 )
-            if sn := self._update_dev(device, isAdmin=True):
+            if sn := self._update_dev(device.copy(), isAdmin=True):
                 active_devices.add(sn)
         # recycle api device list and remove devices no longer used in sites or bind devices
         self.recycleDevices(extraDevices=active_devices)
@@ -506,19 +581,19 @@ class AnkerSolixBaseApi:
             )
         data = resp.get("data") or {}
         main = data.get("main_switch")
-        devicelist = data.get("device_list", [])  # could be null for non owning account
-        if not devicelist:
-            devicelist = []
+        devicelist = (
+            data.get("device_list") or []
+        )  # could be null for non owning account
         for device in devicelist:
             dev_ota = device.get("auto_upgrade")
             if isinstance(dev_ota, bool):
                 # update device setting based on main setting if available
                 if isinstance(main, bool):
                     device.update({"auto_upgrade": main and dev_ota})
-                self._update_dev(device)
+                self._update_dev(device.copy())
         return data
 
-    async def set_auto_upgrade(self, devices: dict[str, bool]) -> bool:
+    async def set_auto_upgrade(self, devices: dict[str, bool]) -> bool | dict:
         """Set auto upgrade switches for given device dictionary.
 
         Example input:
@@ -526,10 +601,11 @@ class AnkerSolixBaseApi:
         The main switch must be set True if any device switch is set True. The main switch does not need to be changed to False if no device is True.
         But if main switch is set to False, all devices will automatically be set to False and individual setting is ignored by Api.
         """
+        resp: bool | dict = False
         # get actual settings
         settings = await self.get_auto_upgrade()
         if (main_switch := settings.get("main_switch")) is None:
-            return False
+            return resp
         dev_switches = {}
         main = None
         change_list = []
@@ -547,7 +623,6 @@ class AnkerSolixBaseApi:
                     change_list.append({"device_sn": sn, "auto_upgrade": upgrade})
                     if upgrade:
                         main = True
-
         if change_list:
             # json example for endpoint
             # {"main_switch": False, "device_list": [{"device_sn": "9JVB42LJK8J0P5RY","auto_upgrade": True}]}
@@ -562,11 +637,10 @@ class AnkerSolixBaseApi:
                 )
             ).get("code")
             if not isinstance(code, int) or int(code) != 0:
-                return False
+                return resp
             # update the data in api dict
-            await self.get_auto_upgrade()
-
-        return True
+            resp = await self.get_auto_upgrade()
+        return resp
 
     async def get_wifi_list(self, siteId: str, fromFile: bool = False) -> dict:
         """Get the wifi list.
@@ -587,7 +661,7 @@ class AnkerSolixBaseApi:
         if data := resp.get("data") or {}:
             for wifi_info in data.get("wifi_info_list") or []:
                 if wifi_info.get("device_sn"):
-                    self._update_dev(wifi_info)
+                    self._update_dev(wifi_info.copy())
         return data
 
     async def get_ota_batch(
@@ -821,6 +895,93 @@ class AnkerSolixBaseApi:
         #         }
         return products
 
+    async def get_co2_ranking(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the CO2 ranking for the site.
+
+        Example data:
+        {"show": true,"ranking": "999+","co2": "33.46","tree": "1.6","content": "Not to be underestimated","level": {
+            "tree": 2,"bubble": 2}}
+        """
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_co2_ranking']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_co2_ranking"], json=data
+            )
+        data = resp.get("data") or {}
+        # update site details in sites dict
+        details = data.copy()
+        details.pop("show", None)
+        self._update_site(siteId, {"co2_ranking": details})
+        return data
+
+    async def get_price_providers(self, model: str, fromFile: bool = False) -> dict:
+        """Get the dynamic price provides for a given device model.
+
+        Example data:
+        {"country_info": [
+            {"country": "DE","company_info": [
+                {"company": "Nordpool","area_info": [
+                    {"area": "GER","area_name": "GER"}]}]}
+        ]}
+        """
+        data = {"device_pn": model}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_dynamic_price_providers"], json=data
+            )
+        # update account details with providers for this model
+        if data := resp.get("data") or {}:
+            self._update_account(
+                {
+                    f"price_providers_{model}": {
+                        # Add poll date to verify if re-polling makes sense
+                        "date": datetime.now().strftime("%Y-%m-%d")
+                    }
+                    | data
+                }
+            )
+        return data
+
+    def price_provider_options(self, siteId: str) -> set:
+        """Get the valid price provider options for the site ID from Api cache data.
+
+        Active dynamic Price example:
+        "dynamic_price": {"country": "DE","company": "Nordpool","area": "GER","pct": null,"currency": "\u20ac","adjust_coef": null}
+        """
+        options: set = set()
+        if isinstance(siteId, str) and (site := self.sites.get(siteId) or {}):
+            for model in (site.get("site_info") or {}).get(
+                "current_site_device_models"
+            ) or []:
+                # add options from provider list
+                for country in (self.account.get(f"price_providers_{model}") or {}).get(
+                    "country_info"
+                ) or []:
+                    for company in country.get("company_info") or []:
+                        for area in company.get("area_info") or []:
+                            options.add(
+                                str(
+                                    SolixPriceProvider(
+                                        country=country.get("country"),
+                                        company=company.get("company"),
+                                        area=area.get("area"),
+                                    )
+                                )
+                            )
+                if options:
+                    break
+        return options
+
     async def get_currency_list(self, fromFile: bool = False) -> dict:
         r"""Get the currency list for the power sites.
 
@@ -840,3 +1001,398 @@ class AnkerSolixBaseApi:
                 "post", API_ENDPOINTS["get_currency_list"]
             )
         return resp.get("data") or {}
+
+    def lookup_currency_symbol(self, currency: str) -> str | None:
+        """Get the currency symbol from the currency list if available."""
+        # lookup symbol in currency list
+        if isinstance(currency, str):
+            return (
+                next(
+                    iter(
+                        item
+                        for item in self.account.get("currency_list") or []
+                        if item.get("name") == currency
+                    ),
+                    {},
+                )
+            ).get("symbol") or None
+        return None
+
+    async def get_site_price(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the power price set for the site.
+
+        Example data:
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"site_co2": 0,"site_price_unit": "\u20ac"}
+        Enhanced data from 2025 to support dynamic prices for systems:
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.29,"site_co2": 0,"site_price_unit": "\u20ac", "price_type": "dynamic",
+        "current_mode": 7, "use_time": null, "dynamic_price": {
+            "country": "DE", "company": "Nordpool", "area": "GER", "pct": null}
+        "accuracy": 2}
+        """
+        data = {"site_id": siteId}
+        if fromFile:
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_site_price"], json=data
+            )
+        data = resp.get("data") or {}
+        # update site details in sites dict
+        details = data.copy()
+        details.pop("site_id", None)
+        self._update_site(siteId, details)
+        return data
+
+    async def set_site_price(
+        self,
+        siteId: str,
+        price: float | None = None,
+        unit: str | None = None,
+        co2: float | None = None,
+        price_type: str | None = None,  # "fixed" | "use_time" | "dynamic"
+        provider: SolixPriceProvider | str | dict | None = None,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Set the power price, the unit, CO2 and price type for a site.
+
+        Example input:
+        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0}
+        Additional fields have been added to support dynamic prices, dynamic_price ignored if type not dynamic
+        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "dynamic", "dynamic_price": {
+            "country": "DE",
+            "company": "Nordpool",
+            "area": "GER",
+        }}
+        """
+        # First get the old settings from api dict or Api call to update only requested parameter
+        if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
+            details = await self.get_site_price(siteId=siteId, fromFile=toFile)
+        if not details or not isinstance(details, dict):
+            return False
+        # Validate parameters
+        provider = (
+            provider
+            if isinstance(provider, SolixPriceProvider)
+            else SolixPriceProvider(provider=provider)
+            if isinstance(provider, str | dict)
+            else None
+        )
+        price_type = (
+            SolixPriceTypes.DYNAMIC.value
+            if provider
+            else str(price_type).lower()
+            if str(price_type).lower() in {item.value for item in SolixPriceTypes}
+            else None
+        )
+        # Prepare payload from details
+        data: dict = {}
+        data["price"] = (
+            float(price) if isinstance(price, float | int) else details.get("price")
+        )
+        data["site_price_unit"] = unit if unit else details.get("site_price_unit")
+        data["site_co2"] = (
+            float(co2) if isinstance(co2, float | int) else details.get("site_co2")
+        )
+        if "price_type" in details or price_type:
+            data["price_type"] = price_type if price_type else details.get("price_type")
+        if "dynamic_price" in details or provider:
+            data["dynamic_price"] = (
+                provider.asdict() if provider else details.get("dynamic_price")
+            )
+
+        # Make the Api call and check for return code
+        data["site_id"] = siteId
+        if toFile:
+            # Write updated response to file for testing purposes
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": data,
+                },
+            ):
+                return False
+        else:
+            code = (
+                await self.apisession.request(
+                    "post", API_ENDPOINTS["update_site_price"], json=data
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return False
+        # update the data in api dict and return active data
+        return await self.get_site_price(siteId=siteId, fromFile=toFile)
+
+    async def get_dynamic_prices(
+        self,
+        provider: SolixPriceProvider | str | dict,
+        date: datetime | None = None,
+        deviceSn: str | None = None,
+        fromFile: bool = False,
+    ) -> dict:
+        """Get the dynamic price details for a given provider and date.
+
+        Example data:
+        {"release_time":"13:00","today_price_trend":[
+            {"time":"00:00","price":"81.76"},{"time":"01:00","price":"75.31"},{"time":"02:00","price":"75.00"},...,{"time":"23:00","price":"98.23"}],
+        "tomorrow_price_trend":[
+            {"time":"00:00","price":"111.49"},{"time":"01:00","price":"109.91"},{"time":"02:00","price":"102.02"},...,{"time":"23:00","price":"95.49"}],
+        "currency":"EUR","today_avg_price":"87.04","tomorrow_avg_price":"71.69"}
+        """
+        # validate provider
+        if not (
+            provider := provider
+            if isinstance(provider, SolixPriceProvider)
+            else SolixPriceProvider(provider=provider)
+            if isinstance(provider, str | dict)
+            else None
+        ):
+            return {}
+        # validate date
+        polldate = date if isinstance(date, datetime) else datetime.now()
+        data = {
+            # country parameter is not required for query
+            "company": provider.company,
+            "area": provider.area,
+            "date": str(int(polldate.timestamp())),
+            "device_sn": deviceSn or "",
+        }
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/', '_')}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_dynamic_price_details"], json=data
+            )
+        data = resp.get("data") or {}
+        # update account details with spot prices for provider and add last poll time
+        self._update_account(
+            {
+                f"price_details_{str(provider).replace('/', '_')}": {
+                    # Add poll date and time to verify if repolling makes sense
+                    "poll_time": polldate.strftime("%Y-%m-%d %H:%M")
+                }
+                | data
+            }
+        )
+        return data
+
+    async def refresh_provider_prices(
+        self,
+        provider: SolixPriceProvider | str | dict,
+        fromFile: bool = False,
+    ) -> None:
+        """Refresh the dynamic price information for given provider if required."""
+        # validate provider
+        if not (
+            provider := provider
+            if isinstance(provider, SolixPriceProvider)
+            else SolixPriceProvider(provider=provider)
+            if isinstance(provider, str | dict)
+            else None
+        ):
+            return
+        # get existing price information
+        spot_prices = (
+            self.account.get(f"price_details_{str(provider).replace('/', '_')}") or {}
+        )
+        # get last poll time or initialize with old date for first poll
+        lastpoll = spot_prices.get("poll_time") or (
+            datetime.now() - timedelta(days=2)
+        ).strftime("%Y-%m-%d %H:%M")
+        lastpoll = datetime.fromisoformat(lastpoll)
+        # fetch provider prices max once per hour or if missing
+        if (
+            lastpoll.date() != datetime.now().date()
+            or lastpoll.hour != datetime.now().hour
+            or not spot_prices.get("today_price_trend")
+        ):
+            self._logger.debug(
+                "Getting api %s dynamic price details for provider %s",
+                self.apisession.nickname,
+                provider,
+            )
+            await self.get_dynamic_prices(
+                provider=provider,
+                fromFile=fromFile,
+            )
+
+    def extractPriceData(
+        self, siteId: str, forceCalc: bool = False, initialize: bool = False
+    ) -> dict:
+        """Get the dynamic price information extracted from cache data using spot prices, fees and taxes."""
+        priceData = {}
+        if not (
+            site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
+        ):
+            return priceData
+        if not (
+            "dynamic_price_details" in (details := site.get("site_details") or {})
+            or initialize
+        ):
+            return priceData
+        # get customized site data
+        customized = site.get("customized") or {}
+        # get provider details from api or customization
+        provider = SolixPriceProvider(
+            provider=details.get("dynamic_price")
+            or customized.get("dynamic_price")
+            or {}
+        )
+        # add generic details that are independent of spot price availability
+        priceData["dynamic_price_provider"] = str(provider)
+        # preset fee and vat, use customized values with priority, defaults last
+        # TODO(SB3): Add fee and tax values active on the system once data can be queried
+        priceData["dynamic_price_fee"] = customized.get("dynamic_price_fee") or str(
+            SolixDefaults.DYNAMIC_TARIFF_PRICE_FEE.get(
+                provider.country or self.apisession.countryId
+            )
+            or SolixDefaults.DYNAMIC_TARIFF_PRICE_FEE.get("DEFAULT")
+        )
+        priceData["dynamic_price_vat"] = customized.get("dynamic_price_vat") or str(
+            SolixDefaults.DYNAMIC_TARIFF_PRICE_VAT.get(
+                provider.country or self.apisession.countryId
+            )
+            or SolixDefaults.DYNAMIC_TARIFF_PRICE_VAT.get("DEFAULT")
+        )
+        priceData["dynamic_price_total"] = ""
+        if (
+            spot_prices := self.account.get(
+                f"price_details_{str(provider).replace('/', '_')}"
+            )
+            or {}
+        ):
+            now = datetime.now()
+            nowstring = now.strftime("%Y-%m-%d %H:%M")
+            last_details = details.get("dynamic_price_details") or {}
+            # get last poll time from site details
+            poll_time = spot_prices.get("poll_time")
+            last_calc = last_details.get("dynamic_price_poll_time") or ""
+            # lookup unit symbol in currency list
+            unit = spot_prices.get("currency") or ""
+            priceData["spot_price_unit"] = self.lookup_currency_symbol(unit) or unit
+            # update dynamic prices if new poll data is available or provider changed since last data
+            if poll_time and (
+                forceCalc
+                or last_calc < poll_time
+                or provider
+                != SolixPriceProvider(
+                    provider=last_details.get("dynamic_price_provider")
+                )
+            ):
+                fee = str(priceData.get("dynamic_price_fee"))
+                fee = (
+                    float(fee)
+                    if fee.replace("-", "", 1).replace(".", "", 1).isdigit()
+                    else 0
+                )
+                vat = priceData.get("dynamic_price_vat")
+                vat = (
+                    float(vat)
+                    if vat.replace("-", "", 1).replace(".", "", 1).isdigit()
+                    else 0
+                )
+                date = datetime.fromisoformat(poll_time)
+                trend = []
+                # calculate total dynamic price
+                for day in [0, 1]:
+                    daystring = (date + timedelta(days=day)).strftime("%Y-%m-%d")
+                    trend.extend(
+                        {
+                            "timestamp": f"{daystring} {item.get('time')}",
+                            "price": f"{(float(spotprice) / 1000 + fee) * (1 + vat / 100):0.4f}",
+                            "spot_mwh": spotprice,
+                        }
+                        for item in (
+                            spot_prices.get(
+                                "today_price_trend"
+                                if day == 0
+                                else "tomorrow_price_trend"
+                            )
+                            or []
+                        )
+                        if (
+                            (spotprice := item.get("price") or "")
+                            .replace("-", "", 1)
+                            .replace(".", "", 1)
+                            .isdigit()
+                        )
+                    )
+                priceData["dynamic_price_forecast"] = trend
+                priceData["dynamic_price_poll_time"] = poll_time
+                priceData["dynamic_price_calc_time"] = nowstring
+            elif (
+                SolixPriceProvider(provider=last_details.get("dynamic_price_provider"))
+                == provider
+            ):
+                # copy previous calculation for same provider
+                priceData["dynamic_price_forecast"] = (
+                    last_details.get("dynamic_price_forecast") or []
+                )
+                priceData["dynamic_price_poll_time"] = (
+                    last_details.get("dynamic_price_poll_time") or ""
+                )
+                priceData["dynamic_price_calc_time"] = (
+                    last_details.get("dynamic_price_calc_time") or ""
+                )
+            # extract correct prices depending on actual time
+            today = now.strftime("%Y-%m-%d") in poll_time
+            slot = next(
+                iter(
+                    [
+                        s
+                        for s in priceData["dynamic_price_forecast"] or []
+                        if isinstance(s, dict) and str(s.get("timestamp")) <= nowstring
+                    ][-1:]
+                ),
+                {},
+            )
+            priceData["spot_price_time"] = slot.get("timestamp") or ""
+            priceData["spot_price_mwh"] = slot.get("spot_mwh") or ""
+            priceData["dynamic_price_total"] = slot.get("price") or ""
+            priceData["spot_price_mwh_avg_today"] = (
+                str(float(price))
+                if (
+                    (
+                        price := (
+                            spot_prices.get(
+                                "today_avg_price" if today else "tomorrow_avg_price"
+                            )
+                            or ""
+                        )
+                    )
+                    .replace("-", "", 1)
+                    .replace(".", "", 1)
+                    .isdigit()
+                )
+                else ""
+            )
+            priceData["spot_price_mwh_avg_tomorrow"] = (
+                str(float(price))
+                if (
+                    (
+                        price := (
+                            spot_prices.get("tomorrow_avg_price" if today else "") or ""
+                        )
+                    )
+                    .replace("-", "", 1)
+                    .replace(".", "", 1)
+                    .isdigit()
+                )
+                else ""
+            )
+        return priceData

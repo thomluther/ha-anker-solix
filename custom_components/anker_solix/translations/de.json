@@ -28,7 +28,7 @@
         },
         "plan": {
             "options": {
-                "custom_rate_plan": "Manueller Plan",
+                "custom_rate_plan": "Benutzerdefinierter Plan",
                 "blend_plan": "Mischungsplan",
                 "manual_backup": "Notfallladeplan",
                 "use_time": "Nutzungszeitplan"
@@ -213,6 +213,13 @@
                     }
                 }
             },
+            "wired_connection": {
+                "name": "Kabelverbindung",
+                "state": {
+                    "on": "Verbunden",
+                    "off": "Getrennt"
+                }
+            },
             "connected": {
                 "name": "Verbindung",
                 "state": {
@@ -243,6 +250,42 @@
                     },
                     "ota_components": {
                         "name": "OTA Komponenten"
+                    }
+                }
+            },
+            "ai_ems_enabled": {
+                "name": "AI Aktivierung",
+                "state": {
+                    "on": "Ja",
+                    "off": "Nein"
+                },
+                "state_attributes": {
+                    "status_code": {
+                        "name": "Status Code"
+                    },
+                    "status": {
+                        "name": "Status",
+                        "state": {
+                            "unknown": "Unbekannt",
+                            "untrained": "Untrainiert",
+                            "learning": "Lernend",
+                            "trained": "Trainiert"
+                        }
+                    }
+                }
+            },
+            "auto_switch": {
+                "name": "AI gesteuert",
+                "state": {
+                    "on": "Ja",
+                    "off": "Nein"
+                },
+                "state_attributes": {
+                    "priority": {
+                        "name": "Priorität"
+                    },
+                    "running_time": {
+                        "name": "Laufzeit"
                     }
                 }
             },
@@ -328,6 +371,23 @@
             },
             "preset_tariff_price": {
                 "name": "Tarifpreis kWh"
+            },
+            "battery_capacity": {
+                "name": "Akku Kapazität",
+                "state_attributes": {
+                    "expansions": {
+                        "name": "Erweiterungen"
+                    },
+                    "calculated": {
+                        "name": "Berechnet"
+                    }
+                }
+            },
+            "dynamic_price_fee": {
+                "name": "Dyn. Preis Gebühr"
+            },
+            "dynamic_price_vat": {
+                "name": "Dyn. Preis MwSt"
             }
         },
         "select": {
@@ -337,21 +397,32 @@
             "preset_usage_mode": {
                 "name": "Benutzermodus",
                 "state": {
-                    "smartmeter": "Smart Meter",
+                    "smartmeter": "Eigenverbrauch",
                     "smartplugs": "Smarte Steckdosen",
-                    "use_time": "Nutzungszeit",
+                    "manual": "Benutzerdefiniert",
                     "backup": "Notstromladung",
-                    "manual": "Manuell"
+                    "use_time": "Nutzungszeit",
+                    "smart": "Smart",
+                    "time_slot": "Zeitfenster"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Modus"
+                    }
                 }
             },
             "preset_tariff": {
                 "name": "Tarif Nutzungszeit",
                 "state": {
-                    "none": "Kein",
                     "peak": "Spitzenzeit",
                     "mid_peak": "Mittlere Spitzenzeit",
                     "off_peak": "Außerhalb Spitzenzeit",
                     "valley": "Nebenzeit"
+                },
+                "state_attributes": {
+                    "tariff": {
+                        "name": "Tarif"
+                    }
                 }
             },
             "system_price_unit": {
@@ -361,11 +432,32 @@
                 "name": "Preis Typ",
                 "state": {
                     "fixed": "Fest",
-                    "use_time": "Nutzungszeit"
+                    "use_time": "Nutzungszeit",
+                    "dynamic": "Dynamisch"
                 },
                 "state_attributes": {
+                    "type": {
+                        "name": "Typ"
+                    },
                     "current_mode": {
                         "name": "Aktiver Benutzermodus"
+                    }
+                }
+            },
+            "dynamic_price_provider": {
+                "name": "Preisanbieter",
+                "state": {
+                    "none": "Keiner"
+                },
+                "state_attributes": {
+                    "country": {
+                        "name": "Land"
+                    },
+                    "company": {
+                        "name": "Firma"
+                    },
+                    "area": {
+                        "name": "Gebiet"
                     }
                 }
             },
@@ -493,7 +585,8 @@
                 "name": "Vorgabe Modus",
                 "state": {
                     "normal": "Normal",
-                    "advanced": "Erweitert"
+                    "advanced": "Erweitert",
+                    "unknown": "Unbekannt"
                 },
                 "state_attributes": {
                     "mode": {
@@ -533,7 +626,7 @@
                 "name": "Firmware"
             },
             "sub_package_num": {
-                "name": "Erweiterungakku"
+                "name": "Erweiterungsakku"
             },
             "battery_count": {
                 "name": "Batteriemodule"
@@ -609,12 +702,14 @@
             "active_scene_mode": {
                 "name": "Aktiver Benutzermodus",
                 "state": {
-                    "smartmeter": "Smart Meter",
+                    "unknown": "Unbekannt",
+                    "smartmeter": "Eigenverbrauch",
                     "smartplugs": "Smarte Steckdosen",
-                    "manual": "Manuell",
+                    "manual": "Benutzerdefiniert",
                     "backup": "Notstromladung",
                     "use_time": "Nutzungszeit",
-                    "unknown": "Unbekannt"
+                    "smart": "Smart",
+                    "time_slot": "Zeitfenster"
                 },
                 "state_attributes": {
                     "mode_type": {
@@ -638,13 +733,83 @@
                 "name": "Andere Verbraucherleistung"
             },
             "total_co2_saving": {
-                "name": "CO₂ Einsparung"
+                "name": "CO₂ Einsparung",
+                "state_attributes": {
+                    "rank": {
+                        "name": "Rang"
+                    },
+                    "trees": {
+                        "name": "Bäume"
+                    },
+                    "message": {
+                        "name": "Nachricht"
+                    }
+                }
             },
             "total_saved_money": {
                 "name": "Kostenersparnis"
             },
             "total_output_energy": {
                 "name": "Ertrag gesamt"
+            },
+            "total_aiems_profit": {
+                "name": "AI Profit",
+                "state_attributes": {
+                    "advantage": {
+                        "name": "Vorteil"
+                    },
+                    "percentage": {
+                        "name": "Prozent"
+                    }
+                }
+            },
+            "aiems_runtime_status": {
+                "name": "AI Überwachung",
+                "state": {
+                    "unknown": "Unbekannt",
+                    "inactive": "Inaktiv",
+                    "running": "Läuft",
+                    "failure": "Fehler"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    },
+                    "runtime": {
+                        "name": "Laufzeit"
+                    }
+                }
+            },
+            "dynamic_price_total": {
+                "name": "Dyn. Preis gesamt",
+                "state_attributes": {
+                    "price_calc": {
+                        "name": "Preisberechnung"
+                    },
+                    "price_time": {
+                        "name": "Preis Zeit"
+                    },
+                    "forecast": {
+                        "name": "Prognose"
+                    }
+                }
+            },
+            "spot_price_mwh": {
+                "name": "Dyn. Börsenpreis",
+                "state_attributes": {
+                    "provider": {
+                        "name": "Preisanbieter"
+                    },
+                    "poll_time": {
+                        "name": "Abfragezeit"
+                    },
+                    "avg_today": {
+                        "name": "Durchschnitt heute"
+                    },
+                    "avg_tomorrow": {
+                        "name": "Durchschnitt morgen"
+                    }
+                }
             },
             "set_system_output_power": {
                 "name": "System Einspeisevorgabe"
@@ -1013,8 +1178,8 @@
             "description": "Der aktuelle Zeitplan der Solarbank wird gelöscht",
             "sections": {
                 "sb2_fields": {
-                    "name": "Solarbank 2 Optionen",
-                    "description": "Für Solarbank 2 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                    "name": "Solarbank 2+ Optionen",
+                    "description": "Für Solarbank 2+ Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
                 }
             },
             "fields": {
@@ -1034,11 +1199,11 @@
             "sections": {
                 "sb1_fields": {
                     "name": "Solarbank 1 Optionen",
-                    "description": "Für Solarbank 1 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 2)"
+                    "description": "Für Solarbank 1 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 2+)"
                 },
                 "sb2_fields": {
-                    "name": "Solarbank 2 Optionen",
-                    "description": "Für Solarbank 2 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                    "name": "Solarbank 2+ Optionen",
+                    "description": "Für Solarbank 2+ Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
                 }
             },
             "fields": {
@@ -1064,19 +1229,19 @@
                 },
                 "device_load": {
                     "name": "Geräte Einspeisevorgabe",
-                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2)"
+                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2+ Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Export erlauben",
-                    "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
+                    "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2+)"
                 },
                 "discharge_priority": {
                     "name": "Entladepriorität",
-                    "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2)"
+                    "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2+)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",
-                    "description": "Bis zum eingestellten Ladestand wird bei definiertem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
+                    "description": "Bis zum eingestellten Ladestand wird bei definiertem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2+ ist."
                 }
             }
         },
@@ -1086,11 +1251,11 @@
             "sections": {
                 "sb1_fields": {
                     "name": "Solarbank 1 Optionen",
-                    "description": "Für Solarbank 1 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 2)"
+                    "description": "Für Solarbank 1 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 2+)"
                 },
                 "sb2_fields": {
-                    "name": "Solarbank 2 Optionen",
-                    "description": "Für Solarbank 2 Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                    "name": "Solarbank 2+ Optionen",
+                    "description": "Für Solarbank 2+ Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
                 }
             },
             "fields": {
@@ -1116,19 +1281,19 @@
                 },
                 "device_load": {
                     "name": "Geräte Einspeisevorgabe",
-                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2 Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2)"
+                    "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2+ Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Export erlauben",
-                    "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2)"
+                    "description": "Bei Deaktivierung wird der Akku nicht entladen, bzw. bei vorhadenem MI80 Wechselrichter oder installiertem 0 W Schalter die Ladepriorität genutzt ohne Abgabe ans Haus (ignoriert für Solarbank 2+)"
                 },
                 "discharge_priority": {
                     "name": "Entladepriorität",
-                    "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2)"
+                    "description": "Bei Aktivierung wird die Akku Entladung priorisiert für den Export und mögliche PV Produktion wird gestoppt (ignoriert für Solarbank 2+)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit für die Ladepriorität",
-                    "description": "Bis zum eingestellten Ladestand wird bei definiertem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2 ist."
+                    "description": "Bis zum eingestellten Ladestand wird bei definiertem MI80 Wechselrichter die Ladepriorität genutzt. Einstellung wird ignoriert falls kein 0 W Schalter installiert ist, kein MI80 Wechselrichter eingestellt ist oder es eine Solarbank 2+ ist."
                 }
             }
         },
@@ -1156,7 +1321,7 @@
         },
         "modify_solix_use_time": {
             "name": "Nutzungszeitplan ändern",
-            "description": "Anpassung des Nutzungszeitplans für Anker Solix Geräte, die AC-Ladung und einen Nutzungszeitmodus mit verschiedenen Stromtarifen unterstützen",
+            "description": "Anpassung des Nutzungszeitplans für Anker Solix Geräte, die AC-Ladung und einen Nutzungszeit Modus mit verschiedenen Stromtarifen unterstützen",
             "fields": {
                 "start_month": {
                     "name": "Anfangsmonat",

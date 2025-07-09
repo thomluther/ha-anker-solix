@@ -157,6 +157,7 @@ VALID_PLAN = vol.All(
     ),
 )
 EXTRA_PLAN_AC = vol.In([SolarbankRatePlan.backup, SolarbankRatePlan.use_time])
+EXTRA_PLAN_SB3 = vol.In([SolarbankRatePlan.time_slot])
 MONTHS: list = [
     "jan",
     "feb",
@@ -226,6 +227,7 @@ SOLIX_WEEKDAY_SCHEMA: vol.Schema = vol.All(
             ): vol.Any(
                 VALID_PLAN,
                 EXTRA_PLAN_AC,
+                EXTRA_PLAN_SB3,
                 msg=f"not in {
                     [
                         field.default

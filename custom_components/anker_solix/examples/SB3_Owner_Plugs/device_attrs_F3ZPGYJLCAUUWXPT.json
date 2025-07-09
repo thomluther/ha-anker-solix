@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "F3ZPGYJLCAUUWXPT",
+    "attributes": {
+      "rssi": "-30"
+    }
+  },
+  "trace_id": "66ecc5ca5f8b0b0ab1c424cfecd4dbe9"
+}

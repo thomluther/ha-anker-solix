@@ -1,0 +1,21 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "e9dbf9b2-5dc7-aaa6-fd97-b4bd15cfac1f",
+    "price": 0.4,
+    "site_co2": 0,
+    "site_price_unit": "\u20ac",
+    "price_type": "dynamic",
+    "current_mode": 3,
+    "use_time": null,
+    "dynamic_price": {
+      "country": "DE",
+      "company": "Nordpool",
+      "area": "GER",
+      "pct": null
+    },
+    "accuracy": 2
+  },
+  "trace_id": "f4a84ae2b6d01bada8bf6a8d4aefbba4"
+}

@@ -41,7 +41,7 @@ from .entity import (
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
 )
-from .solixapi.apitypes import SolixDeviceType, SolixNetworkStatus
+from .solixapi.apitypes import SolarbankAiemsStatus, SolixDeviceType, SolixNetworkStatus
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,7 @@ class AnkerSolixBinarySensorDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
-    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
+    exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
 DEVICE_SENSORS = [
@@ -76,6 +76,14 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixBinarySensorDescription(
+        key="wired_connection",
+        translation_key="wired_connection",
+        json_key="wired_connected",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s) or not d.get("is_support_wired"),
+    ),
+    AnkerSolixBinarySensorDescription(
         key="ota_update",
         translation_key="ota_update",
         json_key="is_ota_update",
@@ -86,6 +94,38 @@ DEVICE_SENSORS = [
             "ota_version": d.get("ota_version") or None,
             "ota_components": d.get("ota_children") or [],
         },
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="ai_ems_enabled",
+        translation_key="ai_ems_enabled",
+        json_key="enable",
+        value_fn=lambda d, jk: ((d.get("schedule") or {}).get("ai_ems") or {}).get(jk),
+        attrib_fn=lambda d: {
+            "status_code": (code := ((d.get("schedule") or {}).get("ai_ems") or {}).get("status")),
+            "status": next(
+                iter(
+                    [
+                        item.name
+                        for item in SolarbankAiemsStatus
+                        if str(item.value) == str(code)
+                    ]
+                ),
+                SolarbankAiemsStatus.unknown.name,
+            ),
+        },
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="auto_switch",
+        translation_key="auto_switch",
+        json_key="auto_switch",
+        attrib_fn=lambda d: {
+            "priority": d.get("priority"),
+            "running_time": d.get("running_time"),
+        },
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
 ]
 

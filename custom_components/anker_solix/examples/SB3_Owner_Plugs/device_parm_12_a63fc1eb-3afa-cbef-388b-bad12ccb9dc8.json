@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"price_type\":\"fixed\",\"use_time\":[{\"sea\":{\"start_month\":1,\"end_month\":12},\"weekday\":[{\"start_time\":0,\"end_time\":24,\"type\":2}],\"weekend\":[{\"start_time\":0,\"end_time\":24,\"type\":2}],\"weekday_price\":[{\"price\":\"0.00\",\"type\":3},{\"price\":\"0.3\",\"type\":1},{\"price\":\"0.3\",\"type\":2}],\"weekend_price\":[{\"price\":\"0.00\",\"type\":3},{\"price\":\"0.3\",\"type\":1},{\"price\":\"0.3\",\"type\":2}],\"unit\":\"\u20ac\",\"is_same\":true}],\"dynamic_price\":null,\"fixed_price\":{\"price\":\"0.33\",\"unit\":\"\u20ac\",\"accuracy\":2},\"time_slot_data\":null}"
+  },
+  "trace_id": "f9377de0e60f6a47bb6a8e5e5e182b3b"
+}

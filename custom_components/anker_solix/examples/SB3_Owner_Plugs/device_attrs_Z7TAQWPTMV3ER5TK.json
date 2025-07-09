@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "Z7TAQWPTMV3ER5TK",
+    "attributes": {
+      "rssi": "-14"
+    }
+  },
+  "trace_id": "05d6c81c4a5defcd05f420ee56cd4ef0"
+}

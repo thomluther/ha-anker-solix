@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "NRL2VNK0468UWHYV",
+    "attributes": {
+      "rssi": "-67"
+    }
+  },
+  "trace_id": "a6bdf43a8d0832dfa5d4c475bee17a62"
+}

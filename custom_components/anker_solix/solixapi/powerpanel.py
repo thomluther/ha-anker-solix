@@ -86,7 +86,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         The device SN should be returned if found in devData and an update was done
         """
 
-        if sn := devData.get("device_sn"):
+        if sn := devData.pop("device_sn", None):
             device: dict = self.devices.get(sn, {})  # lookup old device info if any
             device.update({"device_sn": str(sn)})
             if devType:
@@ -345,12 +345,23 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 self.apisession.nickname,
             )
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
+            # First fetch details that only work for site admins
+            if site.get("site_admin", False):
+                # Fetch site price and CO2 settings
+                if {ApiCategories.site_price} - exclude:
+                    self._logger.debug(
+                        "Getting api %s price and CO2 settings for site",
+                        self.apisession.nickname,
+                    )
+                    await self.get_site_price(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
-            if {SolixDeviceType.POWERPANEL.value} - exclude:
-                # Fetch details that only work for site admins
-                if site.get("site_admin", False):
-                    # Add extra power panel site polling that may make sense
-                    pass
+            # Fetch CO2 Ranking if not excluded
+            if not ({ApiCategories.powerpanel_energy} & exclude):
+                self._logger.debug(
+                    "Getting api %s CO2 ranking",
+                    self.apisession.nickname,
+                )
+            await self.get_co2_ranking(siteId=site_id, fromFile=fromFile)
         return self.sites
 
     async def update_device_energy(

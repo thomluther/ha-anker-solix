@@ -1,0 +1,45 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": false,
+    "device_list": [
+      {
+        "device_sn": "F3ZPGYJLCAUUWXPT",
+        "device_name": "Smart Plug",
+        "auto_upgrade": false,
+        "alias_name": "Keller",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png"
+      },
+      {
+        "device_sn": "J6569JU7G22QRK7I",
+        "device_name": "Smart Plug",
+        "auto_upgrade": false,
+        "alias_name": "K\u00fchlschrank",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png"
+      },
+      {
+        "device_sn": "Z7TAQWPTMV3ER5TK",
+        "device_name": "Smart Plug",
+        "auto_upgrade": false,
+        "alias_name": "Smart Plug",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png"
+      },
+      {
+        "device_sn": "ZLF94UZ1WWW86V1Z",
+        "device_name": "Smart Plug",
+        "auto_upgrade": false,
+        "alias_name": "Sp\u00fclmaschine",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png"
+      },
+      {
+        "device_sn": "YZ66ISQXWBIBW6E2G",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "auto_upgrade": false,
+        "alias_name": "Solarbank 3 E2700 Pro",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png"
+      }
+    ]
+  },
+  "trace_id": "b1dbf5deacdeff5cc82dba63f9d8c47a"
+}

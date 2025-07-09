@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "B2ZDH5QYEIRM4DGZA",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-06-28 13:08:34",
+        "upgrade_version": "v1.0.0.18",
+        "pre_version": "v1.0.0.9",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "B2ZDH5QYEIRM4DGZA",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "c4475ee36e149fc85d513bfffdef3efe"
+}

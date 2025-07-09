@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "GBCOTRWKNXCD6U",
+    "site_id": "",
+    "upgrade_record_list": []
+  },
+  "trace_id": "fefd0b0455e28a5bafc504d4db4cd319"
+}

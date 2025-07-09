@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "show": false,
+    "ranking": "",
+    "co2": "",
+    "tree": "",
+    "content": "",
+    "level": null
+  },
+  "trace_id": "c8ddbde7e1cfb3fc4538568feebc5cbc"
+}

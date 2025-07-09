@@ -1,6 +1,6 @@
 """Default definitions required for the Anker Power/Solix Cloud API."""
 
-from dataclasses import dataclass
+from dataclasses import InitVar, asdict, dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, ClassVar
@@ -143,8 +143,8 @@ API_ENDPOINTS = {
     "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
     "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
-    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn, works as member, {"device_pn": "A5102"}
-    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "2025-05-31", "device_sn": deviceSn})) # may only work for admin?
+    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
+    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
     "get_device_income": "power_service/v1/app/device/get_device_income",  # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
     "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
     "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
@@ -231,7 +231,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/device/set_device_attrs', # attributes must be list of strings, only 'rssi' found working so far
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/shelly_ctrl_device', # {"device_sn": deviceSn, "op_type": "parameter", "value": value})) # Control shelly device settings, may require owner, usage known
-    'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list object e.g. {"check_list": [{"enable_timeslot": True}]}
+    'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list with objects for unknown feature_code e.g. {"check_list": [{"feature_code": "smartmeter", "product_code": "A17C5"}]}
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
@@ -493,6 +493,7 @@ class SolixDeviceType(Enum):
     POWERCOOLER = "powercooler"
     HES = "hes"
     SOLARBANK_PPS = "solarbank_pps"
+    CHARGER = "charger"
 
 
 class SolixParmType(Enum):
@@ -501,11 +502,14 @@ class SolixParmType(Enum):
     SOLARBANK_SCHEDULE = "4"
     SOLARBANK_2_SCHEDULE = "6"
     SOLARBANK_SCHEDULE_ENFORCED = "9"
+    SOLARBANK_TARIFF_SCHEDULE = "12"
+    SOLARBANK_AUTHORIZATIONS = "13"
 
 
 class SolarbankPowerMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 1 Power setting modes."""
 
+    unknown = 0
     normal = 1
     advanced = 2
 
@@ -513,14 +517,39 @@ class SolarbankPowerMode(IntEnum):
 class SolarbankDischargePriorityMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
 
+    unknown = -1
     off = 0
     on = 1
+
+
+class SolarbankAiemsStatus(IntEnum):
+    """Enumeration for Anker Solix Solarbank Anker Intelligence status."""
+
+    unknown = 0
+    untrained = 3
+    learning = 4
+    trained = 5
+
+
+class SolarbankAiemsRuntimeStatus(IntEnum):
+    """Enumeration for Anker Solix Solarbank Anker Intelligence runtime status.
+
+    Following combinations of ai_ems status abd ai_ems runtime information were seen:
+    - left_time > 0 with runtime status 0 => learning phase status 4 without runtime failure
+    - left_time < 0 with runtime status 1 => trained and continues collecting data
+    - left_time < 0 with runtime status 2 => untrained, most likely failure during learning or learning stopped
+    """
+
+    unknown = -1
+    inactive = 0
+    running = 1
+    failure = 2
 
 
 class SolixTariffTypes(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
-    NONE = 0  # Pseudo type to reflect no tariff defined
+    UNKNOWN = 0  # Pseudo type to reflect no known tariff defined
     PEAK = 1  # maximize PV and Battery usage, no AC charge
     MID_PEAK = 2  # maximize PV and Battery usage, no AC charge
     OFF_PEAK = 3  # maximize PV and Battery usage, no AC charge, discharge only above 80% SOC, Reserve charge utilized only for PEAK & MID PEAK times
@@ -532,9 +561,10 @@ class SolixTariffTypes(IntEnum):
 class SolixPriceTypes(StrEnum):
     """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
+    UNKNOWN = "unknown"
     FIXED = "fixed"
     USE_TIME = "use_time"
-    # DYNAMIC = "dynamic"
+    DYNAMIC = "dynamic"
 
 
 class SolixDayTypes(StrEnum):
@@ -548,14 +578,15 @@ class SolixDayTypes(StrEnum):
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 2/3 Power Usage modes."""
 
+    unknown = 0  # AC output based on measured smart meter power
     smartmeter = 1  # AC output based on measured smart meter power
     smartplugs = 2  # AC output based on measured smart plug power
     manual = 3  # manual time plan for home load output
     backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
     use_time = 5  # Use Time plan with AC types and smart meter
-    # unknown = 6  # Not clear yet what this stands for
-    # smart = 7   # Smart mode for AI based charging and discharging
-    # time_slot = 8  # Time slot mode for dynamic tariffs
+    # smart_learning = 6  # TODO(SB3): To be confirmed
+    smart = 7  # Smart mode for AI based charging and discharging
+    time_slot = 8  # Time slot mode for dynamic tariffs
 
 
 @dataclass(frozen=True)
@@ -563,13 +594,15 @@ class SolarbankRatePlan:
     """Dataclass for Anker Solix Solarbank 2/3 rate plan types per usage mode."""
 
     # rate plan per usage mode
+    unknown: str = ""
     smartmeter: str = ""  # does not use a plan
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
     use_time: str = "use_time"
-    # smart: str = ""  # does not use a plan "ai_ems"
-    # time_slot: str = ""  # does not use a plan ? "time_slot"
+    # smart_learning: str = "" # TODO(SB3): To be confirmed if this is a valid mode and plan
+    smart: str = ""  # does not use a plan "ai_ems"
+    time_slot: str = "time_slot"
 
 
 @dataclass(frozen=True)
@@ -633,6 +666,7 @@ class SolixDeviceCapacity:
     A1755: int = 768  # SOLIX C800X Portable Power Station
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
+    A1762: int = 1056  # SOLIX Portable Power Station 1000
     # A17C1: int = 1056  # SOLIX C1000 Expansion Battery # same PN as Solarbank 2?
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
@@ -641,8 +675,10 @@ class SolixDeviceCapacity:
     A1780_1: int = 2048  # Expansion Battery for F2000
     A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WIFI
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
+    A1782: int = 3072  # SOLIX F3000 Portable Power Station
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
+    A1790P: int = 3840  # SOLIX F3800 Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
 
 
@@ -663,9 +699,7 @@ class SolixSiteType:
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
     t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
-    t_13 = (
-        SolixDeviceType.SOLARBANK_PPS.value
-    )  # Main A1782, PPS solarbank with Smart Meter support for US market?
+    t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782, Solarbank PPS with Smart Meter support for US market SOLIX F3000 Portable Power Station
 
 
 @dataclass(frozen=True)
@@ -693,6 +727,7 @@ class SolixDeviceCategory:
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
     # Smart Meter
     A17X7: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter
+    A17X7US: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter for US
     SHEM3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Smart Meter
     SHEMP3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Pro Smart Meter
     # Smart Plug
@@ -718,6 +753,7 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 555 Portable Power Station
     A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) Portable Power Station
+    A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
     A1770: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 757 Portable Power Station
@@ -727,7 +763,11 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
+    A1782: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX Infini Power Station with SM support
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
+    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
     A17B1: str = (
         SolixDeviceType.POWERPANEL.value
@@ -747,6 +787,9 @@ class SolixDeviceCategory:
     A17A3: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 23L
     A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
+    # Charging Stations
+    A2345: str = SolixDeviceType.CHARGER.value  # Anker 250W Prime Charger
+    A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
 
 
 @dataclass(frozen=True)
@@ -861,6 +904,37 @@ class SolixDefaults:
     # Inverter limit
     MICRO_INVERTER_LIMIT_MIN: int = 0
     MICRO_INVERTER_LIMIT_MAX: int = 800
+    # Dynamic tariff defaults
+    DYNAMIC_TARIFF_PRICE_FEE: ClassVar[dict[str, float]] = {
+        "UK": 0.1131,
+        "SE": 0.0643,
+        "AT": 0.11332,
+        "BE": 0.01316,
+        "FR": 0.1329,
+        "DE": 0.17895,
+        "PL": 0.0786,
+        "DEFAULT": 0,
+    }
+    DYNAMIC_TARIFF_SELL_FEE: ClassVar[dict[str, float]] = {
+        "UK": 0.03,
+        "SE": 0.2,
+        "AT": 0.0973,
+        "BE": 0.01305,
+        "FR": 0.127,
+        "DE": 0.0794,
+        "PL": 0,
+        "DEFAULT": 0,
+    }
+    DYNAMIC_TARIFF_PRICE_VAT: ClassVar[dict[str, float]] = {
+        "UK": 5,
+        "SE": 25,
+        "AT": 20,
+        "BE": 21,
+        "FR": 20,
+        "DE": 19,
+        "PL": 23,
+        "DEFAULT": 0,
+    }
 
 
 class SolixDeviceStatus(StrEnum):
@@ -891,7 +965,7 @@ class SolarbankStatus(StrEnum):
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
-    # TODO(AC): Is there a new mode for AC charging? Can it be distinguished from existing values?
+    # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
 class SmartmeterStatus(StrEnum):
@@ -957,3 +1031,32 @@ class Solarbank2Timeslot:
     weekdays: set[int | str] | None = (
         None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
     )
+
+
+@dataclass(order=True, kw_only=True)
+class SolixPriceProvider:
+    """Dataclass to define dynamic price provider attributes and representation of them."""
+
+    country: str | None = None
+    company: str | None = None
+    area: str | None = None
+    provider: InitVar[dict | str | None] = None
+
+    def __post_init__(self, provider) -> None:
+        """Init the dataclass from an optional provider representation or priceinfo dictionary."""
+        if isinstance(provider, dict):
+            self.country = provider.get("country")
+            self.company = provider.get("company")
+            self.area = provider.get("area")
+        elif isinstance(provider, str) and (keys := provider.split("/")):
+            self.country = s if (s := (keys[0:1] or [None])[0]) != "-" else None
+            self.company = s if (s := (keys[1:2] or [None])[0]) != "-" else None
+            self.area = s if (s := (keys[2:3] or [None])[0]) != "-" else None
+
+    def __str__(self) -> str:
+        """Print the class fields."""
+        return f"{self.country or '-'}/{self.company or '-'}/{self.area or '-'}"
+
+    def asdict(self) -> dict:
+        """Return a dictionary representation of the class fields."""
+        return asdict(self)

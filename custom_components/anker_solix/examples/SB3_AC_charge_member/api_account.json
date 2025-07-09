@@ -1,0 +1,223 @@
+{
+  "type": "account",
+  "email": "anonymous-1@domain.com",
+  "nickname": "spa***",
+  "country": "DE",
+  "server": "https://ankerpower-api-eu.anker.com",
+  "currency_list": [
+    {
+      "symbol": "$",
+      "name": "USD"
+    },
+    {
+      "symbol": "\u20ac",
+      "name": "EUR"
+    },
+    {
+      "symbol": "z\u0142",
+      "name": "PLN"
+    }
+  ],
+  "default_currency": {
+    "symbol": "\u20ac",
+    "name": "EUR"
+  },
+  "requests_last_min": 61,
+  "requests_last_hour": 192,
+  "products": {
+    "A1780": {
+      "name": "767 PowerHouse (SOLIX F2000)",
+      "platform": "Portable Power Station"
+    },
+    "A1770": {
+      "name": "F1200 (Bluetooth)",
+      "platform": "Portable Power Station"
+    },
+    "A1771": {
+      "name": "F1200 (Bluetooth and WLAN)",
+      "platform": "Portable Power Station"
+    },
+    "A1781": {
+      "name": "SOLIX F2600",
+      "platform": "Portable Power Station"
+    },
+    "A1772": {
+      "name": "SOLIX F1500",
+      "platform": "Portable Power Station"
+    },
+    "A1753": {
+      "name": "SOLIX C800",
+      "platform": "Portable Power Station"
+    },
+    "A1790": {
+      "name": "SOLIX F3800",
+      "platform": "Portable Power Station"
+    },
+    "A1761": {
+      "name": "SOLIX C1000(X)",
+      "platform": "Portable Power Station"
+    },
+    "A1754": {
+      "name": "SOLIX C800 Plus",
+      "platform": "Portable Power Station"
+    },
+    "A1722": {
+      "name": "SOLIX C300",
+      "platform": "Portable Power Station"
+    },
+    "A1726": {
+      "name": "SOLIX C300 DC",
+      "platform": "Portable Power Station"
+    },
+    "A1755": {
+      "name": "SOLIX C800X",
+      "platform": "Portable Power Station"
+    },
+    "A1723": {
+      "name": "SOLIX C300X",
+      "platform": "Portable Power Station"
+    },
+    "A1780P": {
+      "name": "767 Power House (SOLIX F2000) with WLAN",
+      "platform": "Portable Power Station"
+    },
+    "A1728": {
+      "name": "SOLIX C300X DC",
+      "platform": "Portable Power Station"
+    },
+    "A1729": {
+      "name": "SOLIX C200X DC",
+      "platform": "Portable Power Station"
+    },
+    "A1725": {
+      "name": "SOLIX C200(X)",
+      "platform": "Portable Power Station"
+    },
+    "A1727": {
+      "name": "SOLIX C200 DC",
+      "platform": "Portable Power Station"
+    },
+    "A1790P": {
+      "name": "SOLIX F3800 Plus",
+      "platform": "Portable Power Station"
+    },
+    "A1762": {
+      "name": "Portable Power Station 1000",
+      "platform": "Portable Power Station"
+    },
+    "A5140": {
+      "name": "MI60 Microinverter",
+      "platform": "Balcony Solar Power System"
+    },
+    "A17C1": {
+      "name": "Solarbank 2 E1600 Pro",
+      "platform": "Balcony Solar Power System"
+    },
+    "A5143": {
+      "name": "MI80 Microinverter(BLE)",
+      "platform": "Balcony Solar Power System"
+    },
+    "A17C0": {
+      "name": "Solarbank E1600",
+      "platform": "Balcony Solar Power System"
+    },
+    "A17C5": {
+      "name": "Solarbank 3 E2700 Pro",
+      "platform": "Balcony Solar Power System"
+    },
+    "A17C2": {
+      "name": "Solarbank 2 E1600 AC",
+      "platform": "Balcony Solar Power System"
+    },
+    "A17C3": {
+      "name": "Solarbank 2 E1600 Plus",
+      "platform": "Balcony Solar Power System"
+    },
+    "A17A0": {
+      "name": "Powered Cooler 30",
+      "platform": "Powered Cooler"
+    },
+    "A17A1": {
+      "name": "Powered Cooler 40",
+      "platform": "Powered Cooler"
+    },
+    "A17A2": {
+      "name": "Powered Cooler 50",
+      "platform": "Powered Cooler"
+    },
+    "A17A5": {
+      "name": "SOLIX Everfrost 2 58L",
+      "platform": "Powered Cooler"
+    },
+    "A17A4": {
+      "name": "SOLIX Everfrost 2 40L",
+      "platform": "Powered Cooler"
+    },
+    "A17A3": {
+      "name": "SOLIX Everfrost 2 23L",
+      "platform": "Powered Cooler"
+    },
+    "A17X7": {
+      "name": "Smart Meter",
+      "platform": "Accessory"
+    },
+    "A17X8": {
+      "name": "Smart Plug",
+      "platform": "Accessory"
+    },
+    "A2345": {
+      "name": "250W Prime Charger",
+      "platform": "Charging Station"
+    },
+    "A91B2": {
+      "name": "240W Charging Station",
+      "platform": "Charging Station"
+    },
+    "A5141": {
+      "name": "41",
+      "platform": "Balcony Solar Power System"
+    },
+    "A1340": {
+      "name": "Prime Power Bank",
+      "platform": "Power Bank"
+    },
+    "A5341": {
+      "name": "Backup Controller",
+      "platform": "Residential Storage System"
+    },
+    "A5101": {
+      "name": "X1-P6K-US/S",
+      "platform": "Residential Storage System"
+    },
+    "A5150": {
+      "name": "Microinverter",
+      "platform": "Residential Storage System"
+    },
+    "A5450": {
+      "name": "Zigbee Dongle",
+      "platform": "Residential Storage System"
+    },
+    "A5102": {
+      "name": "X1-H(3.68~6)K-S",
+      "platform": "Residential Storage System"
+    },
+    "A5103": {
+      "name": "X1-H (5~12)K-T",
+      "platform": "Residential Storage System"
+    },
+    "A5220": {
+      "name": "Battery Module",
+      "platform": "Residential Storage System"
+    }
+  },
+  "use_files": true,
+  "sites_poll_time": "2025-05-23 13:41:50",
+  "sites_poll_seconds": 0.003,
+  "details_poll_time": "2025-05-23 13:41:50",
+  "details_poll_seconds": 0.001,
+  "has_unread_msg": true,
+  "system_msg": false,
+  "device_msg": true,
+  "energy_poll_time": "2025-05-23 13:41:50",
+  "energy_poll_seconds": 0.006
+}

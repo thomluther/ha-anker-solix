@@ -20,6 +20,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     ApiCategories,
+    SolixDeviceCapacity,
     SolixDeviceCategory,
     SolixDeviceNames,
     SolixDeviceType,
@@ -74,7 +75,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             self.sites[siteId] = {}
         self.sites[siteId]["site_details"] = site_details
 
-    def _update_dev(
+    def _update_dev(  # noqa: C901
         self,
         devData: dict,
         devType: str | None = None,
@@ -87,7 +88,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         The device SN should be returned if found in devData and an update was done
         """
 
-        if sn := devData.get("device_sn"):
+        if sn := devData.pop("device_sn", None):
             device: dict = self.devices.get(sn, {})  # lookup old device info if any
             device.update({"device_sn": str(sn)})
             if devType:
@@ -98,11 +99,18 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 device.update({"is_admin": True})
             elif isAdmin is False and device.get("is_admin") is None:
                 device.update({"is_admin": False})
+            calc_capacity = False  # Flag whether capacity may need recalculation
             for key, value in devData.items():
                 try:
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     if key in ["product_code", "device_pn"] and value:
                         device.update({"device_pn": str(value)})
+                        # try to get capacity from category definitions
+                        if hasattr(SolixDeviceCapacity, str(value)):
+                            # get battery capacity from known PNs
+                            device["battery_capacity"] = str(
+                                getattr(SolixDeviceCapacity, str(value))
+                            )
                         # try to get type for standalone device from category definitions if not defined yet
                         if hasattr(SolixDeviceCategory, str(value)):
                             dev_type = str(
@@ -134,13 +142,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 }
                             )
                     elif key in ["alias_name"] and value:
-                        device.update({"alias": str(value)})
+                        device["alias"] = str(value)
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",
                         "is_subdevice",
                     ]:
-                        device.update({key: bool(value)})
+                        device[key] = bool(value)
                     elif key in [
                         # key with string values
                         "wireless_type",
@@ -155,10 +163,70 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         ]
                         and value
                     ):
-                        device.update({key: str(value)})
+                        device[key] = str(value)
                     elif key in ["rssi"] and value:
                         # For HES this is actually not a relative rssi value (0-255), but signal strength 0-100 %
-                        device.update({"wifi_signal": str(value)})
+                        device["wifi_signal"] = str(value)
+                    elif key in ["average_power"] and value:
+                        device[key] = value
+                        calc_capacity = True
+                    elif key in ["batCount"] and str(value).isdigit():
+                        device[key] = int(value)
+                        calc_capacity = True
+                    elif key in ["battery_capacity"] and str(value).isdigit():
+                        # This key is used to trigger recalculation from customization
+                        device[key] = value
+                        calc_capacity = True
+                    # generate extra values when certain conditions are met
+                    if calc_capacity:
+                        # generate battery values for main device only when soc updated or battery modules count change
+                        # init calculated fields with 0 if not existing
+                        if "battery_capacity" not in device:
+                            device["battery_capacity"] = "0"
+                        if not (cap := device.get("battery_capacity")) or calc_capacity:
+                            cap = 0
+                            for dev in [
+                                d
+                                for d in self.devices.values()
+                                if d.get("main_sn") == sn
+                                and d.get("is_subdevice")
+                                and str(d.get("battery_capacity")).isdigit()
+                            ]:
+                                # consider customized capacity for calculation
+                                cap += (
+                                    int(c)
+                                    if (
+                                        c := (dev.get("customized") or {}).get(
+                                            "battery_capacity"
+                                        )
+                                    )
+                                    and str(c).isdigit()
+                                    else int(dev.get("battery_capacity"))
+                                )
+                        soc = (devData.get("average_power") or {}).get(
+                            "state_of_charge"
+                        ) or (device.get("average_power") or {}).get("state_of_charge")
+                        # Calculate remaining energy in Wh and add values
+                        if cap and soc and str(cap).isdigit() and str(soc).isdigit():
+                            # Get optional customized capacity for correct energy calculation if adjusted externally
+                            custom_cap = (
+                                custom_cap
+                                if (
+                                    custom_cap := (device.get("customized") or {}).get(
+                                        "battery_capacity"
+                                    )
+                                )
+                                and str(custom_cap).isdigit()
+                                else cap
+                            )
+                            device.update(
+                                {
+                                    "battery_capacity": str(cap),
+                                    "battery_energy": str(
+                                        int(int(custom_cap) * int(soc) / 100)
+                                    ),
+                                }
+                            )
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -395,12 +463,23 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 self.apisession.nickname,
             )
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
+            # First fetch details that only work for site admins
+            if site.get("site_admin", False):
+                # Fetch site price and CO2 settings
+                if {ApiCategories.site_price} - exclude:
+                    self._logger.debug(
+                        "Getting api %s price and CO2 settings for site",
+                        self.apisession.nickname,
+                    )
+                    await self.get_site_price(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
-            if {SolixDeviceType.HES.value} - exclude:
-                # Fetch details that only work for site admins
-                if site.get("site_admin", False):
-                    # Add extra hes site polling that may make sense
-                    pass
+            # Fetch CO2 Ranking if not excluded
+            if not ({ApiCategories.hes_energy} & exclude):
+                self._logger.debug(
+                    "Getting api %s CO2 ranking",
+                    self.apisession.nickname,
+                )
+            await self.get_co2_ranking(siteId=site_id, fromFile=fromFile)
         return self.sites
 
     async def update_device_energy(
@@ -511,10 +590,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             site_id = device.get("site_id", "")
             dev_Type = device.get("type", "")
             # Fetch details that work for shared accounts
-            if (
-                site_id
-                and dev_Type in ({SolixDeviceType.HES.value} - exclude)
-            ):
+            if site_id and dev_Type in ({SolixDeviceType.HES.value} - exclude):
                 # Fetch device wifi info if not found yet with bind_devices
                 self._logger.debug(
                     "Getting api %s wifi info for device",
@@ -522,9 +598,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 )
                 await self.get_hes_wifi_info(deviceSn=sn, fromFile=fromFile)
                 # Fetch details that only work for site admins
-                if (
-                    device.get("is_admin", False)
-                ):
+                if device.get("is_admin", False):
                     pass
         return self.devices
 
@@ -602,6 +676,14 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             )
             mysite.update({"hes_info": myinfo, "statistics": stats})
             self.sites[siteId] = mysite
+            # Update device details with relevant data
+            self._update_dev(
+                {
+                    "device_sn": data.get("mainSn"),
+                    "device_pn": data.get("mainDeviceModel"),
+                    "batCount": data.get("batCount"),
+                }
+            )
         return data
 
     async def get_avg_power_from_energy(
@@ -817,7 +899,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         entry.update(self.extract_energy(source=source, data=data))
             # Add average power to main device details as work around if no other hes device usage data will be found in cloud
             if avg_data and mainSn in self.devices:
-                self.devices[mainSn]["average_power"] = avg_data
+                self._update_dev({"device_sn": mainSn, "average_power": avg_data})
         # return also todays totals so they can be merged to system data
         return avg_data | ({"intraday": entry} if entry else {})
 

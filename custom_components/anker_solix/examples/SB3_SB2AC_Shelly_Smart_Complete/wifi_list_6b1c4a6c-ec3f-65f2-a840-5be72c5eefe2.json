@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "64",
+        "device_sn": "DRVAACFZ5HDHWL8Q5",
+        "rssi": "-66",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      }
+    ]
+  },
+  "trace_id": "4ead136f6cc37b6b861e66c2f50acbc8"
+}

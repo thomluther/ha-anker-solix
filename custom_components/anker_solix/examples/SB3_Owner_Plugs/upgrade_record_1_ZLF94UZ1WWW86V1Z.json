@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "ZLF94UZ1WWW86V1Z",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-05-21 18:53:58",
+        "upgrade_version": "v0.0.2.7",
+        "pre_version": "v0.0.2.2",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "ZLF94UZ1WWW86V1Z",
+        "device_name": "Smart Plug",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "34faae5a7e38eeae4ebd72e3507f1bfa"
+}

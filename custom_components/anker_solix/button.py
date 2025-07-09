@@ -40,7 +40,7 @@ class AnkerSolixButtonDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
-    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
+    exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
 DEVICE_BUTTONS = [

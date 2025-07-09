@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "Z7TAQWPTMV3ER5TK",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-05-21 19:53:06",
+        "upgrade_version": "v0.0.2.7",
+        "pre_version": "v0.0.2.2",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "Z7TAQWPTMV3ER5TK",
+        "device_name": "Smart Plug",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "50b720ee0c1b1611ba2db72930d7e15e"
+}

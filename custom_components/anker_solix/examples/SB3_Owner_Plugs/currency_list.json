@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "currency_list": [
+      {
+        "symbol": "$",
+        "name": "USD"
+      },
+      {
+        "symbol": "\u20ac",
+        "name": "EUR"
+      },
+      {
+        "symbol": "z\u0142",
+        "name": "PLN"
+      }
+    ],
+    "default_currency": {
+      "symbol": "\u20ac",
+      "name": "EUR"
+    }
+  },
+  "trace_id": "76a08cb5ff45dfa1ce22be8fa58aaad4"
+}

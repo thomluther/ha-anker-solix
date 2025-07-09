@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "DRVAACFZ5HDHWL8Q5",
+    "attributes": {
+      "rssi": "-66"
+    }
+  },
+  "trace_id": "32b90afed7deaafef7a9e86aa126cbc5"
+}

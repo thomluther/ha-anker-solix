@@ -18,6 +18,7 @@ from .apitypes import (
     SolixDayTypes,
     SolixDefaults,
     SolixParmType,
+    SolixPriceProvider,
     SolixPriceTypes,
     SolixTariffTypes,
 )
@@ -1266,43 +1267,12 @@ async def set_sb2_home_load(  # noqa: C901
         if str(preset).isdigit() or isinstance(preset, int | float)
         else None
     )
-    # Allow automatic modes only when smart meter or smart plugs available in site
+    # Validate if selected mode is possible
+    usage_mode_options = self.solarbank_usage_mode_options(deviceSn=deviceSn)
     usage_mode = (
         usage_mode
-        if isinstance(usage_mode, int)
-        and usage_mode in iter(SolarbankUsageMode)
-        and not (
-            usage_mode == SolarbankUsageMode.smartmeter.value
-            and len(
-                ((self.sites.get(siteId) or {}).get("grid_info") or {}).get("grid_list")
-                or []
-            )
-            < 1
-        )
-        and not (
-            usage_mode == SolarbankUsageMode.smartplugs.value
-            and len(
-                ((self.sites.get(siteId) or {}).get("smart_plug_info") or {}).get(
-                    "smartplug_list"
-                )
-                or []
-            )
-            < 1
-        )
-        and not (
-            usage_mode == SolarbankUsageMode.use_time.value
-            and ((self.sites.get(siteId) or {}).get("site_info") or {}).get(
-                "power_site_type"
-            )
-            not in [11,12]
-        )
-        # and not (
-        #     usage_mode in [SolarbankUsageMode.time_slot.value,SolarbankUsageMode.smart.value]
-        #     and ((self.sites.get(siteId) or {}).get("site_info") or {}).get(
-        #         "power_site_type"
-        #     )
-        #     not in [12]
-        # )
+        if usage_mode in iter(SolarbankUsageMode)
+        and SolarbankUsageMode(usage_mode).name in usage_mode_options
         else None
     )
     if (
@@ -1786,15 +1756,26 @@ async def set_sb2_home_load(  # noqa: C901
         ]
     if rate_plan_name:
         schedule.update({rate_plan_name: new_rate_plan})
-    # Update usage mode, reset to manual mode if required rate plan not in schedule
-    schedule.update(
-        {
-            "mode_type": SolarbankUsageMode.manual.value
-            if usage_mode == SolarbankUsageMode.use_time.value
+    # Update existing usage mode, reset to an available automatic or manual mode if required rate plan deleted
+    # TODO(SB3): Once time_slot rate plan is available in schedule, verify against existing plan instead of dynamic provider setup
+    mode_type = (
+        getattr(
+            SolarbankUsageMode,
+            ({usage_mode_options} & {SolarbankUsageMode.smartmeter.name})
+            or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
+            or SolarbankUsageMode.manual.name,
+        )
+        if (
+            usage_mode == SolarbankUsageMode.use_time.value
             and not schedule.get(SolarbankRatePlan.use_time)
-            else usage_mode
-        }
+        )
+        or (
+            usage_mode == SolarbankUsageMode.time_slot.value
+            and not schedule.get("dynamic_price")
+        )
+        else usage_mode
     )
+    schedule["mode_type"] = mode_type
     self._logger.debug(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
@@ -1810,19 +1791,25 @@ async def set_sb2_home_load(  # noqa: C901
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
-    # TODO(SB3): This may need updates once plan names for SB3 are known
-    new_schedule = {"mode_type": schedule.get("mode_type")}
+    # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
+    new_schedule = {"mode_type": mode_type}
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
-        new_schedule.update({
-            SolarbankRatePlan.manual: schedule.get(SolarbankRatePlan.manual) or [],
-            SolarbankRatePlan.smartplugs: schedule.get(SolarbankRatePlan.smartplugs) or [],
-        })
+        new_schedule.update(
+            {
+                SolarbankRatePlan.manual: schedule.get(SolarbankRatePlan.manual) or [],
+                SolarbankRatePlan.smartplugs: schedule.get(SolarbankRatePlan.smartplugs)
+                or [],
+            }
+        )
     else:
         # AC unique plans to be separated for Api call
-        new_schedule.update({
-            SolarbankRatePlan.backup: schedule.get(SolarbankRatePlan.backup) or {},
-            SolarbankRatePlan.use_time: schedule.get(SolarbankRatePlan.use_time) or [],
-        })
+        new_schedule.update(
+            {
+                SolarbankRatePlan.backup: schedule.get(SolarbankRatePlan.backup) or {},
+                SolarbankRatePlan.use_time: schedule.get(SolarbankRatePlan.use_time)
+                or [],
+            }
+        )
     # Make the Api call with the schedule subset to be applied and return result, the set call will also re-read full schedule and update api dict
     resp = await self.set_device_parm(
         siteId=siteId,
@@ -1833,24 +1820,35 @@ async def set_sb2_home_load(  # noqa: C901
     )
     # Make also the price type change if required by usage mode change
     # The mobile App only activates use_time price automatically with use_time mode, but may not toggle back to fixed price automatically
-    # TODO(SB3): This may need updates once price types for SB3 are known
-    price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get("price_type")
-    new_type = None
-    if (mode := schedule.get("mode_type")) in iter(SolarbankUsageMode):
-        if price_type in [SolixPriceTypes.FIXED.value] and mode in [SolarbankUsageMode.use_time.value] and schedule.get(SolarbankRatePlan.use_time):
-            new_type = SolixPriceTypes.USE_TIME.value
-        elif (
-            price_type
-            in [SolixPriceTypes.USE_TIME.value]
-            and not schedule.get(SolarbankRatePlan.use_time)
+    price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+        "price_type"
+    )
+    new_price_type: str | None = None
+    provider = (
+        SolixPriceProvider(provider=p) if (p := schedule.get("dynamic_price") or {}) else None
+    )
+    if mode_type in iter(SolarbankUsageMode) and price_type:
+        if (
+            mode_type in [SolarbankUsageMode.use_time.value]
+            and price_type != SolixPriceTypes.USE_TIME.value
+            and schedule.get(SolarbankRatePlan.use_time)
         ):
-            new_type = SolixPriceTypes.FIXED.value
-    # The mobile App only activates use_time price automatically with use_time mode, but does not toggle back to fixed price automatically
-    if new_type:
+            new_price_type = SolixPriceTypes.USE_TIME.value
+        elif (
+            mode_type in [SolarbankUsageMode.time_slot.value]
+            and price_type != SolixPriceTypes.DYNAMIC.value
+            and provider
+        ):
+            new_price_type = SolixPriceTypes.DYNAMIC.value
+    if new_price_type:
         self._logger.debug(
-            "Toggling api %s price type to: %s", self.apisession.nickname, new_type
+            "Toggling api %s price type to: %s",
+            self.apisession.nickname,
+            new_price_type,
         )
-        await self.set_site_price(siteId=siteId, price_type=new_type, toFile=toFile)
+        await self.set_site_price(
+            siteId=siteId, price_type=new_price_type, provider=provider, toFile=toFile
+        )
     return resp
 
 
@@ -1977,19 +1975,25 @@ async def set_sb2_ac_charge(
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
-    # TODO(SB3): This may need updates once plan names for SB3 are known
+    # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
     new_schedule = {"mode_type": schedule.get("mode_type")}
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
-        new_schedule.update({
-            SolarbankRatePlan.manual: schedule.get(SolarbankRatePlan.manual) or [],
-            SolarbankRatePlan.smartplugs: schedule.get(SolarbankRatePlan.smartplugs) or [],
-        })
+        new_schedule.update(
+            {
+                SolarbankRatePlan.manual: schedule.get(SolarbankRatePlan.manual) or [],
+                SolarbankRatePlan.smartplugs: schedule.get(SolarbankRatePlan.smartplugs)
+                or [],
+            }
+        )
     else:
         # AC unique plans to be separated for Api call
-        new_schedule.update({
-            SolarbankRatePlan.backup: schedule.get(SolarbankRatePlan.backup) or {},
-            SolarbankRatePlan.use_time: schedule.get(SolarbankRatePlan.use_time) or [],
-        })
+        new_schedule.update(
+            {
+                SolarbankRatePlan.backup: schedule.get(SolarbankRatePlan.backup) or {},
+                SolarbankRatePlan.use_time: schedule.get(SolarbankRatePlan.use_time)
+                or [],
+            }
+        )
     # Make the Api call with the schedule subset to be applied and return result, the set call will also re-read full schedule and update api dict
     return await self.set_device_parm(
         siteId=siteId,
@@ -2183,11 +2187,11 @@ async def set_sb2_use_time(  # noqa: C901
     tariff_type = (
         int(getattr(SolixTariffTypes, str(tariff_type).upper()))
         if hasattr(SolixTariffTypes, str(tariff_type).upper())
-        and str(tariff_type).upper() != SolixTariffTypes.NONE.name
+        and str(tariff_type).upper() != SolixTariffTypes.UNKNOWN.name
         else int(tariff_type)
         if (str(tariff_type).isdigit() or isinstance(tariff_type, int | float))
         and int(tariff_type) in iter(SolixTariffTypes)
-        and int(tariff_type) != SolixTariffTypes.NONE.value
+        and int(tariff_type) != SolixTariffTypes.UNKNOWN.value
         else None
     )
     tariff_price = (
@@ -2589,13 +2593,24 @@ async def set_sb2_use_time(  # noqa: C901
                             find_tariff.discard(tariff)
                             prices.append(price)
                             # adjust default price to stay in line with prices of existing tarrifs, higher types must be cheaper
-                            if not tariff_price and str(day_tariff_type).isdigit() and str(tariff).isdigit() and str(tp:=price.get("price") or 0).replace(".", "", 1).isdigit():
+                            if (
+                                not tariff_price
+                                and str(day_tariff_type).isdigit()
+                                and str(tariff).isdigit()
+                                and str(tp := price.get("price") or 0)
+                                .replace(".", "", 1)
+                                .isdigit()
+                            ):
                                 if day_tariff_type < tariff:
                                     # added tariff must be higher price
-                                    def_tariff_price = str(max(float(def_tariff_price),float(tp)))
+                                    def_tariff_price = str(
+                                        max(float(def_tariff_price), float(tp))
+                                    )
                                 elif day_tariff_type > tariff:
                                     # added tariff must be lower price
-                                    def_tariff_price = str(min(float(def_tariff_price),float(tp)))
+                                    def_tariff_price = str(
+                                        min(float(def_tariff_price), float(tp))
+                                    )
                         # Ensure to append remaining tariffs to price list
                         prices.extend(
                             {
@@ -2670,22 +2685,12 @@ async def set_sb2_use_time(  # noqa: C901
         and schedule.get("mode_type") == SolarbankUsageMode.use_time.value
     ):
         # Allow automatic modes only when smart meter or smart plugs available in site
-        schedule["mode_type"] = (
-            SolarbankUsageMode.smartmeter.value
-            if len(
-                ((self.sites.get(siteId) or {}).get("grid_info") or {}).get("grid_list")
-                or []
-            )
-            > 0
-            else SolarbankUsageMode.smartplugs.value
-            if len(
-                ((self.sites.get(siteId) or {}).get("smart_plug_info") or {}).get(
-                    "smartplug_list"
-                )
-                or []
-            )
-            > 0
-            else SolarbankUsageMode.manual.value
+        usage_mode_options = self.solarbank_usage_mode_options(deviceSn=deviceSn)
+        schedule["mode_type"] = getattr(
+            SolarbankUsageMode,
+            ({usage_mode_options} & {SolarbankUsageMode.smartmeter.name})
+            or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
+            or SolarbankUsageMode.manual.name,
         )
     self._logger.debug(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
@@ -2702,19 +2707,26 @@ async def set_sb2_use_time(  # noqa: C901
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
-    # TODO(SB3): This may need updates once plan names for SB3 are known
-    new_schedule = {"mode_type": schedule.get("mode_type")}
+    # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
+    mode_type = schedule.get("mode_type")
+    new_schedule = {"mode_type": mode_type}
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
-        new_schedule.update({
-            SolarbankRatePlan.manual: schedule.get(SolarbankRatePlan.manual) or [],
-            SolarbankRatePlan.smartplugs: schedule.get(SolarbankRatePlan.smartplugs) or [],
-        })
+        new_schedule.update(
+            {
+                SolarbankRatePlan.manual: schedule.get(SolarbankRatePlan.manual) or [],
+                SolarbankRatePlan.smartplugs: schedule.get(SolarbankRatePlan.smartplugs)
+                or [],
+            }
+        )
     else:
         # AC unique plans to be separated for Api call
-        new_schedule.update({
-            SolarbankRatePlan.backup: schedule.get(SolarbankRatePlan.backup) or {},
-            SolarbankRatePlan.use_time: schedule.get(SolarbankRatePlan.use_time) or [],
-        })
+        new_schedule.update(
+            {
+                SolarbankRatePlan.backup: schedule.get(SolarbankRatePlan.backup) or {},
+                SolarbankRatePlan.use_time: schedule.get(SolarbankRatePlan.use_time)
+                or [],
+            }
+        )
     # Make the Api call with the schedule subset to be applied and return result, the set call will also re-read full schedule and update api dict
     resp = await self.set_device_parm(
         siteId=siteId,
@@ -2725,22 +2737,24 @@ async def set_sb2_use_time(  # noqa: C901
     )
     # Make also the price type change if required by usage mode change
     # The mobile App only activates use_time price automatically with use_time mode, but may not toggle back to fixed price automatically
-    price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get("price_type")
-    new_type = None
-    # TODO(SB3): This may need updates if price types for SB3 are known
-    if (mode := schedule.get("mode_type")) in iter(SolarbankUsageMode):
-        if price_type in [SolixPriceTypes.FIXED.value] and mode in [SolarbankUsageMode.use_time.value] and schedule.get(SolarbankRatePlan.use_time):
-            new_type = SolixPriceTypes.USE_TIME.value
-        elif (
-            price_type
-            in [SolixPriceTypes.USE_TIME.value]
-            and not schedule.get(SolarbankRatePlan.use_time)
+    price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+        "price_type"
+    )
+    new_price_type = None
+    if mode_type in iter(SolarbankUsageMode) and price_type:
+        if (
+            mode_type in [SolarbankUsageMode.use_time.value]
+            and schedule.get(SolarbankRatePlan.use_time)
+            and price_type != SolixPriceTypes.USE_TIME.value
         ):
-            new_type = SolixPriceTypes.FIXED.value
-    # The mobile App only activates use_time price automatically with use_time mode, but does not toggle back to fixed price automatically
-    if new_type:
+            new_price_type = SolixPriceTypes.USE_TIME.value
+    if new_price_type:
         self._logger.debug(
-            "Toggling api %s price type to: %s", self.apisession.nickname, new_type
+            "Toggling api %s price type to: %s",
+            self.apisession.nickname,
+            new_price_type,
         )
-        await self.set_site_price(siteId=siteId, price_type=new_type, toFile=toFile)
+        await self.set_site_price(
+            siteId=siteId, price_type=new_price_type, toFile=toFile
+        )
     return resp

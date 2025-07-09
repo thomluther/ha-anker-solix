@@ -1,0 +1,172 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "GBCOTRWKNXCD6U",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "",
+        "children": null,
+        "upgrade_level": 0
+      },
+      {
+        "device_sn": "DRVAACFZ5HDHWL8Q5",
+        "need_update": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A17C5",
+          "product_component": "A17C5",
+          "version": "v1.0.0.18",
+          "is_forced": false,
+          "md5": "0e48503ebeb40c3aacf4c77831fbe1c5",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/IPwYO4UfDqQSx1xh/A17C5_EUOTA_V1.0.0.18_20250508.bin",
+          "size": 736768
+        },
+        "change_log": "",
+        "current_version": "v1.0.0.18",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A17C5_mcu",
+            "rom_version_name": "v1.0.0.18",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/KxSu9pL2mJq78DWX/A17C5_EUOTA_V1.0.0.18_20250508.bin",
+              "file_size": 736768,
+              "file_md5": "0e48503ebeb40c3aacf4c77831fbe1c5"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C5_esp32",
+            "rom_version_name": "v0.2.0.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/NgXWFlgrCeo81dWX/A17C5_EUOTAWIFI_V0.2.0.5_20250429.bin",
+              "file_size": 1266880,
+              "file_md5": "c6426adad73d866d19f61ca57b1e7839"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C5_100Ah",
+            "rom_version_name": "v0.3.2.6",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/1qsO4VKkeHjJqMrK/A17C5_EUOTA_V0.3.2.6_20250508.bin",
+              "file_size": 736768,
+              "file_md5": "0e48503ebeb40c3aacf4c77831fbe1c5"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 1
+      },
+      {
+        "device_sn": "2HUES01SE2RX2JIF",
+        "need_update": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A17C2",
+          "product_component": "A17C2",
+          "version": "v1.0.3.8",
+          "is_forced": false,
+          "md5": "b9a913d02fd37f4ff50ef34c2bd1ca04",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/09/iot-admin/m2oF8wd1XYwHLBe1/A17C2_EUOTA_V1.0.3.8_20250425.bin",
+          "size": 717312
+        },
+        "change_log": "",
+        "current_version": "v1.0.3.8",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A17C2_esp32",
+            "rom_version_name": "v0.1.9.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/09/iot-admin/Bv8enPmO9u39EKYa/A17C2_EUOTAWIFI_V0.1.9.5_20250224.bin",
+              "file_size": 1289072,
+              "file_md5": "4fc2e022f3114d7844900f0ef34be268"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C2_mcu",
+            "rom_version_name": "v1.0.3.8",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/09/iot-admin/DG9dPw3QGbg1hJpa/A17C2_EUOTA_V1.0.3.8_20250425.bin",
+              "file_size": 717312,
+              "file_md5": "b9a913d02fd37f4ff50ef34c2bd1ca04"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C2_100Ah",
+            "rom_version_name": "v0.3.2.8",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/09/iot-admin/vN9jeHHBFHZ4gul1/A17C2_EUOTA_V0.3.2.8_20250425.bin",
+              "file_size": 717312,
+              "file_md5": "b9a913d02fd37f4ff50ef34c2bd1ca04"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 1
+      },
+      {
+        "device_sn": "NRL2VNK0468UWHYV",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v0.0.0.36",
+        "children": null,
+        "upgrade_level": 0
+      }
+    ],
+    "popup_info": {
+      "need_update": false,
+      "sub_need_update": false,
+      "upgrade_level": 0
+    }
+  },
+  "trace_id": "66cebaa2fd73374121cb252efcab1fc2"
+}

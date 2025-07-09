@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "2HUES01SE2RX2JIF",
+    "attributes": {
+      "rssi": "-74"
+    }
+  },
+  "trace_id": "f76c1bf8886fff69343d5cd182abf0aa"
+}

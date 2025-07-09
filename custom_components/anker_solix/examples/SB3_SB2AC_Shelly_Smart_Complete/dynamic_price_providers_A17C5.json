@@ -1,0 +1,23 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "country_info": [
+      {
+        "country": "DE",
+        "company_info": [
+          {
+            "company": "Nordpool",
+            "area_info": [
+              {
+                "area": "GER",
+                "area_name": "GER"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "trace_id": "bb633fb15375aea50ed6ee3df0b9eefa"
+}

@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": true,
+    "device_list": [
+      {
+        "device_sn": "B2ZDH5QYEIRM4DGZA",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "auto_upgrade": true,
+        "alias_name": "SB3",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png"
+      },
+      {
+        "device_sn": "4494B9VAAVLAOEAI",
+        "device_name": "Solarbank 2 E1600 AC",
+        "auto_upgrade": true,
+        "alias_name": "ACM",
+        "icon": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/11/11/iot-admin/NycsbknWijoZcv1b/output.lin.png"
+      }
+    ]
+  },
+  "trace_id": "c44df5f689c74c336d748340fb708cf8"
+}

@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f",
+    "solar_brand": "ANKER",
+    "solar_model": "A17CX",
+    "solar_sn": "",
+    "solar_model_name": "Solarbank 2 E1600 Pro"
+  },
+  "trace_id": "10ec7d5786a4739f9ac2cbb1775b5aa0"
+}

@@ -10,12 +10,19 @@ from typing import Any
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE, PERCENTAGE, UnitOfPower
+from homeassistant.const import (
+    CONF_EXCLUDE,
+    PERCENTAGE,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    UnitOfPower,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, datetime
 
 from .const import (
@@ -50,6 +57,7 @@ from .solixapi.apitypes import (
     SolarbankDeviceMetrics,
     SolarbankUsageMode,
     SolixDeviceType,
+    SolixPriceProvider,
     SolixPriceTypes,
     SolixTariffTypes,
 )
@@ -61,7 +69,7 @@ class AnkerSolixSelectDescription(
 ):
     """Select entity description with optional keys."""
 
-    force_creation_fn: Callable[[dict, str], bool] = lambda d, _: False
+    force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], str | None] = (
         lambda d, jk: None if d.get(jk) is None else str(d.get(jk))
@@ -69,9 +77,10 @@ class AnkerSolixSelectDescription(
     options_fn: Callable[[dict, str], list | None] = (
         lambda d, jk: list(d.get(jk), []) or None
     )
-    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
-    attrib_fn: Callable[[dict, str], dict | None] = lambda d, _: None
+    exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
     feature: AnkerSolixEntityFeature | None = None
+    restore: bool = False
 
 
 DEVICE_SELECTS = [
@@ -99,15 +108,10 @@ DEVICE_SELECTS = [
             mode.name for mode in SolarbankUsageMode if "unknown" not in mode.name
         ],
         value_fn=lambda d, jk: next(
-            iter(
-                [
-                    item.name
-                    for item in SolarbankUsageMode
-                    if item.value == d.get(jk)
-                ]
-            ),
+            iter([item.name for item in SolarbankUsageMode if item.value == d.get(jk)]),
             str(d.get(jk)) if jk in d else None,
         ),
+        attrib_fn=lambda d, jk: {"mode": d.get(jk)},
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
     AnkerSolixSelectDescription(
@@ -118,7 +122,7 @@ DEVICE_SELECTS = [
         options_fn=lambda d, _: [
             item.name.lower()
             for item in SolixTariffTypes
-            if item.value != SolixTariffTypes.NONE.value
+            if "unknown" not in item.name.lower()
         ],
         value_fn=lambda d, jk: next(
             iter(
@@ -130,6 +134,7 @@ DEVICE_SELECTS = [
             ),
             None,
         ),
+        attrib_fn=lambda d, jk: {"tariff": d.get(jk)},
         feature=AnkerSolixEntityFeature.AC_CHARGE,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
@@ -169,12 +174,39 @@ SITE_SELECTS = [
         key="system_price_type",
         translation_key="system_price_type",
         json_key="price_type",
-        options_fn=lambda d, _: [t.value for t in SolixPriceTypes],
+        options_fn=lambda d, _: [
+            t.value for t in SolixPriceTypes if "unknown" not in t.name.lower()
+        ],
         value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
         attrib_fn=lambda d, _: {
-            "current_mode": (d.get("site_details") or {}).get("current_mode"),
+            "type": (det := d.get("site_details") or {}).get("price_type"),
+            "current_mode": det.get("current_mode"),
         },
         exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
+    ),
+    AnkerSolixSelectDescription(
+        # Solarbank 3 Dynamic price
+        key="dynamic_price_provider",
+        translation_key="dynamic_price_provider",
+        json_key="dynamic_price",
+        options_fn=lambda d, _: None,
+        value_fn=lambda d, jk: str(SolixPriceProvider(provider=p))
+        if (
+            p := (d.get("site_details") or {}).get(jk)
+            or (d.get("customized") or {}).get(jk)
+            or {}
+        )
+        else "none"
+        if jk in ((d.get("site_details") or {}) | (d.get("customized") or {}))
+        else None,
+        attrib_fn=lambda d, jk: SolixPriceProvider(
+            provider=(d.get("site_details") or {}).get(jk)
+            or (d.get("customized") or {}).get(jk)
+            or {}
+        ).asdict(),
+        exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
+        force_creation_fn=lambda d, _: bool("dynamic_price_details" in (d.get("site_details") or {})),
+        restore=True,
     ),
 ]
 
@@ -220,9 +252,14 @@ async def async_setup_entry(
                     )
                 )
             ):
-                entity = AnkerSolixSelect(
-                    coordinator, description, context, entity_type
-                )
+                if description.restore:
+                    entity = AnkerSolixRestoreSelect(
+                        coordinator, description, context, entity_type
+                    )
+                else:
+                    entity = AnkerSolixSelect(
+                        coordinator, description, context, entity_type
+                    )
                 entities.append(entity)
 
     # create the sensors from the list
@@ -248,6 +285,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
     _unrecorded_attributes = frozenset(
         {
             "power_cutoff",
+            "type",
+            "current_mode",
+            "mode",
+            "tariff",
+            "country",
+            "company",
+            "area",
         }
     )
 
@@ -303,37 +347,12 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         )
         # update options based on other devices configured in system
         if self._attribute_name == "preset_usage_mode":
-            site_data = coordinator.data.get(data.get("site_id") or "") or {}
-            options = set(self._attr_options)
-            if not ((site_data.get("grid_info") or {}).get("grid_list") or []):
-                # Remove smart meter usage mode if no smart meter installed
-                options.discard(SolarbankUsageMode.smartmeter.name)
-            if not (
-                (site_data.get("smart_plug_info") or {}).get("smartplug_list") or []
-            ):
-                # Remove smart plugs usage mode if no smart plugs installed
-                options.discard(SolarbankUsageMode.smartplugs.name)
-            # if not (data.get("generation") or 0) >= 3:
-            #     # Remove options introduced with SB3
-            #     options.discard(SolarbankUsageMode.smart.name)
-            #     options.discard(SolarbankUsageMode.time_slot.name)
-            if "grid_to_battery_power" not in data:
-                # Remove AC model specific modes if not AC model
-                options.discard(SolarbankUsageMode.use_time.name)
-                options.discard(SolarbankUsageMode.backup.name)
-            elif not (
-                options
-                & {
-                    SolarbankUsageMode.smartmeter.name,
-                    SolarbankUsageMode.smartplugs.name,
-                }
-            ):
-                # Remove modes requiring either smart plugs or smart meter in system
-                options.discard(SolarbankUsageMode.use_time.name)
-                # options.discard(SolarbankUsageMode.smart.name)
-                # options.discard(SolarbankUsageMode.time_slot.name)
-            self._attr_options = list(options)
+            self._attr_options = list(
+                coordinator.client.api.solarbank_usage_mode_options(deviceSn=context)
+            )
+            self._attr_options.sort()
         elif self._attribute_name == "system_price_unit":
+            # merge currencies from entity description and from Api currency list
             options = set(self._attr_options) | {
                 item.get("symbol")
                 for item in (
@@ -346,28 +365,16 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             }
             self._attr_options = list(options)
         elif self._attribute_name == "system_price_type":
-            options = set(self._attr_options)
-            site_data = coordinator.data.get(data.get("site_id") or "") or {}
-            if not (
-                data.get("power_site_type") in [11]
-                and (
-                    ((site_data.get("grid_info") or {}).get("grid_list") or [])
-                    or (
-                        (site_data.get("smart_plug_info") or {}).get("smartplug_list")
-                        or []
-                    )
-                )
-            ):
-                # Remove AC model specific types if no AC model or smart meter or smart plugs in site
-                options.discard(SolixPriceTypes.USE_TIME.value)
-            self._attr_options = list(options)
-        # elif self._attribute_name == "preset_inverter_limit":
-        #     data = self.coordinator.data.get(self.coordinator_context) or {}
-        #     options = set(self._attr_options)
-        #     if data.get("device_pn") == "A5143":
-        #         # Remove unsupported power settings for MI80
-        #         options.discard("350")
-        #     self._attr_options = list(options)
+            self._attr_options = list(
+                coordinator.client.api.price_type_options(siteId=context)
+            )
+        elif self._attribute_name == "dynamic_price_provider":
+            self._attr_options = list(
+                coordinator.client.api.price_provider_options(siteId=context)
+                # TODO(SB3): Add None as option only if the provider can ever be removed
+                # | {"none"}
+            )
+            self._attr_options.sort()
         # Make sure that options are limited to existing state if entity cannot be changed
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
@@ -388,53 +395,45 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         """Return the entity options available."""
         # update the options depending on conditions
         if self._attribute_name == "preset_usage_mode":
-            data = self.coordinator.data.get(self.coordinator_context) or {}
-            options = set(self._attr_options)
-            schedule = data.get("schedule") or {}
-            # TODO(SB3): Update option dependencies as required for new SB3 modes
-            if schedule.get("use_time"):
-                # Add Usage Time option
-                options.add(SolarbankUsageMode.use_time.name)
-                # if (data.get("generation") or 0) >= 3:
-                #    options.add(SolarbankUsageMode.smart.name)
-            else:
-                options.discard(SolarbankUsageMode.use_time.name)
-                # options.discard(SolarbankUsageMode.smart.name)
-            # TODO(SB3): Update options as required for new SB3 modes
-            if set(self._attr_options) != options:
+            options = self.coordinator.client.api.solarbank_usage_mode_options(
+                deviceSn=self.coordinator_context
+            )
+            if options != set(self._attr_options):
                 self._attr_options = list(options)
+                self._attr_options.sort()
         elif self._attribute_name == "system_price_type":
-            data = self.coordinator.data.get(self.coordinator_context) or {}
-            options = set(self._attr_options)
-            if sn := next(
-                iter((data.get("solarbank_info") or {}).get("solarbank_list") or []), {}
-            ).get("device_sn"):
-                if ((self.coordinator.data.get(sn) or {}).get("schedule") or {}).get(
-                    "use_time"
-                ):
-                    # Add tariff price option if use time plan defined
-                    options.add(SolixPriceTypes.USE_TIME.value)
-                else:
-                    # remove tariff price option if use time plan missing
-                    options.discard(SolixPriceTypes.USE_TIME.value)
-            if set(self._attr_options) != options:
+            options = self.coordinator.client.api.price_type_options(
+                siteId=self.coordinator_context
+            )
+            if options != set(self._attr_options):
                 self._attr_options = list(options)
+        elif self._attribute_name == "dynamic_price_provider":
+            options = self.coordinator.client.api.price_provider_options(
+                siteId=self.coordinator_context
+            )
+            # TODO(SB3): Add None as option only if the provider can ever be removed
+            # options.add("none")
+            if options != set(self._attr_options):
+                self._attr_options = list(options)
+                self._attr_options.sort()
         elif (
             self._attribute_name == "preset_inverter_limit"
             and self._attr_current_option is not None
         ):
-            data = self.coordinator.data.get(self.coordinator_context) or {}
             options = set(self._attr_options)
             # Add actual power setting to options if not included
             options.add(self._attr_current_option)
             if set(self._attr_options) != options:
                 self._attr_options = list(options)
                 self._attr_options.sort()
+        # Make sure that options are limited to existing state if entity cannot be changed
+        if not self._attr_options and self._attr_current_option is not None:
+            self._attr_options = [self._attr_current_option]
         return self._attr_options
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes of the sensor."""
+        """Return the state attributes of the entity."""
         if (
             self.coordinator
             and (hasattr(self.coordinator, "data"))
@@ -467,7 +466,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         # Mark availability based on value
         self._attr_available = self._attr_current_option is not None
 
-    async def async_select_option(self, option: str) -> None:
+    async def async_select_option(self, option: str) -> None:  # noqa: C901
         """Change the selected option.
 
         Args:
@@ -477,16 +476,22 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         if (
             self.coordinator
             and self.coordinator_context in self.coordinator.data
-            and self._attr_current_option is not None
+            and (self._attr_current_option is not None or self.entity_description.restore)
         ):
             data = self.coordinator.data.get(self.coordinator_context) or {}
-            if self.coordinator.client.testmode() and self._attribute_name not in [
-                "preset_usage_mode",
-                "preset_tariff",
-                "system_price_unit",
-                "system_price_type",
-                "preset_inverter_limit",
-            ]:
+            customize = True
+            if (
+                self.coordinator.client.testmode()
+                and self._attribute_name
+                not in [
+                    "preset_usage_mode",
+                    "preset_tariff",
+                    "system_price_unit",
+                    "system_price_type",
+                    "preset_inverter_limit",
+                ]
+                and not self.entity_description.restore
+            ):
                 # Raise alert to frontend
                 raise ServiceValidationError(
                     f"{self.entity_id} cannot be used while configuration is running in testmode",
@@ -501,9 +506,36 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 return
             # Wait until client cache is valid before applying any api change
             await self.coordinator.client.validate_cache()
+            # Customize cache first if restore entity
+            if self.entity_description.restore:
+                if self._attribute_name in ["dynamic_price_provider"]:
+                    # refresh the price details for new provider prior customizing cache or switching provider
+                    await self.coordinator.client.api.refresh_provider_prices(
+                        provider=option,
+                        fromFile=self.coordinator.client.testmode(),
+                    )
+                    # skip customization of cache for site owners
+                    customize = not bool(data.get("site_admin"))
+                # customize cache with json key
+                if customize:
+                    self.coordinator.client.api.customizeCacheId(
+                        id=self.coordinator_context,
+                        key=self.entity_description.json_key,
+                        value=str(option),
+                    )
+                    if ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: State value of entity '%s' has been customized in Api cache to: %s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            option,
+                        )
+            # Trigger Api calls depending on changed entity
             if self._attribute_name == "power_cutoff":
                 LOGGER.debug(
-                    "%s selection change to option %s will be applied",
+                    "'%s' selection change to option '%s' will be applied",
                     self.entity_id,
                     option,
                 )
@@ -518,19 +550,28 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         )
                         > 0
                     ):
-                        await self.coordinator.client.api.set_power_cutoff(
+                        resp = await self.coordinator.client.api.set_power_cutoff(
                             deviceSn=self.coordinator_context,
                             setId=int(selected_id[0]),
                         )
+                        if resp and ALLOW_TESTMODE:
+                            LOGGER.info(
+                                "%s: Applied power cutoff settings for '%s' change to '%s':\n%s",
+                                self.entity_id,
+                                option,
+                                json.dumps(selected_id[0],indent=2),
+                            )
+
             elif self._attribute_name == "preset_usage_mode":
                 LOGGER.debug(
-                    "%s selection change to option %s will be applied",
+                    "'%s' selection change to option '%s' will be applied",
                     self.entity_id,
                     option,
                 )
                 with suppress(ValueError, TypeError):
-                    usage_mode = getattr(SolarbankUsageMode, option, None)
-                    if usage_mode == SolarbankUsageMode.backup:
+                    if not (usage_mode := getattr(SolarbankUsageMode, option, None)):
+                        return
+                    if usage_mode == SolarbankUsageMode.backup.value:
                         # Backup option cannot be enabled directly, instead activate backup mode switch
                         # This will reactivate an existing interval or start a new backup with default duration
                         resp = await self.coordinator.client.api.set_sb2_ac_charge(
@@ -544,7 +585,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         # Ensure an active backup mode will be disabled first in cache, the Api call will be done in the home load method
                         if (
                             getattr(SolarbankUsageMode, self._attr_current_option, None)
-                            == SolarbankUsageMode.backup
+                            == SolarbankUsageMode.backup.value
                         ):
                             resp = await self.coordinator.client.api.set_sb2_ac_charge(
                                 siteId=data.get("site_id") or "",
@@ -562,7 +603,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
-                            "%s: Applied schedule for %s change to %s:\n%s",
+                            "%s: Applied schedule for '%s' change to '%s':\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -577,7 +618,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 and option != cv.ENTITY_MATCH_NONE
             ):
                 LOGGER.debug(
-                    "%s selection change to option %s will be applied",
+                    "'%s' selection change to option '%s' will be applied",
                     self.entity_id,
                     option,
                 )
@@ -591,10 +632,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         clear_unused_tariff=False,
                         toFile=self.coordinator.client.testmode(),
                     )
-
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
-                            "%s: Applied site price settings for %s change to %s:\n%s",
+                            "%s: Applied site price settings for '%s' change to '%s':\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -606,7 +646,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         )
             elif self._attribute_name == "system_price_unit":
                 LOGGER.debug(
-                    "%s selection change to option %s will be applied",
+                    "'%s' selection change to option '%s' will be applied",
                     self.entity_id,
                     option,
                 )
@@ -621,7 +661,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             toFile=self.coordinator.client.testmode(),
                         )
                     else:
-                        # change real system price
+                        # change real system price unit
                         resp = await self.coordinator.client.api.set_site_price(
                             siteId=self.coordinator_context,
                             unit=option,
@@ -629,7 +669,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
-                            "%s: Applied site price settings for %s change to %s:\n%s",
+                            "%s: Applied site price settings for '%s' change to '%s':\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -660,7 +700,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         )
                         if isinstance(resp, dict) and ALLOW_TESTMODE:
                             LOGGER.info(
-                                "%s: Applied schedule for %s change to %s:\n%s",
+                                "%s: Applied schedule for '%s' change to '%s':\n%s",
                                 "TESTMODE"
                                 if self.coordinator.client.testmode()
                                 else "LIVEMODE",
@@ -674,7 +714,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             elif self._attribute_name == "preset_inverter_limit":
                 with suppress(ValueError, TypeError):
                     LOGGER.debug(
-                        "%s selection change to option %s will be applied",
+                        "'%s' selection change to option '%s' will be applied",
                         self.entity_id,
                         option,
                     )
@@ -693,21 +733,30 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
-            elif self._attribute_name == "system_price_type":
+            # Ensure site price type changes only performed by site owners
+            elif self._attribute_name in [
+                "system_price_type",
+                "dynamic_price_provider",
+            ] and data.get("site_admin"):
                 LOGGER.debug(
-                    "%s selection change to option %s will be applied",
+                    "'%s' selection change to option '%s' will be applied",
                     self.entity_id,
                     option,
                 )
                 with suppress(ValueError, TypeError):
                     resp = await self.coordinator.client.api.set_site_price(
                         siteId=self.coordinator_context,
-                        price_type=option,
+                        price_type=option
+                        if self._attribute_name == "system_price_type"
+                        else None,
+                        provider=SolixPriceProvider(provider=option)
+                        if self._attribute_name == "dynamic_price_provider"
+                        else None,
                         toFile=self.coordinator.client.testmode(),
                     )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
-                            "%s: Applied site price settings for %s change to %s:\n%s",
+                            "%s: Applied site price settings for '%s' change to '%s':\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -717,9 +766,15 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
-
-        # trigger coordinator update with api dictionary data
-        await self.coordinator.async_refresh_data_from_apidict()
+                    # trigger dynamic price calculation refresh upon provider change
+                    if self._attribute_name == "dynamic_price_provider":
+                        self.coordinator.client.api.customizeCacheId(
+                            id=self.coordinator_context,
+                            key=self.entity_description.json_key,
+                            value=str(option),
+                        )
+            # trigger coordinator update with api dictionary data
+            await self.coordinator.async_refresh_data_from_apidict()
 
     async def _solix_ac_charge_service(
         self, service_name: str, **kwargs: Any
@@ -799,3 +854,49 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 )
             await self.coordinator.async_refresh_data_from_apidict()
         return None
+
+
+class AnkerSolixRestoreSelect(AnkerSolixSelect, RestoreEntity):
+    """anker_solix select class with restore capability."""
+
+    def __init__(
+        self,
+        coordinator: AnkerSolixDataUpdateCoordinator,
+        description: AnkerSolixSelectDescription,
+        context: str,
+        entity_type: str,
+    ) -> None:
+        """Initialize the select class."""
+        super().__init__(coordinator, description, context, entity_type)
+        self._assumed_state = True
+
+    async def async_added_to_hass(self) -> None:
+        """Load the last known state when added to hass."""
+        await super().async_added_to_hass()
+        # Note: Only last state object can be restored, but not extra data
+        if (last_state := await self.async_get_last_state()):
+            if (
+                last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+                and last_state.state in self.options
+                and not self._attr_current_option
+            ):
+                if self._attribute_name in ["dynamic_price_provider"]:
+                    # refresh the price details for restored provider
+                    await self.coordinator.client.api.refresh_provider_prices(
+                        provider=last_state.state,
+                        fromFile=self.coordinator.client.testmode(),
+                    )
+                # set last known option as current option if not available
+                self._attr_current_option = last_state.state
+                LOGGER.info(
+                    "Restored state value of entity '%s' to: %s",
+                    self.entity_id,
+                    last_state.state,
+                )
+                # customize cache with json key
+                self.coordinator.client.api.customizeCacheId(
+                    id=self.coordinator_context,
+                    key=self.entity_description.json_key,
+                    value=str(last_state.state),
+                )
+                await self.coordinator.async_refresh_data_from_apidict()

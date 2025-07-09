@@ -1,0 +1,54 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "48",
+        "device_sn": "YZ66ISQXWBIBW6E2G",
+        "rssi": "-76",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      },
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "",
+        "device_sn": "ZLF94UZ1WWW86V1Z",
+        "rssi": "-52",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      },
+      {
+        "wifi_name": "wifi-network-2",
+        "wifi_signal": "",
+        "device_sn": "F3ZPGYJLCAUUWXPT",
+        "rssi": "-30",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      },
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "",
+        "device_sn": "J6569JU7G22QRK7I",
+        "rssi": "-53",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      },
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "",
+        "device_sn": "Z7TAQWPTMV3ER5TK",
+        "rssi": "-14",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      }
+    ]
+  },
+  "trace_id": "ae7c5c4d5bc2dd9cf3117e54eec8da4a"
+}

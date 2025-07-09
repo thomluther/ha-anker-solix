@@ -1,0 +1,37 @@
+{
+  "type": "account",
+  "email": "anonymous-1@domain.com",
+  "nickname": "den***",
+  "country": "DE",
+  "server": "https://ankerpower-api-eu.anker.com",
+  "currency_list": [
+    {
+      "symbol": "$",
+      "name": "USD"
+    },
+    {
+      "symbol": "\u20ac",
+      "name": "EUR"
+    },
+    {
+      "symbol": "z\u0142",
+      "name": "PLN"
+    }
+  ],
+  "default_currency": {
+    "symbol": "\u20ac",
+    "name": "EUR"
+  },
+  "requests_last_min": 102,
+  "requests_last_hour": 194,
+  "use_files": true,
+  "sites_poll_time": "2025-06-04 12:09:01",
+  "sites_poll_seconds": 0.005,
+  "details_poll_time": "2025-06-04 12:09:01",
+  "details_poll_seconds": 0.007,
+  "has_unread_msg": false,
+  "system_msg": false,
+  "device_msg": false,
+  "energy_poll_time": "2025-06-04 12:09:01",
+  "energy_poll_seconds": 0.004
+}

@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"step\": 10, \"ai_ems\": {\"status\": 3}, \"max_load\": 1200, \"min_load\": 0, \"data_auth\": false, \"mode_type\": 7, \"blend_plan\": [{\"week\": [0, 1, 2, 3, 4, 5, 6], \"index\": 0, \"ranges\": [{\"power\": 0, \"end_time\": \"05:00\", \"start_time\": \"00:00\"}, {\"power\": 60, \"end_time\": \"21:00\", \"start_time\": \"05:00\"}, {\"power\": 150, \"end_time\": \"24:00\", \"start_time\": \"21:00\"}]}], \"reserved_soc\": 0, \"custom_rate_plan\": [{\"week\": [0, 1, 2, 3, 4, 5, 6], \"index\": 0, \"ranges\": [{\"power\": 240, \"end_time\": \"24:00\", \"start_time\": \"00:00\"}]}], \"default_home_load\": 200}"
+  },
+  "trace_id": "e1ee1fe49aab7f7a17e0ebfdabd8cdca"
+}

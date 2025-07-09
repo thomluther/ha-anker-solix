@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "status": 2,
+    "result": "fail",
+    "left_time": -8649
+  },
+  "trace_id": "2ee4fceb8edcc26cbf6ee3da742e33dd"
+}

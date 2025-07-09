@@ -1,0 +1,36 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "6b1c4a6c-ec3f-65f2-a840-5be72c5eefe2",
+        "site_name": "Home",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      },
+      {
+        "site_id": "0dfee243-b28a-cff5-bcd6-0fbcb2ccb0ca",
+        "site_name": "Michael",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "solarbank_pps_list": []
+  },
+  "trace_id": "c7a51a579efa56ed1abf1dda47d4ba22"
+}

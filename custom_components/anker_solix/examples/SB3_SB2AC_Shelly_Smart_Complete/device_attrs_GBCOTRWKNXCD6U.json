@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "GBCOTRWKNXCD6U",
+    "attributes": {
+      "rssi": ""
+    }
+  },
+  "trace_id": "debd4d2ef96e779f66e29f801bcec26c"
+}

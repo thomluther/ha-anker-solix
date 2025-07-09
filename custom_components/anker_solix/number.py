@@ -14,9 +14,17 @@ from homeassistant.components.number import (
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
+    RestoreNumber,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE, PERCENTAGE, UnitOfPower
+from homeassistant.const import (
+    CONF_EXCLUDE,
+    PERCENTAGE,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    UnitOfEnergy,
+    UnitOfPower,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -44,11 +52,12 @@ class AnkerSolixNumberDescription(
     """Number entity description with optional keys."""
 
     # Use optionally to provide function for value calculation or lookup of nested values
-    value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
+    value_fn: Callable[[dict, str], StateType] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
-    attrib_fn: Callable[[dict], dict | None] = lambda d: None
-    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
-    force_creation_fn: Callable[[dict, str], bool] = lambda d, _: False
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, ctx: None
+    exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
+    force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
+    restore: bool = False
 
 
 DEVICE_NUMBERS = [
@@ -106,6 +115,25 @@ DEVICE_NUMBERS = [
         native_step=0.01,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
+    AnkerSolixNumberDescription(
+        # Customizable installed battery capacity
+        key="battery_capacity",
+        translation_key="battery_capacity",
+        json_key="battery_capacity",
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        device_class=NumberDeviceClass.ENERGY_STORAGE,
+        native_min_value=1,
+        native_max_value=100000,
+        native_step=1,
+        mode=NumberMode.BOX,
+        value_fn=lambda d, jk: (d.get("customized") or {}).get(jk) or d.get(jk),
+        attrib_fn=lambda d, _: {
+            "expansions": d.get("sub_package_num"),
+            "calculated": d.get("battery_capacity"),
+        },
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        restore=True,
+    ),
 ]
 
 SITE_NUMBERS = [
@@ -115,12 +143,54 @@ SITE_NUMBERS = [
         translation_key="system_price",
         json_key="price",
         unit_fn=lambda d: (d.get("site_details") or {}).get("site_price_unit"),
-        device_class=NumberDeviceClass.MONETARY,
+        # device_class=NumberDeviceClass.MONETARY,
         value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
         native_min_value=0,
         native_max_value=1000,
         native_step=0.01,
+        mode=NumberMode.BOX,
         exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
+    ),
+    AnkerSolixNumberDescription(
+        key="dynamic_price_fee",
+        translation_key="dynamic_price_fee",
+        json_key="dynamic_price_fee",
+        # device_class=NumberDeviceClass.MONETARY,
+        unit_fn=lambda d: (
+            (d.get("site_details") or {}).get("dynamic_price_details") or {}
+        ).get("spot_price_unit"),
+        value_fn=lambda d, jk: (
+            (d.get("site_details") or {}).get("dynamic_price_details") or {}
+        ).get(jk)
+        or None,
+        native_min_value=0,
+        native_max_value=100,
+        native_step=0.0001,
+        mode=NumberMode.BOX,
+        exclude_fn=lambda s, d: not ({ApiCategories.site_price} - s),
+        force_creation_fn=lambda d, _: bool(
+            "dynamic_price_details" in (d.get("site_details") or {})
+        ),
+        restore=True,
+    ),
+    AnkerSolixNumberDescription(
+        key="dynamic_price_vat",
+        translation_key="dynamic_price_vat",
+        json_key="dynamic_price_vat",
+        native_unit_of_measurement=PERCENTAGE,
+        value_fn=lambda d, jk: (
+            (d.get("site_details") or {}).get("dynamic_price_details") or {}
+        ).get(jk)
+        or None,
+        native_min_value=0,
+        native_max_value=100,
+        native_step=0.01,
+        mode=NumberMode.BOX,
+        exclude_fn=lambda s, d: not ({ApiCategories.site_price} - s),
+        force_creation_fn=lambda d, _: bool(
+            "dynamic_price_details" in (d.get("site_details") or {})
+        ),
+        restore=True,
     ),
 ]
 
@@ -166,9 +236,14 @@ async def async_setup_entry(
                     )
                 )
             ):
-                entity = AnkerSolixNumber(
-                    coordinator, description, context, entity_type
-                )
+                if description.restore:
+                    entity = AnkerSolixRestoreNumber(
+                        coordinator, description, context, entity_type
+                    )
+                else:
+                    entity = AnkerSolixNumber(
+                        coordinator, description, context, entity_type
+                    )
                 entities.append(entity)
 
     # create the entities from the list
@@ -184,7 +259,9 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
     _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset(
         {
+            "expansions",
             "schedule",
+            "calculated",
         }
     )
 
@@ -304,13 +381,18 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             value (float): The value to set.
 
         """
-        if self.coordinator.client.testmode() and self._attribute_name not in [
-            "preset_system_output_power",
-            "preset_device_output_power",
-            "preset_charge_priority",
-            "preset_tariff_price",
-            "system_price",
-        ]:
+        if (
+            self.coordinator.client.testmode()
+            and self._attribute_name
+            not in [
+                "preset_system_output_power",
+                "preset_device_output_power",
+                "preset_charge_priority",
+                "preset_tariff_price",
+                "system_price",
+            ]
+            and not self.entity_description.restore
+        ):
             # Raise alert to frontend
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be used while configuration is running in testmode",
@@ -323,13 +405,17 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
         if (
             self.coordinator
             and self.coordinator_context in self.coordinator.data
-            and self._native_value is not None
+            and (self._native_value is not None or self.entity_description.restore)
         ):
             data = self.coordinator.data.get(self.coordinator_context) or {}
             if self.min_value <= value <= self.max_value:
                 # round the number to the defined steps if set via service call
                 if self.step:
-                    value = self.step * round(value / self.step)
+                    step_s = str(self.step)
+                    value = round(
+                        self.step * round(value / self.step),
+                        len(step_s) - step_s.index(".") - 1 if "." in step_s else 0,
+                    )
                 # Skip Api calls if value does not change
                 if str(self._native_value).replace(".", "", 1).isdigit() and float(
                     value
@@ -337,6 +423,23 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     return
                 # Wait until client cache is valid before applying any api change
                 await self.coordinator.client.validate_cache()
+                # Customize cache first if restore entity
+                if self.entity_description.restore:
+                    self.coordinator.client.api.customizeCacheId(
+                        id=self.coordinator_context,
+                        key=self.entity_description.json_key,
+                        value=str(value),
+                    )
+                    if ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: State value of entity '%s' has been customized in Api cache to: %s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            value,
+                        )
+                # Trigger Api calls depending on changed entity
                 if self._attribute_name in [
                     "preset_system_output_power",
                     "preset_device_output_power",
@@ -528,8 +631,51 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         "max": self.max_value,
                     },
                 )
-        # trigger coordinator update with api dictionary data
-        await self.coordinator.async_refresh_data_from_apidict()
-        if self._native_value is not None:
-            self._assumed_state = True
-            self._native_value = value
+            # trigger coordinator update with api dictionary data
+            await self.coordinator.async_refresh_data_from_apidict()
+
+
+class AnkerSolixRestoreNumber(AnkerSolixNumber, RestoreNumber):
+    """anker_solix number class with restore capability."""
+
+    def __init__(
+        self,
+        coordinator: AnkerSolixDataUpdateCoordinator,
+        description: AnkerSolixNumberDescription,
+        context: str,
+        entity_type: str,
+    ) -> None:
+        """Initialize the number class."""
+        super().__init__(coordinator, description, context, entity_type)
+        self._assumed_state = True
+
+    async def async_added_to_hass(self) -> None:
+        """Load the last known state when added to hass."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) and (
+            last_number_data := await self.async_get_last_number_data()
+        ):
+            if (
+                last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+                and self._native_value is not None
+            ):
+                # set the customized value if it was modified
+                if self._native_value != last_number_data.native_value:
+                    if self._attribute_name == "battery_capacity":
+                        # skip value restore if config was changed
+                        if last_state.attributes.get(
+                            "calculated"
+                        ) != self.extra_state_attributes.get("calculated"):
+                            return
+                    self._native_value = last_number_data.native_value
+                    LOGGER.info(
+                        "Restored state value of entity '%s' to: %s",
+                        self.entity_id,
+                        self._native_value,
+                    )
+                    self.coordinator.client.api.customizeCacheId(
+                        id=self.coordinator_context,
+                        key=self.entity_description.json_key,
+                        value=str(last_number_data.native_value),
+                    )
+                    await self.coordinator.async_refresh_data_from_apidict()

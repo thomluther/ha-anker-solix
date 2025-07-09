@@ -1,0 +1,27 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-2",
+        "wifi_signal": "54",
+        "device_sn": "2HUES01SE2RX2JIF",
+        "rssi": "-74",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      },
+      {
+        "wifi_name": "wifi-network-2",
+        "wifi_signal": "",
+        "device_sn": "NRL2VNK0468UWHYV",
+        "rssi": "-67",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      }
+    ]
+  },
+  "trace_id": "9b27ea71feb6efdc48682c5bdaaac6c1"
+}

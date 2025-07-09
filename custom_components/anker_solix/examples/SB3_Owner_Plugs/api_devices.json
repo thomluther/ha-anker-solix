@@ -1,0 +1,332 @@
+{
+  "YZ66ISQXWBIBW6E2G": {
+    "device_sn": "YZ66ISQXWBIBW6E2G",
+    "type": "solarbank",
+    "site_id": "a63fc1eb-3afa-cbef-388b-bad12ccb9dc8",
+    "is_admin": true,
+    "device_pn": "A17C5",
+    "generation": 3,
+    "battery_soc": "40",
+    "battery_capacity": "2688",
+    "battery_energy": "1075",
+    "charging_power": "205",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "protection_charge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "495",
+    "output_power": "290",
+    "sub_package_num": 0,
+    "output_cutoff_data": 0,
+    "bat_charge_power": "205",
+    "alias": "Solarbank 3 E2700 Pro",
+    "name": "Solarbank 3 E2700 Pro",
+    "set_output_power": "450",
+    "set_system_output_power": "450",
+    "data_valid": true,
+    "solarbank_count": 1,
+    "solar_power_1": "241",
+    "solar_power_2": "254",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "to_home_load": "0",
+    "other_input_power": "0",
+    "grid_to_battery_power": "0",
+    "pei_heating_power": "0",
+    "bt_ble_mac": "0AD019DA23BC",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.0.18",
+    "tag": "",
+    "rssi": "-76",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v1.0.0.18",
+    "ota_children": [
+      {
+        "device_type": "A17C5_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.0.18"
+      },
+      {
+        "device_type": "A17C5_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.0.5"
+      },
+      {
+        "device_type": "A17C5_100Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.2.6"
+      }
+    ],
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "48",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 0,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 1,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "power_cutoff": 5,
+    "schedule": {
+      "mode_type": 3,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 450
+            }
+          ]
+        }
+      ],
+      "blend_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "05:00",
+              "power": 0
+            },
+            {
+              "start_time": "05:00",
+              "end_time": "21:00",
+              "power": 250
+            },
+            {
+              "start_time": "21:00",
+              "end_time": "24:00",
+              "power": 150
+            }
+          ]
+        }
+      ],
+      "use_time": [
+        {
+          "sea": {
+            "start_month": 1,
+            "end_month": 12
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 24,
+              "type": 2
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 24,
+              "type": 2
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.00",
+              "type": 3
+            },
+            {
+              "price": "0.3",
+              "type": 1
+            },
+            {
+              "price": "0.3",
+              "type": 2
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.00",
+              "type": 3
+            },
+            {
+              "price": "0.3",
+              "type": 1
+            },
+            {
+              "price": "0.3",
+              "type": 2
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": true
+        }
+      ],
+      "manual_backup": {
+        "ranges": null,
+        "switch": false
+      },
+      "reserved_soc": 0,
+      "dynamic_price": null,
+      "ai_ems": {
+        "enable": false,
+        "status": 3
+      },
+      "time_slot": null,
+      "schedule_mode": null,
+      "default_home_load": 200,
+      "max_load": 1200,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_usage_mode": 3,
+    "preset_system_output_power": 450,
+    "preset_manual_backup_start": 0,
+    "preset_manual_backup_end": 0,
+    "preset_backup_option": false,
+    "preset_tariff": 2,
+    "preset_tariff_price": "0.3",
+    "preset_tariff_currency": "\u20ac"
+  },
+  "ZLF94UZ1WWW86V1Z": {
+    "device_sn": "ZLF94UZ1WWW86V1Z",
+    "type": "smartplug",
+    "site_id": "a63fc1eb-3afa-cbef-388b-bad12ccb9dc8",
+    "is_admin": true,
+    "device_pn": "A17X8",
+    "current_power": "2",
+    "tag": "Kitchen",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "err_code": "0",
+    "alias": "Sp\u00fclmaschine",
+    "name": "Smart Plug",
+    "bt_ble_mac": "0FE8B1E8E3B9",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.2.7",
+    "rssi": "-52",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v0.0.2.7",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "94",
+    "energy_today": "1.66",
+    "energy_last_period": "1.66"
+  },
+  "Z7TAQWPTMV3ER5TK": {
+    "device_sn": "Z7TAQWPTMV3ER5TK",
+    "type": "smartplug",
+    "site_id": "a63fc1eb-3afa-cbef-388b-bad12ccb9dc8",
+    "is_admin": true,
+    "device_pn": "A17X8",
+    "current_power": "0",
+    "tag": "Dining Room",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "err_code": "0",
+    "alias": "Smart Plug",
+    "name": "Smart Plug",
+    "bt_ble_mac": "D95DECEF4FE5",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.2.7",
+    "rssi": "-14",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v0.0.2.7",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100",
+    "energy_today": "0.11",
+    "energy_last_period": "0.11"
+  },
+  "J6569JU7G22QRK7I": {
+    "device_sn": "J6569JU7G22QRK7I",
+    "type": "smartplug",
+    "site_id": "a63fc1eb-3afa-cbef-388b-bad12ccb9dc8",
+    "is_admin": true,
+    "device_pn": "A17X8",
+    "current_power": "85",
+    "tag": "Kitchen",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "err_code": "0",
+    "alias": "K\u00fchlschrank",
+    "name": "Smart Plug",
+    "bt_ble_mac": "8FA6AEB2BAFA",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.2.7",
+    "rssi": "-53",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v0.0.2.7",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "91",
+    "energy_today": "1.80",
+    "energy_last_period": "1.80"
+  },
+  "F3ZPGYJLCAUUWXPT": {
+    "device_sn": "F3ZPGYJLCAUUWXPT",
+    "type": "smartplug",
+    "site_id": "a63fc1eb-3afa-cbef-388b-bad12ccb9dc8",
+    "is_admin": true,
+    "device_pn": "A17X8",
+    "current_power": "66",
+    "tag": "Garage",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "err_code": "0",
+    "alias": "Keller",
+    "name": "Smart Plug",
+    "bt_ble_mac": "0B3732991737",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.2.7",
+    "rssi": "-30",
+    "auto_upgrade": false,
+    "is_ota_update": false,
+    "ota_version": "v0.0.2.7",
+    "wifi_name": "wifi-network-2",
+    "wifi_signal": "100",
+    "energy_today": "3.15",
+    "energy_last_period": "3.15"
+  }
+}

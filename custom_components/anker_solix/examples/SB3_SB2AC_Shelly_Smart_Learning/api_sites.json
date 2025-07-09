@@ -1,0 +1,521 @@
+{
+  "e9dbf9b2-5dc7-aaa6-fd97-b4bd15cfac1f": {
+    "type": "system",
+    "site_info": {
+      "site_id": "e9dbf9b2-5dc7-aaa6-fd97-b4bd15cfac1f",
+      "site_name": "Home",
+      "site_img": "",
+      "device_type_list": [
+        3,
+        6
+      ],
+      "ms_type": 1,
+      "power_site_type": 12,
+      "is_allow_delete": true,
+      "support_device_models": [
+        "A17C5",
+        "A17X7",
+        "SHEM3",
+        "SHEMP3",
+        "A17X8",
+        "SHPPS"
+      ],
+      "current_site_device_models": [
+        "A17C5",
+        "SHEMP3"
+      ]
+    },
+    "site_type": "solarbank",
+    "site_admin": true,
+    "data_valid": true,
+    "requeries": 0,
+    "energy_offset_seconds": -214,
+    "energy_offset_check": "2025-07-04 10:29:56",
+    "energy_offset_tz": 0,
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "0.00",
+        "unit": "kWh"
+      },
+      {
+        "type": "2",
+        "total": "0.00",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "0.00",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C5",
+          "device_sn": "B2ZDH5QYEIRM4DGZA",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+          "battery_power": "35",
+          "bind_site_status": "",
+          "charging_power": "0",
+          "power_unit": "W",
+          "charging_status": "0",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "0",
+          "output_power": "0",
+          "create_time": 1751616832,
+          "set_load_power": "",
+          "sub_package_num": 4,
+          "output_cutoff_data": 0,
+          "is_display": true,
+          "bat_charge_power": "0",
+          "pv_power": null,
+          "feature_switch": {
+            "0w_feed_v2": true,
+            "enable_parallel": false,
+            "enable_timeslot": true,
+            "exceed_power": false,
+            "heating": false,
+            "plug_switch_report": true
+          },
+          "heating_power": "",
+          "bat_discharge_power": "0",
+          "err_code": 0,
+          "alias_name": "SB3",
+          "parallel_home_load": "0",
+          "current_home_load": "0"
+        }
+      ],
+      "total_charging_power": "0",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.35",
+      "updated_time": "2025-07-04 10:28:23",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "0.00",
+      "display_set_power": false,
+      "battery_discharge_power": "0",
+      "ac_power": "0",
+      "to_home_load": "0",
+      "is_display_data": true,
+      "solar_power_1": "0",
+      "solar_power_2": "0",
+      "solar_power_3": "0",
+      "solar_power_4": "0",
+      "other_input_power": "0",
+      "micro_inverter_power": "0",
+      "micro_inverter_power_limit": "0",
+      "micro_inverter_low_power_limit": "0",
+      "grid_to_battery_power": "0",
+      "pei_heating_power": "0",
+      "backup_info": {
+        "start_time": 0,
+        "end_time": 0,
+        "full_time": 0
+      },
+      "use_time_excute_info": {
+        "current_band": "0"
+      }
+    },
+    "retain_load": "0W",
+    "scene_mode": 3,
+    "home_load_power": "9",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 12,
+    "site_id": "e9dbf9b2-5dc7-aaa6-fd97-b4bd15cfac1f",
+    "powerpanel_list": [],
+    "grid_info": {
+      "grid_list": [
+        {
+          "device_pn": "SHEMP3",
+          "device_sn": "3U9HDQYFU18Z67",
+          "device_name": "Shelly Pro Home",
+          "device_img": "",
+          "create_time": 1751616832,
+          "status": "1",
+          "bind_site_status": "",
+          "wireless_type": ""
+        }
+      ],
+      "photovoltaic_to_grid_power": "0",
+      "grid_to_home_power": "9",
+      "grid_status": 0,
+      "has_history_data": true
+    },
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "0w_feed_v2": true,
+      "enable_parallel": false,
+      "enable_timeslot": true,
+      "exceed_power": false,
+      "heating": false,
+      "plug_switch_report": true
+    },
+    "other_loads_power": "9",
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "priority_discharge_upgrade_devices": "",
+    "style_id": 0,
+    "is_show_priority_discharge": 0,
+    "solarbank_pps_info": {
+      "pps_list": null,
+      "total_charging_power": "",
+      "total_output_power": "",
+      "total_battery_power": "",
+      "total_pv_input_power": "",
+      "total_home_load_power": "",
+      "total_grid_to_battery": "",
+      "home": null,
+      "grid": null,
+      "system": null
+    },
+    "user_scene_mode": 3,
+    "is_dynamic_price_down_grade": false,
+    "aiems_profit": {
+      "unit": "\u20ac",
+      "aiems_profit_total": "0.00",
+      "percentage": "0",
+      "show_percentage": false,
+      "aiems_self_use_diff": "0"
+    },
+    "switch_0w": 0,
+    "err_msg": "",
+    "site_details": {
+      "price": 0.4,
+      "site_co2": 0,
+      "site_price_unit": "\u20ac",
+      "price_type": "dynamic",
+      "current_mode": 3,
+      "use_time": null,
+      "dynamic_price": {
+        "country": "DE",
+        "company": "Nordpool",
+        "area": "GER",
+        "pct": null
+      },
+      "accuracy": 2
+    },
+    "energy_details": {
+      "last_period": {
+        "date": "2025-07-03",
+        "battery_discharge": "0",
+        "ac_socket": "0.00",
+        "battery_to_home": "0.00",
+        "grid_to_battery": "0.00",
+        "home_usage": "0",
+        "grid_to_home": "0.01",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "0",
+        "solar_production_pv2": "0",
+        "solar_production_pv3": "0",
+        "solar_production_pv4": "0",
+        "solar_production": "0",
+        "battery_charge": "0.00",
+        "solar_to_grid": "0.00",
+        "solar_to_battery": "0.00",
+        "solar_to_home": "0.00",
+        "battery_percentage": "0",
+        "solar_percentage": "0",
+        "other_percentage": "0"
+      },
+      "today": {
+        "date": "2025-07-04",
+        "battery_discharge": "0.04",
+        "ac_socket": "0.00",
+        "battery_to_home": "0.00",
+        "grid_to_battery": "0.00",
+        "home_usage": "0.01",
+        "grid_to_home": "0.01",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "0.00",
+        "solar_production_pv2": "0.00",
+        "solar_production_pv3": "0.00",
+        "solar_production_pv4": "0.00",
+        "solar_production": "0.00",
+        "battery_charge": "0.00",
+        "solar_to_grid": "0.00",
+        "solar_to_battery": "0.00",
+        "solar_to_home": "0.00",
+        "battery_percentage": "0",
+        "solar_percentage": "0",
+        "other_percentage": "0"
+      }
+    }
+  },
+  "2aa94bae-cfec-44ed-5963-b7dabf41036f": {
+    "type": "system",
+    "site_info": {
+      "site_id": "2aa94bae-cfec-44ed-5963-b7dabf41036f",
+      "site_name": "Michael",
+      "site_img": "",
+      "device_type_list": [
+        3,
+        6
+      ],
+      "ms_type": 1,
+      "power_site_type": 11,
+      "is_allow_delete": true,
+      "support_device_models": [
+        "A17C2",
+        "A17X7",
+        "A17X8",
+        "SHEM3",
+        "SHEMP3"
+      ],
+      "current_site_device_models": [
+        "A17C2",
+        "A17X7"
+      ]
+    },
+    "site_type": "solarbank",
+    "site_admin": true,
+    "data_valid": true,
+    "requeries": 0,
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "2.21",
+        "unit": "kWh"
+      },
+      {
+        "type": "2",
+        "total": "2.20",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "0.00",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C2",
+          "device_sn": "4494B9VAAVLAOEAI",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/11/11/iot-admin/NycsbknWijoZcv1b/output.lin.png",
+          "battery_power": "36",
+          "bind_site_status": "",
+          "charging_power": "318",
+          "power_unit": "W",
+          "charging_status": "0",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "0",
+          "output_power": "0",
+          "create_time": 1751116767,
+          "set_load_power": "",
+          "sub_package_num": 1,
+          "output_cutoff_data": 0,
+          "is_display": true,
+          "bat_charge_power": "318",
+          "pv_power": null,
+          "feature_switch": {
+            "0w_feed": true,
+            "0w_feed_v2": true,
+            "exceed_power": false,
+            "heating": false,
+            "manual_backup_mode": true,
+            "micro_inverter_output_exceed": false,
+            "micro_inverter_power_exceed": false,
+            "offgrid_with_micro_inverter_alert": false,
+            "peak_valley_mode": true,
+            "shelly_meter": true,
+            "smart_plug": false
+          },
+          "heating_power": "",
+          "bat_discharge_power": "0",
+          "err_code": 0,
+          "alias_name": "ACM",
+          "parallel_home_load": "0",
+          "current_home_load": "0"
+        }
+      ],
+      "total_charging_power": "318",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.36",
+      "updated_time": "2025-07-04 10:29:56",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "0.00",
+      "display_set_power": false,
+      "battery_discharge_power": "0",
+      "ac_power": "0",
+      "to_home_load": "0",
+      "is_display_data": true,
+      "solar_power_1": "0",
+      "solar_power_2": "0",
+      "solar_power_3": "0",
+      "solar_power_4": "0",
+      "other_input_power": "318",
+      "micro_inverter_power": "0",
+      "micro_inverter_power_limit": "0",
+      "micro_inverter_low_power_limit": "0",
+      "grid_to_battery_power": "318",
+      "pei_heating_power": "0",
+      "backup_info": {
+        "start_time": 1751458200,
+        "end_time": 1751469000,
+        "full_time": 0
+      },
+      "use_time_excute_info": {
+        "current_band": "0"
+      }
+    },
+    "retain_load": "0W",
+    "scene_mode": 1,
+    "home_load_power": "0",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 11,
+    "site_id": "2aa94bae-cfec-44ed-5963-b7dabf41036f",
+    "powerpanel_list": [],
+    "grid_info": {
+      "grid_list": [
+        {
+          "device_pn": "A17X7",
+          "device_sn": "1UDKTH3DCIMBLSU3",
+          "device_name": "Smart Meter",
+          "device_img": "",
+          "create_time": 1751471212,
+          "status": "1",
+          "bind_site_status": "",
+          "wireless_type": ""
+        }
+      ],
+      "photovoltaic_to_grid_power": "0",
+      "grid_to_home_power": "0",
+      "grid_status": 0,
+      "has_history_data": true
+    },
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "0w_feed": true,
+      "0w_feed_v2": true,
+      "exceed_power": false,
+      "heating": false,
+      "manual_backup_mode": true,
+      "micro_inverter_output_exceed": false,
+      "micro_inverter_power_exceed": false,
+      "offgrid_with_micro_inverter_alert": false,
+      "peak_valley_mode": true,
+      "shelly_meter": true,
+      "smart_plug": false
+    },
+    "other_loads_power": "0",
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "priority_discharge_upgrade_devices": "",
+    "style_id": 0,
+    "is_show_priority_discharge": 0,
+    "solarbank_pps_info": {
+      "pps_list": null,
+      "total_charging_power": "",
+      "total_output_power": "",
+      "total_battery_power": "",
+      "total_pv_input_power": "",
+      "total_home_load_power": "",
+      "total_grid_to_battery": "",
+      "home": null,
+      "grid": null,
+      "system": null
+    },
+    "user_scene_mode": 1,
+    "is_dynamic_price_down_grade": false,
+    "aiems_profit": null,
+    "switch_0w": 0,
+    "err_msg": "",
+    "site_details": {
+      "price": 0.4,
+      "site_co2": 0,
+      "site_price_unit": "\u20ac",
+      "price_type": "fixed",
+      "current_mode": 1,
+      "use_time": [],
+      "dynamic_price": null,
+      "accuracy": 2
+    },
+    "energy_details": {
+      "last_period": {
+        "date": "2025-07-03",
+        "battery_discharge": "2.41",
+        "ac_socket": "0.00",
+        "battery_to_home": "3.82",
+        "grid_to_battery": "3.74",
+        "home_usage": "4.89",
+        "grid_to_home": "2.88",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "0.00",
+        "solar_production_pv2": "0.00",
+        "solar_production_microinverter": "0.00",
+        "solar_production": "2.18",
+        "battery_charge": "3.74",
+        "solar_to_grid": "2.18",
+        "solar_to_battery": "0.00",
+        "solar_to_home": "0.00",
+        "battery_percentage": "1.00",
+        "solar_percentage": "0.00",
+        "other_percentage": "0"
+      },
+      "today": {
+        "date": "2025-07-04",
+        "battery_discharge": "1.45",
+        "ac_socket": "0.00",
+        "battery_to_home": "3.82",
+        "grid_to_battery": "3.74",
+        "home_usage": "1.81",
+        "grid_to_home": "2.88",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "0.00",
+        "solar_production_pv2": "0.00",
+        "solar_production_microinverter": "0.00",
+        "solar_production": "0.00",
+        "battery_charge": "3.74",
+        "solar_to_grid": "2.18",
+        "solar_to_battery": "0.00",
+        "solar_to_home": "0.00",
+        "battery_percentage": "1.00",
+        "solar_percentage": "0.00",
+        "other_percentage": "0"
+      }
+    }
+  }
+}

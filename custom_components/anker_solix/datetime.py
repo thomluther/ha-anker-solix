@@ -43,7 +43,7 @@ class AnkerSolixDateTimeDescription(
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
-    exclude_fn: Callable[[set, dict], bool] = lambda s, _: False
+    exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
 DEVICE_DATETIMES = [

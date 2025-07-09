@@ -12,6 +12,7 @@ from .apitypes import (
     SolarbankStatus,
     SolixDeviceType,
     SolixParmType,
+    SolixPriceProvider,
     SolixSiteType,
 )
 from .hesapi import AnkerSolixHesApi
@@ -359,7 +360,7 @@ async def poll_sites(  # noqa: C901
                     new_sites.update({myid: mysite})
                     # add count of same solarbanks to device details and other metrics that might be device related
                     if sn := api._update_dev(
-                        solarbank
+                        solarbank.copy()
                         | {
                             "data_valid": data_valid,
                             "solarbank_count": sb_count,
@@ -555,6 +556,16 @@ async def poll_sites(  # noqa: C901
                         api._site_devices.add(sn)
     # Write back the updated sites
     api.sites = new_sites
+
+    # Extract actual dynamic price for sites supporting it if not excluded
+    if {ApiCategories.site_price} - exclude:
+        for site_id in api.sites:
+            # filter requested site id or all sites
+            if site_id == (siteId or site_id) and (
+                dp := api.extractPriceData(siteId=site_id)
+            ):
+                # save the actual extracted dynamic price details for sites supporting dynamic prices
+                api._update_site(siteId=site_id, details={"dynamic_price_details": dp})
     # actions for all filtered virtual sites that represent standalone inverters
     if inverters := [
         sn
@@ -605,16 +616,22 @@ async def poll_site_details(
     if api.hesApi:
         await api.hesApi.update_site_details(fromFile=fromFile, exclude=exclude)
     for site_id, site in api.sites.items():
-        # check if power panel site type to refresh runtime stats in sites cache
+        # check if power panel site type to refresh runtime stats and merge site details in sites cache
         if site.get("site_type") == SolixDeviceType.POWERPANEL.value:
             api.sites[site_id]["statistics"] = (
                 (api.powerpanelApi.sites.get(site_id) or {}).get("statistics") or {}
             ).copy()
+            details = api.sites[site_id].get("site_details") or {}
+            details.update((api.powerpanelApi.sites.get(site_id) or {}).get("site_details") or {})
+            api.sites[site_id]["site_details"] = details
         # check if hes site type to refresh runtime stats in sites cache
         elif site.get("site_type") == SolixDeviceType.HES.value:
             api.sites[site_id]["statistics"] = (
                 (api.hesApi.sites.get(site_id) or {}).get("statistics") or {}
             ).copy()
+            details = api.sites[site_id].get("site_details") or {}
+            details.update((api.hesApi.sites.get(site_id) or {}).get("site_details") or {})
+            api.sites[site_id]["site_details"] = details
         # Fetch details for virtual sites
         if site.get("site_type") == SolixDeviceType.VIRTUAL.value:
             deviceSn = site_id.split("-")[1]
@@ -636,15 +653,74 @@ async def poll_site_details(
                         api.apisession.nickname,
                     )
                     await api.get_device_pv_price(deviceSn=deviceSn, fromFile=fromFile)
-        # Fetch details that only work for site admins and real sites
-        elif site.get("site_admin", False):
-            # Fetch site price and CO2 settings
-            if {ApiCategories.site_price} - exclude:
+        # Fetch solarbank data that works for member or admin sites
+        if site.get("site_type") in [SolixDeviceType.SOLARBANK.value]:
+            # First fetch details that only work for site admins
+            if site.get("site_admin", False):
+                # Fetch site price and CO2 settings
+                if {ApiCategories.site_price} - exclude:
+                    api._logger.debug(
+                        "Getting api %s price and CO2 settings for site",
+                        api.apisession.nickname,
+                    )
+                    await api.get_site_price(siteId=site_id, fromFile=fromFile)
+            # Fetch CO2 Ranking if not excluded
+            if not ({ApiCategories.solarbank_energy} & exclude):
                 api._logger.debug(
-                    "Getting api %s price and CO2 settings for site",
+                    "Getting api %s CO2 ranking",
                     api.apisession.nickname,
                 )
-                await api.get_site_price(siteId=site_id, fromFile=fromFile)
+                await api.get_co2_ranking(siteId=site_id, fromFile=fromFile)
+            # Fetch AI EMS runtime stats for sites supporting it
+            if site.get("power_site_type") in [12]:
+                api._logger.debug(
+                    "Getting api %s AI EMS runtime",
+                    api.apisession.nickname,
+                )
+                await api.get_ai_ems_runtime(siteId=site_id, fromFile=fromFile)
+            # Fetch dynamic price providers and prices if supported for site
+            if {ApiCategories.site_price} - exclude:
+                for model in {
+                    m
+                    for m in (site.get("site_info") or {}).get(
+                        "current_site_device_models"
+                    )
+                    or []
+                    if m in ["A17C5"]
+                }:
+                    # fetch provider list for supported models only once per day
+                    if (datetime.now().strftime("%Y-%m-%d")) != (
+                        api.account.get(f"price_providers_{model}") or {}
+                    ).get("date"):
+                        api._logger.debug(
+                            "Getting api %s dynamic price providers for %s",
+                            api.apisession.nickname,
+                            model,
+                        )
+                        await api.get_price_providers(model=model, fromFile=fromFile)
+                    # determine active provider for admin site or customized provider for member site
+                    if (
+                        provider := (site.get("site_details") or {}).get(
+                            "dynamic_price"
+                        )
+                        or (site.get("customized") or {}).get("dynamic_price")
+                        or {}
+                    ):
+                        # Ensure actual provider prices are available
+                        await api.refresh_provider_prices(
+                            provider=SolixPriceProvider(provider=provider),
+                            fromFile=fromFile,
+                        )
+                    # extract the actual spot price and unit for sites supporting dynamic prices
+                    # The dynamic_price_details key is also a marker for sites supporting dynamic tariffs
+                    api._update_site(
+                        siteId=site_id,
+                        details={
+                            "dynamic_price_details": api.extractPriceData(
+                                siteId=site_id, initialize=True
+                            )
+                        },
+                    )
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
     return api.sites
@@ -777,7 +853,6 @@ async def poll_device_details(
                     api._update_dev({"device_sn": sn} | dict(wifi_list[wifi_index - 1]))
 
             # Fetch device type specific details, if device type not excluded
-
             if dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude):
                 # Fetch active Power Cutoff setting for solarbanks
                 if {ApiCategories.solarbank_cutoff} - exclude:
@@ -789,7 +864,7 @@ async def poll_device_details(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
                 # queries for solarbank 1 only
-                if ((api.devices.get(sn) or {}).get("generation") or 0) < 2:
+                if (device.get("generation") or 0) < 2:
                     # Fetch available OTA update for solarbanks, does not work for solarbank 2 with device SN
                     # DISABLED: Not reliable for Solarbank 1 either, SN can also be "", so not clear what the response actually reports
                     # api._logger.debug("Getting api %s OTA update info for device", api.apisession.nickname)

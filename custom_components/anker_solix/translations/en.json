@@ -31,7 +31,7 @@
                 "custom_rate_plan": "Custom plan",
                 "blend_plan": "Blend plan",
                 "manual_backup": "Backup charge plan",
-                "use_time": "Usage time plan"
+                "use_time": "Time of Use plan"
             }
         },
         "weekday": {
@@ -213,6 +213,13 @@
                     }
                 }
             },
+            "wired_connection": {
+                "name": "Wired connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                }
+            },
             "connected": {
                 "name": "Connection",
                 "state": {
@@ -243,6 +250,42 @@
                     },
                     "ota_components": {
                         "name": "OTA Components"
+                    }
+                }
+            },
+            "ai_ems_enabled": {
+                "name": "AI enabled",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                },
+                "state_attributes": {
+                    "status_code": {
+                        "name": "Status code"
+                    },
+                    "status": {
+                        "name": "Status",
+                        "state": {
+                            "unknown": "Unknown",
+                            "untrained": "Untrained",
+                            "learning": "Learning",
+                            "trained": "Trained"
+                        }
+                    }
+                }
+            },
+            "auto_switch": {
+                "name": "AI controlled",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                },
+                "state_attributes": {
+                    "priority": {
+                        "name": "Priority"
+                    },
+                    "running_time": {
+                        "name": "Runtime"
                     }
                 }
             },
@@ -328,6 +371,23 @@
             },
             "preset_tariff_price": {
                 "name": "Tariff price kWh"
+            },
+            "battery_capacity": {
+                "name": "Battery capacity",
+                "state_attributes": {
+                    "expansions": {
+                        "name": "Expansions"
+                    },
+                    "calculated": {
+                        "name": "Calculated"
+                    }
+                }
+            },
+            "dynamic_price_fee": {
+                "name": "Dyn. price fee"
+            },
+            "dynamic_price_vat": {
+                "name": "Dyn. price VAT"
             }
         },
         "select": {
@@ -337,21 +397,32 @@
             "preset_usage_mode": {
                 "name": "Usage mode",
                 "state": {
-                    "smartmeter": "Smart meter",
+                    "smartmeter": "Self consumption",
                     "smartplugs": "Smart plugs",
-                    "use_time": "Usage time",
+                    "manual": "Custom",
                     "backup": "Backup charge",
-                    "manual": "Manual"
+                    "use_time": "Time of Use",
+                    "smart": "Smart",
+                    "time_slot": "Time slot"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
+                    }
                 }
             },
             "preset_tariff": {
-                "name": "Tariff usage time",
+                "name": "Tariff ToU",
                 "state": {
-                    "none": "None",
                     "peak": "Peak",
                     "mid_peak": "Medium peak",
                     "off_peak": "Off peak",
                     "valley": "Valley"
+                },
+                "state_attributes": {
+                    "tariff": {
+                        "name": "Tariff"
+                    }
                 }
             },
             "system_price_unit": {
@@ -361,11 +432,32 @@
                 "name": "Price type",
                 "state": {
                     "fixed": "Fixed",
-                    "use_time": "Usage time"
+                    "use_time": "Time of Use",
+                    "dynamic": "Dynamic"
                 },
                 "state_attributes": {
+                    "type": {
+                        "name": "Type"
+                    },
                     "current_mode": {
                         "name": "Active usage mode"
+                    }
+                }
+            },
+            "dynamic_price_provider": {
+                "name": "Price provider",
+                "state": {
+                    "none": "None"
+                },
+                "state_attributes": {
+                    "country": {
+                        "name": "Country"
+                    },
+                    "company": {
+                        "name": "Company"
+                    },
+                    "area": {
+                        "name": "Area"
                     }
                 }
             },
@@ -493,7 +585,8 @@
                 "name": "Preset mode",
                 "state": {
                     "normal": "Normal",
-                    "advanced": "Advanced"
+                    "advanced": "Advanced",
+                    "unknown": "Unknown"
                 },
                 "state_attributes": {
                     "mode": {
@@ -609,12 +702,14 @@
             "active_scene_mode": {
                 "name": "Active usage mode",
                 "state": {
-                    "smartmeter": "Smart meter",
+                    "unknown": "Unknown",
+                    "smartmeter": "Self consumption",
                     "smartplugs": "Smart plugs",
-                    "manual": "Manual",
+                    "manual": "Custom",
                     "backup": "Backup charge",
-                    "use_time": "Usage time",
-                    "unknown": "Unknown"
+                    "use_time": "Time of Use",
+                    "smart": "Smart",
+                    "time_slot": "Time slot"
                 },
                 "state_attributes": {
                     "mode_type": {
@@ -638,13 +733,83 @@
                 "name": "Other load power"
             },
             "total_co2_saving": {
-                "name": "CO₂ savings"
+                "name": "CO₂ savings",
+                "state_attributes": {
+                    "rank": {
+                        "name": "Rank"
+                    },
+                    "trees": {
+                        "name": "Trees"
+                    },
+                    "message": {
+                        "name": "Message"
+                    }
+                }
             },
             "total_saved_money": {
                 "name": "Cost savings"
             },
             "total_output_energy": {
                 "name": "Yield total"
+            },
+            "total_aiems_profit": {
+                "name": "AI profit",
+                "state_attributes": {
+                    "advantage": {
+                        "name": "Advantage"
+                    },
+                    "percentage": {
+                        "name": "Percentage"
+                    }
+                }
+            },
+            "aiems_runtime_status": {
+                "name": "AI monitoring",
+                "state": {
+                    "unknown": "Unknown",
+                    "inactive": "Inactive",
+                    "running": "Running",
+                    "failure": "Failure"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    },
+                    "runtime": {
+                        "name": "Runtime"
+                    }
+                }
+            },
+            "dynamic_price_total": {
+                "name": "Dyn. price total",
+                "state_attributes": {
+                    "price_calc": {
+                        "name": "Price calculation"
+                    },
+                    "price_time": {
+                        "name": "Price time"
+                    },
+                    "forecast": {
+                        "name": "Forecast"
+                    }
+                }
+            },
+            "spot_price_mwh": {
+                "name": "Dyn. spot price",
+                "state_attributes": {
+                    "provider": {
+                        "name": "Provider"
+                    },
+                    "poll_time": {
+                        "name": "Poll Time"
+                    },
+                    "avg_today": {
+                        "name": "Avg today"
+                    },
+                    "avg_tomorrow": {
+                        "name": "Avg tomorrow"
+                    }
+                }
             },
             "set_system_output_power": {
                 "name": "System home preset"
@@ -1013,8 +1178,8 @@
             "description": "The Solarbank schedule will be cleared",
             "sections": {
                 "sb2_fields": {
-                    "name": "Solarbank 2 options",
-                    "description": "For Solarbank 2 systems you can specify following options (ignored for Solarbank 1)"
+                    "name": "Solarbank 2+ options",
+                    "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
                 }
             },
             "fields": {
@@ -1034,11 +1199,11 @@
             "sections": {
                 "sb1_fields": {
                     "name": "Solarbank 1 options",
-                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2)"
+                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2+)"
                 },
                 "sb2_fields": {
-                    "name": "Solarbank 2 options",
-                    "description": "For Solarbank 2 systems you can specify following options (ignored for Solarbank 1)"
+                    "name": "Solarbank 2+ options",
+                    "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
                 }
             },
             "fields": {
@@ -1064,19 +1229,19 @@
                 },
                 "device_load": {
                     "name": "Device load preset",
-                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2)"
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Allow export",
-                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2)"
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2+)"
                 },
                 "discharge_priority": {
                     "name": "Discharge priority",
-                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2)"
+                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2+)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",
-                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2."
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2+."
                 }
             }
         },
@@ -1086,11 +1251,11 @@
             "sections": {
                 "sb1_fields": {
                     "name": "Solarbank 1 options",
-                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2)"
+                    "description": "For Solarbank 1 systems you can specify following options (ignored for Solarbank 2+)"
                 },
                 "sb2_fields": {
-                    "name": "Solarbank 2 options",
-                    "description": "For Solarbank 2 systems you can specify following options (ignored for Solarbank 1)"
+                    "name": "Solarbank 2+ options",
+                    "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
                 }
             },
             "fields": {
@@ -1116,19 +1281,19 @@
                 },
                 "device_load": {
                     "name": "Device load preset",
-                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2)"
+                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Allow export",
-                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2)"
+                    "description": "If deactivated, the battery is not discharged or, if an MI80 inverter or 0 W switch is installed, the charging priority is used without exporting power to the house (ignored for Solarbank 2+)"
                 },
                 "discharge_priority": {
                     "name": "Discharge priority",
-                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2)"
+                    "description": "If activated, battery discharge will be prioritized for export and possible PV production will be stopped (ignored for Solarbank 2+)"
                 },
                 "charge_priority_limit": {
                     "name": "Limit for charge priority",
-                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2."
+                    "description": "The charging priority is used up to the set charge level when the MI80 inverter is set. Setting is ignored if no 0 W switch is installed or no MI80 inverter is set or for Solarbank 2+."
                 }
             }
         },
@@ -1155,8 +1320,8 @@
             }
         },
         "modify_solix_use_time": {
-            "name": "Modify usage time plan",
-            "description": "Adjust the usage time plan for Anker Solix devices that support AC charge and a usage time mode with various power tariffs",
+            "name": "Modify Time of Use plan",
+            "description": "Adjust the Time of Use plan for Anker Solix devices that support AC charge and a Time of Use mode with flexible power tariffs",
             "fields": {
                 "start_month": {
                     "name": "Start month",
@@ -1168,15 +1333,15 @@
                 },
                 "day_type": {
                     "name": "Day type",
-                    "description": "Type of the days to be modified in the season"
+                    "description": "Type of days to be modified in the season"
                 },
                 "start_hour": {
                     "name": "Start hour",
-                    "description": "Start hour of the days to be modified (minutes and seconds are ignored)"
+                    "description": "Start hour of day type to be modified (minutes and seconds are ignored)"
                 },
                 "end_hour": {
                     "name": "End hour",
-                    "description": "End hour of the days to be modified (minutes and seconds are ignored). For 24:00 you must enter 23:59"
+                    "description": "End hour of day type to be modified (minutes and seconds are ignored). For 24:00 you must enter 23:59"
                 },
                 "tariff": {
                     "name": "Tariff",

@@ -1,0 +1,165 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "productsInfo": [
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A5140",
+        "name": "MI60 Microinverter",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/2e60fc1a-f1c2-4574-8e00-a50689c87f72/picl_A5140_normal.png"
+      },
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A17C1",
+        "name": "Solarbank 2 E1600 Pro",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png"
+      },
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A5143",
+        "name": "MI80 Microinverter(BLE)",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png"
+      },
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A17C0",
+        "name": "Solarbank E1600",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png"
+      },
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A17C5",
+        "name": "Solarbank 3 E2700 Pro",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png"
+      },
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A17C2",
+        "name": "Solarbank 2 E1600 AC",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/11/11/iot-admin/NycsbknWijoZcv1b/output.lin.png"
+      },
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A5141",
+        "name": "41",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/9f46a3c3-6e95-47f2-8736-b95d8a6990bd/picl_A5141_normal_blur.png"
+      },
+      {
+        "category": "Balcony Solar Power System",
+        "code": "A17C3",
+        "name": "Solarbank 2 E1600 Plus",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/06/24/iot-admin/3cVAFo62HO58vAdl/picl_A17C3_normal.png"
+      },
+      {
+        "category": "Powered Cooler",
+        "code": "A17A0",
+        "name": "Powered Cooler 30",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/fac7b94e-c02a-44b1-8836-a78cb938c50e/picl_A17A0_normal.png"
+      },
+      {
+        "category": "Powered Cooler",
+        "code": "A17A1",
+        "name": "Powered Cooler 40",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/a9d58f40-3bac-4972-b0dc-dd2d2a4d6106/picl_A17A1_normal.png"
+      },
+      {
+        "category": "Powered Cooler",
+        "code": "A17A2",
+        "name": "Powered Cooler 50",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/435287b1-9dcf-45ac-b363-67b92a0f6c42/picl_A17A2_normal.png"
+      },
+      {
+        "category": "Powered Cooler",
+        "code": "A17A5",
+        "name": "SOLIX Everfrost 2 58L",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/02/17/iot-admin/YIpI9EuYtXk6CzlA/picl_A17A5_normal%20%281%29.png"
+      },
+      {
+        "category": "Powered Cooler",
+        "code": "A17A4",
+        "name": "SOLIX Everfrost 2 40L",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/02/17/iot-admin/qXKe8Y2GHMdAOWau/picl_A17A4_normal%20%281%29.png"
+      },
+      {
+        "category": "Powered Cooler",
+        "code": "A17A3",
+        "name": "SOLIX Everfrost 2 23L",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/03/24/iot-admin/cOKszdkfKpfdaxkS/picl_A17A3_normal.png"
+      },
+      {
+        "category": "Power Bank",
+        "code": "A1340",
+        "name": "Prime Power Bank",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/ab1026e0-5376-482a-b795-742acd1532ca/picl_A1340_black_normal.png"
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5341",
+        "name": "Backup Controller",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/09/24/iot-admin/ANJzf3AX8isPzNMI/picl_A5341_normal.png"
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5101",
+        "name": "X1-P6K-US/S",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/KEwdxNejZq2tDXCX/picl_A5101_normal.png"
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5150",
+        "name": "Microinverter",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/29/iot-admin/1VUzMEfFhzv4gopz/%E5%BE%AE%E9%80%86.png"
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5450",
+        "name": "Zigbee Dongle",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/29/iot-admin/mp7s3FzbBXjRqIxV/ECU.png"
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5102",
+        "name": "X1-H(3.68~6)K-S\t",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/BT8pMS9hrhg8IEob/picl_A5101_normal.png"
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5103",
+        "name": "X1-H (5~12)K-T",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/NLxTngSOzIY49fX2/picl_A5101_normal.png"
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5220",
+        "name": "Battery Module",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/QgLuazcQypTsCzvv/picl_A5220_normal.png"
+      },
+      {
+        "category": "Accessory",
+        "code": "A17X7",
+        "name": "Smart Meter",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/opwTD5izbjD9DjKB/picl_A17X7_normal.png"
+      },
+      {
+        "category": "Accessory",
+        "code": "A17X8",
+        "name": "Smart Plug",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/23/iot-admin/jvwLiu0cOHjYMCwV/picl_A17X8_normal.png"
+      },
+      {
+        "category": "Charging Station",
+        "code": "A2345",
+        "name": "250W Prime Charger",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/08/08/iot-admin/0lJm9TW1Kmizv9OM/picl_A2345.png"
+      },
+      {
+        "category": "Charging Station",
+        "code": "A91B2",
+        "name": "240W Charging Station",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/08/08/iot-admin/37vPAkEWziYkHFJk/picl_A91B2_Japan.png"
+      }
+    ]
+  },
+  "trace_id": "a4cfb4eb1b01da4911a59b82cd0acb9a"
+}

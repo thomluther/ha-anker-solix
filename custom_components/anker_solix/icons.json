@@ -13,11 +13,32 @@
                     "off": "mdi:wifi-off"
                 }
             },
+            "wired_connection": {
+                "default": "mdi:alert-box-outline",
+                "state": {
+                    "on": "mdi:ethernet-cable",
+                    "off": "mdi:ethernet-cable-off"
+                }
+            },
             "ota_update": {
                 "default": "mdi:alert-circle-outline",
                 "state": {
                     "on": "mdi:download-circle-outline",
                     "off": "mdi:check-circle-outline"
+                }
+            },
+            "ai_ems_enabled": {
+                "default": "mdi:head-question-outline",
+                "state": {
+                    "on": "mdi:head-sync",
+                    "off": "mdi:head-outline"
+                }
+            },
+            "auto_switch": {
+                "default": "mdi:help-circle-outline",
+                "state": {
+                    "on": "mdi:auto-mode",
+                    "off": "mdi:gesture-tap"
                 }
             },
             "heating": {
@@ -72,6 +93,12 @@
             },
             "preset_tariff_price": {
                 "default": "mdi:cash-edit"
+            },
+            "dynamic_price_fee": {
+                "default": "mdi:cash-plus"
+            },
+            "dynamic_price_vat": {
+                "default": "mdi:cash-plus"
             }
         },
         "select": {
@@ -81,10 +108,12 @@
             "preset_usage_mode": {
                 "default": "mdi:account-clock",
                 "state": {
-                    "smartmeter": "mdi:auto-mode",
+                    "smartmeter": "mdi:refresh-auto",
                     "smartplugs": "mdi:power-plug",
                     "backup": "mdi:power-plug-battery-outline",
-                    "use_time": "mdi:battery-clock"
+                    "use_time": "mdi:battery-clock",
+                    "smart": "mdi:auto-mode",
+                    "time_slot": "mdi:update"
                 }
             },
             "preset_tariff": {
@@ -97,8 +126,12 @@
                 "default": "mdi:cash-edit",
                 "state": {
                     "fixed": "mdi:cash-lock",
-                    "use_time": "mdi:cash-clock"
+                    "use_time": "mdi:cash-clock",
+                    "dynamic": "mdi:cash-sync"
                 }
+            },
+            "dynamic_price_provider": {
+                "default": "mdi:cash-sync"
             },
             "preset_inverter_limit": {
                 "default": "mdi:speedometer"
@@ -197,12 +230,15 @@
             "active_scene_mode": {
                 "default": "mdi:alert-box-outline",
                 "state": {
+                    "unknown": "mdi:help-box-outline",
                     "smartmeter": "mdi:numeric-1-box-outline",
                     "smartplugs": "mdi:numeric-2-box-outline",
                     "manual": "mdi:numeric-3-box-outline",
                     "backup": "mdi:numeric-4-box-outline",
                     "use_time": "mdi:numeric-5-box-outline",
-                    "unknown": "mdi:help-box-outline"
+                    "dynamic_price": "mdi:numeric-6-box-outline",
+                    "smart": "mdi:numeric-7-box-outline",
+                    "time_slot": "mdi:numeric-8-box-outline"
                 }
             },
             "daily_discharge_energy": {
@@ -329,6 +365,23 @@
             },
             "total_saved_money": {
                 "default": "mdi:hand-coin"
+            },
+            "total_aiems_profit": {
+                "default": "mdi:hand-coin"
+            },
+            "aiems_runtime_status": {
+                "default": "mdi:head-question-outline",
+                "state": {
+                    "inactive": "mdi:head-outline",
+                    "running": "mdi:head-sync",
+                    "failure": "mdi:head-alert-outline"
+                }
+            },
+            "dynamic_price_total": {
+                "default": "mdi:account-cash"
+            },
+            "spot_price_mwh": {
+                "default": "mdi:cash-sync"
             },
             "set_system_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"

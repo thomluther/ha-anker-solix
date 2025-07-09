@@ -52,7 +52,7 @@ clear_solarbank_schedule:
         - calendar.CalendarEntityFeature.CREATE_EVENT
   fields:
     sb2_fields:
-      # Following section is used only for Solarbank 2 schedule types
+      # Following section is used only for Solarbank 2 or later schedule types
       collapsed: true
       fields:
         plan:
@@ -111,7 +111,7 @@ set_solarbank_schedule:
       selector:
         time:
     sb2_fields:
-      # Following section is used only for Solarbank 2 schedule types
+      # Following section is used only for Solarbank 2 or later schedule types
       collapsed: true
       fields:
         plan:

@@ -1,0 +1,33 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "4494B9VAAVLAOEAI",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-05-09 13:01:46",
+        "upgrade_version": "v1.0.3.8",
+        "pre_version": "v1.0.3.4",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "4494B9VAAVLAOEAI",
+        "device_name": "Solarbank 2 E1600 AC",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      },
+      {
+        "upgrade_time": "2025-03-10 11:41:47",
+        "upgrade_version": "v1.0.3.4",
+        "pre_version": "v1.0.3.2",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "4494B9VAAVLAOEAI",
+        "device_name": "Solarbank 2 E1600 AC",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "06b6acac80a4eab1ed2ced20e9bddebc"
+}

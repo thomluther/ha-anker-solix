@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "J6569JU7G22QRK7I",
+    "attributes": {
+      "rssi": "-53"
+    }
+  },
+  "trace_id": "0e513e9ce17eb7ca1aee565fb9fcb0d0"
+}

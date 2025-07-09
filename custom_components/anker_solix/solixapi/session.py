@@ -9,8 +9,10 @@ from datetime import datetime
 import hashlib
 import json
 import logging
+import os
 from pathlib import Path
 from random import randbytes, randrange
+import tempfile
 
 import aiofiles
 from aiohttp import ClientSession
@@ -63,20 +65,19 @@ class AnkerSolixClientSession:
         self._password: str = password
         self._session: ClientSession = websession
         self._loggedIn: bool = False
-        self._testdir: str = str(
-            Path(Path(__file__).parent) / ".." / "examples" / "example1"
-        )
+        self._testdir: str = str((Path(__file__).parent / ".." / "examples" / "example1").resolve())
 
         # Flag for retry of any or certain error
         self._retry_attempt: bool | int = False
+
         # ensure folder for authentication caching exists
-        Path(Path(Path(__file__).parent) / "authcache").mkdir(
-            parents=True, exist_ok=True
-        )
+        auth_cache_dir = Path(__file__).parent / "authcache"
+        if not os.access(auth_cache_dir.parent, os.W_OK):
+            auth_cache_dir = Path(tempfile.gettempdir()) / "authcache"
+        auth_cache_dir.mkdir(parents=True, exist_ok=True)
+
         # filename for authentication cache
-        self._authFile: str = str(
-            Path(Path(__file__).parent) / "authcache" / f"{email}.json"
-        )
+        self._authFile: str = str(auth_cache_dir / f"{email}.json")
         self._authFileTime: float = 0
 
         # Timezone format: 'GMT+01:00'

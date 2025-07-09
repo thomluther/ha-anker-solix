@@ -1,0 +1,120 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "power": [
+      {
+        "time": "2025-06-03",
+        "value": "4.33"
+      },
+      {
+        "time": "2025-06-04",
+        "value": "2.61"
+      }
+    ],
+    "charge_trend": null,
+    "charge_level": null,
+    "forecast_trend": null,
+    "power_unit": "wh",
+    "charge_total": "",
+    "charge_unit": "kwh",
+    "discharge_total": "",
+    "discharge_unit": "kwh",
+    "charging_pre": "",
+    "electricity_pre": "",
+    "others_pre": "",
+    "statistics": null,
+    "battery_discharging_total": "3.08",
+    "solar_to_grid_total": "",
+    "grid_to_home_total": "0.00",
+    "ac_out_put_total": "",
+    "home_usage_total": "6.94",
+    "solar_total": "",
+    "trend_unit": "kwh",
+    "battery_to_home_total": "3.08",
+    "smart_plug_info": {
+      "smartplug_list": [
+        {
+          "device_pn": "",
+          "device_sn": "ZLF94UZ1WWW86V1Z",
+          "device_name": "Sp\u00fclmaschine",
+          "device_img": "",
+          "create_time": 0,
+          "current_power": "",
+          "tag": "",
+          "tag_img": "",
+          "total_power": "1.66",
+          "bind_site_status": "",
+          "status": "",
+          "wireless_type": "",
+          "err_code": 0,
+          "priority": 0,
+          "auto_switch": false,
+          "running_time": null
+        },
+        {
+          "device_pn": "",
+          "device_sn": "F3ZPGYJLCAUUWXPT",
+          "device_name": "wifi-network-2",
+          "device_img": "",
+          "create_time": 0,
+          "current_power": "",
+          "tag": "",
+          "tag_img": "",
+          "total_power": "3.15",
+          "bind_site_status": "",
+          "status": "",
+          "wireless_type": "",
+          "err_code": 0,
+          "priority": 0,
+          "auto_switch": false,
+          "running_time": null
+        },
+        {
+          "device_pn": "",
+          "device_sn": "J6569JU7G22QRK7I",
+          "device_name": "K\u00fchlschrank",
+          "device_img": "",
+          "create_time": 0,
+          "current_power": "",
+          "tag": "",
+          "tag_img": "",
+          "total_power": "1.80",
+          "bind_site_status": "",
+          "status": "",
+          "wireless_type": "",
+          "err_code": 0,
+          "priority": 0,
+          "auto_switch": false,
+          "running_time": null
+        },
+        {
+          "device_pn": "",
+          "device_sn": "Z7TAQWPTMV3ER5TK",
+          "device_name": "Smart Plug",
+          "device_img": "",
+          "create_time": 0,
+          "current_power": "",
+          "tag": "",
+          "tag_img": "",
+          "total_power": "0.11",
+          "bind_site_status": "",
+          "status": "",
+          "wireless_type": "",
+          "err_code": 0,
+          "priority": 0,
+          "auto_switch": false,
+          "running_time": null
+        }
+      ],
+      "total_power": "6.72"
+    },
+    "local_time": "",
+    "grid_to_battery_total": "",
+    "grid_imported_total": "",
+    "solar_to_battery_total": "",
+    "solar_to_home_total": "3.86",
+    "forecast_total": ""
+  },
+  "trace_id": "3dc937ddd34d42f30abcb1ef8e9f8dd9"
+}

@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "ZLF94UZ1WWW86V1Z",
+    "attributes": {
+      "rssi": "-52"
+    }
+  },
+  "trace_id": "8faa65cdabafebf691689c9073a2219e"
+}

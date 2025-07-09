@@ -51,6 +51,7 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Solarbank 2 devices and Smart Meters](#solarbank-2-devices-and-smart-meters)
    * [Solarbank 2 AC devices](#solarbank-2-ac-devices)
    * [Combined Solarbank 2 systems containing cascaded Solarbank 1 devices](#combined-solarbank-2-systems-containing-cascaded-solarbank-1-devices)
+   * [Solarbank 3 devices](#solarbank-3-devices)
    * [Power Panels](#power-panels)
    * [Home Energy Systems (HES)](#home-energy-systems-hes)
    * [Other devices](#other-devices)
@@ -115,7 +116,7 @@ Device type | Description
 -- | --
 `account` | Anker Solix user account used for the configured hub entry. It collects all common entities belonging to the account or api connection.
 `system` | Anker Solix 'Power System' as defined in the Anker app. It collects all entities belonging to the defined system and is referred as 'site' in the cloud api.
-`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC
+`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC<br>- A17C5: Solarbank 3 E2700
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No individual device setting supported)**
@@ -150,7 +151,7 @@ Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 powe
 
 ### Solarbank 2 AC devices
 
-The Solarbank 2 AC model comes with new and unique features and initial support has been implemented with version 2.5.0. Version 2.6.0 added support for missing capabilities like modifications of the Usage Time plan via control entities or actions.
+The Solarbank 2 AC model comes with new and unique features and initial support has been implemented with version 2.5.0. Version 2.6.0 added support for missing capabilities like modifications of the Time of Use plan via control entities or actions.
 
 > [!NOTE]
 > The Solarbank 2 AC devices still have issues and may stop updating some values in the cloud after active use of the mobile app with the system owner. See issue [#211](https://github.com/thomluther/ha-anker-solix/issues/211#issuecomment-2692936285).
@@ -180,16 +181,35 @@ To achieve a correct charge and discharge energy calculation for your energy das
   - Create total charge and discharge power helper entities, that summarize the device power values separately. Then you can accumulate the total charge and discharge energies from those new summary helper entities.
 
 
-### Power Panels:
+### Solarbank 3 devices
+
+Solarbank 3 devices behave similar to Solarbank 2 AC devices, but they will provide additional entities and usage mode options that are unique to this generation:
+  - Anker Intelligence (AI) usage with Smart mode
+  - Dynamic Price support (Provider options depend on country and model)
+  - New Time Slot usage mode (based on dynamic prices) to automate AC charging and discharging
+
+> [!IMPORTANT]
+> Neither Smart mode nor Time Slot mode configuration options are provided in the known cloud Api structures. Therefore these new modes can only be toggled, but not configured or modified via the integration. If you want the toggle to these new modes, they must be configured initially through the mobile app.
+
+> [!NOTE]
+> The Solarbank 3 dynamic price VAT and fee actually cannot be determined or modified through the cloud Api. While those entities can be customized in the integration, the changes are only applied as customization to the Api cache, but **NOT** to your real system configuration. However, they are required to calculate the total dynamic prices (actual and forecast) as used by your system to evaluate charge and discharge slots as well as saving calculations. To monitor total dynamic prices and forecast also as system member, those entities have been made customizable in the Api cache for now. They will be initialized with an average default for your country if defined.
+
+
+### Power Panels
 
 Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800 power stations attached to the Power Panel are not tracked as system devices. Actual power consumption data in the cloud api was not discovered yet and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
 
 Power Panel owners need to explore and document cloud Api capabilities to further expand any Power Panel system or device support. Please refer to issue [Add F3800/BP3800 Equipment when connected to Home Power Panel](https://github.com/thomluther/anker-solix-api/issues/117) for contribution.
 
 
-### Home Energy Systems (HES):
+### Home Energy Systems (HES)
 
 Anker released also large battery devices to complement existing PV systems. They are classified as Home Energy Systems (HES) and they come along with their own Api structures and endpoints. The X1 system belongs to this device category. The common HES Api structures and information is still unknown to a large extend, since most queries require owner access to such a device. Furthermore no endpoint to query actual power values has been identified yet, and it is assumed that the power values presented on the App home screen are merged from the MQTT server Api, but only when the App is actively used. In order to provide initial monitoring capabilities similar to Power Panel systems, the same work around for average power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your Anker App). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
+
+Since integration version 3.0.0, a customizable battery capacity entity was implemented for each X1 battery module. As described above, SOC and average power values are extracted from intraday energy stats of the whole system. The values are reported against the main controller device in your system. Likewise this controller device has now also a virtual and customizable capacity entity for the whole system. If you adjust the capacity of individual battery modules, this is considered automatically for the overall system capacity calculation. However, if you modify the overall system capacity in the main controller device, individual capacity modifications of battery modules are ignored.
+
+> [!IMPORTANT]
+> I have not seen any data of X1 systems that have more than 1 controller device (I think there can be up to 3 🤔). Therefore I have no clue how SOC and average power entities are reported across multiple controller devices in the system. They may be created as duplicates for each controller and also the system capacity calculation may be completely wrong. Please open an issue and export your X1 system data if you have such an installation and weird entity constellations.
 
 X1 system owners need to explore and document cloud Api capabilities to further expand any X1 system or (sub-)device support. Please refer to issue [Extending the solution to support Anker Solix X1 systems](https://github.com/thomluther/anker-solix-api/issues/162) for contribution or create a new and more specific issue as feature request.
 
@@ -207,7 +227,7 @@ You can also explore the Anker Solix cloud Api directly within your HA instance 
 
 ## Installation via HACS (recommended)
 
-🎉 The repository has beed added to HACS community store 🎉
+🎉 The repository has been added to HACS community store 🎉
 
 You should find the Anker Solix integration when you search for Anker Solix in HACS and you can install it directly from your HACS store.
 

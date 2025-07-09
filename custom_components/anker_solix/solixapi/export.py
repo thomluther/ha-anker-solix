@@ -15,11 +15,13 @@ from functools import partial
 import json
 import logging
 import logging.handlers
+import os
 from pathlib import Path
 import queue
 import random
 import shutil
 import string
+import tempfile
 from typing import Any
 
 import aiofiles
@@ -32,10 +34,11 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     ApiEndpointServices,
+    SolixPriceProvider,
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.8.0.0"
+VERSION: str = "3.0.0.0"
 
 
 class AnkerSolixApiExport:
@@ -85,7 +88,9 @@ class AnkerSolixApiExport:
 
         if not export_path:
             # default to exports self.export_path in parent path of api library
-            self.export_path = Path(__file__).parent / ".." / "exports"
+            self.export_path = (Path(__file__).parent / ".." / "exports").resolve()
+            if not (os.access(self.export_path.parent, os.W_OK) or os.access(self.export_path, os.W_OK)):
+                self.export_path = Path(tempfile.gettempdir()) / "exports"
         else:
             self.export_path = Path(export_path)
         if not export_folder:
@@ -116,9 +121,7 @@ class AnkerSolixApiExport:
             # avoid filesystem problems with * in user nicknames
             self.export_folder = self.client.nickname.replace("*", "x")
         # complete path and ensure parent self.export_path for export exists
-        self.export_path: Path = Path.resolve(
-            Path(self.export_path) / self.export_folder
-        )
+        self.export_path: Path = (Path(self.export_path) / self.export_folder).resolve()
         try:
             # clear export folder if it exists already
             if self.export_path.exists():
@@ -445,6 +448,13 @@ class AnkerSolixApiExport:
                     payload={"site_id": siteId},
                     replace=[(siteId, "<siteId>")],
                 )
+                self._logger.info("Exporting CO2 ranking...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_co2_ranking"],
+                    filename=f"{API_FILEPREFIXES['get_co2_ranking']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
@@ -523,11 +533,33 @@ class AnkerSolixApiExport:
                 self._logger.info(
                     "Exporting dynamic price providers for model '%s'...", model
                 )
-                await self.query(
-                    endpoint=API_ENDPOINTS["get_dynamic_price_providers"],
-                    filename=f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json",
-                    payload={"device_pn": model},
-                )
+                if (
+                    resp := await self.query(
+                        endpoint=API_ENDPOINTS["get_dynamic_price_providers"],
+                        filename=f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json",
+                        payload={"device_pn": model},
+                    )
+                ) and isinstance(resp, dict):
+                    # export prices for all provider options
+                    for country in (resp.get("data") or {}).get("country_info") or []:
+                        for company in country.get("company_info") or []:
+                            for area in company.get("area_info") or []:
+                                provider = SolixPriceProvider(country=country.get("country"),company=company.get("company"),area=area.get("area"))
+                                self._logger.info(
+                                    "Exporting device model %s dynamic price details for %s...",
+                                    model,
+                                    provider,
+                                )
+                                await self.query(
+                                    endpoint=API_ENDPOINTS["get_dynamic_price_details"],
+                                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/','_')}.json",
+                                    payload={
+                                        "company": provider.company,
+                                        "area": provider.area,
+                                        "date": str(int(datetime.today().timestamp())),
+                                        "device_sn": "",
+                                    },
+                                )
 
             # loop through all found sites
             for siteId, site in self.api_power.sites.items():
@@ -571,13 +603,6 @@ class AnkerSolixApiExport:
                     payload={"site_id": siteId},
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
-                )
-                self._logger.info("Exporting CO2 ranking...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["get_co2_ranking"],
-                    filename=f"{API_FILEPREFIXES['get_co2_ranking']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"site_id": siteId},
-                    replace=[(siteId, "<siteId>")],
                 )
                 # Additional exports for site types support AI mode
                 if power_site_type in [12]:
@@ -628,6 +653,7 @@ class AnkerSolixApiExport:
                         "Exporting site energy data for %s...",
                         stat_type.upper(),
                     )
+                    # Day Totals
                     await self.query(
                         endpoint=API_ENDPOINTS["energy_analysis"],
                         filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_{self._randomize(siteId, 'site_id')}.json",
@@ -639,6 +665,20 @@ class AnkerSolixApiExport:
                             "start_time": (
                                 datetime.today() - timedelta(days=1)
                             ).strftime("%Y-%m-%d"),
+                            "end_time": datetime.today().strftime("%Y-%m-%d"),
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
+                    # Intraday
+                    await self.query(
+                        endpoint=API_ENDPOINTS["energy_analysis"],
+                        filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_today_{self._randomize(siteId, 'site_id')}.json",
+                        payload={
+                            "site_id": siteId,
+                            "device_sn": "",
+                            "type": "day",
+                            "device_type": stat_type,
+                            "start_time": datetime.today().strftime("%Y-%m-%d"),
                             "end_time": datetime.today().strftime("%Y-%m-%d"),
                         },
                         replace=[(siteId, "<siteId>")],
@@ -680,7 +720,6 @@ class AnkerSolixApiExport:
                 )
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
-                model = device.get("device_pn")
 
                 if device.get("type") == api.SolixDeviceType.SOLARBANK.value:
                     self._logger.info("Exporting solar info settings for solarbank...")
@@ -761,36 +800,15 @@ class AnkerSolixApiExport:
                         "attributes": [
                             "rssi",
                             "temperature",
-                            "battery_cycles",
-                            "state_of_health",
-                            "status",
+                            "priority", # Smart plug attribute?
+                            "auto_switch", # Smart plug attribute?
+                            "running_time", # Smart plug attribute?
                             "wifi_signal",
-                            "switch",
-                            "ssid",
-                            "led",
-                            "micro_inverter_power_limit",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                     admin=admin,
                 )
-                if model in ["A17C5"]:
-                    self._logger.info(
-                        "Exporting device dynamic price details for Nordpool GER..."
-                    )
-                    # works only for site owners
-                    await self.query(
-                        endpoint=API_ENDPOINTS["get_dynamic_price_details"],
-                        filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{self._randomize(sn, '_sn')}.json",
-                        payload={
-                            "area": "GER",
-                            "company": "Nordpool",
-                            "date": datetime.today().strftime("%Y-%m-%d"),
-                            "device_sn": sn,
-                        },
-                        replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
-                        admin=admin,
-                    )
 
                 # export device pv status and statistics for inverters
                 if device.get("type") == api.SolixDeviceType.INVERTER.value:

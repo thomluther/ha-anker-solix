@@ -1,0 +1,147 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "ZLF94UZ1WWW86V1Z",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v0.0.2.7",
+        "children": null,
+        "upgrade_level": 0
+      },
+      {
+        "device_sn": "J6569JU7G22QRK7I",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v0.0.2.7",
+        "children": null,
+        "upgrade_level": 0
+      },
+      {
+        "device_sn": "F3ZPGYJLCAUUWXPT",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v0.0.2.7",
+        "children": null,
+        "upgrade_level": 0
+      },
+      {
+        "device_sn": "Z7TAQWPTMV3ER5TK",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v0.0.2.7",
+        "children": null,
+        "upgrade_level": 0
+      },
+      {
+        "device_sn": "YZ66ISQXWBIBW6E2G",
+        "need_update": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A17C5",
+          "product_component": "A17C5",
+          "version": "v1.0.0.18",
+          "is_forced": false,
+          "md5": "0e48503ebeb40c3aacf4c77831fbe1c5",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/IPwYO4UfDqQSx1xh/A17C5_EUOTA_V1.0.0.18_20250508.bin",
+          "size": 736768
+        },
+        "change_log": "",
+        "current_version": "v1.0.0.18",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A17C5_mcu",
+            "rom_version_name": "v1.0.0.18",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/KxSu9pL2mJq78DWX/A17C5_EUOTA_V1.0.0.18_20250508.bin",
+              "file_size": 736768,
+              "file_md5": "0e48503ebeb40c3aacf4c77831fbe1c5"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C5_esp32",
+            "rom_version_name": "v0.2.0.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/NgXWFlgrCeo81dWX/A17C5_EUOTAWIFI_V0.2.0.5_20250429.bin",
+              "file_size": 1266880,
+              "file_md5": "c6426adad73d866d19f61ca57b1e7839"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C5_100Ah",
+            "rom_version_name": "v0.3.2.6",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/1qsO4VKkeHjJqMrK/A17C5_EUOTA_V0.3.2.6_20250508.bin",
+              "file_size": 736768,
+              "file_md5": "0e48503ebeb40c3aacf4c77831fbe1c5"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 1
+      }
+    ],
+    "popup_info": {
+      "need_update": false,
+      "sub_need_update": false,
+      "upgrade_level": 0
+    }
+  },
+  "trace_id": "87d3547ee0be9f0e2bceaea6de4dfe0e"
+}
