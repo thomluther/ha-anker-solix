@@ -196,8 +196,6 @@ SITE_SELECTS = [
             or (d.get("customized") or {}).get(jk)
             or {}
         )
-        else "none"
-        if jk in ((d.get("site_details") or {}) | (d.get("customized") or {}))
         else None,
         attrib_fn=lambda d, jk: SolixPriceProvider(
             provider=(d.get("site_details") or {}).get(jk)
