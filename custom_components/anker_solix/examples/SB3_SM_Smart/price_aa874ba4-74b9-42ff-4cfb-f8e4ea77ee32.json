@@ -1,0 +1,208 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32",
+    "price": 0.4,
+    "site_co2": 0,
+    "site_price_unit": "\u20ac",
+    "price_type": "dynamic",
+    "current_mode": 7,
+    "use_time": [
+      {
+        "sea": {
+          "start_month": 1,
+          "end_month": 3
+        },
+        "weekday": [
+          {
+            "start_time": 0,
+            "end_time": 18,
+            "type": 3
+          },
+          {
+            "start_time": 18,
+            "end_time": 21,
+            "type": 1
+          },
+          {
+            "start_time": 21,
+            "end_time": 24,
+            "type": 3
+          }
+        ],
+        "weekend": [
+          {
+            "start_time": 0,
+            "end_time": 18,
+            "type": 3
+          },
+          {
+            "start_time": 18,
+            "end_time": 21,
+            "type": 1
+          },
+          {
+            "start_time": 21,
+            "end_time": 24,
+            "type": 3
+          }
+        ],
+        "weekday_price": [
+          {
+            "price": "0.2",
+            "type": 3
+          },
+          {
+            "price": "0.4",
+            "type": 1
+          }
+        ],
+        "weekend_price": [
+          {
+            "price": "0.2",
+            "type": 3
+          },
+          {
+            "price": "0.4",
+            "type": 1
+          }
+        ],
+        "unit": "\u20ac",
+        "is_same": false
+      },
+      {
+        "sea": {
+          "start_month": 4,
+          "end_month": 9
+        },
+        "weekday": [
+          {
+            "start_time": 0,
+            "end_time": 18,
+            "type": 3
+          },
+          {
+            "start_time": 18,
+            "end_time": 21,
+            "type": 1
+          },
+          {
+            "start_time": 21,
+            "end_time": 24,
+            "type": 3
+          }
+        ],
+        "weekend": [
+          {
+            "start_time": 0,
+            "end_time": 18,
+            "type": 3
+          },
+          {
+            "start_time": 18,
+            "end_time": 21,
+            "type": 1
+          },
+          {
+            "start_time": 21,
+            "end_time": 24,
+            "type": 3
+          }
+        ],
+        "weekday_price": [
+          {
+            "price": "0.2",
+            "type": 3
+          },
+          {
+            "price": "0.4",
+            "type": 1
+          }
+        ],
+        "weekend_price": [
+          {
+            "price": "0.2",
+            "type": 3
+          },
+          {
+            "price": "0.4",
+            "type": 1
+          }
+        ],
+        "unit": "\u20ac",
+        "is_same": false
+      },
+      {
+        "sea": {
+          "start_month": 10,
+          "end_month": 12
+        },
+        "weekday": [
+          {
+            "start_time": 0,
+            "end_time": 18,
+            "type": 3
+          },
+          {
+            "start_time": 18,
+            "end_time": 21,
+            "type": 1
+          },
+          {
+            "start_time": 21,
+            "end_time": 24,
+            "type": 3
+          }
+        ],
+        "weekend": [
+          {
+            "start_time": 0,
+            "end_time": 18,
+            "type": 3
+          },
+          {
+            "start_time": 18,
+            "end_time": 21,
+            "type": 1
+          },
+          {
+            "start_time": 21,
+            "end_time": 24,
+            "type": 3
+          }
+        ],
+        "weekday_price": [
+          {
+            "price": "0.2",
+            "type": 3
+          },
+          {
+            "price": "0.4",
+            "type": 1
+          }
+        ],
+        "weekend_price": [
+          {
+            "price": "0.2",
+            "type": 3
+          },
+          {
+            "price": "0.4",
+            "type": 1
+          }
+        ],
+        "unit": "\u20ac",
+        "is_same": false
+      }
+    ],
+    "dynamic_price": {
+      "country": "DE",
+      "company": "Nordpool",
+      "area": "GER",
+      "pct": null
+    },
+    "accuracy": 2
+  },
+  "trace_id": "b648bae7dd08dd1f6f1f2e4d53cdbedb"
+}

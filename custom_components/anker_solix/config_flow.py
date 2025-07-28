@@ -19,7 +19,7 @@ from homeassistant.const import (
     __version__ as HAVERSION,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, selector
+from homeassistant.helpers import device_registry as dr, restore_state, selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from . import api_client
@@ -576,8 +576,11 @@ async def async_check_and_remove_devices(
                 obsolete_user_devs[dev_entry.id] = dev_entry.serial_number
 
     # Remove the obsolete device entries if not only checking for configured user during switch
-    if not configured_user:
+    if not configured_user and obsolete_user_devs:
         dev_registry = None
+        # Save actual restore states before removal
+        await restore_state.RestoreStateData.async_save_persistent_states(hass)
+        LOGGER.info("Saved HA states of restore entities prior removing devices")
         for dev_id, serial in obsolete_user_devs.items():
             # ensure to obtain dev registry again if no longer available
             if dev_registry is None:

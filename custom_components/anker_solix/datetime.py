@@ -17,8 +17,8 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import UTC
 
+# from homeassistant.util.dt import UTC
 from .const import ALLOW_TESTMODE, ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -51,7 +51,7 @@ DEVICE_DATETIMES = [
         key="preset_manual_backup_start",
         translation_key="preset_manual_backup_start",
         json_key="preset_manual_backup_start",
-        value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk), UTC).astimezone()
+        value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk)).astimezone()
         if d.get(jk) is not None
         else None,
         exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
@@ -60,7 +60,7 @@ DEVICE_DATETIMES = [
         key="preset_manual_backup_end",
         translation_key="preset_manual_backup_end",
         json_key="preset_manual_backup_end",
-        value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk), UTC).astimezone()
+        value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk)).astimezone()
         if d.get(jk) is not None
         else None,
         exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),

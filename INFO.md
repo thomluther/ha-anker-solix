@@ -74,10 +74,11 @@ This integration utilizes an unofficial Python library to communicate with the A
         - [Dynamic price provider](#dynamic-price-provider)
         - [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
         - [Export tariff options](#export-tariff-options)
+1. **[Solar forecast data](#solar-forecast-data)**
 1. **[Markdown card to show the defined Solarbank schedule](#markdown-card-to-show-the-defined-solarbank-schedule)**
     * [Markdown card for Solarbank 1 schedules](#markdown-card-for-solarbank-1-schedules)
     * [Markdown card for Solarbank 2+ schedules](#markdown-card-for-solarbank-2-schedules)
-1. **[Apex chart card to show your dynamic tariff price forecast](#apex-chart-card-to-show-your-dynamic-tariff-price-forecast)**
+1. **[Apex chart card to show your forecast data](#apex-chart-card-to-show-forecast-data)**
 1. **[Script to manually modify appliance schedule for your solarbank](#script-to-manually-modify-appliance-schedule-for-your-solarbank)**
     * [Script code to adjust Solarbank 1 schedules](#script-code-to-adjust-solarbank-1-schedules)
     * [Script code to adjust Solarbank 2+ schedules](#script-code-to-adjust-solarbank-2-schedules)
@@ -811,6 +812,27 @@ The dynamic price options in the mobile App allow definition of selling price op
 > None of these options was found in the Api structures and they are currently not implemented at all in the integration.
 
 
+## Solar forecast data
+
+The Solarbank 3 mode was the first Anker Solix device that supports solar forecast data. Other devices like the X1 may follow.
+One important fact about forecast data for the Solarbank 3 is that they are provided through the cloud only when your device is running in 'Smart' mode.
+Then you can see the forecast also in your mobile app solar chart for today and tomorrow. The forecast data is limited to next 24h, so they do NOT cover the full next day typically. Therefore the presented 24h forecast energy may not be that usable, depending on your home usage pattern over the day.
+The integration version 3.1.0 added support to query the solar forecast data and presents them in following two system entities:
+  - sensor.system_*name*_solar_forecast_today
+  - sensor.system_*name*_solar_forecast_this_hour
+
+The cloud only provides hourly energy values for the next 24 hours. No history of past hours for today is provided. The integration enhances this data with additional information, such as forecast for this and next hour, total forecast for today, remaining forecast for today as well as the poll time and the hourly values for today and available hours for tomorrow. The integration utilizes the entity restore capability to maintain the forecast history of today whenever the integration is reloaded or HA is being restarted. Therefore you typically do not loose them if the Api cache has to be rebuilt from scratch upon new connections.
+The remaining energy for today is calculated only from the forecast data. The total forecast for today is calculated from available forecast data. If data polling started in the middle of the day and no history is available, the past hour production data is used to calculate a more accurate total forecast.
+Along the solar forecast data collection, the integration also calculates the hourly solar production for today from the provided cloud data and adds them as new attribute to the existing `sensor.system_*name*_daily_solar_yield` entity. This allows you to compare the hourly forecast data with the daily production data as demonstrated in the [forecast data example diagram](#apex-chart-card-to-show-forecast-data).
+![forecast-data-diagram][forecast-data-diagram-img]
+
+If you want to track older hourly history data, you can use the state tracking of your `sensor.system_*name*_solar_forecast_this_hour` entity and compare it with the hourly averaged state values of your `sensor.system_*name*_sb_solar_power` entity. The hourly power average corresponds to the forecast energy of the hour if the power state intervals are pretty similar.
+Forecast data entities and cloud polling can be excluded in your hub configuration options with the Solarbank Energy category.
+
+> [!IMPORTANT]
+> None of the forecast entities can be used as solar forecast entities for your HA energy dashboard. If Smart mode is inactive, no forecast data is provided and the entities will show an unknown state. Furthermore those entities are not designed to integrate with your HA energy dashboard. Instead they are usable to monitor the behavior of the 'Smart' mode since that is acting like a black box and may show weird charging and discharging behavior that may not make much sense. If you need more accurate forecast data, I recommend any of the available solar forecast integrations.
+
+
 ## Markdown card to show the defined Solarbank schedule
 
 ### Markdown card for Solarbank 1 schedules
@@ -827,11 +849,11 @@ Following markdown card code can be used to display the solarbank 1 schedule in 
 ```yaml
 type: markdown
 content: |
-  ## Solarbank 1 Schedule
-
   {% set entity = 'sensor.solarbank_e1600_home_preset' %}
+  {% set datatime = 'sensor.system_solarbank_sb_data_time' %}
+  {% set isnow = (now()+timedelta(seconds=state_attr(datatime,'tz_offset_sec')|int(0))).replace(second=0,microsecond=0) %}
   {% set slots = (state_attr(entity,'schedule')).ranges|default([])|list %}
-  {% set isnow = now().time().replace(second=0,microsecond=0) %}
+  ### Solarbank 1 Schedule - Local time: {{isnow.strftime("%H:%M")}}
   {% if slots %}
     {{ "%s | %s | %s | %s | %s | %s | %s | %s | %s | %s"|format('Start', 'End', 'Preset', 'Export', '▼Prio', '▲Prio', 'Mode', 'SB1', 'SB2', 'Name') }}
     {{ ":---:|:---:|---:|:---:|:---:|:---:|:---:|---:|---:|:---" }}
@@ -842,7 +864,7 @@ content: |
     {%- set bs = '_**' if strptime(slot.start_time,"%H:%M").time() <= isnow < strptime(slot.end_time.replace('24:00','23:59'),"%H:%M").time() else '' -%}
     {%- set be = '**_' if bs else '' -%}
     {%- set sb2 = '-/-' if slot.device_power_loads|default([])|length < 2 else slot.device_power_loads[1].power~" W" -%}
-      {{ "%s | %s | %s | %s | %s | %s | %s | %s | %s | %s"|format(bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.appliance_loads[0].power~" W"~be, bs~'On'~be if slot.turn_on else bs~'Off'~be, bs~'On'~be if slot.priority_discharge_switch else bs~'Off'~be, bs~slot.charge_priority~' %'~be, bs~(slot.power_setting_mode or '-')~be, bs~slot.device_power_loads[0].power~" W"~be, bs~sb2~be, bs~slot.appliance_loads[0].name)~be }}
+      {{ "%s | %s | %s | %s | %s | %s | %s | %s | %s | %s"|format(bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.appliance_loads[0].power~" W"~be, bs~'On'~be if slot.turn_on else bs~'Off'~be, bs~'On'~be if slot.priority_discharge_switch|default(false) else bs~'Off'~be, bs~slot.charge_priority~' %'~be, bs~(slot.power_setting_mode or '-')~be, bs~slot.device_power_loads[0].power~" W"~be, bs~sb2~be, bs~slot.appliance_loads[0].name)~be }}
   {% endfor -%}
 ```
 </details>
@@ -859,14 +881,12 @@ content: |
 
 ### Markdown card for Solarbank 2+ schedules
 
-Following markdown card code can be used to display the Solarbank 2+ schedule in the UI frontend (including custom_rate_plan, blend_plan, use_time plan and manual_backup plan if defined). The active interval in the active plan will be highlighted. Just replace the entities at the top with your sensor entities representing the solarbank output preset and usage mode.
+Following markdown card code can be used to display the Solarbank 2+ schedule in the UI frontend (including optional smart mode stats, custom_rate_plan, blend_plan, use_time plan and manual_backup plan if defined). The active interval in the active plan will be highlighted. Just replace the entities at the top with your sensor entities representing the corresponding device and system entities. If you do not have corresponding AI entities, you can leave them as is since the Smart mode section is only shown once usable in your system.
 
-**Attention:**
+> [!IMPORTANT]
+> The markdown card is very sensitive for proper formatting of printed characters. Markdown tables may not be correctly formatted if indents are wrong, for example caused by indents of the template code.
 
-The markdown card is very sensitive for proper formatting of printed characters. Markdown tables may not be correctly formatted if indents are wrong, for example caused by indents of the template code.
-
-
-![markdown-card][schedule-2-markdown-img]
+![markdown-3-card][schedule-3-markdown-img]
 
 #### Markdown card code for Solarbank 2+ schedules
 
@@ -876,16 +896,27 @@ The markdown card is very sensitive for proper formatting of printed characters.
 ```yaml
 type: markdown
 content: >
-  {% set entity = 'sensor.solarbank_2_e1600_ac_home_preset' %}
-  {% set mode = state_translated('select.solarbank_2_e1600_ac_usage_mode') %}
+  {% set entity = 'sensor.solarbank_3_home_preset' %}
+  {% set usage = 'select.solarbank_3_usage_mode' %}
+  {% set ai_state = 'binary_sensor.solarbank_3_ai_enabled' %}
+  {% set ai_mon = 'sensor.system_solarbank_ai_monitoring' %}
+  {% set datatime = 'sensor.system_solarbank_sb_data_time' %}
+  {% set mode = states(usage) %}
+  {% set isnow = (now()+timedelta(seconds=state_attr(datatime,'tz_offset_sec')|int(0))).replace(second=0,microsecond=0) %}
   {% set schedule = state_attr(entity,'schedule')|default({}) %}
   {% set plan = ((state_attr(entity,'schedule')).custom_rate_plan|default([]))|list %}
-  {% set isnow = now().replace(second=0,microsecond=0) %}
-  ### SB2 Schedule (Set Usage Mode: {{mode|capitalize}})
+  ### SB Schedule (Usage Mode: {{state_translated(usage)}}) - Local: {{isnow.strftime("%H:%M")}}
+  {% if 'smart' in state_attr(usage,'options')|default([]) %}
+    {%- set bs = '_**' if mode == 'smart' else '' -%}
+    {%- set be = '**_' if bs else '' %}
+    ### Anker Intelligence
+    {{bs~'Enabled: '~state_translated(ai_state)~(' *' if bs else '')~' ('~state_attr(ai_state,'status')|capitalize~')'~be}}
+    {{'Monitor: '~state_translated(ai_mon)~' - Runtime: '~state_attr(ai_mon,'runtime')}}
+  {% endif %}
   {% for plan_name,plan in (schedule or {}).items() %}
     {% if plan_name in ['custom_rate_plan','blend_plan'] and plan -%}
       {%- set week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] -%}
-      {%- set active = (mode=='smartplugs' and plan_name=='blend_plan') or (mode!='smartplugs' and plan_name!='blend_plan')-%}
+      {%- set active = (mode=='smartplugs' and plan_name=='blend_plan') or (mode=='manual' and plan_name=='custom_rate_plan')-%}
     {{ "%s | %s | %s | %s | %s"|format('ID', 'Start', 'End', 'Preset', 'Weekdays ('+plan_name+')') }}
     {{ ":---|:---|:---|:---:|:---" }}
       {%- for idx in plan -%}
@@ -911,11 +942,12 @@ content: >
         {%- set end = idx.end_time|as_datetime|as_local -%}
         {%- set bs = '_**' if switch and start.time() <= isnow.time() < end.time() else '' -%}
         {%- set be = '**_' if bs else '' %}
-    {{ "%s | %s | %s"|format(bs~start.strftime("%d.%m.%y %H:%M")~bs, bs~end.strftime("%d.%m.%y %H:%M")~be,'*' if be else '') }}
+    {{ "%s | %s | %s"|format(bs~start.strftime("%d.%m.%y %H:%M")~be, bs~end.strftime("%d.%m.%y %H:%M")~be,'*' if be else '') }}
       {%- endfor %}
     {% endif %}
     {% if plan and plan_name in ['use_time'] %}
       {%- set tariffs = ["Peak","Medium","OffPeak","Valley"] -%}
+      {%- set active = mode=='use_time' %}
       {% for sea in plan|default({}) -%}
         {%- set unit = sea.unit|default('-') -%}
         {%- set wk = sea.weekday|default([]) -%}
@@ -935,7 +967,7 @@ content: >
             {%- set start = today_at(wk[idx].start_time|default(0)|string~":0") -%}
             {%- set end = wk[idx].end_time|default(0)|int(0) -%}
             {%- set end = today_at(end|string~":0") if end < 24 else today_at("0:0") + timedelta(days=1)  -%}
-            {%- set bs = '_**' if m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5) and start.time() <= isnow.time() < end.time() else '' -%}
+            {%- set bs = '_**' if active and m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5) and start.time() <= isnow.time() < end.time() else '' -%}
             {%- set be = '**_' if bs else '' -%}
             {%- set row = "%s | %s | %s | %s%.2f %s | |"|format(bs~start.strftime("%H:%M")~be, bs~end.strftime("%H:%M")~be, bs~tariff~be, bs, price, unit~be~('*' if bs else '')) -%}
           {%- else -%}
@@ -948,7 +980,7 @@ content: >
             {%- set start = today_at(we[idx].start_time|default(0)|string~":0") -%}
             {%- set end = we[idx].end_time|default(0)|int(0) -%}
             {%- set end = today_at(end|string~":0") if end < 24 else today_at("0:0") + timedelta(days=1)  -%}
-            {%- set bs = '_**' if m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5,7) and start.time() <= isnow.time() < end.time() else '' -%}
+            {%- set bs = '_**' if active and m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5,7) and start.time() <= isnow.time() < end.time() else '' -%}
             {%- set be = '**_' if bs else '' -%}
             {%- set row = row ~ "%s | %s | %s | %s%.2f %s"|format(bs~start.strftime("%H:%M")~be, bs~end.strftime("%H:%M")~be, bs~tariff~be, bs, price, unit~be~('*' if bs else '')) -%}
           {%- else -%}
@@ -958,8 +990,7 @@ content: >
         {%- endfor %}
       {% endfor %}
     {% endif %}
-  {% endfor %}
-  {% if not plan %}
+  {% endfor %} {% if not plan %}
     {{ "No schedule available"}}
   {% endif %}
 ```
@@ -975,15 +1006,18 @@ content: >
 - The `manual_backup` plan is only used for the 'Backup charge' mode of models supporting AC charge. It will overlay any other mode if enabled and in defined datetime interval.
 - The `use_time` plan is only used when the 'Time of Use' mode is enabled
 - The `time_slot` plan is only used for 'Time Slot' mode. However, currently there is not supplied any object for the time_slot plan through the cloud Api, therefore the structure and configuration parameters are unknown. Once they become available, the markdown card will be revised with this additional plan of Solarbank 3 devices
+- The Anker Intelligence (AI) section is just shown if the device supports the `Smart` mode
+- Highlighting of the active plan and slot is based on local timezone of the device. The local timestamp is provided in the card header
 
 
-## Apex chart card to show your dynamic tariff price forecast
+## Apex chart card to show forecast data
 
-The [Apex chart card](https://github.com/RomRider/apexcharts-card) can be installed from the [HA Community Store](https://www.hacs.xyz/). It is a very customizable and flexible card to display diagrams of your entities. Following is an example card to demonstrate how you can extract the fields from the forecast attribute of your total price forecast entity. Just replace the entity_id with your sensor entity representing the price forecast.
+The [Apex chart card](https://github.com/RomRider/apexcharts-card) can be installed from the [HA Community Store](https://www.hacs.xyz/). It is a very customizable and flexible card to display diagrams of your entities. Following is an example card to demonstrate how you can extract the fields from the hourly attributes of forecast and solar yield entities. Just replace the entity_id's with your sensor entity_id representing the corresponding entity.
 
-![dynamic-price-diagram][dynamic-price-diagram-img]
+![forecast-data-diagram][forecast-data-diagram-img]
 
-#### Apex chart card code for dynamic tariff price forecast
+
+#### Apex chart card code for forecast data
 
 <details>
 <summary><b>Expand to see card code</b><br><br></summary>
@@ -991,7 +1025,7 @@ The [Apex chart card](https://github.com/RomRider/apexcharts-card) can be instal
 ```yaml
 type: custom:apexcharts-card
 header:
-  title: Dynamic Price Forecast €/kWh
+  title: Price & Solar Forecast
   show: true
   show_states: true
   colorize_states: true
@@ -1003,19 +1037,29 @@ now:
   show: true
   label: Now
 yaxis:
-  - id: first
+  - id: price
     decimals: 2
     min: auto
-    max: 0.5
+    max: 0.6
     show: true
     apex_config:
-      tickAmount: 10
+      tickAmount: 12
+      axisBorder:
+        show: true
+  - id: energy
+    decimals: 0
+    opposite: true
+    min: auto
+    max: 600
+    show: true
+    apex_config:
+      tickAmount: 12
       axisBorder:
         show: true
 apex_config:
   chart:
     height: 350px
-    width: 100%
+    width: 105%
     offsetX: -10
     zoom:
       enabled: true
@@ -1026,42 +1070,73 @@ apex_config:
   group_by:
     duration: 1h
 all_series_config:
-  type: line
-  stroke_width: 2
+  type: area
+  stroke_width: 3
+  opacity: 0.2
   extend_to: now
   show:
     legend_value: false
     offset_in_name: false
-    extremas: true
     in_header: false
 experimental:
   color_threshold: true
 series:
   - entity: sensor.system_solarbank_dyn_price_total
-    name: Total per kWh
-    yaxis_id: first
+    name: Price €/kWh
+    unit: €/kWh
+    yaxis_id: price
     offset: "-0.5h"
     float_precision: 4
     data_generator: |
       let res = [];
-      for (const item of
-        Object.values(entity.attributes.forecast)) {
+      for (const item of Object.values(entity.attributes.forecast)) {
         res.push([new Date(item.timestamp).getTime(), item.price]);
       }
       return res;
     color_threshold:
       - value: 0
-        color: lightgreen
+        color: LimeGreen
       - value: 0.2
-        color: yellow
+        color: GreenYellow
       - value: 0.25
-        color: orange
+        color: gold
       - value: 0.3
-        color: red
+        color: tomato
       - value: 0.35
-        color: darkred
+        color: red
     type: column
+    opacity: 0.5
     stroke_width: 0
+    show:
+      extremas: true
+  - entity: sensor.system_solarbank_solar_forecast_today
+    name: Solar forecast Wh
+    yaxis_id: energy
+    unit: Wh
+    float_precision: 0
+    offset: "-0h"
+    data_generator: |
+      let res = [];
+      for (const item of Object.values(entity.attributes.forecast_hourly)) {
+        res.push([new Date(item.timestamp).getTime(), item.power]);
+      }
+      return res;
+    color: LemonChiffon
+    stroke_dash: 3
+  - entity: sensor.system_solarbank_daily_solar_yield
+    name: Solar yield Wh
+    yaxis_id: energy
+    unit: Wh
+    float_precision: 0
+    offset: "-0h"
+    data_generator: >
+      let res = []; for (const item of Object.values(entity.attributes.produced_hourly)) {
+        if (item.power != '') {
+          res.push([new Date(item.timestamp).getTime(), item.power]);
+        }
+      } return res;
+    color: yellow
+    opacity: 0.6
 ```
 </details>
 
@@ -1681,6 +1756,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [system-dashboard-img]: doc/system-dashboard.png
 [schedule-markdown-img]: doc/schedule-markdown.png
 [schedule-2-markdown-img]: doc/schedule-2-markdown.png
+[schedule-3-markdown-img]: doc/schedule-3-markdown.png
 [schedule-script-img]: doc/change-schedule-script.png
 [schedule-service-img]: doc/schedule-service.png
 [request-schedule-img]: doc/request-schedule.png
@@ -1700,4 +1776,5 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [ac-tariff-control-img]: doc/ac-tariff-control.png
 [ac-time-of-use-service-img]: doc/ac-time-of-use-service.png
 [dynamic-price-diagram-img]: doc/dynamic-price-diagram.png
+[forecast-data-diagram-img]: doc/forecast-data-diagram.png
 

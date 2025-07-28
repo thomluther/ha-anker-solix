@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "M55A0NSED232",
+    "attributes": {
+      "rssi": ""
+    }
+  },
+  "trace_id": "6ad3dbffabda0afc58d74dcdfe1e56cb"
+}

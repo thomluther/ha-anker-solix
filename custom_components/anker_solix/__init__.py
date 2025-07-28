@@ -20,6 +20,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
+from homeassistant.helpers import restore_state
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
 
@@ -184,6 +185,12 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN][entry.entry_id] = coordinator
 
         if do_reload:
+            # Save actual restore states before unload and unregistering devices and entities
+            await restore_state.RestoreStateData.async_save_persistent_states(hass)
+            LOGGER.info(
+                "Api Coordinator %s saved HA states of restore entities",
+                coordinator.config_entry.title,
+            )
             hass.config_entries.async_schedule_reload(entry.entry_id)
     return True
 

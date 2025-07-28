@@ -130,7 +130,10 @@ DEVICE_NUMBERS = [
         attrib_fn=lambda d, _: {
             "expansions": d.get("sub_package_num"),
             "calculated": d.get("battery_capacity"),
-        },
+        }
+        | {"customized": c}
+        if (c := (d.get("customized") or {}).get("battery_capacity"))
+        else {},
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
         restore=True,
     ),
@@ -163,6 +166,9 @@ SITE_NUMBERS = [
             (d.get("site_details") or {}).get("dynamic_price_details") or {}
         ).get(jk)
         or None,
+        attrib_fn=lambda d, _: {"customized": c}
+        if (c := (d.get("customized") or {}).get("dynamic_price_fee"))
+        else {},
         native_min_value=0,
         native_max_value=100,
         native_step=0.0001,
@@ -182,6 +188,9 @@ SITE_NUMBERS = [
             (d.get("site_details") or {}).get("dynamic_price_details") or {}
         ).get(jk)
         or None,
+        attrib_fn=lambda d, _: {"customized": c}
+        if (c := (d.get("customized") or {}).get("dynamic_price_vat"))
+        else {},
         native_min_value=0,
         native_max_value=100,
         native_step=0.01,
@@ -262,6 +271,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             "expansions",
             "schedule",
             "calculated",
+            "customized",
         }
     )
 
@@ -293,7 +303,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 self._attr_device_info = get_AnkerSolixDeviceInfo(
                     data, context, coordinator.client.api.apisession.email
                 )
-            # update number limits based on solarbank count in system
+            # update number limits based on solarbank count in system or active max
             if self._attribute_name == "preset_system_output_power":
                 if (data.get("generation") or 0) >= 2:
                     # SB2 has min limit of 0W, they are typically correctly set in the schedule depending on device settings
@@ -369,7 +379,6 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     self._attr_native_unit_of_measurement = unit
         else:
             self._native_value = None
-
         self._assumed_state = False
         # Mark availability based on value
         self._attr_available = self._native_value is not None
@@ -621,7 +630,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 )
                 # Raise alert to frontend
                 raise ServiceValidationError(
-                    f"{self.entity_id} cannot be set to {value} because it is outsite of allowed range {self.min_value}-{self.max_value}",
+                    f"{self.entity_id} cannot be set to {value} because it is outside of allowed range {self.min_value}-{self.max_value}",
                     translation_domain=DOMAIN,
                     translation_key="out_of_range",
                     translation_placeholders={
@@ -652,22 +661,25 @@ class AnkerSolixRestoreNumber(AnkerSolixNumber, RestoreNumber):
     async def async_added_to_hass(self) -> None:
         """Load the last known state when added to hass."""
         await super().async_added_to_hass()
-        if (last_state := await self.async_get_last_state()) and (
-            last_number_data := await self.async_get_last_number_data()
-        ):
+        if last_state := await self.async_get_last_state():
+            # First try to get customization from state attributes if last state was unknown
+            if last_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+                if customized := last_state.attributes.get("customized"):
+                    last_state.state = customized
             if (
                 last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
                 and self._native_value is not None
             ):
                 # set the customized value if it was modified
-                if self._native_value != last_number_data.native_value:
+                if self._native_value != last_state.state:
                     if self._attribute_name == "battery_capacity":
-                        # skip value restore if config was changed
-                        if last_state.attributes.get(
-                            "calculated"
-                        ) != self.extra_state_attributes.get("calculated"):
+                        # skip value restore if config was changed, actual native value initially contains calculated value
+                        if (
+                            last_state.attributes.get("calculated")
+                            != self._native_value
+                        ):
                             return
-                    self._native_value = last_number_data.native_value
+                    self._native_value = last_state.state
                     LOGGER.info(
                         "Restored state value of entity '%s' to: %s",
                         self.entity_id,
@@ -676,6 +688,6 @@ class AnkerSolixRestoreNumber(AnkerSolixNumber, RestoreNumber):
                     self.coordinator.client.api.customizeCacheId(
                         id=self.coordinator_context,
                         key=self.entity_description.json_key,
-                        value=str(last_number_data.native_value),
+                        value=str(last_state.state),
                     )
-                    await self.coordinator.async_refresh_data_from_apidict()
+                    await self.coordinator.async_refresh_data_from_apidict(delayed=True)

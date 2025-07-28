@@ -1,0 +1,92 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "UC5INFAQGH50OS",
+        "product_code": "SHEMP3",
+        "bt_ble_id": "",
+        "bt_ble_mac": "",
+        "device_name": "Netzstrom",
+        "alias_name": "Netzstrom",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+        "link_time": 1751558964,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "0",
+        "intgr_device": {
+          "integrator": "shelly",
+          "access_group": 2
+        }
+      },
+      {
+        "device_sn": "200Z24CCLUIX9A9H9",
+        "product_code": "A17C5",
+        "bt_ble_id": "34CFFA7C7CEEFE8CA42917F46B75B3CF",
+        "bt_ble_mac": "F07C77235DAD",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "alias_name": "Solarbank 3",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+        "link_time": 1747913358,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.0.0.18",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-70",
+        "intgr_device": null
+      },
+      {
+        "device_sn": "M55A0NSED232",
+        "product_code": "A5143",
+        "bt_ble_id": "ABFBFFAED71B",
+        "bt_ble_mac": "ABFBFFAED71B",
+        "device_name": "MI80 Microinverter(BLE)",
+        "alias_name": "MI80 Microinverter (BLE)",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
+        "link_time": 1693920879,
+        "wifi_online": false,
+        "wifi_name": "wifi-network-1",
+        "relate_type": [
+          "ble"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "V1.0.0",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "",
+        "intgr_device": null
+      }
+    ]
+  },
+  "trace_id": "867ef5e813f9d0e2ce2ee1ae0bf61fbb"
+}

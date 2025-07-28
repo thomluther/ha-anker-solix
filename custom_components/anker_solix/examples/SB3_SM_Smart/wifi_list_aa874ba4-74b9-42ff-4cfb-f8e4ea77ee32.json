@@ -1,0 +1,27 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "60",
+        "device_sn": "200Z24CCLUIX9A9H9",
+        "rssi": "-70",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      },
+      {
+        "wifi_name": "wifi-network-1",
+        "wifi_signal": "",
+        "device_sn": "UC5INFAQGH50OS",
+        "rssi": "0",
+        "offline": false,
+        "is_support_wired": false,
+        "wired_connected": false
+      }
+    ]
+  },
+  "trace_id": "b8eee2eeaafcdb145e4c2eb9fe653da2"
+}

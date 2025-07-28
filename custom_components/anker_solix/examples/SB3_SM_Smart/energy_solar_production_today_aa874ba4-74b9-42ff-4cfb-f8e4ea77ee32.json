@@ -1,0 +1,461 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "power": [
+      {
+        "time": "00:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "00:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "00:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "01:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "01:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "01:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "02:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "02:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "02:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "03:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "03:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "03:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "04:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "04:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "04:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "05:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "05:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "05:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "06:00",
+        "value": "3.00",
+        "rods": null
+      },
+      {
+        "time": "06:20",
+        "value": "14.00",
+        "rods": null
+      },
+      {
+        "time": "06:40",
+        "value": "28.50",
+        "rods": null
+      },
+      {
+        "time": "07:00",
+        "value": "31.25",
+        "rods": null
+      },
+      {
+        "time": "07:20",
+        "value": "33.00",
+        "rods": null
+      },
+      {
+        "time": "07:40",
+        "value": "37.75",
+        "rods": null
+      },
+      {
+        "time": "08:00",
+        "value": "70.75",
+        "rods": null
+      },
+      {
+        "time": "08:20",
+        "value": "109.75",
+        "rods": null
+      },
+      {
+        "time": "08:40",
+        "value": "164.75",
+        "rods": null
+      },
+      {
+        "time": "09:00",
+        "value": "228.00",
+        "rods": null
+      },
+      {
+        "time": "09:20",
+        "value": "281.25",
+        "rods": null
+      },
+      {
+        "time": "09:40",
+        "value": "335.75",
+        "rods": null
+      },
+      {
+        "time": "10:00",
+        "value": "382.25",
+        "rods": null
+      },
+      {
+        "time": "10:20",
+        "value": "457.25",
+        "rods": null
+      },
+      {
+        "time": "10:40",
+        "value": "519.75",
+        "rods": null
+      },
+      {
+        "time": "11:00",
+        "value": "455.50",
+        "rods": null
+      },
+      {
+        "time": "11:20",
+        "value": "597.75",
+        "rods": null
+      },
+      {
+        "time": "11:40",
+        "value": "659.50",
+        "rods": null
+      },
+      {
+        "time": "12:00",
+        "value": "384.25",
+        "rods": null
+      },
+      {
+        "time": "12:20",
+        "value": "367.50",
+        "rods": null
+      },
+      {
+        "time": "12:40",
+        "value": "201.75",
+        "rods": null
+      },
+      {
+        "time": "13:00",
+        "value": "369.00",
+        "rods": null
+      },
+      {
+        "time": "13:20",
+        "value": "534.00",
+        "rods": null
+      },
+      {
+        "time": "13:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "14:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "14:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "14:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "15:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "15:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "15:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "16:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "16:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "16:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "17:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "17:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "17:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "18:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "18:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "18:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "19:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "19:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "19:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "20:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "20:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "20:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "21:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "21:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "21:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "22:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "22:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "22:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "23:00",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "23:20",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "23:40",
+        "value": "0",
+        "rods": null
+      },
+      {
+        "time": "24:00",
+        "value": "0",
+        "rods": null
+      }
+    ],
+    "charge_trend": null,
+    "charge_level": [],
+    "forecast_trend": [
+      {
+        "time": "14:00",
+        "value": "402.00",
+        "rods": null
+      },
+      {
+        "time": "15:00",
+        "value": "434.00",
+        "rods": null
+      },
+      {
+        "time": "16:00",
+        "value": "401.00",
+        "rods": null
+      },
+      {
+        "time": "17:00",
+        "value": "350.00",
+        "rods": null
+      },
+      {
+        "time": "18:00",
+        "value": "263.00",
+        "rods": null
+      },
+      {
+        "time": "19:00",
+        "value": "214.00",
+        "rods": null
+      },
+      {
+        "time": "20:00",
+        "value": "72.00",
+        "rods": null
+      },
+      {
+        "time": "21:00",
+        "value": "37.00",
+        "rods": null
+      },
+      {
+        "time": "22:00",
+        "value": "0.00",
+        "rods": null
+      },
+      {
+        "time": "23:00",
+        "value": "0.00",
+        "rods": null
+      },
+      {
+        "time": "00:00",
+        "value": "0.00",
+        "rods": null
+      }
+    ],
+    "power_unit": "wh",
+    "charge_total": "0.17",
+    "charge_unit": "kwh",
+    "discharge_total": "6.94",
+    "discharge_unit": "kwh",
+    "charging_pre": "0.09",
+    "electricity_pre": "0.91",
+    "others_pre": "0",
+    "statistics": null,
+    "battery_discharging_total": "",
+    "solar_to_grid_total": "0.02",
+    "grid_to_home_total": "",
+    "ac_out_put_total": "",
+    "home_usage_total": "",
+    "solar_total": "1.91",
+    "trend_unit": "w",
+    "battery_to_home_total": "",
+    "smart_plug_info": null,
+    "local_time": "2025-07-18 13:23",
+    "grid_to_battery_total": "",
+    "grid_imported_total": "",
+    "solar_to_battery_total": "0.16",
+    "solar_to_home_total": "1.73",
+    "forecast_total": "3.97",
+    "sop_grid_to_battery_total": "",
+    "third_solar_to_battery_total": "",
+    "pps_list": null,
+    "total_energy_unit": ""
+  },
+  "trace_id": "6c0806ad0f1eb9eaae0b4150ac4a1e9c"
+}

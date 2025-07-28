@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "200Z24CCLUIX9A9H9",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-05-22 13:33:58",
+        "upgrade_version": "v1.0.0.18",
+        "pre_version": "v1.0.0.9",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "200Z24CCLUIX9A9H9",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "0fa9b7a20b54fb16f1be15ae894ada1c"
+}

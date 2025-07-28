@@ -52,6 +52,9 @@ API_CATEGORIES: list = [
     SolixDeviceType.SMARTMETER.value,
     SolixDeviceType.SMARTPLUG.value,
     SolixDeviceType.HES.value,
+    # SolixDeviceType.SOLARBANK_PPS.value,
+    # SolixDeviceType.CHARGER.value,
+    # SolixDeviceType.EV_CHARGER.value,
     # SolixDeviceType.POWERCOOLER.value,
     ApiCategories.solarbank_energy,
     ApiCategories.smartmeter_energy,
@@ -167,13 +170,14 @@ class AnkerSolixApiClient:
 
     def toggle_cache(self, toggle: bool) -> None:
         """Toggle the cache valid or invalid."""
-        self.cache_valid = bool(toggle)
-        _LOGGER.log(
-            logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
-            "Api Coordinator %s client cache toggled %s",
-            self.api.apisession.nickname,
-            "VALID" if self.cache_valid else "INVALID temporarily",
-        )
+        if self.cache_valid != toggle:
+            self.cache_valid = bool(toggle)
+            _LOGGER.log(
+                logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                "Api Coordinator %s client cache toggled %s",
+                self.api.apisession.nickname,
+                "VALID" if self.cache_valid else "INVALID temporarily",
+            )
 
     async def validate_cache(self, timeout: int = 10) -> bool:
         """Check and optionally wait up to timeout seconds until cache becomes valid."""
@@ -216,8 +220,9 @@ class AnkerSolixApiClient:
                 f"Login Retries exceeded: {exception}",
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Api Client Exception:")
             raise AnkerSolixApiClientError(
-                f"Api Request Error: {type(exception)}: {exception}"
+                f"Api Client Error: {type(exception)}: {exception}"
             ) from exception
 
     async def request(
@@ -247,8 +252,9 @@ class AnkerSolixApiClient:
                 f"Login Retries exceeded: {exception}",
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Api Client Exception:")
             raise AnkerSolixApiClientError(
-                f"Api Request Error: {type(exception)}: {exception}"
+                f"Api Client Error: {type(exception)}: {exception}"
             ) from exception
 
     async def async_get_data(
@@ -443,8 +449,9 @@ class AnkerSolixApiClient:
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
             self.active_device_refresh = False
+            _LOGGER.exception("Api Client Exception:")
             raise AnkerSolixApiClientError(
-                f"Api Request Error: {type(exception)}: {exception}"
+                f"Api Client Error: {type(exception)}: {exception}"
             ) from exception
 
     def testmode(self, mode: bool | None = None) -> bool:

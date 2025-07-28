@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "M55A0NSED232",
+    "site_id": "",
+    "upgrade_record_list": []
+  },
+  "trace_id": "2e5edafe26a448c076cfd5ecf6be0eab"
+}

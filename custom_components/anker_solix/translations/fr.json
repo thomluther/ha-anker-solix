@@ -380,14 +380,27 @@
                     },
                     "calculated": {
                         "name": "Calculé"
+                    },
+                    "customized": {
+                        "name": "Personnalisé"
                     }
                 }
             },
             "dynamic_price_fee": {
-                "name": "Redevance de prix dynamique"
+                "name": "Redevance de prix dynamique",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Personnalisé"
+                    }
+                }
             },
             "dynamic_price_vat": {
-                "name": "Taxe sur les prix dynamique"
+                "name": "Taxe sur les prix dynamique",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Personnalisé"
+                    }
+                }
             }
         },
         "select": {
@@ -458,6 +471,9 @@
                     },
                     "area": {
                         "name": "Zone"
+                    },
+                    "customized": {
+                        "name": "Personnalisé"
                     }
                 }
             },
@@ -535,16 +551,44 @@
                 "name": "Puissance solaire"
             },
             "solar_power_1": {
-                "name": "Solaire PV1"
+                "name": "Solaire PV1",
+                "state_attributes": {
+                    "name": {
+                        "name": "Nom"
+                    }
+                }
             },
             "solar_power_2": {
-                "name": "Solaire PV2"
+                "name": "Solaire PV2",
+                "state_attributes": {
+                    "name": {
+                        "name": "Nom"
+                    }
+                }
             },
             "solar_power_3": {
-                "name": "Solaire PV3"
+                "name": "Solaire PV3",
+                "state_attributes": {
+                    "name": {
+                        "name": "Nom"
+                    }
+                }
             },
             "solar_power_4": {
-                "name": "Solaire PV4"
+                "name": "Solaire PV4",
+                "state_attributes": {
+                    "name": {
+                        "name": "Nom"
+                    }
+                }
+            },
+            "micro_inverter_power": {
+                "name": "Puissance de l'onduleur",
+                "state_attributes": {
+                    "name": {
+                        "name": "Nom"
+                    }
+                }
             },
             "output_power": {
                 "name": "Puissance de sortie"
@@ -566,9 +610,6 @@
             },
             "grid_to_battery_power": {
                 "name": "Charge du réseau"
-            },
-            "micro_inverter_power": {
-                "name": "Puissance de l'onduleur"
             },
             "micro_inverter_power_limit": {
                 "name": "Limite de l'onduleur"
@@ -697,7 +738,12 @@
                 "name": "Etat de charge du SB"
             },
             "solarbank_timestamp": {
-                "name": "Temps de données SB"
+                "name": "Temps de données SB",
+                "state_attributes": {
+                    "tz_offset_sec": {
+                        "name": "Décalage horaire secondes"
+                    }
+                }
             },
             "active_scene_mode": {
                 "name": "Mode d'utilisation actif",
@@ -830,10 +876,41 @@
                 }
             },
             "grid_to_home_power": {
-                "name": "Grid import"
+                "name": "Achat sur le réseau"
             },
             "photovoltaic_to_grid_power": {
-                "name": "Grid export"
+                "name": "Alimentation du réseau"
+            },
+            "solar_forecast_today": {
+                "name": "Prévision solaire aujourd'hui",
+                "state_attributes": {
+                    "remain_today": {
+                        "name": "Reste aujourd'hui"
+                    },
+                    "forecast_24h": {
+                        "name": "Prévision 24h"
+                    },
+                    "poll_time": {
+                        "name": "Sondage de données"
+                    },
+                    "hourly_unit": {
+                        "name": "Unité horaire"
+                    },
+                    "forecast_hourly": {
+                        "name": "Prévisions horaires"
+                    }
+                }
+            },
+            "solar_forecast_this_hour": {
+                "name": "Prévision solaire heure actuelle",
+                "state_attributes": {
+                    "hour_end": {
+                        "name": "Fin d'heure"
+                    },
+                    "forecast_next_hour": {
+                        "name": "Prévision pour l'heure suivante"
+                    }
+                }
             },
             "energy_today": {
                 "name": "Énergie journalière",
@@ -873,6 +950,12 @@
                     },
                     "last_period": {
                         "name": "Dernière période"
+                    },
+                    "hourly_unit": {
+                        "name": "Unité horaire"
+                    },
+                    "produced_hourly": {
+                        "name": "À l'heure"
                     }
                 }
             },

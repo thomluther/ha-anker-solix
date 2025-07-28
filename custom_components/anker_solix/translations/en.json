@@ -380,14 +380,27 @@
                     },
                     "calculated": {
                         "name": "Calculated"
+                    },
+                    "customized": {
+                        "name": "Customized"
                     }
                 }
             },
             "dynamic_price_fee": {
-                "name": "Dyn. price fee"
+                "name": "Dyn. price fee",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
             },
             "dynamic_price_vat": {
-                "name": "Dyn. price VAT"
+                "name": "Dyn. price VAT",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
             }
         },
         "select": {
@@ -458,6 +471,9 @@
                     },
                     "area": {
                         "name": "Area"
+                    },
+                    "customized": {
+                        "name": "Customized"
                     }
                 }
             },
@@ -535,16 +551,44 @@
                 "name": "Solar power"
             },
             "solar_power_1": {
-                "name": "Solar PV1"
+                "name": "Solar PV1",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
             },
             "solar_power_2": {
-                "name": "Solar PV2"
+                "name": "Solar PV2",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
             },
             "solar_power_3": {
-                "name": "Solar PV3"
+                "name": "Solar PV3",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
             },
             "solar_power_4": {
-                "name": "Solar PV4"
+                "name": "Solar PV4",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
+            },
+            "micro_inverter_power": {
+                "name": "Inverter power",
+                "state_attributes": {
+                    "name": {
+                        "name": "Name"
+                    }
+                }
             },
             "output_power": {
                 "name": "DC output power"
@@ -566,9 +610,6 @@
             },
             "grid_to_battery_power": {
                 "name": "Grid charge"
-            },
-            "micro_inverter_power": {
-                "name": "Inverter power"
             },
             "micro_inverter_power_limit": {
                 "name": "Inverter limit"
@@ -697,7 +738,12 @@
                 "name": "SB state of charge"
             },
             "solarbank_timestamp": {
-                "name": "SB data time"
+                "name": "SB data time",
+                "state_attributes": {
+                    "tz_offset_sec": {
+                        "name": "TZ Offset sec"
+                    }
+                }
             },
             "active_scene_mode": {
                 "name": "Active usage mode",
@@ -835,6 +881,37 @@
             "photovoltaic_to_grid_power": {
                 "name": "Grid export"
             },
+            "solar_forecast_today": {
+                "name": "Solar forecast today",
+                "state_attributes": {
+                    "remain_today": {
+                        "name": "Remaining today"
+                    },
+                    "forecast_24h": {
+                        "name": "Forecast 24h"
+                    },
+                    "poll_time": {
+                        "name": "Data poll"
+                    },
+                    "hourly_unit": {
+                        "name": "Hourly unit"
+                    },
+                    "forecast_hourly": {
+                        "name": "Forecast hourly"
+                    }
+                }
+            },
+            "solar_forecast_this_hour": {
+                "name": "Solar forecast this hour",
+                "state_attributes": {
+                    "hour_end": {
+                        "name": "Hour end"
+                    },
+                    "forecast_next_hour": {
+                        "name": "Forecast next hour"
+                    }
+                }
+            },
             "energy_today": {
                 "name": "Daily energy",
                 "state_attributes": {
@@ -873,6 +950,12 @@
                     },
                     "last_period": {
                         "name": "Last period"
+                    },
+                    "hourly_unit": {
+                        "name": "Hourly unit"
+                    },
+                    "produced_hourly": {
+                        "name": "Hourly"
                     }
                 }
             },
@@ -1381,7 +1464,7 @@
           "message": "{entity_id} cannot be increased to {value} because minimum change delay of {delay} seconds is not passed"
         },
         "out_of_range": {
-            "message": "{entity_id} cannot be set to {value} because it is outsite of allowed range {min}-{max}"
+            "message": "{entity_id} cannot be set to {value} because it is outside of allowed range {min}-{max}"
         },
         "active_testmode": {
             "message": "{entity_id} cannot be used while configuration is running in testmode"

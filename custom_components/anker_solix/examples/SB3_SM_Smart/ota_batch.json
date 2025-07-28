@@ -1,0 +1,111 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "UC5INFAQGH50OS",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "",
+        "children": null,
+        "upgrade_level": 0
+      },
+      {
+        "device_sn": "M55A0NSED232",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "",
+        "children": null,
+        "upgrade_level": 0
+      },
+      {
+        "device_sn": "200Z24CCLUIX9A9H9",
+        "need_update": true,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "A17C5",
+          "product_component": "A17C5",
+          "version": "v1.0.0.24",
+          "is_forced": false,
+          "md5": "b7c402208595f3917fda1de5d1c26f58",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/12/iot-admin/LDwEPCmthkIjhEki/A17C5_EUOTA_V1.0.0.24_20250703.bin",
+          "size": 737280
+        },
+        "change_log": "",
+        "current_version": "v1.0.0.18",
+        "children": [
+          {
+            "needUpdate": true,
+            "device_type": "A17C5_esp32",
+            "rom_version_name": "v0.2.0.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/NgXWFlgrCeo81dWX/A17C5_EUOTAWIFI_V0.2.0.5_20250429.bin",
+              "file_size": 1266880,
+              "file_md5": "c6426adad73d866d19f61ca57b1e7839"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": true,
+            "device_type": "A17C5_100Ah",
+            "rom_version_name": "v0.3.2.6",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/05/14/iot-admin/1qsO4VKkeHjJqMrK/A17C5_EUOTA_V0.3.2.6_20250508.bin",
+              "file_size": 736768,
+              "file_md5": "0e48503ebeb40c3aacf4c77831fbe1c5"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": true,
+            "device_type": "A17C5_mcu",
+            "rom_version_name": "v1.0.0.24",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/12/iot-admin/SxXlvIujol8o39G7/A17C5_EUOTA_V1.0.0.24_20250703.bin",
+              "file_size": 737280,
+              "file_md5": "b7c402208595f3917fda1de5d1c26f58"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 1
+      }
+    ],
+    "popup_info": {
+      "need_update": true,
+      "sub_need_update": false,
+      "upgrade_level": 1
+    }
+  },
+  "trace_id": "c85af4dec06d92af3c6a59f4e1d8fee7"
+}

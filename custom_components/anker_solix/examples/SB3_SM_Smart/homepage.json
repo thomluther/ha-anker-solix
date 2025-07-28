@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32",
+        "site_name": "Solarbank",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "solarbank_pps_list": []
+  },
+  "trace_id": "19fdef9ddf2d9002bcde544bbbffd62c"
+}

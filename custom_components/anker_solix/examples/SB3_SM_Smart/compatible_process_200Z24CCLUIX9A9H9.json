@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "ota_complete_status": 2,
+    "process_skip_type": 1,
+    "solar_info": {
+      "solar_sn": "",
+      "solar_brand": "",
+      "solar_model": "",
+      "brand_id": "",
+      "model_img": "",
+      "version": "",
+      "ota_status": 0,
+      "solar_model_name": ""
+    }
+  },
+  "trace_id": "8cbd09ef8d7dc0bdcdbdcd6c5ae59be1"
+}

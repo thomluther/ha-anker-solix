@@ -1,0 +1,2034 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "curve": [
+      {
+        "power": 0,
+        "time": "00:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "00:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "01:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "02:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "03:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "04:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "05:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "06:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "07:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "08:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "09:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "10:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "11:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "12:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "13:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "14:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "15:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "16:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "17:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "18:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "19:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "20:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "21:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "22:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:00",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:05",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:10",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:15",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:20",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:25",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:30",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:35",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:40",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:45",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:50",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      },
+      {
+        "power": 0,
+        "time": "23:55",
+        "valuePtr": null,
+        "isFix": false,
+        "isFuture": false
+      }
+    ],
+    "energy": [],
+    "energyUnit": "kWh",
+    "solarGeneraion": 0,
+    "money": 0,
+    "moneyUnit": "\u20ac",
+    "loadPercent": "",
+    "ppsPercent": "",
+    "generationTime": 0,
+    "maxPower": 0
+  },
+  "trace_id": "b65a2fad1c9f07bac61e83646ea6cff5"
+}

@@ -101,7 +101,12 @@ class AnkerSolixBaseApi:
             if id in self.sites:
                 data = self.sites.get(id)
                 customized = data.get("customized") or {}
-                customized[key] = value
+                # merge with existing dict if value is dict
+                customized[key] = (
+                    ((customized.get(key) or {}) | value)
+                    if isinstance(value, dict)
+                    else value
+                )
                 data["customized"] = customized
                 # trigger an update of cached data depending on customized value
                 # customized keys that are used as alternate value must be handled separately since they may not exist in cache
@@ -125,6 +130,9 @@ class AnkerSolixBaseApi:
                             )
                         },
                     )
+                elif key in ["pv_forecast_details"] and value:
+                    # update whole solar forecast in energy details
+                    self.extractSolarForecast(siteId=id)
                 elif key in (data.get("site_details") or {}):
                     # trigger dependent updates by rewriting old value to cache update method
                     self._update_site(
@@ -919,6 +927,28 @@ class AnkerSolixBaseApi:
         self._update_site(siteId, {"co2_ranking": details})
         return data
 
+    async def get_power_limit(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the power limit for the site.
+
+        Example data:
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_unit": "kwh","legal_power_limit": 1200,"device_info": [
+            {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5RY","device_name": "Solarbank 3",
+            "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+            "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0}],
+        "current_power": 0,"all_power_limit": 0,"ae100_info": null,"parallel_type": "Single"}
+        """
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_site_power_limit']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_site_power_limit"], json=data
+            )
+        return resp.get("data") or {}
+
     async def get_price_providers(self, model: str, fromFile: bool = False) -> dict:
         """Get the dynamic price provides for a given device model.
 
@@ -987,9 +1017,10 @@ class AnkerSolixBaseApi:
 
         Example data:
         "data": {"currency_list": [
-            {"symbol": "$","name": "USD"},
+            {"symbol": "$","name": "AUD, CAD, USD"},
             {"symbol": "\u20ac","name": "EUR"},
             {"symbol": "z\u0142","name": "PLN"}],
+            {"symbol": "kr","name": "ISK, NOK, SEK"},
             "default_currency": {"symbol": "\u20ac","name": "EUR"}}
         """
         if fromFile:
@@ -1011,7 +1042,7 @@ class AnkerSolixBaseApi:
                     iter(
                         item
                         for item in self.account.get("currency_list") or []
-                        if item.get("name") == currency
+                        if currency in item.get("name")
                     ),
                     {},
                 )
@@ -1194,9 +1225,11 @@ class AnkerSolixBaseApi:
     async def refresh_provider_prices(
         self,
         provider: SolixPriceProvider | str | dict,
+        siteId: str,
+        forceRefresh: bool = False,
         fromFile: bool = False,
     ) -> None:
-        """Refresh the dynamic price information for given provider if required."""
+        """Refresh the dynamic price information for given provider and site ID if required."""
         # validate provider
         if not (
             provider := provider
@@ -1206,19 +1239,27 @@ class AnkerSolixBaseApi:
             else None
         ):
             return
+        # validate site ID
+        if not (
+            site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
+        ):
+            return
+        # consider different timezone if recognized in energy data
+        now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
         # get existing price information
         spot_prices = (
             self.account.get(f"price_details_{str(provider).replace('/', '_')}") or {}
         )
         # get last poll time or initialize with old date for first poll
-        lastpoll = spot_prices.get("poll_time") or (
-            datetime.now() - timedelta(days=2)
-        ).strftime("%Y-%m-%d %H:%M")
+        lastpoll = spot_prices.get("poll_time") or (now - timedelta(days=2)).strftime(
+            "%Y-%m-%d %H:%M"
+        )
         lastpoll = datetime.fromisoformat(lastpoll)
         # fetch provider prices max once per hour or if missing
         if (
-            lastpoll.date() != datetime.now().date()
-            or lastpoll.hour != datetime.now().hour
+            forceRefresh
+            or lastpoll.date() != now.date()
+            or lastpoll.hour != now.hour
             or not spot_prices.get("today_price_trend")
         ):
             self._logger.debug(
@@ -1228,6 +1269,7 @@ class AnkerSolixBaseApi:
             )
             await self.get_dynamic_prices(
                 provider=provider,
+                date=now,
                 fromFile=fromFile,
             )
 
@@ -1276,7 +1318,8 @@ class AnkerSolixBaseApi:
             )
             or {}
         ):
-            now = datetime.now()
+            # consider different timezone if recognized in energy data
+            now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
             nowstring = now.strftime("%Y-%m-%d %H:%M")
             last_details = details.get("dynamic_price_details") or {}
             # get last poll time from site details
@@ -1309,7 +1352,7 @@ class AnkerSolixBaseApi:
                 date = datetime.fromisoformat(poll_time)
                 trend = []
                 # calculate total dynamic price
-                for day in [0, 1]:
+                for day in range(2):
                     daystring = (date + timedelta(days=day)).strftime("%Y-%m-%d")
                     trend.extend(
                         {
@@ -1396,3 +1439,68 @@ class AnkerSolixBaseApi:
                 else ""
             )
         return priceData
+
+    def extractSolarForecast(self, siteId: str) -> None:
+        """Get the current solar forecast data in cached details."""
+        if not (
+            site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
+        ):
+            return
+        if (
+            fcdetails := (site.get("energy_details") or {}).get("pv_forecast_details")
+            or {}
+        ):
+            # consider different timezone if recognized in energy data
+            now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
+            thishour = (
+                (now + timedelta(hours=1)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
+            )
+            # first check if historical trend data from customization can be merged
+            if (
+                customized_fc := (site.get("customized") or {}).get(
+                    "pv_forecast_details"
+                )
+                or {}
+            ) and (old_trend := customized_fc.get("trend")):
+                # keep historical trend of today
+                checkdate = now.replace(hour=0, minute=0).strftime("%Y-%m-%d %H:%M")
+                new_trend = fcdetails.get("trend") or []
+                new_start = (new_trend[:1] or [{}])[0].get("timestamp") or ""
+                trend = [
+                    slot
+                    for slot in old_trend
+                    if (ot := slot.get("timestamp") or "") >= checkdate
+                    and (not new_start or ot < new_start)
+                ]
+                fcdetails["trend"] = trend + new_trend
+                # remove customization once merged
+                customized_fc.pop("trend", None)
+            # extract correct hourly data depending on actual time
+            if fcdetails.get("time_this_hour") != thishour:
+                slot = (
+                    [
+                        s
+                        for s in fcdetails.get("trend") or []
+                        if str(s.get("timestamp")) == thishour
+                    ][-1:]
+                    or [{}]
+                )[0]
+                # do inplace update
+                fcdetails["time_this_hour"] = slot.get("timestamp") or ""
+                fcdetails["trend_this_hour"] = slot.get("power") or ""
+                nexthour = (
+                    (now + timedelta(hours=2))
+                    .replace(minute=0)
+                    .strftime("%Y-%m-%d %H:%M")
+                )
+                slot = (
+                    [
+                        s
+                        for s in fcdetails.get("trend") or []
+                        if str(s.get("timestamp")) == nexthour
+                    ][-1:]
+                    or [{}]
+                )[0]
+                # do inplace update
+                fcdetails["time_next_hour"] = slot.get("timestamp") or ""
+                fcdetails["trend_next_hour"] = slot.get("power") or ""

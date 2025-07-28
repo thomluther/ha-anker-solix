@@ -140,6 +140,11 @@ Anker does not support the creation of a power system with their MI80 inverter a
 
 Solarbank 1 systems transfer their power values every 60 seconds to the cloud while there is PV generation or battery discharge. Once the Solarbank 1 goes into standby mode, there is only a cloud state check/update once per hour to save standby energy consumption.
 
+> [!NOTE]
+> If you want to use the output preset through the integration, you need to be aware of an Api bug that disables the export completely (set to 0 W) which is not possible via the Anker app at all. This occurs if the Api sends only a single slot (e.g. full day) in the schedule. This problem can only be fixed if you apply another plan change via the mobile app. To utilize the output preset without issues, you need to make sure that your schedule plan has at least 2 time slots.
+
+> [!IMPORTANT]
+> The daily battery discharge statistic value for Solarbank 1 is no longer correct since mid June 2024. The cloud statistics changed this value when introducing support for Solarbank 2. The daily battery discharge value for Solarbank 1 now includes also bypassed PV energy, so its value is no longer dedicated to battery discharge only. You can see this wrong value also in your Anker app statistics for the Solarbank 1 battery.
 
 ### Solarbank 2 devices and Smart Meters
 
@@ -184,20 +189,28 @@ To achieve a correct charge and discharge energy calculation for your energy das
 ### Solarbank 3 devices
 
 Solarbank 3 devices behave similar to Solarbank 2 AC devices, but they will provide additional entities and usage mode options that are unique to this generation:
-  - Anker Intelligence (AI) usage with Smart mode
+  - Anker Intelligence (AI) usage with 'Smart' mode
   - Dynamic Price support (Provider options depend on country and model)
-  - New Time Slot usage mode (based on dynamic prices) to automate AC charging and discharging
+  - New 'Time Slot' usage mode (based on dynamic prices) to automate AC charging and discharging
+  - 24h solar forecast data while 'Smart' mode is active, which can be seen in the App intraday solar chart
 
 > [!IMPORTANT]
-> Neither Smart mode nor Time Slot mode configuration options are provided in the known cloud Api structures. Therefore these new modes can only be toggled, but not configured or modified via the integration. If you want the toggle to these new modes, they must be configured initially through the mobile app.
+> Neither 'Smart' mode nor 'Time Slot' mode configuration options are provided in the known cloud Api structures. Therefore these new modes can only be toggled, but not configured or modified via the integration. If you want the toggle to these new modes, they must be configured initially through the mobile app. For example, the Smart mode requires your data usage authorization as well as confirmation of device location via Google Maps before it can be enabled.
+
+[Dynamic utility rate plan support](INFO.md#dynamic-utility-rate-plans-options) was introduced with integration version 3.0.0. Version 3.1.0 added support for [solar forecast data](INFO.md#solar-forecast-data).
 
 > [!NOTE]
-> The Solarbank 3 dynamic price VAT and fee actually cannot be determined or modified through the cloud Api. While those entities can be customized in the integration, the changes are only applied as customization to the Api cache, but **NOT** to your real system configuration. However, they are required to calculate the total dynamic prices (actual and forecast) as used by your system to evaluate charge and discharge slots as well as saving calculations. To monitor total dynamic prices and forecast also as system member, those entities have been made customizable in the Api cache for now. They will be initialized with an average default for your country if defined.
+> The Solarbank 3 dynamic price VAT and fee actually cannot be determined or modified through the cloud Api. While those entities can be customized in the integration, the changes are only applied as customization to the Api cache, but **NOT** to your real system configuration. However, they are required to calculate the total dynamic prices (actual and forecast) as used by your system to evaluate charge and discharge slots as well as saving calculations. To monitor total dynamic prices and forecast also as system member, those entities have been made customizable in the Api cache for now. They will be initialized with an average default for your country if defined. Refer to [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for more details on their behavior.
+
+> [!IMPORTANT]
+> Anker announced their [Solarbank 3 Multisystem solution for early testing in Germany](https://www.ankersolix.com/de/balkonkraftwerk-mit-speicher/solarbank3-a17c5-multisystem). It is expected, that such multi-system configurations will cause issues with the integration. There is already a feature request [#310](https://github.com/thomluther/ha-anker-solix/issues/310) where owners can contribute with data exports and Api exploration for such multi-system configurations.
 
 
 ### Power Panels
 
 Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800 power stations attached to the Power Panel are not tracked as system devices. Actual power consumption data in the cloud api was not discovered yet and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
+
+Integration version 3.1.0 added a [customizable battery capacity](INFO.md#battery-capacity) to the Powerpanel device. Since the assigned F3800 PPS cannot be determined via Api queries, the capacity is assumed with a single F3800 device without expansion batteries. You can adjust the capacity to your installation to let the integration calculate the estimated remaining battery energy based on the actual SOC. See [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for a better understanding how such virtual entities are being used.
 
 Power Panel owners need to explore and document cloud Api capabilities to further expand any Power Panel system or device support. Please refer to issue [Add F3800/BP3800 Equipment when connected to Home Power Panel](https://github.com/thomluther/anker-solix-api/issues/117) for contribution.
 
@@ -207,6 +220,8 @@ Power Panel owners need to explore and document cloud Api capabilities to furthe
 Anker released also large battery devices to complement existing PV systems. They are classified as Home Energy Systems (HES) and they come along with their own Api structures and endpoints. The X1 system belongs to this device category. The common HES Api structures and information is still unknown to a large extend, since most queries require owner access to such a device. Furthermore no endpoint to query actual power values has been identified yet, and it is assumed that the power values presented on the App home screen are merged from the MQTT server Api, but only when the App is actively used. In order to provide initial monitoring capabilities similar to Power Panel systems, the same work around for average power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your Anker App). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
 
 Since integration version 3.0.0, a customizable battery capacity entity was implemented for each X1 battery module. As described above, SOC and average power values are extracted from intraday energy stats of the whole system. The values are reported against the main controller device in your system. Likewise this controller device has now also a virtual and customizable capacity entity for the whole system. If you adjust the capacity of individual battery modules, this is considered automatically for the overall system capacity calculation. However, if you modify the overall system capacity in the main controller device, individual capacity modifications of battery modules are ignored.
+
+Integration version 3.1.0 added [Dynamic utility rate plan support](INFO.md#dynamic-utility-rate-plans-options) to monitor dynamic price forecasts for your system. However, none of those entities can actually control your X1 system settings, they are only used as [customizable entities](INFO.md#customizable-entities-of-the-api-cache) to calculate the total energy price.
 
 > [!IMPORTANT]
 > I have not seen any data of X1 systems that have more than 1 controller device (I think there can be up to 3 🤔). Therefore I have no clue how SOC and average power entities are reported across multiple controller devices in the system. They may be created as duplicates for each controller and also the system capacity calculation may be completely wrong. Please open an issue and export your X1 system data if you have such an installation and weird entity constellations.

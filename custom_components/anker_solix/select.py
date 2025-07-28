@@ -23,7 +23,7 @@ from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity, datetime
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ALLOW_TESTMODE,
@@ -201,9 +201,12 @@ SITE_SELECTS = [
             provider=(d.get("site_details") or {}).get(jk)
             or (d.get("customized") or {}).get(jk)
             or {}
-        ).asdict(),
+        ).asdict()
+        | ({"customized": c} if (c := (d.get("customized") or {}).get(jk)) else {}),
         exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
-        force_creation_fn=lambda d, _: bool("dynamic_price_details" in (d.get("site_details") or {})),
+        force_creation_fn=lambda d, _: bool(
+            "dynamic_price_details" in (d.get("site_details") or {})
+        ),
         restore=True,
     ),
 ]
@@ -290,6 +293,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             "country",
             "company",
             "area",
+            "customized",
         }
     )
 
@@ -366,6 +370,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             self._attr_options = list(
                 coordinator.client.api.price_type_options(siteId=context)
             )
+            self._attr_options.sort()
         elif self._attribute_name == "dynamic_price_provider":
             self._attr_options = list(
                 coordinator.client.api.price_provider_options(siteId=context)
@@ -474,7 +479,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         if (
             self.coordinator
             and self.coordinator_context in self.coordinator.data
-            and (self._attr_current_option is not None or self.entity_description.restore)
+            and (
+                self._attr_current_option is not None or self.entity_description.restore
+            )
         ):
             data = self.coordinator.data.get(self.coordinator_context) or {}
             customize = True
@@ -510,6 +517,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     # refresh the price details for new provider prior customizing cache or switching provider
                     await self.coordinator.client.api.refresh_provider_prices(
                         provider=option,
+                        siteId=self.coordinator_context,
                         fromFile=self.coordinator.client.testmode(),
                     )
                     # skip customization of cache for site owners
@@ -557,7 +565,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 "%s: Applied power cutoff settings for '%s' change to '%s':\n%s",
                                 self.entity_id,
                                 option,
-                                json.dumps(selected_id[0],indent=2),
+                                json.dumps(selected_id[0], indent=2),
                             )
 
             elif self._attribute_name == "preset_usage_mode":
@@ -576,7 +584,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             siteId=data.get("site_id") or "",
                             deviceSn=self.coordinator_context,
                             backup_switch=True,
-                            backup_start=datetime.now().astimezone(),
                             toFile=self.coordinator.client.testmode(),
                         )
                     else:
@@ -611,6 +618,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
+
             elif (
                 self._attribute_name == "preset_tariff"
                 and option != cv.ENTITY_MATCH_NONE
@@ -872,7 +880,11 @@ class AnkerSolixRestoreSelect(AnkerSolixSelect, RestoreEntity):
         """Load the last known state when added to hass."""
         await super().async_added_to_hass()
         # Note: Only last state object can be restored, but not extra data
-        if (last_state := await self.async_get_last_state()):
+        if last_state := await self.async_get_last_state():
+            # First try to get customization from state attributes if last state was unknown
+            if last_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+                if customized := last_state.attributes.get("customized"):
+                    last_state.state = customized
             if (
                 last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
                 and last_state.state in self.options
@@ -882,6 +894,7 @@ class AnkerSolixRestoreSelect(AnkerSolixSelect, RestoreEntity):
                     # refresh the price details for restored provider
                     await self.coordinator.client.api.refresh_provider_prices(
                         provider=last_state.state,
+                        siteId=self.coordinator_context,
                         fromFile=self.coordinator.client.testmode(),
                     )
                 # set last known option as current option if not available
@@ -897,4 +910,4 @@ class AnkerSolixRestoreSelect(AnkerSolixSelect, RestoreEntity):
                     key=self.entity_description.json_key,
                     value=str(last_state.state),
                 )
-                await self.coordinator.async_refresh_data_from_apidict()
+                await self.coordinator.async_refresh_data_from_apidict(delayed=True)

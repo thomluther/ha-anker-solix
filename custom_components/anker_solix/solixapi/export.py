@@ -38,7 +38,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.0.0.0"
+VERSION: str = "3.1.1.0"
 
 
 class AnkerSolixApiExport:
@@ -89,7 +89,10 @@ class AnkerSolixApiExport:
         if not export_path:
             # default to exports self.export_path in parent path of api library
             self.export_path = (Path(__file__).parent / ".." / "exports").resolve()
-            if not (os.access(self.export_path.parent, os.W_OK) or os.access(self.export_path, os.W_OK)):
+            if not (
+                os.access(self.export_path.parent, os.W_OK)
+                or os.access(self.export_path, os.W_OK)
+            ):
                 self.export_path = Path(tempfile.gettempdir()) / "exports"
         else:
             self.export_path = Path(export_path)
@@ -367,9 +370,16 @@ class AnkerSolixApiExport:
         if not self.api_power.sites | self.api_power.devices:
             self._logger.info("Querying site information...")
             await self.api_power.update_sites()
-            # Run bind devices to get also standalone devices for data export
+            # Run bind devices to get also standalone devices of admin accounts for data export
+            # Do not use site_details method, which may create virtual sites
             self._logger.info("Querying bind devices information...")
             await self.api_power.get_bind_devices()
+            # Get HES device specific updates for member accounts and merge them
+            if self.api_power.hesApi:
+                for sn, device in self.api_power.hesApi.devices.items():
+                    merged_dev = self.api_power.devices.get(sn) or {}
+                    merged_dev.update(device)
+                    self.api_power.devices[sn] = merged_dev
         self._logger.info(
             "Found %s accessible systems (sites) and %s devices.",
             len(self.api_power.sites),
@@ -439,6 +449,58 @@ class AnkerSolixApiExport:
                 endpoint=API_ENDPOINTS["get_third_platforms"],
                 filename=f"{API_FILEPREFIXES['get_third_platforms']}.json",
             )
+            self._logger.info("Get dynamic price sites for user account...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_dynamic_price_sites"],
+                filename=f"{API_FILEPREFIXES['get_dynamic_price_sites']}.json",
+            )
+            # Get supported providers for found device models supporting dynamic prices
+            providers = set()
+            for model in {
+                dev.get("device_pn")
+                for dev in self.api_power.devices.values()
+                if dev.get("device_pn") in ["A17C5", "A5101", "A5102", "A5103"]
+            }:
+                self._logger.info(
+                    "Exporting dynamic price providers for model '%s'...", model
+                )
+                if (
+                    resp := await self.query(
+                        endpoint=API_ENDPOINTS["get_dynamic_price_providers"],
+                        filename=f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json",
+                        payload={"device_pn": model},
+                    )
+                ) and isinstance(resp, dict):
+                    # add provider options to set
+                    for country in (resp.get("data") or {}).get("country_info") or []:
+                        for company in country.get("company_info") or []:
+                            for area in company.get("area_info") or []:
+                                providers.add(
+                                    str(
+                                        SolixPriceProvider(
+                                            country=country.get("country"),
+                                            company=company.get("company"),
+                                            area=area.get("area"),
+                                        )
+                                    )
+                                )
+            # export prices for all provider options
+            for provider in [SolixPriceProvider(provider=p) for p in providers]:
+                self._logger.info(
+                    "Exporting dynamic price details for %s...",
+                    provider,
+                )
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_dynamic_price_details"],
+                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/', '_')}.json",
+                    payload={
+                        "company": provider.company,
+                        "area": provider.area,
+                        "date": str(int(datetime.today().timestamp())),
+                        "device_sn": "",
+                    },
+                )
+
             # loop through all found sites
             for siteId in self.api_power.sites:
                 self._logger.info("Exporting scene info...")
@@ -519,47 +581,6 @@ class AnkerSolixApiExport:
                 # use real token from previous response for query
                 payload={"token": (response or {}).get("data", {}).get("token", "")},
             )
-            self._logger.info("Get dynamic price sites for user account...")
-            await self.query(
-                endpoint=API_ENDPOINTS["get_dynamic_price_sites"],
-                filename=f"{API_FILEPREFIXES['get_dynamic_price_sites']}.json",
-            )
-            # Get supported providers for found device models supporting dynamic prices
-            for model in {
-                dev.get("device_pn")
-                for dev in self.api_power.devices.values()
-                if dev.get("device_pn") in ["A17C5"]
-            }:
-                self._logger.info(
-                    "Exporting dynamic price providers for model '%s'...", model
-                )
-                if (
-                    resp := await self.query(
-                        endpoint=API_ENDPOINTS["get_dynamic_price_providers"],
-                        filename=f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json",
-                        payload={"device_pn": model},
-                    )
-                ) and isinstance(resp, dict):
-                    # export prices for all provider options
-                    for country in (resp.get("data") or {}).get("country_info") or []:
-                        for company in country.get("company_info") or []:
-                            for area in company.get("area_info") or []:
-                                provider = SolixPriceProvider(country=country.get("country"),company=company.get("company"),area=area.get("area"))
-                                self._logger.info(
-                                    "Exporting device model %s dynamic price details for %s...",
-                                    model,
-                                    provider,
-                                )
-                                await self.query(
-                                    endpoint=API_ENDPOINTS["get_dynamic_price_details"],
-                                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/','_')}.json",
-                                    payload={
-                                        "company": provider.company,
-                                        "area": provider.area,
-                                        "date": str(int(datetime.today().timestamp())),
-                                        "device_sn": "",
-                                    },
-                                )
 
             # loop through all found sites
             for siteId, site in self.api_power.sites.items():
@@ -594,6 +615,15 @@ class AnkerSolixApiExport:
                     filename=f"{API_FILEPREFIXES['get_installation']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"site_id": siteId},
                     replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting site power limit...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_site_power_limit"],
+                    filename=f"{API_FILEPREFIXES['get_site_power_limit']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
                 )
                 self._logger.info("Exporting site price...")
                 # works only for site owners
@@ -630,7 +660,7 @@ class AnkerSolixApiExport:
                     #         replace=[(siteId, "<siteId>")],
                     #     )
 
-                for parmtype in ["4", "6", "9", "12", "13"]:
+                for parmtype in ["4", "6", "12", "13", "16"]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
                     )
@@ -800,9 +830,9 @@ class AnkerSolixApiExport:
                         "attributes": [
                             "rssi",
                             "temperature",
-                            "priority", # Smart plug attribute?
-                            "auto_switch", # Smart plug attribute?
-                            "running_time", # Smart plug attribute?
+                            "priority",  # Smart plug attribute?
+                            "auto_switch",  # Smart plug attribute?
+                            "running_time",  # Smart plug attribute?
                             "wifi_signal",
                         ],
                     },
@@ -1195,6 +1225,22 @@ class AnkerSolixApiExport:
                         },
                         replace=[(siteId, "<siteId>")],
                     )
+                # get various profits of today and actual year per month
+                for stat_type in ["day", "year"]:
+                    self._logger.info(
+                        "Exporting HES site profit data for %s...",
+                        stat_type.upper(),
+                    )
+                    response = await self.query(
+                        endpoint=API_HES_SVC_ENDPOINTS["get_system_profit"],
+                        filename=f"{API_FILEPREFIXES['hes_get_system_profit']}_{stat_type}_{self._randomize(siteId, 'site_id')}.json",
+                        payload={
+                            "siteId": siteId,
+                            "dateType": stat_type,
+                            "start": datetime.today().strftime("%Y-%m-%d") if stat_type == "day" else datetime.today().strftime("%Y"),
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
                 self._logger.info("Exporting HES device info...")
                 response = await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_hes_dev_info"],
@@ -1317,9 +1363,9 @@ class AnkerSolixApiExport:
         Reuse same randomization if value was already randomized
         """
 
-        val = str(val)
-        if not self.randomized:
+        if not self.randomized or not val:
             return val
+        val = str(val)
         randomstr = self._randomdata.get(val, "")
         # generate new random string
         if not randomstr and val and key not in ["device_name"]:
@@ -1327,7 +1373,7 @@ class AnkerSolixApiExport:
                 randomstr = "".join(
                     random.choices(string.ascii_uppercase + string.digits, k=len(val))
                 )
-            elif "bt_ble_" in key:
+            elif "bt_ble_" in key or "_mac" in key:
                 # Handle values with and without ':'
                 temp = val.replace(":", "")
                 randomstr = self._randomdata.get(
@@ -1344,7 +1390,7 @@ class AnkerSolixApiExport:
                         a + b
                         for a, b in zip(randomstr[::2], randomstr[1::2], strict=False)
                     )
-            elif "_id" in key:
+            elif "_id" in key or "_password" in key:
                 for part in val.split("-"):
                     if randomstr:
                         randomstr = "-".join(
@@ -1412,6 +1458,9 @@ class AnkerSolixApiExport:
                     "device_name",
                     "token",
                     "email",
+                    "user_id",
+                    "_password",
+                    "_mac"
                 ]
             ) or k in ["sn"]:
                 data[k] = self._randomize(v, k)

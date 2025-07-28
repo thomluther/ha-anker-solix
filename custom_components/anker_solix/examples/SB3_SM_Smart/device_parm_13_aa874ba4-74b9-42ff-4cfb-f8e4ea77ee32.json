@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"step\": 5, \"ai_ems\": null, \"max_load\": 1200, \"min_load\": null, \"data_auth\": true, \"mode_type\": null, \"blend_plan\": null, \"custom_rate_plan\": null, \"default_home_load\": null}"
+  },
+  "trace_id": "2d1aec01313d2d8fe8786dea5a97dc41"
+}

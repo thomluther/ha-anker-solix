@@ -241,6 +241,12 @@
                     "time_slot": "mdi:numeric-8-box-outline"
                 }
             },
+            "solar_forecast_today": {
+                "default": "mdi:sun-compass"
+            },
+            "solar_forecast_this_hour": {
+                "default": "mdi:sun-compass"
+            },
             "daily_discharge_energy": {
                 "default": "mdi:battery-minus-variant"
             },

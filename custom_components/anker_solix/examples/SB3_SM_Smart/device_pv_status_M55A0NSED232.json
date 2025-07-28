@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "pvStatuses": [
+      {
+        "sn": "M55A0NSED232",
+        "power": 0,
+        "status": 0
+      }
+    ]
+  },
+  "trace_id": "a1cffe7ed9377c0bda6970c3d9c593aa"
+}

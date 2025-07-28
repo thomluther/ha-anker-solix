@@ -9,7 +9,7 @@ pip install aiofiles
 from __future__ import annotations
 
 import contextlib
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from pathlib import Path
 from typing import Any
@@ -61,6 +61,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         energy_daily,
         get_device_pv_statistics,
         home_load_chart,
+        refresh_pv_forecast,
     )
     from .schedule import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         get_device_load,
@@ -127,9 +128,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # try to get capacity from category definitions
                         if hasattr(SolixDeviceCapacity, str(value)):
                             # get battery capacity from known PNs
-                            device["battery_capacity"] = str(
-                                getattr(SolixDeviceCapacity, str(value))
-                            )
+                            if not device.get("battery_capacity"):
+                                device["battery_capacity"] = str(
+                                    getattr(SolixDeviceCapacity, str(value))
+                                )
+                                calc_capacity = True
                         # try to get type for standalone device from category definitions if not defined yet
                         if hasattr(SolixDeviceCategory, str(value)):
                             dev_type = str(
@@ -141,8 +144,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             if len(dev_type) > 1:
                                 device["generation"] = int(dev_type[1])
                     elif key in ["device_name"] and value:
-                        if value != device.get("name", ""):
-                            calc_capacity = True
                         device["name"] = str(value)
                     elif key in ["alias_name"] and value:
                         device["alias"] = str(value)
@@ -171,7 +172,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .replace("w", "")
                             }
                         )
-                    elif key in ["intgr_device"]:
+                    elif key in [
+                        "intgr_device",
+                        "feature_switch",
+                        "pv_name",
+                        "pv_power",
+                        "group_info",
+                    ]:
                         # keys to be updated independent of value
                         device[key] = value
                     elif (
@@ -208,8 +215,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # keys with string values that should only be updated if value returned
                             "wifi_name",
                             "bt_ble_mac",
+                            "wifi_mac",
                             "energy_today",
                             "energy_last_period",
+                            "time_zone",
                         ]
                         and value
                     ):
@@ -507,17 +516,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     }
                                 )
                         # get actual presets from current slot
-                        now: datetime = datetime.now().time().replace(microsecond=0)
+                        # Consider time zone shifts
+                        tz_offset = (
+                            self.sites.get(device.get("site_id") or "") or {}
+                        ).get("energy_offset_tz") or 0
+                        now = datetime.now() + timedelta(seconds=tz_offset)
+                        now_time = now.time().replace(microsecond=0)
                         sys_power = None
                         dev_power = None
                         # set now to new daytime if close to end of day
-                        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-                            now = datetime.strptime("00:00", "%H:%M").time()
+                        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+                            now_time = datetime.strptime("00:00", "%H:%M").time()
                         if generation >= 2:
                             # Solarbank 2 schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
-                            weekday = int(datetime.now().strftime("%w"))
-                            month = datetime.now().month
+                            weekday = int(now.strftime("%w"))
+                            month = now.month
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
                                 SolarbankRatePlan,
@@ -558,7 +572,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         end_time = datetime.strptime(
                                             end_time, "%H:%M"
                                         ).time()
-                                    if start_time <= now < end_time:
+                                    if start_time <= now_time < end_time:
                                         sys_power = slot.get("power")
                                         device.update(
                                             {
@@ -581,8 +595,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device.update(
                                     {
                                         "preset_usage_mode": SolarbankUsageMode.backup
-                                        if switch
-                                        and start < datetime.now().timestamp() < end
+                                        if switch and start < now.timestamp() < end
                                         else mode_type,
                                         "preset_manual_backup_start": start,
                                         "preset_manual_backup_end": end,
@@ -611,7 +624,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                                 slot
                                                 for slot in dayplan
                                                 if (slot.get("start_time") or 0)
-                                                <= now.hour
+                                                <= now_time.hour
                                                 < (slot.get("end_time") or 24)
                                             ]
                                         ),
@@ -663,7 +676,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         end_time = datetime.strptime(
                                             end_time, "%H:%M"
                                         ).time()
-                                    if start_time <= now < end_time:
+                                    if start_time <= now_time < end_time:
                                         preset_power = (
                                             slot.get("appliance_loads") or [{}]
                                         )[0].get("power")
@@ -908,6 +921,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device["battery_capacity"] = "0"
                             if "battery_energy" not in device:
                                 device["battery_energy"] = "0"
+                        calc_capacity = False
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -988,15 +1002,42 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             else:
                 super().customizeCacheId(id=id, key=key, value=value)
 
-    def solarbank_usage_mode_options(self, deviceSn: str) -> set:
+    def solarbank_usage_mode_options(
+        self,
+        deviceSn: str | None = None,
+        siteId: str | None = None,
+        ignoreAdmin: bool = False,
+    ) -> set:
         """Get the valid solarbank usage mode options based on Api cache data."""
         options: set = set()
+        device = {}
+        site = {}
+        # first get valid site and solarbank from cache depending on provided parameters
         if (
             isinstance(deviceSn, str)
             and (device := self.devices.get(deviceSn) or {})
-            and device.get("is_admin")
+            and (ignoreAdmin or device.get("is_admin"))
+            and device.get("type") == SolixDeviceType.SOLARBANK.value
+            and device.get("generation") >= 2
         ):
             site = self.sites.get(device.get("site_id") or "") or {}
+        elif (
+            isinstance(siteId, str)
+            and (site := self.sites.get(siteId) or {})
+            and (ignoreAdmin or site.get("site_admin"))
+        ):
+            # get first solarbank of site that supports usage modes
+            device = (
+                [
+                    dev
+                    for dev in self.devices.values()
+                    if dev.get("site_id") == siteId
+                    and dev.get("type") == SolixDeviceType.SOLARBANK.value
+                    and dev.get("generation") >= 2
+                ][:1]
+                or [{}]
+            )[0]
+        if site and device:
             # manual mode is always possible
             options.add(SolarbankUsageMode.manual.name)
             # Add smart meter usage mode if smart meter installed
@@ -1009,8 +1050,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if "grid_to_battery_power" in device:
                 options.add(SolarbankUsageMode.backup.name)
                 # Add use time if plan is defined
-                if smartmeter and (device.get("schedule") or {}).get(
-                    SolarbankRatePlan.use_time
+                if smartmeter and (
+                    ignoreAdmin
+                    or (device.get("schedule") or {}).get(SolarbankRatePlan.use_time)
                 ):
                     options.add(SolarbankUsageMode.use_time.name)
             # Add options introduced with SB3

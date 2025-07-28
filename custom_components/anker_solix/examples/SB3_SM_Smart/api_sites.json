@@ -1,0 +1,937 @@
+{
+  "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32": {
+    "type": "system",
+    "site_info": {
+      "site_id": "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32",
+      "site_name": "Solarbank",
+      "site_img": "",
+      "device_type_list": [
+        3,
+        6
+      ],
+      "ms_type": 1,
+      "power_site_type": 12,
+      "is_allow_delete": true,
+      "support_device_models": [
+        "A17C5",
+        "A17X7",
+        "SHEM3",
+        "SHEMP3",
+        "A17X8",
+        "SHPPS"
+      ],
+      "current_site_device_models": [
+        "A17C5",
+        "SHEMP3"
+      ]
+    },
+    "site_type": "solarbank",
+    "site_admin": true,
+    "data_valid": true,
+    "requeries": 0,
+    "energy_offset_seconds": -184,
+    "energy_offset_check": "2025-07-18 13:23:27",
+    "energy_offset_tz": 0,
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "198.61",
+        "unit": "kWh"
+      },
+      {
+        "type": "2",
+        "total": "198.01",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "56.17",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C5",
+          "device_sn": "200Z24CCLUIX9A9H9",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+          "battery_power": "15",
+          "bind_site_status": "",
+          "charging_power": "0",
+          "power_unit": "W",
+          "charging_status": "0",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "534",
+          "output_power": "534",
+          "create_time": 1747913739,
+          "set_load_power": "",
+          "sub_package_num": 0,
+          "output_cutoff_data": 0,
+          "is_display": true,
+          "bat_charge_power": "0",
+          "pv_power": null,
+          "feature_switch": {
+            "0w_feed_v2": true,
+            "enable_parallel": false,
+            "enable_timeslot": true,
+            "exceed_power": false,
+            "heating": false,
+            "plug_switch_report": true
+          },
+          "heating_power": "",
+          "bat_discharge_power": "0",
+          "err_code": 0,
+          "alias_name": "Solarbank 3",
+          "parallel_home_load": "200",
+          "current_home_load": "200"
+        }
+      ],
+      "total_charging_power": "0",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.15",
+      "updated_time": "2025-07-18 13:22:23",
+      "total_photovoltaic_power": "534",
+      "total_output_power": "534.00",
+      "display_set_power": false,
+      "battery_discharge_power": "0",
+      "ac_power": "0",
+      "to_home_load": "0",
+      "is_display_data": true,
+      "solar_power_1": "252",
+      "solar_power_2": "282",
+      "solar_power_3": "0",
+      "solar_power_4": "0",
+      "other_input_power": "0",
+      "micro_inverter_power": "0",
+      "micro_inverter_power_limit": "0",
+      "micro_inverter_low_power_limit": "0",
+      "grid_to_battery_power": "0",
+      "pei_heating_power": "0",
+      "backup_info": {
+        "start_time": 0,
+        "end_time": 0,
+        "full_time": 0
+      },
+      "use_time_excute_info": {
+        "current_band": "0"
+      }
+    },
+    "retain_load": "200W",
+    "scene_mode": 7,
+    "home_load_power": "1350",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 12,
+    "site_id": "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32",
+    "powerpanel_list": [],
+    "grid_info": {
+      "grid_list": [
+        {
+          "device_pn": "SHEMP3",
+          "device_sn": "UC5INFAQGH50OS",
+          "device_name": "Netzstrom",
+          "device_img": "",
+          "create_time": 1751559005,
+          "status": "1",
+          "bind_site_status": "",
+          "wireless_type": ""
+        }
+      ],
+      "photovoltaic_to_grid_power": "0",
+      "grid_to_home_power": "816",
+      "grid_status": 0,
+      "has_history_data": true
+    },
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "0w_feed_v2": true,
+      "enable_parallel": false,
+      "enable_timeslot": true,
+      "exceed_power": false,
+      "heating": false,
+      "plug_switch_report": true
+    },
+    "other_loads_power": "1350",
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "priority_discharge_upgrade_devices": "",
+    "style_id": 0,
+    "is_show_priority_discharge": 0,
+    "solarbank_pps_info": {
+      "pps_list": null,
+      "total_charging_power": "",
+      "total_output_power": "",
+      "total_battery_power": "",
+      "total_pv_input_power": "",
+      "total_home_load_power": "",
+      "total_grid_to_battery": "",
+      "home": null,
+      "grid": null,
+      "system": null
+    },
+    "user_scene_mode": 7,
+    "is_dynamic_price_down_grade": false,
+    "aiems_profit": {
+      "unit": "\u20ac",
+      "aiems_profit_total": "46.68",
+      "percentage": "9.30",
+      "show_percentage": true,
+      "aiems_self_use_diff": "3.97"
+    },
+    "switch_0w": 0,
+    "err_msg": "",
+    "site_details": {
+      "price": 0.4,
+      "site_co2": 0,
+      "site_price_unit": "\u20ac",
+      "price_type": "dynamic",
+      "current_mode": 7,
+      "use_time": [
+        {
+          "sea": {
+            "start_month": 1,
+            "end_month": 3
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        },
+        {
+          "sea": {
+            "start_month": 4,
+            "end_month": 9
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        },
+        {
+          "sea": {
+            "start_month": 10,
+            "end_month": 12
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        }
+      ],
+      "dynamic_price": {
+        "country": "DE",
+        "company": "Nordpool",
+        "area": "GER",
+        "pct": null
+      },
+      "accuracy": 2,
+      "co2_ranking": {
+        "ranking": "999+",
+        "co2": "198.01",
+        "tree": "9.4",
+        "content": "Not to be underestimated",
+        "level": {
+          "tree": 4,
+          "bubble": 4
+        }
+      },
+      "ai_ems_runtime": {
+        "status": 1,
+        "result": "fail",
+        "left_time": -4829815,
+        "status_desc": "running"
+      },
+      "dynamic_price_details": {
+        "dynamic_price_provider": "DE/Nordpool/GER",
+        "dynamic_price_fee": "0.17895",
+        "dynamic_price_vat": "19",
+        "dynamic_price_total": "0.2998",
+        "spot_price_unit": "\u20ac",
+        "dynamic_price_forecast": [
+          {
+            "timestamp": "2025-07-18 00:00",
+            "price": "0.3400",
+            "spot_mwh": "106.80"
+          },
+          {
+            "timestamp": "2025-07-18 01:00",
+            "price": "0.3309",
+            "spot_mwh": "99.15"
+          },
+          {
+            "timestamp": "2025-07-18 02:00",
+            "price": "0.3264",
+            "spot_mwh": "95.36"
+          },
+          {
+            "timestamp": "2025-07-18 03:00",
+            "price": "0.3276",
+            "spot_mwh": "96.37"
+          },
+          {
+            "timestamp": "2025-07-18 04:00",
+            "price": "0.3304",
+            "spot_mwh": "98.66"
+          },
+          {
+            "timestamp": "2025-07-18 05:00",
+            "price": "0.3417",
+            "spot_mwh": "108.23"
+          },
+          {
+            "timestamp": "2025-07-18 06:00",
+            "price": "0.3509",
+            "spot_mwh": "115.92"
+          },
+          {
+            "timestamp": "2025-07-18 07:00",
+            "price": "0.3512",
+            "spot_mwh": "116.17"
+          },
+          {
+            "timestamp": "2025-07-18 08:00",
+            "price": "0.3431",
+            "spot_mwh": "109.39"
+          },
+          {
+            "timestamp": "2025-07-18 09:00",
+            "price": "0.3297",
+            "spot_mwh": "98.13"
+          },
+          {
+            "timestamp": "2025-07-18 10:00",
+            "price": "0.3141",
+            "spot_mwh": "84.98"
+          },
+          {
+            "timestamp": "2025-07-18 11:00",
+            "price": "0.3106",
+            "spot_mwh": "82.02"
+          },
+          {
+            "timestamp": "2025-07-18 12:00",
+            "price": "0.3082",
+            "spot_mwh": "80.00"
+          },
+          {
+            "timestamp": "2025-07-18 13:00",
+            "price": "0.2998",
+            "spot_mwh": "73.02"
+          },
+          {
+            "timestamp": "2025-07-18 14:00",
+            "price": "0.2977",
+            "spot_mwh": "71.20"
+          },
+          {
+            "timestamp": "2025-07-18 15:00",
+            "price": "0.2994",
+            "spot_mwh": "72.68"
+          },
+          {
+            "timestamp": "2025-07-18 16:00",
+            "price": "0.3081",
+            "spot_mwh": "79.99"
+          },
+          {
+            "timestamp": "2025-07-18 17:00",
+            "price": "0.3130",
+            "spot_mwh": "84.07"
+          },
+          {
+            "timestamp": "2025-07-18 18:00",
+            "price": "0.3319",
+            "spot_mwh": "99.92"
+          },
+          {
+            "timestamp": "2025-07-18 19:00",
+            "price": "0.3558",
+            "spot_mwh": "120.00"
+          },
+          {
+            "timestamp": "2025-07-18 20:00",
+            "price": "0.3873",
+            "spot_mwh": "146.55"
+          },
+          {
+            "timestamp": "2025-07-18 21:00",
+            "price": "0.3848",
+            "spot_mwh": "144.44"
+          },
+          {
+            "timestamp": "2025-07-18 22:00",
+            "price": "0.3627",
+            "spot_mwh": "125.88"
+          },
+          {
+            "timestamp": "2025-07-18 23:00",
+            "price": "0.3480",
+            "spot_mwh": "113.48"
+          },
+          {
+            "timestamp": "2025-07-19 00:00",
+            "price": "0.3410",
+            "spot_mwh": "107.60"
+          },
+          {
+            "timestamp": "2025-07-19 01:00",
+            "price": "0.3383",
+            "spot_mwh": "105.35"
+          },
+          {
+            "timestamp": "2025-07-19 02:00",
+            "price": "0.3357",
+            "spot_mwh": "103.19"
+          },
+          {
+            "timestamp": "2025-07-19 03:00",
+            "price": "0.3339",
+            "spot_mwh": "101.63"
+          },
+          {
+            "timestamp": "2025-07-19 04:00",
+            "price": "0.3300",
+            "spot_mwh": "98.38"
+          },
+          {
+            "timestamp": "2025-07-19 05:00",
+            "price": "0.3244",
+            "spot_mwh": "93.69"
+          },
+          {
+            "timestamp": "2025-07-19 06:00",
+            "price": "0.3300",
+            "spot_mwh": "98.39"
+          },
+          {
+            "timestamp": "2025-07-19 07:00",
+            "price": "0.3163",
+            "spot_mwh": "86.89"
+          },
+          {
+            "timestamp": "2025-07-19 08:00",
+            "price": "0.3068",
+            "spot_mwh": "78.89"
+          },
+          {
+            "timestamp": "2025-07-19 09:00",
+            "price": "0.2760",
+            "spot_mwh": "52.98"
+          },
+          {
+            "timestamp": "2025-07-19 10:00",
+            "price": "0.2249",
+            "spot_mwh": "10.00"
+          },
+          {
+            "timestamp": "2025-07-19 11:00",
+            "price": "0.2137",
+            "spot_mwh": "0.65"
+          },
+          {
+            "timestamp": "2025-07-19 12:00",
+            "price": "0.2130",
+            "spot_mwh": "0.00"
+          },
+          {
+            "timestamp": "2025-07-19 13:00",
+            "price": "0.2129",
+            "spot_mwh": "-0.01"
+          },
+          {
+            "timestamp": "2025-07-19 14:00",
+            "price": "0.2130",
+            "spot_mwh": "0.00"
+          },
+          {
+            "timestamp": "2025-07-19 15:00",
+            "price": "0.2154",
+            "spot_mwh": "2.08"
+          },
+          {
+            "timestamp": "2025-07-19 16:00",
+            "price": "0.2479",
+            "spot_mwh": "29.33"
+          },
+          {
+            "timestamp": "2025-07-19 17:00",
+            "price": "0.3044",
+            "spot_mwh": "76.85"
+          },
+          {
+            "timestamp": "2025-07-19 18:00",
+            "price": "0.3300",
+            "spot_mwh": "98.40"
+          },
+          {
+            "timestamp": "2025-07-19 19:00",
+            "price": "0.3492",
+            "spot_mwh": "114.47"
+          },
+          {
+            "timestamp": "2025-07-19 20:00",
+            "price": "0.3473",
+            "spot_mwh": "112.87"
+          },
+          {
+            "timestamp": "2025-07-19 21:00",
+            "price": "0.3416",
+            "spot_mwh": "108.08"
+          },
+          {
+            "timestamp": "2025-07-19 22:00",
+            "price": "0.3387",
+            "spot_mwh": "105.63"
+          },
+          {
+            "timestamp": "2025-07-19 23:00",
+            "price": "0.3297",
+            "spot_mwh": "98.07"
+          }
+        ],
+        "dynamic_price_poll_time": "2025-07-18 13:23",
+        "dynamic_price_calc_time": "2025-07-18 13:23",
+        "spot_price_time": "2025-07-18 13:00",
+        "spot_price_mwh": "73.02",
+        "spot_price_mwh_avg_today": "100.93",
+        "spot_price_mwh_avg_tomorrow": "70.14"
+      }
+    },
+    "energy_details": {
+      "last_period": {
+        "date": "2025-07-17",
+        "battery_discharge": "0.60",
+        "ac_socket": "0.00",
+        "battery_to_home": "0.61",
+        "grid_to_battery": "0.03",
+        "home_usage": "8.26",
+        "grid_to_home": "10.73",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "1.22",
+        "solar_production_pv2": "1.27",
+        "solar_production_pv3": "0.00",
+        "solar_production_pv4": "0.00",
+        "solar_production": "2.76",
+        "battery_charge": "0.78",
+        "solar_to_grid": "0.06",
+        "solar_to_battery": "0.75",
+        "solar_to_home": "3.86",
+        "battery_percentage": "0.17",
+        "solar_percentage": "0.83",
+        "other_percentage": "0"
+      },
+      "today": {
+        "date": "2025-07-18",
+        "battery_discharge": "0.03",
+        "ac_socket": "0.00",
+        "battery_to_home": "0.61",
+        "grid_to_battery": "0.03",
+        "home_usage": "6.94",
+        "grid_to_home": "10.73",
+        "smartplugs_total": "0.00",
+        "solar_production_pv1": "1.01",
+        "solar_production_pv2": "0.84",
+        "solar_production_pv3": "0.00",
+        "solar_production_pv4": "0.00",
+        "solar_production": "1.91",
+        "battery_charge": "0.78",
+        "solar_to_grid": "0.06",
+        "solar_to_battery": "0.75",
+        "solar_to_home": "3.86",
+        "battery_percentage": "0.17",
+        "solar_percentage": "0.83",
+        "other_percentage": "0"
+      },
+      "pv_forecast_details": {
+        "forecast_24h": "3.97",
+        "trend_unit": "W",
+        "local_time": "2025-07-18 13:23",
+        "poll_time": "2025-07-18 13:23",
+        "produced_hourly": [
+          {
+            "timestamp": "2025-07-18 01:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-18 02:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-18 03:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-18 04:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-18 05:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-18 06:00",
+            "power": "1"
+          },
+          {
+            "timestamp": "2025-07-18 07:00",
+            "power": "25"
+          },
+          {
+            "timestamp": "2025-07-18 08:00",
+            "power": "47"
+          },
+          {
+            "timestamp": "2025-07-18 09:00",
+            "power": "168"
+          },
+          {
+            "timestamp": "2025-07-18 10:00",
+            "power": "333"
+          },
+          {
+            "timestamp": "2025-07-18 11:00",
+            "power": "478"
+          },
+          {
+            "timestamp": "2025-07-18 12:00",
+            "power": "547"
+          },
+          {
+            "timestamp": "2025-07-18 13:00",
+            "power": "313"
+          },
+          {
+            "timestamp": "2025-07-18 14:00",
+            "power": "178"
+          }
+        ],
+        "produced_today": "1.91",
+        "trend": [
+          {
+            "timestamp": "2025-07-18 14:00",
+            "power": "402"
+          },
+          {
+            "timestamp": "2025-07-18 15:00",
+            "power": "434"
+          },
+          {
+            "timestamp": "2025-07-18 16:00",
+            "power": "401"
+          },
+          {
+            "timestamp": "2025-07-18 17:00",
+            "power": "350"
+          },
+          {
+            "timestamp": "2025-07-18 18:00",
+            "power": "263"
+          },
+          {
+            "timestamp": "2025-07-18 19:00",
+            "power": "214"
+          },
+          {
+            "timestamp": "2025-07-18 20:00",
+            "power": "72"
+          },
+          {
+            "timestamp": "2025-07-18 21:00",
+            "power": "37"
+          },
+          {
+            "timestamp": "2025-07-18 22:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-18 23:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-19 14:00",
+            "power": "402"
+          },
+          {
+            "timestamp": "2025-07-19 15:00",
+            "power": "434"
+          },
+          {
+            "timestamp": "2025-07-19 16:00",
+            "power": "401"
+          },
+          {
+            "timestamp": "2025-07-19 17:00",
+            "power": "350"
+          },
+          {
+            "timestamp": "2025-07-19 18:00",
+            "power": "263"
+          },
+          {
+            "timestamp": "2025-07-19 19:00",
+            "power": "214"
+          },
+          {
+            "timestamp": "2025-07-19 20:00",
+            "power": "72"
+          },
+          {
+            "timestamp": "2025-07-19 21:00",
+            "power": "37"
+          },
+          {
+            "timestamp": "2025-07-19 22:00",
+            "power": "0"
+          },
+          {
+            "timestamp": "2025-07-19 23:00",
+            "power": "0"
+          }
+        ],
+        "remaining_today": "2.02",
+        "produced_initially": "1.91",
+        "forecast_today": "4.08",
+        "forecast_tomorrow": "2.17",
+        "time_this_hour": "2025-07-18 14:00",
+        "trend_this_hour": "402",
+        "time_next_hour": "2025-07-18 15:00",
+        "trend_next_hour": "434"
+      }
+    }
+  },
+  "virtual-M55A0NSED232": {
+    "type": "system",
+    "site_info": {
+      "site_id": "virtual-M55A0NSED232",
+      "site_name": "Standalone inverter",
+      "ms_type": 1,
+      "power_site_type": 0,
+      "support_device_models": [
+        "A5143"
+      ],
+      "current_site_device_models": [
+        "A5143"
+      ]
+    },
+    "site_id": "virtual-M55A0NSED232",
+    "power_site_type": 0,
+    "site_type": "virtual",
+    "site_admin": true,
+    "solar_list": [
+      {
+        "device_pn": "A5143",
+        "device_sn": "M55A0NSED232"
+      }
+    ],
+    "solar_info": {
+      "micro_inverter_power_limit": "800W"
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "1.25",
+        "unit": "mwh"
+      },
+      {
+        "type": "2",
+        "total": "1249",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "313.1",
+        "unit": "\u20ac"
+      }
+    ],
+    "site_details": {
+      "price": 0.25,
+      "site_price_unit": "\u20ac"
+    },
+    "energy_details": {
+      "last_period": {
+        "date": "2025-07-17",
+        "solar_production": "0"
+      },
+      "today": {
+        "date": "2025-07-18",
+        "solar_production": "0"
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "energy": 1.25,
+    "energyUnit": "MWh",
+    "reductionCo2": 1249,
+    "reductionCo2Unit": "kg",
+    "saveMoney": 313.1,
+    "saveMoneyUnit": "\u20ac",
+    "powerConfig": "800W",
+    "powerPopUpFlag": 0
+  },
+  "trace_id": "6972af79a10e30e6e89d9bc6ddc0d83f"
+}

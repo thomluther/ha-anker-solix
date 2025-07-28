@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from asyncio import sleep
+from asyncio import TimerHandle, sleep
 from datetime import datetime, timedelta
+import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -18,7 +19,7 @@ from .api_client import (
     AnkerSolixApiClientError,
     AnkerSolixApiClientRetryExceededError,
 )
-from .const import DOMAIN, LOGGER, PLATFORMS
+from .const import ALLOW_TESTMODE, DOMAIN, LOGGER, PLATFORMS
 
 
 # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
@@ -28,6 +29,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
     config_entry: ConfigEntry
     client: AnkerSolixApiClient
     details_delayed: datetime | None
+    update_handler: TimerHandle | None
 
     def __init__(
         self,
@@ -40,6 +42,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         self.config_entry = config_entry
         self.client = client
         self.details_delayed = None
+        self.update_handler = None
 
         super().__init__(
             hass=hass,
@@ -84,9 +87,36 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         else:
             return data
 
-    async def async_refresh_data_from_apidict(self) -> None:
-        """Update data from client api dictionaries without resetting update interval."""
+    async def async_refresh_data_from_apidict(self, delayed: bool = False) -> None:
+        """Update data from client api dictionaries without resetting update interval.
+
+        The delayed option will wait 2 seconds before listeners are notified to allow
+        consolidating parallel update requests during the state restore processing.
+        """
         self.data = await self.client.async_get_data(from_cache=True)
+        if delayed and not self.update_handler:
+            # get handler for delayed listener update
+            self.update_handler = self.hass.loop.call_later(
+                delay=(delay := 2.0), callback=self.async_update_listeners
+            )
+            LOGGER.log(
+                logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                "Coordinator %s delayed listener update for %s seconds during entity restore processing",
+                self.client.api.apisession.nickname,
+                int(delay),
+            )
+            return
+        if self.update_handler:
+            # check if upate handler execution was done and remove handler
+            if self.hass.loop.time() - self.update_handler.when() <= 0:
+                # skip listener update for now
+                LOGGER.log(
+                    logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                    "Coordinator %s skipped listener update due to active delayed processing",
+                    self.client.api.apisession.nickname,
+                )
+                return
+            self.update_handler = None
         # inform listeners about changed data
         self.async_update_listeners()
 
@@ -97,10 +127,12 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         )
         if reset_cache:
             # ensure to refresh entity setup when cache was reset to unload all entities and reload remaining entities
+            # This will also restore states from previous state in state machine if required
             self.data = data
             if await self.hass.config_entries.async_unload_platforms(
                 self.config_entry, PLATFORMS
             ):
+                # refresh restore state cache
                 await self.hass.config_entries.async_forward_entry_setups(
                     self.config_entry, PLATFORMS
                 )
@@ -117,10 +149,12 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                 if isinstance(option, bool):
                     self.client.allow_refresh(allow=option)
                     if option:
-                        # enable Api refresh and clear cache
+                        # first restore previous states from cache in state machine to have valid restore state during reload
+                        await self.async_refresh_data_from_apidict()
+                        # refresh states from recreated cache, which will do the reload
                         await self.async_refresh_device_details(reset_cache=True)
                     else:
-                        # disable Api refresh
+                        # refresh states from cache that is virtually empty while refresh not allowed
                         await self.async_refresh_data_from_apidict()
 
     async def async_refresh_delay(self) -> None:

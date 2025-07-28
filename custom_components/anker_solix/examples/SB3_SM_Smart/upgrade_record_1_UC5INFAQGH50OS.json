@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "UC5INFAQGH50OS",
+    "site_id": "",
+    "upgrade_record_list": []
+  },
+  "trace_id": "cde2cb9274f479c089ee6649c2b1221e"
+}

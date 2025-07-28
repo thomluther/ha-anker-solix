@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "200Z24CCLUIX9A9H9",
+    "attributes": {
+      "rssi": "-70"
+    }
+  },
+  "trace_id": "59eca3bbd667a72f800c5bec0cba4bf6"
+}

@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "show": true,
+    "ranking": "999+",
+    "co2": "198.01",
+    "tree": "9.4",
+    "content": "Not to be underestimated",
+    "level": {
+      "tree": 4,
+      "bubble": 4
+    }
+  },
+  "trace_id": "df58fd0bd3bca05f961f11daa833bd94"
+}

@@ -10,6 +10,7 @@ from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     ApiCategories,
     SolarbankStatus,
+    SolarbankUsageMode,
     SolixDeviceType,
     SolixParmType,
     SolixPriceProvider,
@@ -537,35 +538,28 @@ async def poll_sites(  # noqa: C901
                         powerpanel = dict(powerpanel).copy()
                         powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                     if sn := api._update_dev(
-                        # merge powerpanel device details if available
-                        powerpanel
-                        | (
-                            (
-                                api.powerpanelApi.devices.get(
-                                    powerpanel.get("device_sn") or ""
-                                )
-                                or {}
-                            )
-                            if api.powerpanelApi
-                            else {}
-                        ),
+                        powerpanel,
                         devType=SolixDeviceType.POWERPANEL.value,
                         siteId=myid,
                         isAdmin=admin,
                     ):
+                        # merge powerpanel device details in place if available from powerpanel api
+                        if api.powerpanelApi:
+                            api.devices[sn] = api.devices[sn] | (api.powerpanelApi.devices.get(sn) or {})
                         api._site_devices.add(sn)
+                # Extract actual dynamic price if supported and not excluded
+                if {ApiCategories.site_price} - exclude:
+                    if dp := api.extractPriceData(siteId=myid):
+                        # save the actual extracted dynamic price details
+                        api._update_site(
+                            siteId=myid, details={"dynamic_price_details": dp}
+                        )
+                # extract the actual forecast for sites containing pv_forecast data
+                api.extractSolarForecast(siteId=myid)
+
     # Write back the updated sites
     api.sites = new_sites
 
-    # Extract actual dynamic price for sites supporting it if not excluded
-    if {ApiCategories.site_price} - exclude:
-        for site_id in api.sites:
-            # filter requested site id or all sites
-            if site_id == (siteId or site_id) and (
-                dp := api.extractPriceData(siteId=site_id)
-            ):
-                # save the actual extracted dynamic price details for sites supporting dynamic prices
-                api._update_site(siteId=site_id, details={"dynamic_price_details": dp})
     # actions for all filtered virtual sites that represent standalone inverters
     if inverters := [
         sn
@@ -622,7 +616,9 @@ async def poll_site_details(
                 (api.powerpanelApi.sites.get(site_id) or {}).get("statistics") or {}
             ).copy()
             details = api.sites[site_id].get("site_details") or {}
-            details.update((api.powerpanelApi.sites.get(site_id) or {}).get("site_details") or {})
+            details.update(
+                (api.powerpanelApi.sites.get(site_id) or {}).get("site_details") or {}
+            )
             api.sites[site_id]["site_details"] = details
         # check if hes site type to refresh runtime stats in sites cache
         elif site.get("site_type") == SolixDeviceType.HES.value:
@@ -630,7 +626,9 @@ async def poll_site_details(
                 (api.hesApi.sites.get(site_id) or {}).get("statistics") or {}
             ).copy()
             details = api.sites[site_id].get("site_details") or {}
-            details.update((api.hesApi.sites.get(site_id) or {}).get("site_details") or {})
+            details.update(
+                (api.hesApi.sites.get(site_id) or {}).get("site_details") or {}
+            )
             api.sites[site_id]["site_details"] = details
         # Fetch details for virtual sites
         if site.get("site_type") == SolixDeviceType.VIRTUAL.value:
@@ -709,6 +707,7 @@ async def poll_site_details(
                         # Ensure actual provider prices are available
                         await api.refresh_provider_prices(
                             provider=SolixPriceProvider(provider=provider),
+                            siteId=site_id,
                             fromFile=fromFile,
                         )
                     # extract the actual spot price and unit for sites supporting dynamic prices
@@ -1009,21 +1008,9 @@ async def poll_device_energy(  # noqa: C901
                             fromFile=fromFile,
                         )
                     )
-                if fromFile:
-                    # get last date entries from file and replace date with yesterday and today for testing
-                    days = len(data)
-                    if len(data) > 1:
-                        entry: dict = list(data.values())[days - 2]
-                        entry.update({"date": yesterday})
-                        energy["last_period"] = entry
-                    if len(data) > 0:
-                        entry: dict = list(data.values())[days - 1]
-                        entry.update({"date": today})
-                        energy["today"] = entry
-                else:
-                    energy["today"] = data.get(today) or {}
-                    if data.get(yesterday):
-                        energy["last_period"] = data.get(yesterday) or {}
+                energy["today"] = data.get(today) or {}
+                if yesterday in data:
+                    energy["last_period"] = data.get(yesterday) or {}
                 # save energy stats with sites dictionary
                 site["energy_details"] = energy
                 api.sites[site_id] = site
@@ -1038,10 +1025,10 @@ async def poll_device_energy(  # noqa: C901
                 and isinstance(dev_list, list)
                 and (sn := dev_list[0].get("device_sn"))
             ):
-                query_types |= {SolixDeviceType.INVERTER.value}
+                query_types.add(SolixDeviceType.INVERTER.value)
                 query_sn = sn
             if sn := (site.get("grid_info") or {}).get("device_sn"):
-                query_types -= {SolixDeviceType.INVERTER.value}
+                query_types.discard(SolixDeviceType.INVERTER.value)
                 if not (
                     {
                         SolixDeviceType.SMARTMETER.value,
@@ -1049,13 +1036,13 @@ async def poll_device_energy(  # noqa: C901
                     }
                     & exclude
                 ):
-                    query_types |= {SolixDeviceType.SMARTMETER.value}
+                    query_types.add(SolixDeviceType.SMARTMETER.value)
                     query_sn = sn
             if (
                 plug_list := (site.get("smart_plug_info") or {}).get("smartplug_list")
                 or []
             ):
-                query_types -= {SolixDeviceType.INVERTER.value}
+                query_types.discard(SolixDeviceType.INVERTER.value)
                 if not (
                     {
                         SolixDeviceType.SMARTPLUG.value,
@@ -1063,7 +1050,7 @@ async def poll_device_energy(  # noqa: C901
                     }
                     & exclude
                 ):
-                    query_types |= {SolixDeviceType.SMARTPLUG.value}
+                    query_types.add(SolixDeviceType.SMARTPLUG.value)
                     query_sn = plug_list[0].get("device_sn") or ""
             if (
                 (
@@ -1073,7 +1060,7 @@ async def poll_device_energy(  # noqa: C901
                 and isinstance(dev_list, list)
                 and (sn := dev_list[0].get("device_sn"))
             ):
-                query_types -= {SolixDeviceType.INVERTER.value}
+                query_types.discard(SolixDeviceType.INVERTER.value)
                 if not (
                     {
                         SolixDeviceType.SOLARBANK.value,
@@ -1081,7 +1068,7 @@ async def poll_device_energy(  # noqa: C901
                     }
                     & exclude
                 ):
-                    query_types |= {SolixDeviceType.SOLARBANK.value}
+                    query_types.add(SolixDeviceType.SOLARBANK.value)
                     query_sn = sn
                     # Query also embedded inverter energy per channel if not excluded
                     if not (
@@ -1090,7 +1077,7 @@ async def poll_device_energy(  # noqa: C901
                         }
                         & exclude
                     ):
-                        query_types |= {SolixDeviceType.INVERTER.value}
+                        query_types.add(SolixDeviceType.INVERTER.value)
 
             if query_types:
                 api._logger.debug(
@@ -1167,6 +1154,28 @@ async def poll_device_energy(  # noqa: C901
                             "energy_last_period": plug.get("energy"),
                         }
                     )
+            # Fetch solar forecast if supported for site
+            # solar forecast only works in Smart mode which requires a Smart Meter
+            if (
+                not (
+                    {
+                        SolixDeviceType.SOLARBANK.value,
+                        ApiCategories.solarbank_energy,
+                    }
+                    & exclude
+                )
+                and SolarbankUsageMode.smart.name
+                in api.solarbank_usage_mode_options(siteId=site_id, ignoreAdmin=True)
+                # and (site.get("site_info") or {}).get("power_site_type") in [12]
+                # and (site.get("grid_info") or {}).get("grid_list")
+            ):
+                # initialize fetch of solar forecast data
+                api._logger.debug(
+                    "Getting api %s solar forecast for %s",
+                    api.apisession.nickname,
+                    site_id,
+                )
+                await api.refresh_pv_forecast(siteId=site_id, fromFile=fromFile)
 
     # update account dictionary with number of requests
     api._update_account(

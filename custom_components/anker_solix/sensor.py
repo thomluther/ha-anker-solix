@@ -22,6 +22,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_EXCLUDE,
     PERCENTAGE,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
     EntityCategory,
     UnitOfEnergy,
     UnitOfPower,
@@ -48,8 +50,6 @@ from .const import (
     DOMAIN,
     END_TIME,
     INCLUDE_CACHE,
-    LAST_PERIOD,
-    LAST_RESET,
     LOGGER,
     PLAN,
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
@@ -99,7 +99,7 @@ class AnkerSolixSensorDescription(
 ):
     """Sensor entity description with optional keys."""
 
-    reset_at_midnight: bool = False
+    # reset_at_midnight: bool = False
     picture_path: str = None
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str, str], StateType] = lambda d, jk, ctx: d.get(jk)
@@ -110,6 +110,7 @@ class AnkerSolixSensorDescription(
     nested_sensor: bool = False
     feature: AnkerSolixEntityFeature | None = None
     check_invalid: bool = False
+    restore: bool = False
 
 
 DEVICE_SENSORS = [
@@ -199,6 +200,9 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        attrib_fn=lambda d, _: {
+            "name": (d.get("pv_name") or {}).get("pv1_name") or "",
+        },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
         check_invalid=True,
     ),
@@ -210,6 +214,9 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        attrib_fn=lambda d, _: {
+            "name": (d.get("pv_name") or {}).get("pv2_name") or "",
+        },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
         check_invalid=True,
     ),
@@ -221,6 +228,9 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        attrib_fn=lambda d, _: {
+            "name": (d.get("pv_name") or {}).get("pv3_name") or "",
+        },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
         check_invalid=True,
     ),
@@ -232,6 +242,9 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        attrib_fn=lambda d, _: {
+            "name": (d.get("pv_name") or {}).get("pv4_name") or "",
+        },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
         check_invalid=True,
     ),
@@ -316,6 +329,9 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        attrib_fn=lambda d, _: {
+            "name": (d.get("pv_name") or {}).get("micro_inverter_name") or "",
+        },
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
@@ -853,6 +869,7 @@ SITE_SENSORS = [
         json_key="updated_time",
         # value_fn=lambda d, jk, _: datetime.strptime((d.get("solarbank_info") or {}).get(jk), "%Y-%m-%d %H:%M:%S").astimezone().isoformat(),
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
+        attrib_fn=lambda d, _: {"tz_offset_sec": d.get("energy_offset_tz") or 0},
         # exclude sensor if unused artifacts in structure
         exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s)
         or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
@@ -1139,6 +1156,56 @@ SITE_SENSORS = [
             "dynamic_price_details" in (d.get("site_details") or {})
         ),
     ),
+    AnkerSolixSensorDescription(
+        key="solar_forecast_today",
+        translation_key="solar_forecast_today",
+        json_key="forecast_today",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            (d.get("energy_details") or {}).get("pv_forecast_details") or {}
+        ).get(jk)
+        or None,
+        attrib_fn=lambda d, _: {
+            "remain_today": (
+                fc := (d.get("energy_details") or {}).get("pv_forecast_details") or {}
+            ).get("remaining_today"),
+            "forecast_24h": fc.get("forecast_24h"),
+            "poll_time": fc.get("poll_time"),
+            "hourly_unit": fc.get("trend_unit"),
+            "forecast_hourly": list(fc.get("trend") or []),
+        },
+        exclude_fn=lambda s, d: not ({ApiCategories.site_price} - s),
+        force_creation_fn=lambda d: bool(
+            "pv_forecast_details" in (d.get("energy_details") or {})
+        ),
+        restore=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="solar_forecast_this_hour",
+        translation_key="solar_forecast_this_hour",
+        json_key="trend_this_hour",
+        unit_fn=lambda d, _: (
+            (d.get("energy_details") or {}).get("pv_forecast_details") or {}
+        ).get("trend_unit"),
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            (d.get("energy_details") or {}).get("pv_forecast_details") or {}
+        ).get(jk)
+        or None,
+        attrib_fn=lambda d, _: {
+            "hour_end": (
+                fc := (d.get("energy_details") or {}).get("pv_forecast_details") or {}
+            ).get("time_this_hour"),
+            "forecast_next_hour": fc.get("trend_next_hour"),
+        },
+        exclude_fn=lambda s, d: not ({ApiCategories.site_price} - s),
+        force_creation_fn=lambda d: bool(
+            "pv_forecast_details" in (d.get("energy_details") or {})
+        ),
+    ),
     # Following sensor delivers meaningless values if any, home_info charging_power reports same value as inverter generated_power?!?
     # AnkerSolixSensorDescription(
     #     # System charging power
@@ -1267,7 +1334,19 @@ SITE_SENSORS = [
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_production"),
-        },
+        }
+        # Add hourly production data if solar forecast possible for system
+        | (
+            {
+                "hourly_unit": (
+                    fc := (d.get("energy_details") or {}).get("pv_forecast_details")
+                    or {}
+                ).get("trend_unit"),
+                "produced_hourly": fc.get("produced_hourly"),
+            }
+            if "pv_forecast_details" in (d.get("energy_details") or {})
+            else {}
+        ),
         exclude_fn=lambda s, _: not (
             {
                 SolixDeviceType.INVERTER.value,
@@ -1909,9 +1988,9 @@ async def async_setup_entry(
                         )
                     )
                 ):
-                    if description.device_class == SensorDeviceClass.ENERGY:
-                        entity = AnkerSolixEnergySensor(
-                            coordinator, description, sn, entity_type
+                    if description.restore:
+                        entity = AnkerSolixRestoreSensor(
+                            coordinator, description, context, entity_type
                         )
                     else:
                         entity = AnkerSolixSensor(
@@ -1976,9 +2055,14 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "avg_tomorrow",
             "device_sn",
             "fittings",
-            "forecast",
+            "forecast_24h",
+            "forecast_hourly",
+            "forecast_next_hour",
+            "hour_end",
+            "hourly_unit",
             "inverter_info",
             "message",
+            "name",
             "network",
             "network_code",
             "percentage",
@@ -1986,7 +2070,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "poll_time",
             "price_calc",
             "price_time",
+            "produced_hourly",
             "rank",
+            "remain_today",
             "role_status",
             "runtime",
             "schedule",
@@ -1998,6 +2084,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "solar_sn",
             "sw_version",
             "trees",
+            "tz_offset_sec",
         }
     )
 
@@ -2402,6 +2489,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         prio = kwargs.get(CHARGE_PRIORITY_LIMIT)
                         # check if now is in given time range and ensure preset increase is limited by min interval
                         now = datetime.now().astimezone()
+                        # consider device timezone offset when checking for actual slot
+                        tz_offset = (self.coordinator.data.get(siteId) or {}).get(
+                            "energy_offset_tz"
+                        ) or 0
                         start_time.astimezone()
                         # get old device load, which is none for single solarbanks, use old system preset instead
                         old_dev = data.get("preset_device_output_power") or data.get(
@@ -2424,7 +2515,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             and check_load
                             and check_load > int(self._last_schedule_service_value)
                             and start_time.astimezone().time()
-                            <= now.time()
+                            <= (now + timedelta(seconds=tz_offset)).time()
                             < end_time.astimezone().time()
                             and now
                             < (
@@ -2688,10 +2779,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         return None
 
 
-class AnkerSolixEnergySensor(AnkerSolixSensor, RestoreSensor):
-    """Represents an energy sensor entity for Anker Solix site and device data."""
+class AnkerSolixRestoreSensor(AnkerSolixSensor, RestoreSensor):
+    """Represents an restore sensor entity for Anker Solix site and device data."""
 
-    _last_period: str | None = None
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixSensorDescription
 
@@ -2704,74 +2794,47 @@ class AnkerSolixEnergySensor(AnkerSolixSensor, RestoreSensor):
     ) -> None:
         """Pass coordinator to CoordinatorEntity."""
         super().__init__(coordinator, description, context, entity_type)
-        # Important to set last known value to None to not mess with long term stats
-        self._last_known_value = None
-
-    def schedule_midnight_reset(self, reset_sensor_value: bool = True):
-        """Schedule the reset function to run again at the next midnight."""
-        now = datetime.now().astimezone()
-        midnight = (
-            datetime.now()
-            .astimezone()
-            .replace(hour=0, minute=0, second=0, microsecond=0)
-        )
-        midnight = midnight + timedelta(days=1) if now > midnight else midnight
-        time_until_midnight = (midnight - datetime.now().astimezone()).total_seconds()
-
-        if reset_sensor_value:
-            self.reset_sensor_value()
-        self.hass.loop.call_later(time_until_midnight, self.schedule_midnight_reset)
-
-    def reset_sensor_value(self):
-        """Reset the sensor value."""
-        self._last_known_value = 0
-
-    @property
-    def native_value(self):
-        """Return the native value of the sensor."""
-        super_native_value = super().native_value
-        # For an energy sensor a value of 0 would mess up long term stats because of how total_increasing works
-        if super_native_value == 0.0:
-            LOGGER.debug(
-                "Returning last known value instead of 0.0 for %s to avoid resetting total_increasing counter",
-                self.name,
-            )
-            self._assumed_state = True
-            return self._last_known_value
-        self._last_known_value = super_native_value
-        self._assumed_state = False
-        return super_native_value
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes of the sensor."""
-        if self.entity_description.reset_at_midnight:
-            last_reset = None
-            if hasattr(self, "_attr_last_reset"):
-                last_reset = self._attr_last_reset.isoformat()
-            return {
-                LAST_PERIOD: self._last_period,
-                LAST_RESET: last_reset,
-            }
-        if (
-            self.coordinator
-            and (hasattr(self.coordinator, "data"))
-            and self._context_base in self.coordinator.data
-        ):
-            data = self.coordinator.data.get(self._context_base)
-            with suppress(ValueError, TypeError):
-                self._attr_extra_state_attributes = self.entity_description.attrib_fn(
-                    data, self.coordinator_context
-                )
-        return self._attr_extra_state_attributes
+        self._assumed_state = True
 
     async def async_added_to_hass(self) -> None:
-        """Call when entity about to be added to hass."""
+        """Load the last known state when added to hass."""
         await super().async_added_to_hass()
-
-        state = await self.async_get_last_sensor_data()
-        if state:
-            self._last_known_value = state.native_value
-
-        if self.entity_description.reset_at_midnight:
-            self.schedule_midnight_reset(reset_sensor_value=False)
+        if (last_state := await self.async_get_last_state()) and (
+            last_data := await self.async_get_last_sensor_data()
+        ):
+            # handle special entity restore actions for customized attributes even if old state was unknown
+            if self._attribute_name in ["solar_forecast_today"]:
+                attribute = "forecast_hourly"
+                if (
+                    attr_value := last_state.attributes.get(attribute)
+                ) and self.extra_state_attributes.get(attribute) != attr_value:
+                    LOGGER.info(
+                        "Restored state attribute '%s' of entity '%s' to: %s",
+                        attribute,
+                        self.entity_id,
+                        attr_value,
+                    )
+                    self.coordinator.client.api.customizeCacheId(
+                        id=self.coordinator_context,
+                        key="pv_forecast_details",
+                        value={"trend": attr_value},
+                    )
+                    await self.coordinator.async_refresh_data_from_apidict(delayed=True)
+            elif (
+                last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+                and self._native_value is not None
+            ):
+                # set the customized value if it was modified
+                if self._native_value != last_data.native_value:
+                    self._native_value = last_data.native_value
+                    LOGGER.info(
+                        "Restored state value of entity '%s' to: %s",
+                        self.entity_id,
+                        self._native_value,
+                    )
+                    self.coordinator.client.api.customizeCacheId(
+                        id=self.coordinator_context,
+                        key=self.entity_description.json_key,
+                        value=str(last_data.native_value),
+                    )
+                    await self.coordinator.async_refresh_data_from_apidict(delayed=True)

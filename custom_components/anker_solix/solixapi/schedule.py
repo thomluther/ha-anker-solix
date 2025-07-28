@@ -160,8 +160,8 @@ async def get_device_parm(
 ) -> dict:
     r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId responded in the site_list query.
 
-    Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, 9 for enforced SB1 schedules when in coupled SB2 system, but can be modified if necessary.
-    SB3 also supports 12 and 13 to list various options/settings for Smart mode and dynamic tariff plans
+    Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, 9 for enforced SB1 schedules when in coupled SB2 system (9 no longer supported since Jul 2025?), but can be modified if necessary.
+    SB3 also supports 12 and 13 to list various options/settings for Smart mode and dynamic tariff plans.
     Example data for provided site_id with param_type 4 for SB1:
     {"param_data": "{\"ranges\":[
         {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
@@ -184,6 +184,20 @@ async def get_device_parm(
             \"charge_priority\":0,\"power_setting_mode\":null,\"device_power_loads\":null,\"priority_discharge_switch\":0}],
         \"min_load\":0,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":0,\"display_advanced_mode\":0,\"advanced_mode_min_load\":0,
         \"is_show_install_mode\":1,\"display_priority_discharge_tips\":0,\"priority_discharge_upgrade_devices\":\"\",\"default_home_load\":200,\"is_show_priority_discharge\":0}"
+    Example data for provided site_id with param_type 12 for SB3 system:
+    {"param_data":"{\"price_type\":\"dynamic\",
+        \"use_time\":[{\"sea\":{\"start_month\":1,\"end_month\":12},\"weekday\":[
+            {\"start_time\":0,\"end_time\":18,\"type\":3},{\"start_time\":18,\"end_time\":21,\"type\":1},{\"start_time\":21,\"end_time\":24,\"type\":3}],
+            \"weekend\":[{\"start_time\":0,\"end_time\":18,\"type\":3},{\"start_time\":18,\"end_time\":21,\"type\":1},{\"start_time\":21,\"end_time\":24,\"type\":3}],
+            \"weekday_price\":[{\"price\":\"0.2\",\"type\":3},{\"price\":\"0.4\",\"type\":1}],
+            \"weekend_price\":[{\"price\":\"0.2\",\"type\":3},{\"price\":\"0.4\",\"type\":1}],
+            \"unit\":\"\u20ac\",\"is_same\":false}],
+        \"dynamic_price\":{\"country\":\"DE\",\"company\":\"Nordpool\",\"area\":\"GER\",\"pct\":null,\"currency\":\"\u20ac\",\"adjust_coef\":null},
+        \"fixed_price\":{\"price\":\"0.4\",\"unit\":\"\u20ac\",\"accuracy\":2},
+        \"time_slot_data\":null}"}
+    Example data for provided site_id with param_type 13 for SB3 system:
+    {"param_data":"{\"step\":5,\"ai_ems\":null,\"max_load\":1200,\"min_load\":null,\"data_auth\":true,\"mode_type\":null,
+        \"blend_plan\":null,\"custom_rate_plan\":null,\"default_home_load\":null}"}
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None
@@ -534,13 +548,16 @@ async def set_home_load(  # noqa: C901
         set_slot.appliance_load = min(max(set_slot.appliance_load, min_load), max_load)
 
     new_ranges = []
+    # Consider time zone shifts of HA server to modify correct device time slot
+    tz_offset = (self.sites.get(siteId) or {}).get("energy_offset_tz") or 0
+    now = datetime.now() + timedelta(seconds=tz_offset)
     # update individual values in current slot or insert SolarbankTimeslot and adjust adjacent slots
     if not set_slot:
-        now = datetime.now().time().replace(microsecond=0)
+        now_time = now.time().replace(microsecond=0)
         last_time = datetime.strptime("00:00", "%H:%M").time()
         # set now to new daytime if close to end of day to determine which slot to modify
-        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-            now = datetime.strptime("00:00", "%H:%M").time()
+        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+            now_time = datetime.strptime("00:00", "%H:%M").time()
         next_start = None
         split_slot: dict = {}
         for idx, slot in enumerate(ranges, start=1):
@@ -562,8 +579,8 @@ async def set_home_load(  # noqa: C901
                     not insert_slot
                     and pending_now_update
                     and (
-                        last_time <= now < start_time
-                        or (idx == len(ranges) and now >= end_time)
+                        last_time <= now_time < start_time
+                        or (idx == len(ranges) and now_time >= end_time)
                     )
                 ):
                     # Use daily end time if now after last slot
@@ -571,7 +588,7 @@ async def set_home_load(  # noqa: C901
                     insert.update(
                         {
                             "start_time": last_time.isoformat(timespec="minutes")
-                            if now < start_time
+                            if now_time < start_time
                             else end_time.isoformat(timespec="minutes")
                         }
                     )
@@ -580,7 +597,7 @@ async def set_home_load(  # noqa: C901
                             "end_time": (
                                 start_time.isoformat(timespec="minutes")
                             ).replace("23:59", "24:00")
-                            if now < start_time
+                            if now_time < start_time
                             else "24:00"
                         }
                     )
@@ -669,7 +686,7 @@ async def set_home_load(  # noqa: C901
                         )
 
                     # if gap is before current slot, insert now
-                    if now < start_time:
+                    if now_time < start_time:
                         new_ranges.append(insert)
                         last_time = start_time
                         insert = {}
@@ -973,7 +990,7 @@ async def set_home_load(  # noqa: C901
                         )
                     next_start = None
 
-                elif not insert_slot and (all_day or start_time <= now < end_time):
+                elif not insert_slot and (all_day or start_time <= now_time < end_time):
                     # update required parameters in current slot or all slots
                     # Get other device loads if device load is provided
                     dev_other = 0
@@ -1046,7 +1063,7 @@ async def set_home_load(  # noqa: C901
                             }
                         )
                     # clear flag for pending parameter update for actual time
-                    if start_time <= now < end_time:
+                    if start_time <= now_time < end_time:
                         pending_now_update = False
 
             if (
@@ -1359,11 +1376,12 @@ async def set_sb2_home_load(  # noqa: C901
     new_rate_plan = []
 
     # identify week days to be used, default to todays weekday or all
+    # Consider time zone shifts
+    tz_offset = (self.sites.get(siteId) or {}).get("energy_offset_tz") or 0
+    now = datetime.now() + timedelta(seconds=tz_offset)
     days: list[str] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
     weekdays = (
-        {int(datetime.now().strftime("%w"))}
-        if rate_plan and not delete_plan
-        else set(range(7))
+        {int(now.strftime("%w"))} if rate_plan and not delete_plan else set(range(7))
     )
     # set flag to match weekdays with current plan if no weekdays provided
     match_plan = True
@@ -1475,11 +1493,11 @@ async def set_sb2_home_load(  # noqa: C901
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs} and (
         preset is not None or pending_insert
     ):
-        now = datetime.now().time().replace(microsecond=0)
+        now_time = now.time().replace(microsecond=0)
         last_time = datetime.strptime("00:00", "%H:%M").time()
         # set now to new daytime if close to end of day to determine which slot to modify
-        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-            now = datetime.strptime("00:00", "%H:%M").time()
+        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+            now_time = datetime.strptime("00:00", "%H:%M").time()
         next_start = None
         split_slot: dict = {}
         for idx, slot in enumerate(ranges, start=1):
@@ -1501,8 +1519,8 @@ async def set_sb2_home_load(  # noqa: C901
                     not insert_slot
                     and pending_now_update
                     and (
-                        last_time <= now < start_time
-                        or (idx == len(ranges) and now >= end_time)
+                        last_time <= now_time < start_time
+                        or (idx == len(ranges) and now_time >= end_time)
                     )
                 ):
                     # Use daily end time if now after last slot
@@ -1510,7 +1528,7 @@ async def set_sb2_home_load(  # noqa: C901
                     insert.update(
                         {
                             "start_time": last_time.isoformat(timespec="minutes")
-                            if now < start_time
+                            if now_time < start_time
                             else end_time.isoformat(timespec="minutes")
                         }
                     )
@@ -1519,7 +1537,7 @@ async def set_sb2_home_load(  # noqa: C901
                             "end_time": (
                                 start_time.isoformat(timespec="minutes")
                             ).replace("23:59", "24:00")
-                            if now < start_time
+                            if now_time < start_time
                             else "24:00"
                         }
                     )
@@ -1540,7 +1558,7 @@ async def set_sb2_home_load(  # noqa: C901
                     )
 
                     # if gap is before current slot, insert now
-                    if now < start_time:
+                    if now_time < start_time:
                         new_ranges.append(insert)
                         last_time = start_time
                         insert: dict = {}
@@ -1668,7 +1686,7 @@ async def set_sb2_home_load(  # noqa: C901
                         )
                     next_start = None
 
-                elif not insert_slot and (start_time <= now < end_time):
+                elif not insert_slot and (start_time <= now_time < end_time):
                     # update required parameters in current slot
                     # adjust appliance load
                     if preset is not None:
@@ -1684,7 +1702,7 @@ async def set_sb2_home_load(  # noqa: C901
                             }
                         )
                     # clear flag for pending parameter update for actual time
-                    if start_time <= now < end_time:
+                    if start_time <= now_time < end_time:
                         pending_now_update = False
 
             if (
@@ -1825,7 +1843,9 @@ async def set_sb2_home_load(  # noqa: C901
     )
     new_price_type: str | None = None
     provider = (
-        SolixPriceProvider(provider=p) if (p := schedule.get("dynamic_price") or {}) else None
+        SolixPriceProvider(provider=p)
+        if (p := schedule.get("dynamic_price") or {})
+        else None
     )
     if mode_type in iter(SolarbankUsageMode) and price_type:
         if (
@@ -1919,7 +1939,8 @@ async def set_sb2_ac_charge(
         ).get("param_data") or {}
 
     rate_plan_name = SolarbankRatePlan.backup
-    dtn = datetime.now().replace(second=0, microsecond=0).astimezone()
+    # Consider time zone shifts of device, timestamp conversion is absolute and timezone aware
+    now = datetime.now().replace(second=0, microsecond=0).astimezone()
     # create new structure if none exists yet or get old times if not provided for validation
     if not (new_rate_plan := schedule.get(rate_plan_name) or {}):
         new_rate_plan["ranges"] = []
@@ -1939,10 +1960,10 @@ async def set_sb2_ac_charge(
     else:
         # switch provided as parameter, first ensure start time is set correctly if backup range will be activated
         if backup_switch:
-            backup_start = backup_start or dtn
-            if not new_rate_plan.get("switch") and (backup_end or dtn) <= dtn:
+            backup_start = backup_start or now
+            if not new_rate_plan.get("switch") and (backup_end or now) <= now:
                 # switch will be changed to enabled, ensure start time is at least now if now passed a previous interval
-                backup_start = dtn
+                backup_start = now
         new_rate_plan["switch"] = backup_switch
 
     # make sure backup start and end time are valid and merged with optional parameters before applying them
@@ -2225,19 +2246,22 @@ async def set_sb2_use_time(  # noqa: C901
         )
         return False
     # set parameters for the lookup
+    # Consider time zone shifts
+    tz_offset = (self.sites.get(siteId) or {}).get("energy_offset_tz") or 0
+    now = datetime.now() + timedelta(seconds=tz_offset)
     find_month = (
         start_month
         if start_month is not None
         else end_month
         if end_month is not None
-        else datetime.now().month
+        else now.month
     )
     find_hour = (
         start_hour
         if start_hour is not None
         else end_hour - 1
         if end_hour is not None
-        else datetime.now().hour
+        else now.hour
     )
 
     # set parameters for the deletion scope, starting from smallest to largest
@@ -2257,7 +2281,7 @@ async def set_sb2_use_time(  # noqa: C901
     # set defaults if needed
     def_day_type = (
         SolixDayTypes.WEEKDAY
-        if 0 < int(datetime.now().strftime("%w")) < 6
+        if 0 < int(now.strftime("%w")) < 6
         else SolixDayTypes.WEEKEND
     )
     def_currency = (

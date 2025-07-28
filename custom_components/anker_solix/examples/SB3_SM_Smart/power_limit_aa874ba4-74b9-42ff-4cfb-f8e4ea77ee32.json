@@ -1,0 +1,26 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32",
+    "power_unit": "kwh",
+    "legal_power_limit": 1200,
+    "device_info": [
+      {
+        "device_pn": "A17C5",
+        "device_sn": "200Z24CCLUIX9A9H9",
+        "device_name": "Solarbank 3",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+        "power_limit": 0,
+        "power_limit_option": null,
+        "power_limit_option_real": null,
+        "status": 0
+      }
+    ],
+    "current_power": 0,
+    "all_power_limit": 0,
+    "ae100_info": null,
+    "parallel_type": "Single"
+  },
+  "trace_id": "ee01cacbb89d4a8bc4bf1ca38daedf3e"
+}

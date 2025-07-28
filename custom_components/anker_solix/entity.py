@@ -25,7 +25,10 @@ class AnkerSolixPicturePath:
     PPS: str = str(Path(IMAGEPATH) / "PPS_F1200_A1771_pub.png")
     POWERPANEL: str = str(Path(IMAGEPATH) / "Power_Panel_A17B1.png")
     HES: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
-    SOLARBANK_PPS: str = str(Path(IMAGEPATH) / "Solarbank_PPS_A1782.png")
+    SOLARBANK_PPS: str = str(Path(IMAGEPATH) / "Solarbank_PPS_F3000_A1782.png")
+    POWERCOOLER: str = str(Path(IMAGEPATH) / "Everfrost_2_40L_A17A4_pub.png")
+    CHARGER: str = str(Path(IMAGEPATH) / "Charger_250W_A2345_pub.png")
+    EV_CHARGER: str = str(Path(IMAGEPATH) / "EV_Charger_A5191_pub.png")
 
     A17B1: str = str(Path(IMAGEPATH) / "Power_Panel_A17B1.png")
 
@@ -41,6 +44,7 @@ class AnkerSolixPicturePath:
 
     A17X7: str = str(Path(IMAGEPATH) / "Smartmeter_A17X7_pub.png")
     A17X7US: str = str(Path(IMAGEPATH) / "Smartmeter_A17X7US.png")
+    AE1R0: str = str(Path(IMAGEPATH) / "Smartmeter_AE1R0_pub.png")
     SHEM3: str = str(Path(IMAGEPATH) / "Shelly_Pro_3EM.png")
     SHEMP3: str = str(Path(IMAGEPATH) / "Shelly_Pro_3EM.png")
 
@@ -63,11 +67,12 @@ class AnkerSolixPicturePath:
     A1772: str = str(Path(IMAGEPATH) / "PPS_F1500_A1772_pub.png")
     A1780: str = str(Path(IMAGEPATH) / "PPS_F2000_A1780_pub.png")
     A1781: str = str(Path(IMAGEPATH) / "PPS_F2600_A1781_pub.png")
+    A1782: str = str(Path(IMAGEPATH) / "Solarbank_PPS_F3000_A1782.png")
     A1790: str = str(Path(IMAGEPATH) / "PPS_F3800_A1790_pub.png")
     A1790P: str = str(Path(IMAGEPATH) / "PPS_F3800_A1790P_pub.png")
     A17B2: str = str(Path(IMAGEPATH) / "Fitting_A17B2_pub.png")
-
-    A1782: str = str(Path(IMAGEPATH) / "Solarbank_PPS_A1782.png")
+    A17D0: str = str(Path(IMAGEPATH) / "Fitting_A17D0_pub.png")
+    A17D4: str = str(Path(IMAGEPATH) / "Fitting_A17D4_pub.png")
 
     A17A0: str = str(Path(IMAGEPATH) / "PowerCooler30_A17A0_pub.png")
     A17A1: str = str(Path(IMAGEPATH) / "PowerCooler40_A17A1_pub.png")
@@ -83,6 +88,8 @@ class AnkerSolixPicturePath:
     A5150: str = str(Path(IMAGEPATH) / "HES_A5150_pub.png")
     A5341: str = str(Path(IMAGEPATH) / "HES_A5341_pub.png")
     A5450: str = str(Path(IMAGEPATH) / "HES_A5450_pub.png")
+
+    A5191: str = str(Path(IMAGEPATH) / "EV_Charger_A5191_pub.png")
 
     A2345: str = str(Path(IMAGEPATH) / "Charger_250W_A2345_pub.png")
     A91B2: str = str(Path(IMAGEPATH) / "Charger_240W_A91B2_pub.png")

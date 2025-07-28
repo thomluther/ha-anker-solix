@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "UC5INFAQGH50OS",
+    "attributes": {
+      "rssi": ""
+    }
+  },
+  "trace_id": "ddded1ab0abeb9f7f04682b61023cc8a"
+}

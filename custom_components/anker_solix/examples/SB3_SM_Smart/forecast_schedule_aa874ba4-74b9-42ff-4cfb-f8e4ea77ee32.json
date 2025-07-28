@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "status": 0,
+    "remain_energy": null,
+    "negative_price": null,
+    "push_time": "18/07/2025 13:23:11"
+  },
+  "trace_id": "9055517ce1d39d2bbdc2ec6a1c86d0e9"
+}

@@ -1,0 +1,403 @@
+{
+  "200Z24CCLUIX9A9H9": {
+    "device_sn": "200Z24CCLUIX9A9H9",
+    "type": "solarbank",
+    "site_id": "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32",
+    "is_admin": true,
+    "device_pn": "A17C5",
+    "battery_capacity": "2688",
+    "generation": 3,
+    "battery_soc": "15",
+    "battery_energy": "403",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "detection",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "534",
+    "output_power": "534",
+    "sub_package_num": 0,
+    "output_cutoff_data": 0,
+    "bat_charge_power": "0",
+    "err_code": 0,
+    "alias": "Solarbank 3",
+    "name": "Solarbank 3 E2700 Pro",
+    "set_output_power": "200",
+    "set_system_output_power": "200",
+    "data_valid": true,
+    "solarbank_count": 1,
+    "solar_power_1": "252",
+    "solar_power_2": "282",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "to_home_load": "0",
+    "other_input_power": "0",
+    "grid_to_battery_power": "0",
+    "pei_heating_power": "0",
+    "bt_ble_mac": "F07C77235DAD",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.0.18",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-70",
+    "intgr_device": null,
+    "auto_upgrade": false,
+    "is_ota_update": true,
+    "ota_version": "v1.0.0.24",
+    "ota_children": [
+      {
+        "device_type": "A17C5_esp32",
+        "need_update": true,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.0.5"
+      },
+      {
+        "device_type": "A17C5_100Ah",
+        "need_update": true,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.2.6"
+      },
+      {
+        "device_type": "A17C5_mcu",
+        "need_update": true,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.0.24"
+      }
+    ],
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "60",
+    "is_support_wired": false,
+    "wired_connected": false,
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "power_cutoff": 10,
+    "schedule": {
+      "mode_type": 7,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 200
+            }
+          ]
+        }
+      ],
+      "blend_plan": [],
+      "use_time": [
+        {
+          "sea": {
+            "start_month": 1,
+            "end_month": 3
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        },
+        {
+          "sea": {
+            "start_month": 4,
+            "end_month": 9
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        },
+        {
+          "sea": {
+            "start_month": 10,
+            "end_month": 12
+          },
+          "weekday": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekend": [
+            {
+              "start_time": 0,
+              "end_time": 18,
+              "type": 3
+            },
+            {
+              "start_time": 18,
+              "end_time": 21,
+              "type": 1
+            },
+            {
+              "start_time": 21,
+              "end_time": 24,
+              "type": 3
+            }
+          ],
+          "weekday_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "weekend_price": [
+            {
+              "price": "0.2",
+              "type": 3
+            },
+            {
+              "price": "0.4",
+              "type": 1
+            }
+          ],
+          "unit": "\u20ac",
+          "is_same": false
+        }
+      ],
+      "manual_backup": {
+        "ranges": [
+          {
+            "start_time": 1751840220,
+            "end_time": 1751851020
+          }
+        ],
+        "switch": false
+      },
+      "reserved_soc": 0,
+      "dynamic_price": {
+        "country": "DE",
+        "company": "Nordpool",
+        "area": "GER",
+        "pct": null,
+        "currency": "\u20ac",
+        "adjust_coef": null
+      },
+      "ai_ems": {
+        "enable": true,
+        "status": 5
+      },
+      "time_slot": null,
+      "schedule_mode": {
+        "last_select_mode": 8
+      },
+      "default_home_load": 200,
+      "max_load": 1200,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_usage_mode": 7,
+    "preset_system_output_power": null,
+    "preset_manual_backup_start": 1751840220,
+    "preset_manual_backup_end": 1751851020,
+    "preset_backup_option": false,
+    "preset_tariff": 3,
+    "preset_tariff_price": "0.2",
+    "preset_tariff_currency": "\u20ac"
+  },
+  "UC5INFAQGH50OS": {
+    "device_sn": "UC5INFAQGH50OS",
+    "type": "smartmeter",
+    "site_id": "aa874ba4-74b9-42ff-4cfb-f8e4ea77ee32",
+    "is_admin": true,
+    "device_pn": "SHEMP3",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "alias": "Netzstrom",
+    "name": "Netzstrom",
+    "data_valid": true,
+    "photovoltaic_to_grid_power": "0",
+    "grid_to_home_power": "816",
+    "grid_status": "0",
+    "grid_status_desc": "ok",
+    "wifi_online": true,
+    "charge": false,
+    "bws_surplus": "0",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "0",
+    "intgr_device": {
+      "integrator": "shelly",
+      "access_group": 2
+    },
+    "is_ota_update": false,
+    "ota_version": "",
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "",
+    "is_support_wired": false,
+    "wired_connected": false
+  },
+  "M55A0NSED232": {
+    "device_sn": "M55A0NSED232",
+    "is_admin": true,
+    "device_pn": "A5143",
+    "type": "inverter",
+    "bt_ble_mac": "ABFBFFAED71B",
+    "name": "MI80 Microinverter(BLE)",
+    "alias": "MI80 Microinverter (BLE)",
+    "wifi_online": false,
+    "wifi_name": "wifi-network-1",
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "V1.0.0",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "",
+    "intgr_device": null,
+    "is_ota_update": false,
+    "ota_version": "",
+    "site_id": "virtual-M55A0NSED232",
+    "generate_power": "0",
+    "status": "0",
+    "status_desc": "offline",
+    "preset_inverter_limit": "800"
+  }
+}
