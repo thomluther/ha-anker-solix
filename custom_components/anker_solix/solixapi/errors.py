@@ -27,6 +27,18 @@ class RequestError(AnkerSolixError):
     """Request error."""
 
 
+class ItemNotFoundError(RequestError):
+    """Requested item not found error."""
+
+
+class ItemExistsError(RequestError):
+    """Duplicate item error."""
+
+
+class ItemLimitExceededError(RequestError):
+    """Item limit exceeded error."""
+
+
 class BusyError(AnkerSolixError):
     """Busy error."""
 
@@ -86,6 +98,7 @@ ERRORS: dict[int, type[AnkerSolixError]] = {
     999: ServerError,
     10000: RequestError,
     10003: RequestError,
+    10004: ItemNotFoundError,
     10007: RequestError,
     21105: BusyError,
     26050: VerifyCodeError,
@@ -99,6 +112,8 @@ ERRORS: dict[int, type[AnkerSolixError]] = {
     26108: InvalidCredentialsError,
     26156: InvalidCredentialsError,
     26161: RequestError,
+    31001: ItemExistsError,
+    31003: ItemLimitExceededError,
     100053: RetryExceeded,
 }
 

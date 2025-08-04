@@ -38,7 +38,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.1.1.0"
+VERSION: str = "3.2.0.0"
 
 
 class AnkerSolixApiExport:
@@ -267,12 +267,15 @@ class AnkerSolixApiExport:
                     self.client.nickname,
                     filename := f"{API_FILEPREFIXES['api_account']}.json",
                 )
-                # update account dictionary with number of requests during export
-                self.api_power._update_account()  # noqa: SLF001
-                # Randomizing dictionary for account data
+                # update account dictionary with number of requests during export and randomized email
+                self.api_power._update_account(
+                    {"email": self._randomize(self.api_power.apisession.email, "email")}
+                )  # noqa: SLF001
+                # Skip randomizing dictionary for account data to prevent double randomizaiton of other account fields
                 await self._export(
                     Path(self.export_path) / filename,
                     self.api_power.account,
+                    skip_randomize=True,
                 )
                 # Print stats
                 self._logger.info(
@@ -500,6 +503,33 @@ class AnkerSolixApiExport:
                         "device_sn": "",
                     },
                 )
+            # get EV brands and extract attributes of a random model
+            self._logger.info("Get EV brands and attributes of a random model...")
+            response = await self.query(
+                endpoint=API_ENDPOINTS["get_vehicle_brands"],
+                filename=f"{API_FILEPREFIXES['get_vehicle_brands']}.json",
+            )
+            if items := ((response or {}).get("data") or {}).get("brand_list"):
+                brand = str(random.choice(items))
+                response = await self.query(
+                    endpoint=API_ENDPOINTS["get_vehicle_brand_models"],
+                    filename=f"{API_FILEPREFIXES['get_vehicle_brand_models']}_{brand.replace(' ', '_')}.json",
+                    payload={"brand_name": brand},
+                )
+                if items := ((response or {}).get("data") or {}).get("model_list"):
+                    model = str(random.choice(items))
+                    response = await self.query(
+                        endpoint=API_ENDPOINTS["get_vehicle_model_years"],
+                        filename=f"{API_FILEPREFIXES['get_vehicle_model_years']}_{brand.replace(' ', '_')}_{model.replace(' ', '_')}.json",
+                        payload={"brand_name": brand, "model_name": model},
+                    )
+                    if items := ((response or {}).get("data") or {}).get("year_list"):
+                        year = random.choice(items)
+                        await self.query(
+                            endpoint=API_ENDPOINTS["get_vehicle_year_attributes"],
+                            filename=f"{API_FILEPREFIXES['get_vehicle_year_attributes']}_{brand.replace(' ', '_')}_{model.replace(' ', '_')}_{year!s}.json",
+                            payload={"brand_name": brand, "model_name": model, "productive_year": year},
+                        )
 
             # loop through all found sites
             for siteId in self.api_power.sites:
@@ -579,8 +609,25 @@ class AnkerSolixApiExport:
                 endpoint=API_ENDPOINTS["get_shelly_status"],
                 filename=f"{API_FILEPREFIXES['get_shelly_status']}.json",
                 # use real token from previous response for query
-                payload={"token": (response or {}).get("data", {}).get("token", "")},
+                payload={"token": ((response or {}).get("data") or {}).get("token", "")},
             )
+            self._logger.info("Get user vehicle list...")
+            response = await self.query(
+                endpoint=API_ENDPOINTS["get_user_vehicles"],
+                filename=f"{API_FILEPREFIXES['get_user_vehicles']}.json",
+            )
+            # use real vehicle_id from previous response for query
+            self._logger.info("Get details for vehicle IDs...")
+            for vehicleId in [
+                v.get("vehicle_id")
+                for v in ((response or {}).get("data") or {}).get("vehicle_list") or []
+            ]:
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_user_vehicle_details"],
+                    filename=f"{API_FILEPREFIXES['get_user_vehicle_details']}_{self._randomize(vehicleId, 'vehicle_id')}.json",
+                    payload={"vehicle_id": vehicleId},
+                    replace=[(vehicleId, "<vehicleId>")],
+                )
 
             # loop through all found sites
             for siteId, site in self.api_power.sites.items():
@@ -839,6 +886,74 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                     admin=admin,
                 )
+                self._logger.info("Exporting device tamper records...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_tamper_records"],
+                    filename=f"{API_FILEPREFIXES['get_tamper_records']}_{self._randomize(sn, '_sn')}.json",
+                    payload={
+                        "device_sn": sn,
+                        "page_num": 0,
+                        "page_size": 10,
+                    },
+                    replace=[(sn, "<deviceSn>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting device RFID cards...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_rfid_cards"],
+                    filename=f"{API_FILEPREFIXES['get_device_rfid_cards']}_{self._randomize(sn, '_sn')}.json",
+                    payload={"device_sn": sn},
+                    replace=[(sn, "<deviceSn>")],
+                    admin=admin,
+                )
+                self._logger.info("Exporting device group...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_group"],
+                    filename=f"{API_FILEPREFIXES['get_device_group']}_{self._randomize(sn, '_sn')}.json",
+                    payload={"device_sn": sn},
+                    replace=[(sn, "<deviceSn>")],
+                    admin=admin,
+                )
+
+                # export EV charger status and statistics
+                if device.get("type") == api.SolixDeviceType.EV_CHARGER.value:
+                    self._logger.info("Exporting EV charger order statistics...")
+                    # TODO: Update order status types once known, may have to be limited for time range
+                    for stat_type in ["week", "all"]:
+                        await self.query(
+                            endpoint=API_ENDPOINTS["get_device_charge_order_stats"],
+                            filename=f"{API_FILEPREFIXES['get_device_charge_order_stats']}_{'today' if stat_type == 'week' else stat_type}_{self._randomize(sn, '_sn')}.json",
+                            payload={
+                                "device_sn": sn,
+                                "date_type": stat_type,
+                                "start_date": datetime.today().strftime("%Y-%m-%d")
+                                if stat_type == "week"
+                                else "",
+                                "end_date": datetime.today().strftime("%Y-%m-%d")
+                                if stat_type == "week"
+                                else "",
+                            },
+                            replace=[(sn, "<deviceSn>")],
+                        )
+                    self._logger.info("Exporting EV charger order statistics list...")
+                    for stat_type in [1]:
+                        # TODO: Update order status types once known, may have to be limited for time range
+                        await self.query(
+                            endpoint=API_ENDPOINTS[
+                                "get_device_charge_order_stats_list"
+                            ],
+                            filename=f"{API_FILEPREFIXES['get_device_charge_order_stats_list']}_{stat_type!s}_{self._randomize(sn, '_sn')}.json",
+                            payload={
+                                "device_sn": sn,
+                                "date_type": "all",
+                                "start_date": "",
+                                "end_date": "",
+                                "order_status": 1,
+                                "page": 0,
+                                "page_size": 10,
+                            },
+                            replace=[(sn, "<deviceSn>")],
+                        )
 
                 # export device pv status and statistics for inverters
                 if device.get("type") == api.SolixDeviceType.INVERTER.value:
@@ -1171,7 +1286,7 @@ class AnkerSolixApiExport:
                 if is_hes:
                     has_hes = True
                 self._logger.info("Exporting HES monetary units...")
-                response = await self.query(
+                await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_monetary_units"],
                     filename=f"{API_FILEPREFIXES['hes_get_monetary_units']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"siteId": siteId},
@@ -1179,7 +1294,7 @@ class AnkerSolixApiExport:
                 )
                 # Following will show sensitive information and addresses
                 # self._logger.info("Exporting HES install info...")
-                # response = await self.query(
+                # await self.query(
                 #     endpoint=API_HES_SVC_ENDPOINTS["get_install_info"],
                 #     filename=f"{API_FILEPREFIXES['hes_get_install_info']}_{self._randomize(siteId,'site_id')}.json",
                 #     payload={"siteId": siteId},
@@ -1231,44 +1346,52 @@ class AnkerSolixApiExport:
                         "Exporting HES site profit data for %s...",
                         stat_type.upper(),
                     )
-                    response = await self.query(
+                    await self.query(
                         endpoint=API_HES_SVC_ENDPOINTS["get_system_profit"],
                         filename=f"{API_FILEPREFIXES['hes_get_system_profit']}_{stat_type}_{self._randomize(siteId, 'site_id')}.json",
                         payload={
                             "siteId": siteId,
                             "dateType": stat_type,
-                            "start": datetime.today().strftime("%Y-%m-%d") if stat_type == "day" else datetime.today().strftime("%Y"),
+                            "start": datetime.today().strftime("%Y-%m-%d")
+                            if stat_type == "day"
+                            else datetime.today().strftime("%Y"),
                         },
                         replace=[(siteId, "<siteId>")],
                     )
                 self._logger.info("Exporting HES device info...")
-                response = await self.query(
+                await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_hes_dev_info"],
                     filename=f"{API_FILEPREFIXES['hes_get_hes_dev_info']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"siteId": siteId},
                     replace=[(siteId, "<siteId>")],
                 )
+                self._logger.info("Exporting HES standalone EV chargers...")
+                await self.query(
+                    endpoint=API_HES_SVC_ENDPOINTS["get_evcharger_standalone"],
+                    filename=f"{API_FILEPREFIXES['hes_get_evcharger_standalone']}.json",
+                    payload={},
+                )
 
                 # Export site infos requiring owner accounts
-                # Following will show sensitive information and addresses of installer
-                # self._logger.info("Exporting HES installer info...")
-                # response = await self.query(
-                #     endpoint=API_HES_SVC_ENDPOINTS["get_installer_info"],
-                #     filename=f"{API_FILEPREFIXES['hes_get_installer_info']}_{self._randomize(siteId,'site_id')}.json",
-                #     payload={"siteIds": [siteId], "siteId": siteId},
-                #     replace=[(siteId, "<siteId>")],
-                #     admin=admin,
-                # )
                 self._logger.info("Exporting HES system running time...")
-                response = await self.query(
+                await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_system_running_time"],
                     filename=f"{API_FILEPREFIXES['hes_get_system_running_time']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"siteId": siteId},
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
+                # Following will show sensitive information and addresses of installer
+                # self._logger.info("Exporting HES installer info...")
+                # await self.query(
+                #     endpoint=API_HES_SVC_ENDPOINTS["get_installer_info"],
+                #     filename=f"{API_FILEPREFIXES['hes_get_installer_info']}_{self._randomize(siteId,'site_id')}.json",
+                #     payload={"siteIds": [siteId], "siteId": siteId},
+                #     replace=[(siteId, "<siteId>")],
+                #     admin=admin,
+                # )
                 self._logger.info("Exporting HES MI layout...")
-                response = await self.query(
+                await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_mi_layout"],
                     filename=f"{API_FILEPREFIXES['hes_get_mi_layout']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"siteId": siteId},
@@ -1276,7 +1399,7 @@ class AnkerSolixApiExport:
                     admin=admin,
                 )
                 self._logger.info("Exporting HES connection net tips...")
-                response = await self.query(
+                await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_conn_net_tips"],
                     filename=f"{API_FILEPREFIXES['hes_get_conn_net_tips']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"siteId": siteId},
@@ -1284,7 +1407,7 @@ class AnkerSolixApiExport:
                     admin=admin,
                 )
                 self._logger.info("Exporting HES device data...")
-                response = await self.query(
+                await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["report_device_data"],
                     filename=f"{API_FILEPREFIXES['hes_report_device_data']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"siteIds": [siteId]},
@@ -1330,15 +1453,31 @@ class AnkerSolixApiExport:
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
 
-                # run only for hes devices for site owner
+                # queries for HES devices
                 if device.get("type") == api.SolixDeviceType.HES.value:
                     self._logger.info("Exporting HES device wifi info...")
+                    # works only for site owners
                     await self.query(
                         endpoint=API_HES_SVC_ENDPOINTS["get_wifi_info"],
                         filename=f"{API_FILEPREFIXES['hes_get_wifi_info']}_{self._randomize(sn, '_sn')}.json",
                         payload={"sn": sn},
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                        admin=admin,
                     )
+                # queries for EV charger devices
+                elif device.get("type") == api.SolixDeviceType.EV_CHARGER.value:
+                    self._logger.info("Exporting HES EV charger station info...")
+                    # get various feature types
+                    for stat_type in [1, 2]:
+                        await self.query(
+                            endpoint=API_HES_SVC_ENDPOINTS[
+                                "get_evcharger_station_info"
+                            ],
+                            filename=f"{API_FILEPREFIXES['hes_get_evcharger_station_info']}_{stat_type!s}_{self._randomize(sn, '_sn')}.json",
+                            payload={"evChargerSn": sn, "featuretype": stat_type},
+                            replace=[(sn, "<deviceSn>")],
+                            admin=admin,
+                        )
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
@@ -1449,6 +1588,9 @@ class AnkerSolixApiExport:
                     "mainSn",
                     "site_id",
                     "station_id",
+                    "user_id",
+                    "member_id",
+                    "vehicle_id",
                     "trace_id",
                     "bt_ble_",
                     "wifi_name",
@@ -1458,9 +1600,8 @@ class AnkerSolixApiExport:
                     "device_name",
                     "token",
                     "email",
-                    "user_id",
                     "_password",
-                    "_mac"
+                    "_mac",
                 ]
             ) or k in ["sn"]:
                 data[k] = self._randomize(v, k)
@@ -1559,7 +1700,9 @@ class AnkerSolixApiExport:
                 # return real response data without randomization if needed
                 response = await self.client.request(method, endpoint, json=payload)
                 await self._export(
-                    Path(self.export_path) / filename, response, randomkeys=randomkeys
+                    Path(self.export_path) / filename,
+                    deepcopy(response),
+                    randomkeys=randomkeys,
                 )
         except (errors.AnkerSolixError, ClientError) as err:
             ignore_client_error = True

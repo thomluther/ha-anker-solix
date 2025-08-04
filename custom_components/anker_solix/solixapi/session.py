@@ -15,6 +15,7 @@ from random import randbytes, randrange
 import tempfile
 
 import aiofiles
+import aiofiles.os
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from cryptography.hazmat.backends import default_backend
@@ -771,6 +772,25 @@ class AnkerSolixClientSession:
             self._logger.error(err)
             return False
 
+    async def deleteModifiedFile(self, filename: str | Path) -> bool:
+        """Delete given modified json file for testing."""
+        filename = str(filename)
+        if "modified" not in filename:
+            return False
+        if self.mask_credentials:
+            masked_filename = filename.replace(
+                self._email, self.mask_values(self._email)
+            )
+        else:
+            masked_filename = filename
+        try:
+            await aiofiles.os.remove(masked_filename)
+            self._logger.debug("Remove modified JSON file %s:", masked_filename)
+        except OSError as err:
+            self._logger.error("ERROR: Failed to remove modified JSON file %s", masked_filename)
+            self._logger.error(err)
+            return False
+        return True
 
 class AnkerEncryptionHandler:
     """Anker Solix encryption handler class.

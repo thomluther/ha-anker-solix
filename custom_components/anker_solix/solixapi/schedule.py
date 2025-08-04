@@ -11,6 +11,7 @@ from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
     Solarbank2Timeslot,
+    SolarbankDeviceMetrics,
     SolarbankPowerMode,
     SolarbankRatePlan,
     SolarbankTimeslot,
@@ -1330,6 +1331,10 @@ async def set_sb2_home_load(  # noqa: C901
     else:
         max_load = SolixDefaults.PRESET_MAX
     # Adjust provided appliance limits
+    # Relaxed max_load to device type max if schedule max_load no longer reflecting active device limit, see issue #309
+    if ((d:=self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2:
+        model = d.get("device_pn") or ""
+        max_load = max([int(x) for x in (SolarbankDeviceMetrics.INVERTER_OUTPUT_OPTIONS.get(model) or [])] + [max_load])
     # appliance limits depend on device load setting and other device setting. Must be reduced for individual slots if necessary
     if preset is not None:
         preset = min(max(preset, min_load), max_load)

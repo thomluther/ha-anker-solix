@@ -59,6 +59,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         device_pv_energy_daily,
         energy_analysis,
         energy_daily,
+        get_device_charge_order_stats,
         get_device_pv_statistics,
         home_load_chart,
         refresh_pv_forecast,
@@ -72,6 +73,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_sb2_ac_charge,
         set_sb2_home_load,
         set_sb2_use_time,
+    )
+    from .vehicle import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+        create_vehicle,
+        get_brand_list,
+        get_brand_models,
+        get_model_year_attributes,
+        get_model_years,
+        get_vehicle_details,
+        get_vehicle_list,
+        get_vehicle_options,
+        manage_vehicle,
     )
 
     def __init__(
@@ -173,6 +185,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             }
                         )
                     elif key in [
+                        "relate_type",
                         "intgr_device",
                         "feature_switch",
                         "pv_name",

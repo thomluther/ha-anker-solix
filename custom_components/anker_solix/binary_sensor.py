@@ -70,6 +70,7 @@ DEVICE_SENSORS = [
             "rssi": " ".join(
                 [d.get("rssi") or "--", SIGNAL_STRENGTH_DECIBELS_MILLIWATT]
             ),
+            "wifi_mac": d.get("wifi_mac"),
             "bt_mac": d.get("bt_ble_mac"),
             "wireless_type": d.get("wireless_type"),
         },
@@ -305,6 +306,7 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "wifi_ssid",
             "wifi_signal",
             "wireless_type",
+            "wifi_mac",
             "bt_mac",
             "site_admin",
             "rssi",

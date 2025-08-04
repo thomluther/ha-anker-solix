@@ -47,6 +47,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass=hass,
             logger=LOGGER,
+            config_entry=config_entry,
             name=f"{DOMAIN}_{config_entry.title}",
             update_interval=timedelta(seconds=update_interval),
         )
@@ -182,15 +183,31 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             for c in active_crds
         ]
         next_refreshes.sort()
-        # find next 10 sec gap in active clients
+        # find next gap in active clients
         delay = None
         time_now = datetime.now().astimezone()
         start_time = time_now
         for x in next_refreshes:
+            LOGGER.log(
+                logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                "Api Coordinator %s: Other client data refresh expected by %s (in %s seconds)%s",
+                self.client.api.apisession.nickname,
+                x.strftime("%H:%M:%S"),
+                f"{(diff := round((x - time_now).total_seconds()))!s:>3s}",
+                " => THROTTLED?"
+                if diff < -10
+                else " => ACTIVE?"
+                if diff < 0
+                else " => IN RANGE"
+                if diff < sites_shift.total_seconds()
+                else "",
+            )
             if x - start_time >= sites_shift:
-                delay = int(max(0, (start_time - time_now).total_seconds()))
+                # existing gap, break with required delay
+                delay = round(max(0, (start_time - time_now).total_seconds()))
                 break
-            start_time = x + sites_shift
+            # next gap at least site shift from now
+            start_time = max(x, time_now) + sites_shift
         if delay is None:
             # set delay according config index or next possible start time
             delay = (
@@ -211,8 +228,8 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                 int(delay),
             )
             # delay also last refresh to allow other clients proper next refresh check
-            self.client.last_site_refresh = self.client.last_site_refresh + timedelta(
-                seconds=delay
+            self.client.last_site_refresh = (
+                time_now - self.update_interval + timedelta(seconds=delay)
             )
             await sleep(delay)
 

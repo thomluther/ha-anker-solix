@@ -319,9 +319,10 @@ class AnkerSolixApiClient:
                             exclude=set(self.exclude_categories),
                         )
                         # Fetch device details without excluded types or categories
+                        # TODO: Remove EV charger exclusion for non test modes
                         await self.api.update_device_details(
                             fromFile=self._testmode,
-                            exclude=set(self.exclude_categories),
+                            exclude=set(self.exclude_categories) | (set() if ALLOW_TESTMODE else {SolixDeviceType.EV_CHARGER.value}),
                         )
                         # Fetch site details without excluded types or categories
                         # This must be run after the device details, which may create virtual sites for standalone devices
@@ -374,9 +375,10 @@ class AnkerSolixApiClient:
                             else "",
                         )
                         # Fetch device details without excluded types or categories
+                        # TODO: Remove EV charger exclusion for non test modes
                         await self.api.update_device_details(
                             fromFile=self._testmode,
-                            exclude=set(self.exclude_categories),
+                            exclude=set(self.exclude_categories) | (set() if ALLOW_TESTMODE else {SolixDeviceType.EV_CHARGER.value}),
                         )
                         # Fetch site details without excluded types or categories
                         # This must be run after the device details, which may create virtual sites for standalone devices
