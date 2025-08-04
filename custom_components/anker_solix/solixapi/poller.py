@@ -762,6 +762,23 @@ async def poll_device_details(
             api.apisession.nickname,
         )
         await api.get_ota_batch(fromFile=fromFile)
+    # Get EV vehicles if device type not excluded
+    if {SolixDeviceType.EV_CHARGER.value} - exclude:
+        # Fetch brands once if not existing yet
+        if not api.account.get("vehicle_brands"):
+            api._logger.debug(
+                "Getting api %s vehicle brand list",
+                api.apisession.nickname,
+            )
+            await api.get_brand_list(fromFile=fromFile)
+        # Fetch vehicle details for account
+        api._logger.debug(
+            "Getting api %s vehicle details for user",
+            api.apisession.nickname,
+        )
+        for vehicle in (await api.get_vehicle_list(fromFile=fromFile)).get("vehicle_list") or []:
+            await api.get_vehicle_details(vehicleId=vehicle.get("vehicle_id"), fromFile=fromFile)
+
     # Get Power Panel device specific updates
     if api.powerpanelApi:
         for sn, device in dict(

@@ -11,6 +11,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
+import random
+import string
 from typing import Any
 
 from aiohttp import ClientSession
@@ -270,7 +272,6 @@ class AnkerSolixBaseApi:
         This method should be implemented to consolidate various device related key values from various requests under a common set of device keys.
         The device SN should be returned if found in devData and an update was done
         """
-
         if sn := devData.get("device_sn"):
             device: dict = self.devices.get(sn, {})  # lookup old device info if any
             device.update({"device_sn": str(sn)})
@@ -533,6 +534,7 @@ class AnkerSolixBaseApi:
             "total_charging_power":"0","power_unit":"W","charging_status":"0","total_battery_power":"0.00","updated_time":"2023-12-28 18:53:27","total_photovoltaic_power":"0","total_output_power":"0.00"},
         "retain_load":"0W","updated_time":"01-01-0001 00:00:00","power_site_type":2,"site_id":"efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c"}
         """
+        siteId = str(siteId) or ""
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
@@ -656,6 +658,7 @@ class AnkerSolixBaseApi:
         Example data:
         {'wifi_info_list': [{"wifi_name": "wifi-network-1","wifi_signal": "48","device_sn": "7SKIVRGPK8XC2ROB","rssi": "","offline": false}]}
         """
+        siteId = str(siteId) or ""
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
@@ -910,6 +913,7 @@ class AnkerSolixBaseApi:
         {"show": true,"ranking": "999+","co2": "33.46","tree": "1.6","content": "Not to be underestimated","level": {
             "tree": 2,"bubble": 2}}
         """
+        siteId = str(siteId) or ""
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
@@ -937,6 +941,7 @@ class AnkerSolixBaseApi:
             "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0}],
         "current_power": 0,"all_power_limit": 0,"ae100_info": null,"parallel_type": "Single"}
         """
+        siteId = str(siteId) or ""
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
@@ -988,8 +993,9 @@ class AnkerSolixBaseApi:
         Active dynamic Price example:
         "dynamic_price": {"country": "DE","company": "Nordpool","area": "GER","pct": null,"currency": "\u20ac","adjust_coef": null}
         """
+        siteId = str(siteId) or ""
         options: set = set()
-        if isinstance(siteId, str) and (site := self.sites.get(siteId) or {}):
+        if site := self.sites.get(siteId) or {}:
             for model in (site.get("site_info") or {}).get(
                 "current_site_device_models"
             ) or []:
@@ -1060,7 +1066,8 @@ class AnkerSolixBaseApi:
             "country": "DE", "company": "Nordpool", "area": "GER", "pct": null}
         "accuracy": 2}
         """
-        data = {"site_id": siteId}
+        siteId = str(siteId) or ""
+        data = {"site_id": str(siteId)}
         if fromFile:
             # For file data, verify first if there is a modified file to be used for testing
             if not (
@@ -1105,6 +1112,7 @@ class AnkerSolixBaseApi:
             "area": "GER",
         }}
         """
+        siteId = str(siteId) or ""
         # First get the old settings from api dict or Api call to update only requested parameter
         if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
             details = await self.get_site_price(siteId=siteId, fromFile=toFile)
@@ -1230,6 +1238,7 @@ class AnkerSolixBaseApi:
         fromFile: bool = False,
     ) -> None:
         """Refresh the dynamic price information for given provider and site ID if required."""
+        siteId = str(siteId) or ""
         # validate provider
         if not (
             provider := provider
@@ -1277,6 +1286,7 @@ class AnkerSolixBaseApi:
         self, siteId: str, forceCalc: bool = False, initialize: bool = False
     ) -> dict:
         """Get the dynamic price information extracted from cache data using spot prices, fees and taxes."""
+        siteId = str(siteId) or ""
         priceData = {}
         if not (
             site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
@@ -1442,6 +1452,7 @@ class AnkerSolixBaseApi:
 
     def extractSolarForecast(self, siteId: str) -> None:
         """Get the current solar forecast data in cached details."""
+        siteId = str(siteId) or ""
         if not (
             site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
         ):

@@ -148,15 +148,32 @@ API_ENDPOINTS = {
     "get_device_income": "power_service/v1/app/device/get_device_income",  # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
     "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
     "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
+    "get_site_power_limit": "power_service/v1/site/get_power_limit",  # needs owner, lists power limits for system
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
+    "get_shared_device": "app/devicerelation/get_shared_device",  # works as member, list device sharing details, {"device_sn": deviceSn}, sharing works only for EV charger or any device?
     "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
     "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
     "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
     "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
     "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
     "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
-    "get_site_power_limit": "power_service/v1/site/get_power_limit", # needs owner, lists power limits for system
+    "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
+    "get_device_rfid_cards": "power_service/v1/rfid/get_device_cards",  # needs owner. get rfid cards (for EV charger?), {"device_sn": deviceSn}
+    "get_device_group": "power_service/v1/app/group/get_group_devices",  # works as member, shows whether device is grouped with sub devices, {"device_sn": deviceSn}
+    "get_device_charge_order_stats": "power_service/v1/app/order/get_charge_order_stats",  # works as member, date_type[week month year all], show EV_charger stats, {"device_sn":deviceSn,"date_type":"all","start_date":"","end_date":""}))
+    "get_device_charge_order_stats_list": "power_service/v1/app/order/get_charge_order_stats_list",  # works as member, date_type[week month year all], order_Status unknown, {"device_sn":deviceSn,"order_status":1,"date_type":"all","start_date":"","end_date":"","page":0,"page_size":10}
+    "get_vehicle_brands": "power_service/v1/app/get_brand_list",  # get vehicle brand list
+    "get_vehicle_brand_models": "power_service/v1/app/get_models",  # get model list for given brand, {"brand_name": "BMW"}
+    "get_vehicle_model_years": "power_service/v1/app/get_model_years",  # get prodictive year list for given model, {"brand_name": "BMW", "model_name": "iX3"}
+    "get_vehicle_year_attributes": "power_service/v1/app/get_model_list",  # get attributes for model and productive year, {"brand_name": "BMW", "model_name": "iX3", "productive_year": 2023}
+    "get_user_vehicles": "power_service/v1/app/vehicle/get_vehicle_list",  # list of vehicles with details for account
+    "get_user_vehicle_details": "power_service/v1/app/vehicle/get_vehicle_detail",  # deteils for given vehicle id, {"vehicle_id": vehicleId}
+    "vehicle_add": "power_service/v1/app/vehicle/add_vehicle",  # add vehicles to account, {"user_vehicle_info": [{"vehicle_name": "MyCar","brand": "Audi","model": "eTron","productive_year": 2024}]}
+    "vehicle_update": "power_service/v1/app/vehicle/update_vehicle",  # update any vehicle detail, {"vehicle_id": vehicleId, "vehicle_name": "MyCar","brand": "Audi","model": "eTron","productive_year": 2024, "battery_capacity": 80, "ac_max_charging_power": 11, "energy_consumption_per_100km": 18}
+    "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
+    "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
+    "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -181,7 +198,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_heat_pump_plan": "charging_hes_svc/get_heat_pump_plan_json",  # heat pump plan, works with shared account
     "get_electric_plan_list": "charging_hes_svc/get_electric_utility_and_electric_plan_list",  # Energy plan if available for country & state combination, works with shared account
     "get_system_running_info": "charging_hes_svc/get_system_running_info",  # system runtime info, works with shared account
-    "get_system_profit": "charging_hes_svc/get_system_profit_detail", # works as member, {"siteId": siteId,"dateType": "year","start": "2025","end": ""} [day 2025-01-01, week, month 2025-01, year 2025], weekly syntax unklear
+    "get_system_profit": "charging_hes_svc/get_system_profit_detail",  # works as member, {"siteId": siteId,"dateType": "year","start": "2025","end": ""} [day 2025-01-01, week, month 2025-01, year 2025], weekly syntax unklear
     "energy_statistics": "charging_hes_svc/get_energy_statistics",  # Energy stats for HES, # source type [solar hes grid home]
     "get_monetary_units": "charging_hes_svc/get_world_monetary_unit",  # monetary unit list for system, works with shared account
     "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account. Shows installation location
@@ -192,10 +209,19 @@ API_HES_SVC_ENDPOINTS = {
     "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips",  # no shared account access, needs HES site?
     "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info",  # works with shared account, lists hes device structure and SNs
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
-
+    "get_evcharger_standalone": "charging_hes_svc/get_user_bind_and_not_in_station_evchargers",  # works as member, but list may be empty
+    "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 47 + 49 used => 96
+""" Other endpoints neither implemented nor explored: 60 + 65 used => 125
+    'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
+    'power_service/v1/message_not_disturb',  # change do not disturb messages settings
+    'power_service/v1/read_message', # payload format unknown
+    'power_service/v1/add_message',
+    'power_service/v1/del_message',
+    'power_service/v1/dynamic_price/check_adjust',  # works for members, but only applies on owned devices?, not sure what it does, {}, lists owned SB3 device with status code but also others
+    'power_service/v1/rfid/save_device_card',
+    'power_service/v1/rfid/delete_device_card',
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -209,19 +235,30 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/site/update_site_devices',
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
     'power_service/v1/site/get_comb_addable_sites',
-    'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
-    "power_service/v1/app/user/set_user_param",
     'power_service/v1/site/shift_power_site_type', # maybe to convert to different system type, {"site_id": siteId, "power_site_type": 11}
     'power_service/v1/site/local_net',
     'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]}) May be used for automatic control of plugs in smart mode?
+    'power_service/v1/app/compatible/check_third_sn',
+    'power_service/v1/app/compatible/confirm_permissions_settings',
+    'power_service/v1/app/compatible/get_confirm_permissions', # works as member, {"device_model": "A17C0"} => "data": {"is_confirm": 1,"confirm_type": "APs"}
+    'power_service/v1/app/compatible/installation_popup',
+    'power_service/v1/app/compatible/save_compatible_solar',
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
-    'power_service/v1/app/compatible/check_third_sn',
-    'power_service/v1/app/compatible/save_compatible_solar',
-    'power_service/v1/app/compatible/get_confirm_permissions', # works as member, {"device_model": "A17C0"} => "data": {"is_confirm": 1,"confirm_type": "APs"}
-    'power_service/v1/app/compatible/confirm_permissions_settings',
+    'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
+    'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
+    'power_service/v1/app/device/remove_param_config_key'
+    'power_service/v1/app/device/set_device_attrs', # attributes must be list of strings, only 'rssi' found working so far
+    'power_service/v1/app/group/replace_group_devices',
+    'power_service/v1/app/group/save_group_devices',
+    'power_service/v1/app/group/force_save_group_devices',
+    'power_service/v1/app/group/delete_group_devices',
+    'power_service/v1/app/order/get_charging_order_list',  # may need real EV_Charger?, {"device_sn": deviceSn, "start_time": "<timestamp>"}
+    'power_service/v1/app/order/get_charging_order_detail',  # may need real EV_Charger? {"device_sn": deviceSn}
+    'power_service/v1/app/order/get_charging_order_sec_detail',  # may need real EV_Charger? {"order_id": "1","start_time": "<timestamp>"}
+    'power_service/v1/app/order/get_charging_order_sec_preview',  # may need real EV_Charger? {"order_id": "1"}
+    'power_service/v1/app/order/export_charge_order',
     'power_service/v1/app/after_sale/check_popup',
-    'power_service/v1/app/after_sale/check_sn',
     'power_service/v1/app/after_sale/mark_sn',
     'power_service/v1/app/share_site/anonymous_join_site',
     'power_service/v1/app/share_site/delete_site_member',
@@ -229,42 +266,68 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/share_site/delete_inviting_member',
     'power_service/v1/app/share_site/get_invited_list',
     'power_service/v1/app/share_site/join_site',
-    'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
+    'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
+    "power_service/v1/app/user/set_user_param",
+    'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list with objects for unknown feature_code e.g. {"check_list": [{"feature_code": "smartmeter", "product_code": "A17C5"}]}
     'power_service/v1/app/get_phonecode_list',
     'power_service/v1/app/get_annual_report',  # new report starting Jan 2025?
-    'power_service/v1/app/device/remove_param_config_key'
-    'power_service/v1/app/device/set_device_attrs', # attributes must be list of strings, only 'rssi' found working so far
-    'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
+    'power_service/v1/app/report_tlv_event',  # tamper event? unknown what events to report, {"device_sn": deviceSn, "events": [{}]}
     'power_service/v1/app/shelly_ctrl_device', # {"device_sn": deviceSn, "op_type": "parameter", "value": value})) # Control shelly device settings, may require owner, usage known
-    'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list with objects for unknown feature_code e.g. {"check_list": [{"feature_code": "smartmeter", "product_code": "A17C5"}]}
-    'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
-    'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
-    'power_service/v1/message_not_disturb',  # change do not disturb messages settings
-    'power_service/v1/read_message', # payload format unknown
-    'power_service/v1/add_message',
-    'power_service/v1/del_message',
+    'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
 
-App related: 11 + 2 used => 13 total
+App related: 18 + 3 used => 21 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/cloudstor/get_app_up_token_without_login',
     'app/logging/get_device_logging',
     'app/logging/upload',
+    'app/logging/upload_pb_events',
     'app/devicerelation/up_alias_name',  # Update Alias name of device? Fails with (10003) Failed to request
     'app/devicerelation/un_relate_and_unbind_device',
     'app/devicerelation/relate_device',
+    'app/devicerelation/device_invite', # Sharing of EV charger devices, {"nick_name": "lol***", "email": "<email>", "invites": [{"device_sn": deviceSn, "member_type": 1}]}
+    'app/devicerelation/confirm_invite', # accept invite
+    'app/devicerelation/ignore_invite',
+    'app/devicerelation/update_share',
+    'app/devicerelation/clear_share',
     'app/news/get_popups',
+    'app/news/popup_record',
     'app/push/clear_count',
     'app/push/register_push_token',
 
-Passport related: 4 + 0 used => 4 total
+Passport related: 30 + 0 used => 30 total
     'passport/get_user_param', # specify param_type which must be parsable as list of int, but does not show anything in response
+    'passport/update_user_param',
     'passport/get_subscriptions,  #  get user email, accept_survey, subscribe, phone_number, sms_subscribe
-    '/passport/subscription_configs',  # get show_sms
-    '/passport/discount_desc',  # get title, sub_title, button and sub_button
+    'passport/set_subscriptions',
+    'passport/get_profile', # get email, nickname, geokey, userid and some profile info
+    'passport/login',
+    'passport/logout',
+    'passport/update_profile',
+    'passport/change_password',
+    'passport/forget_password',
+    'passport/set_account_password',
+    'passport/validate_pass',
+    'passport/destroy_user',
+    'passport/phone_reset_password',
+    'passport/phone_verification_login',
+    'passport/phone_verification_regist',
+    'passport/phone_code_list',
+    'passport/external_login',
+    'passport/third_party_login',
+    'passport/freeze_account',
+    'passport/register',
+    'passport/resend_active_email',
+    'passport/validate_email', # verify if an email is already registered
+    'passport/terminal_id',
+    'passport/estimate_domain',
+    'passport/phone_bind_account',
+    'passport/phone_verification_code',
+    'passport/subscription_configs',  # get show_sms
+    'passport/discount_desc',  # get title, sub_title, button and sub_button
 
 PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/sync_installation_inspection", #Unknown at this time
@@ -278,13 +341,14 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_common_svc/location/set",  # Set default and identifier location
     "charging_common_svc/location/support",
 
-Home Energy System related (X1): 38 + 15 used => 53 total
+Home Energy System related (X1): 43 + 17 used => 60 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
     "charging_hes_svc/check_device_bluetooth_password",
     "charging_hes_svc/check_function",
     "charging_hes_svc/device_command",
+    "charging_hes_svc/device_self_check",
     "charging_hes_svc/deal_share_data",
     "charging_hes_svc/download_energy_statistics",
     "charging_hes_svc/get_auto_disaster_prepare_status",
@@ -295,6 +359,7 @@ Home Energy System related (X1): 38 + 15 used => 53 total
     "charging_hes_svc/get_device_pn_info",
     "charging_hes_svc/get_device_card_list",
     "charging_hes_svc/get_device_card_details",
+    "charging_hes_svc/get_device_self_check",
     "charging_hes_svc/get_external_device_config",
     "charging_hes_svc/get_history_setting", # needs owner
     "charging_hes_svc/get_site_mi_list",
@@ -302,6 +367,7 @@ Home Energy System related (X1): 38 + 15 used => 53 total
     "charging_hes_svc/get_system_device_time",
     "charging_hes_svc/get_tou_price_plan_detail",
     "charging_hes_svc/get_user_fault_info",
+    "charging_hes_svc/get_station_evchargers",  # needs owner
     "charging_hes_svc/get_utility_rate_plan",
     "charging_hes_svc/get_vpp_check_code",
     "charging_hes_svc/get_vpp_service_policy_by_agg_user",
@@ -316,6 +382,8 @@ Home Energy System related (X1): 38 + 15 used => 53 total
     "charging_hes_svc/remove_user_fault_info",
     "charging_hes_svc/restart_peak_session",
     "charging_hes_svc/start",
+    "charging_hes_svc/set_station_evchargers",
+    "charging_hes_svc/set_evcharger_station_feature",
     "charging_hes_svc/sync_back_up_history",
 
 Home Energy System related (X1): 5 + 0 used => 5 total
@@ -325,15 +393,16 @@ Home Energy System related (X1): 5 + 0 used => 5 total
     "charging_hes_dynamic_price_svc/save_time_of_use", # needs owner
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
 
-related to what, seem to work with Power Panel sites: 6 + 0 used => 6 total
+related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_site_device_disaster', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/get_site_device_disaster_status', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/set_site_device_disaster',
+    'charging_disaster_prepared/clear',
     'charging_disaster_prepared/quit_disaster_prepare',
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/disaster_detail',
 
-related to Prime charger models: 11 + 0 used => 11 total
+related to Prime charger models: 12 + 0 used => 12 total
     'mini_power/v1/app/charging/get_charging_mode_list',
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
@@ -344,6 +413,7 @@ related to Prime charger models: 11 + 0 used => 11 total
     'mini_power/v1/app/egg/report_easter_egg_trigger_status',
     'mini_power/v1/app/setting/get_device_setting',
     'mini_power/v1/app/power/get_day_power_data',
+    'mini_power/v1/app/setting/set_compatibility_status',
     'mini_power/v1/app/style/get_clock_screensavers',  # works for {'product_code': 'A2345'} => Prime charger
 
 Structure of the JSON response for an API Login Request:
@@ -395,6 +465,7 @@ API_FILEPREFIXES = {
     "get_ota_info": "ota_info",
     "get_upgrade_record": "upgrade_record",
     "check_upgrade_record": "check_upgrade_record",
+    "get_shared_device": "shared_device",
     "get_device_attributes": "device_attrs",
     "get_message_unread": "message_unread",
     "get_currency_list": "currency_list",
@@ -406,6 +477,17 @@ API_FILEPREFIXES = {
     "get_device_income": "device_income",
     "get_ai_ems_status": "ai_ems_status",
     "get_ai_ems_profit": "ai_ems_profit",
+    "get_tamper_records": "tamper_records",
+    "get_device_rfid_cards": "rfid_cards",
+    "get_device_group": "device_group",
+    "get_device_charge_order_stats": "charge_order_stats",
+    "get_device_charge_order_stats_list": "charge_order_stats_list",
+    "get_vehicle_brands": "vehicle_brands",
+    "get_vehicle_brand_models": "vehicle_brand_models",
+    "get_vehicle_model_years": "vehicle_model_years",
+    "get_vehicle_year_attributes": "vehicle_year_attributes",
+    "get_user_vehicles": "user_vehicles",
+    "get_user_vehicle_details": "user_vehicle_details",
     "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
@@ -463,6 +545,8 @@ API_FILEPREFIXES = {
     "hes_get_conn_net_tips": "hes_conn_net_tips",
     "hes_get_hes_dev_info": "hes_dev_info",
     "hes_report_device_data": "hes_report_device_data",
+    "hes_get_evcharger_standalone": "hes_evcharger_standalone",
+    "hes_get_evcharger_station_info": "hes_evcharger_station_info",
 }
 
 
@@ -517,11 +601,11 @@ class SolixParmType(Enum):
 
     SOLARBANK_SCHEDULE = "4"
     SOLARBANK_2_SCHEDULE = "6"
-    SOLARBANK_SCHEDULE_ENFORCED = "9" # No longer supported by cloud as of July 2025
+    SOLARBANK_SCHEDULE_ENFORCED = "9"  # No longer supported by cloud as of July 2025
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
     # TODO: Add description for type 16 once known
-    #SOLARBANK_MULTIUSE = "16"
+    # SOLARBANK_MULTIUSE = "16"
 
 
 class SolarbankPowerMode(IntEnum):
@@ -785,7 +869,7 @@ class SolixDeviceCategory:
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX F3000  Portable Power Station with SM support (US Market)
+    )  # SOLIX F3000 Portable Power Station with SM support (US Market)
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
@@ -884,9 +968,9 @@ class SolarbankDeviceMetrics:
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
         "A5143": ["600", "800"],
-        "A17C1": ["350", "600", "800"],
-        "A17C2": ["350", "600", "800"],
-        "A17C3": ["350", "600", "800"],
+        "A17C1": ["350", "600", "800", "1000"],
+        "A17C2": ["350", "600", "800", "1000"],
+        "A17C3": ["350", "600", "800", "1000"],
         "A17C5": ["350", "600", "800", "1200"],
     }
 
@@ -1082,3 +1166,75 @@ class SolixPriceProvider:
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
         return asdict(self)
+
+
+@dataclass(order=True, kw_only=True)
+class SolixVehicle:
+    """Dataclass to define vehicle attributes and representation of them."""
+
+    brand: str = ""
+    model: str = ""
+    productive_year: int = 0
+    id: int | None = None
+    battery_capacity: float = 0
+    ac_max_charging_power: float = 0
+    energy_consumption_per_100km: float = 0
+    vehicle: InitVar[dict | str | None] = None
+
+    def __post_init__(self, vehicle) -> None:
+        """Init the dataclass from an optional vehicle representation or dictionary."""
+        if isinstance(vehicle, dict):
+            self.update(attributes=vehicle)
+        elif isinstance(vehicle, str) and (keys := vehicle.split("/")):
+            self.brand = s if (s := (keys[0:1] or [None])[0]) != "-" else ""
+            self.model = s if (s := (keys[1:2] or [None])[0]) != "-" else ""
+            self.productive_year = (
+                int(s) if str(s := (keys[2:3] or [None])[0]).isdigit() else 0
+            )
+            self.id = int(s) if str(s := (keys[3:4] or [None])[0]).isdigit() else None
+
+    def __str__(self) -> str:
+        """Print the class fields."""
+        return f"{self.brand or '-'}/{self.model or '-'}/{self.productive_year or '-'}"
+
+    def update(self, attributes: dict) -> None:
+        """Update attributes based on provided dictionary fields."""
+        if isinstance(attributes, dict):
+            self.brand = attributes.get("brand") or attributes.get("brand_name") or self.brand
+            self.model = attributes.get("model") or attributes.get("model_name") or self.model
+            self.productive_year = (
+                int(year)
+                if str(year := attributes.get("productive_year")).isdigit()
+                else self.productive_year
+            )
+            self.id = int(vid) if str(vid := attributes.get("id")).isdigit() else self.id
+            self.battery_capacity = (
+                float(capacity)
+                if str(capacity := attributes.get("battery_capacity"))
+                .replace(".", "", 1)
+                .isdigit()
+                else self.battery_capacity
+            )
+            self.ac_max_charging_power = (
+                float(limit)
+                if str(limit := attributes.get("ac_max_charging_power") or attributes.get("ac_max_power"))
+                .replace(".", "", 1)
+                .isdigit()
+                else self.ac_max_charging_power
+            )
+            self.energy_consumption_per_100km = (
+                float(consumption)
+                if str(consumption := attributes.get("energy_consumption_per_100km") or attributes.get("hundred_fuel_consumption"))
+                .replace(".", "", 1)
+                .isdigit()
+                else self.energy_consumption_per_100km
+            )
+
+    def asdict(self, skip_empty: bool = False) -> dict:
+        """Return a dictionary representation of the class fields."""
+        d = asdict(self)
+        if skip_empty:
+            keys = d.keys()
+            for key in [key for key in keys if not d[key] or key in ["id"]]:
+                d.pop(key, None)
+        return d

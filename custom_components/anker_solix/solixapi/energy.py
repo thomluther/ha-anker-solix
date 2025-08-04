@@ -927,16 +927,68 @@ async def get_device_pv_statistics(
     'ppsPercent': '', 'generationTime': 0, 'maxPower': 0}
     """
 
+    rangeType = rangeType if rangeType in ["week", "month", "year"] else "day"
+    startDay = startDay if isinstance(startDay, datetime) else datetime.today()
+    endDay = endDay if isinstance(endDay, datetime) else startDay
     data = {
         "sn": deviceSn,
-        "type": rangeType if rangeType in ["day", "week", "month", "year"] else "day",
-        "start": startDay.strftime("%Y-%m-%d")
-        if isinstance(startDay, datetime)
-        else datetime.today().strftime("%Y-%m-%d"),
-        "end": endDay.strftime("%Y-%m-%d") if isinstance(endDay, datetime) else "",
+        "type": rangeType,
+        "start": startDay.strftime(
+            "%Y-%m"
+            if rangeType in ["month"]
+            else "%Y"
+            if rangeType in ["year"]
+            else "%Y-%m-%d"
+        ),
+        "end": ""
+        if not endDay
+        else endDay.strftime(
+            "%Y-%m"
+            if rangeType in ["month"]
+            else "%Y"
+            if rangeType in ["year"]
+            else "%Y-%m-%d"
+        ),
         "version": version,
     }
     resp = await self.apisession.request(
         "post", API_ENDPOINTS["get_device_pv_statistics"], json=data
+    )
+    return resp.get("data") or {}
+
+
+async def get_device_charge_order_stats(
+    self,
+    deviceSn: str,
+    rangeType: str | None = None,
+    startDay: datetime | None = None,
+    endDay: datetime | None = None,
+) -> dict:
+    """Get EV charger order statistics on a weekly, monthly, yearly or total basis.
+
+    - rangeType is either week, month, year or all
+    - startDay is the day (YYYY-MM-DD) in question
+    - endDay is to limit period, default is requested range type
+
+    Example data:
+    {"total_stats": {"charge_unit": "","charge_total": 0,"charge_time": 0,"charge_count": 0,"cost": 0,"cost_unit": "\u20ac","cost_saving": 0,
+    "co2_saving": 0,"co2_saveing_unit": "","mile_age": 0},"date_list": []}
+    """
+    # TODO: Update example once range break down is available
+    rangeType = rangeType if rangeType in ["week", "month", "year"] else "all"
+    startDay = startDay if isinstance(startDay, datetime) else datetime.now()
+    endDay = endDay if isinstance(endDay, datetime) else startDay
+    data = {
+        "device_sn": deviceSn,
+        "date_type": rangeType,
+        "start_date": ""
+        if not startDay or rangeType in ["all"]
+        else startDay.strftime("%Y-%m-%d"),
+        "end_date": ""
+        if not endDay or rangeType in ["all"]
+        else endDay.strftime("%Y-%m-%d"),
+    }
+    resp = await self.apisession.request(
+        "post", API_ENDPOINTS["get_device_charge_order_stats"], json=data
     )
     return resp.get("data") or {}

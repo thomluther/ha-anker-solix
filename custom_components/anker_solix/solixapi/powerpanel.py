@@ -814,14 +814,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                     if float(new_total) >= float(last_total)
                                     else float(new_total)
                                 )
-                                # spread total delta across number of 5 min intervals since last valid time
-                                intervals = (
-                                    datetime.fromisoformat(avg_data["valid_time"])
-                                    - datetime.fromisoformat(old_valid)
-                                ).total_seconds() / 300
+                                # spread total Wh delta across time since last valid time
+                                factor = 3600 / max(
+                                    (
+                                        datetime.fromisoformat(avg_data["valid_time"])
+                                        - datetime.fromisoformat(old_valid)
+                                    ).total_seconds(),
+                                    60,
+                                )
                                 # consider unit conversion since totals are always converted to kwh
                                 avg_data["grid_export_avg"] = (
-                                    f"{(avg_data['grid_export_avg'] / intervals * (1 if 'k' in avg_data['power_unit'].lower() else 1000)):.2f}"
+                                    f"{(avg_data['grid_export_avg'] * factor * (1 if 'k' in avg_data['power_unit'].lower() else 1000)):.2f}"
                                 )
                             else:
                                 # first total value, calculate an approximate for first interval (remainder from other avg values)
@@ -960,7 +963,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             items = resp.get("energy") or []
             # No daystring in response, count the index for proper date and skip previous items
             # for file usage ensure that last item is used if today is included
-            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            start = (
+                len(items) - 1
+                if fromFile and datetime.now().date() == startDay.date()
+                else 0
+            )
             for idx, item in enumerate(items[start : start + numDays]):
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
@@ -1045,7 +1052,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             unit = resp.get("energyUnit") or ""
             items = resp.get("energy") or []
             # for file usage ensure that last item is used if today is included
-            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            start = (
+                len(items) - 1
+                if fromFile and datetime.now().date() == startDay.date()
+                else 0
+            )
             for idx, item in enumerate(items[start : start + numDays]):
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
@@ -1128,7 +1139,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             unit = resp.get("energyUnit") or ""
             items = resp.get("energy") or []
             # for file usage ensure that last item is used if today is included
-            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            start = (
+                len(items) - 1
+                if fromFile and datetime.now().date() == startDay.date()
+                else 0
+            )
             for idx, item in enumerate(items[start : start + numDays]):
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
@@ -1227,7 +1242,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         unit = resp.get("energyUnit") or ""
         items = resp.get("energy") or []
         # for file usage ensure that last item is used if today is included
-        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
         for idx, item in enumerate(items[start : start + numDays]):
             daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
             entry = table.get(daystr, {"date": daystr})
