@@ -35,6 +35,7 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Device structure used by the integration](#device-structure-used-by-the-integration)**
     * [Example screenshots](#example-screenshots)
 1. **[Anker account limitation and usage recommendations](#anker-account-limitation-and-usage-recommendations)**
+    * [Previous work around to overcome parallel usage restriction](#previous-work-around-to-overcome-parallel-usage-restriction-of-owner-account-no-longer-required-since-august-2025)
 1. **[Data refresh configuration options](#data-refresh-configuration-options)**
     * [Option considerations for Solarbank 2 systems](#option-considerations-for-solarbank-2-systems)
     * [Default options as of version 2.5.5](#default-options-as-of-version-255)
@@ -105,7 +106,7 @@ Following example shows how configured integration accounts may look like:
 
 For each end device the system owner has configured into a system, the integration will create an End Device entry, which is assigned to the `system` device.
 So far, available accessory devices such as the 0 W Output switch are not manageable on its own. Therefore they are currently presented as entity of the End Device entry that is managing the accessory.
-Starting with version 2.3.0, the integration will also create one `account` device for each configuration. The `account` device has assigned all `system` devices and stand alone End Devices of your Anker account as well as some common Api entities.
+Starting with version 2.3.0, the integration will also create one `account` device for each hub configuration. The `account` device has assigned all `system` devices and stand alone End Devices of your Anker account as well as common Api entities that belongs to the user/account.
 
 ### Example screenshots
 
@@ -148,22 +149,24 @@ Following are anonymized examples how the Anker power devices will be presented 
 
 
 > [!NOTE]
-> When using a shared system account for the integration, device detail information is limited and changes are not permitted. Therefore shared system account users may get presented no changeable and only a subset of entities by the integration.
+> When using a shared system account for the integration, device detail information is limited and changes are not permitted. Therefore shared system account users may get presented no control entities and only a subset of entities by the integration.
 
 
 ## Anker account limitation and usage recommendations
 
-Usage of the same Anker account in the integration and the Anker mobile app at the same time is not possible due to security reasons enforced by Anker. For more details refer to the Anker Account information in the [README](README.md).
-Therefore, it is recommended to create a second account and use one in the integration and the other one in the mobile app. For instructions to create a second account and share the system, see [How to create a second Anker Power account](#how-to-create-a-second-anker-power-account).
+Prior August 2025, usage of the same Anker account in the integration and the Anker mobile app at the same time was not possible due to security reasons enforced by Anker. Therefore, it was recommended to create a second account and use one in the integration and the other one in the mobile app. For instructions to create a second account and share the system, see [How to create a second Anker Power account](#how-to-create-a-second-anker-power-account).
+**This Anker account usage limitation was relaxed end of June 2025** and a second account for integration usage is no longer mandatory. For more details refer to the [Anker Account information in the README](README.md#anker-account-information).
+
 Following is the integration configuration dialog:
 
 ![configuration][config-img]
 
-**Attention:**
+> [!IMPORTANT]
+> System members cannot manage any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
 
-System members cannot manage any devices of the shared system or view any of their details. You can only see the system overview in the app. Likewise it is the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
+### Previous work around to overcome parallel usage restriction of owner account (NO longer required since August 2025)
 
-A work around to overcome this limitation for using the owning account in the HA integration has been implemented via an Api switch in the `account` device. When disabled, the integration stops any Api communication for that account. During that time, you can use the owning account again for login through the Anker app and modify device settings or perform firmware upgrades as needed. Afterwards, you can re-activate Api communication in the integration again, which will automatically re-login and continue reporting data for that account. While the Api switch is off, all sensors related to this Anker account will become unavailable to avoid reporting of stale data.
+A work around to overcome the previous account usage limitation had been implemented via an Api switch in the `account` device. When disabled, the integration stops any Api communication for the account configured in the hub entry. During that time, you could use the same account again for login through the Anker app and regain full control to modify device settings or perform firmware upgrades as needed. Afterwards, you could re-activate Api communication in the integration again, which automatically logged in the integration client to continue reporting data for that account. While the Api switch is off, all sensors related to this Anker account (hub entry) will become unavailable to avoid reporting of stale data.
 
 To simplify usage of this workaround, please see [Automation to send and clear sticky, actionable notifications to your smart phone based on Api switch setting](#automation-to-send-and-clear-sticky-actionable-notifications-to-your-smart-phone-based-on-api-switch-setting) for an example automation, which sends a sticky mobile notification when the Api switch was disabled, using actionable buttons to launch the Anker App directly from the notification. It provides also actionable buttons to re-enable the switch again and clear the sticky notification. This avoids forgetting to re-enable your data collection once you are finished with your tasks in the Anker mobile app.
 
@@ -237,14 +240,14 @@ Starting with version 1.2.0, a change in the exclusion list that added more excl
 
 ## Switching between different Anker Power accounts
 
-The integration will setup the entities with unique IDs based on device serials or a combination of serial numbers. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. While the entity history is not lost, it implies that you cannot configure different accounts at the same time when they share a system. Otherwise, it would cause HA setup errors because of non unique entities. Therefore, new integration hub configurations are validated and not allowed when they share systems or devices with an active hub configuration.
-Up to release 2.1.0, if you wanted to switch between your main and shared account, you had to delete first the active configuration and then create a new configuration with the other account. When the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured HA recorder interval is over. The default HA recorder history interval is 10 days.
+The integration will setup the entities with unique IDs based on device serials or a combination of serial numbers. This makes them truly unique and provides the advantage that the same entities can be re-used after switching the integration configuration to another shared account. While the entity history is not lost, it implies that you cannot configure different accounts at the same time **once they share a system**. Otherwise, it would cause HA setup errors because of non unique entities. Therefore, new integration hub configurations are validated and not allowed if they share systems or devices with an active hub configuration.
+Up to release 2.1.0, if you wanted to switch between your main and shared account, you had to delete first the active configuration and then create a new configuration with the other account. While the devices and entities for the configured account will be created, deleted entities will be re-activated if their data is accessible via Api for the configured account. That means if you switch from your main account to the shared account, only a subset of entities will be re-activated. The other deleted entities and their history data may remain available until your configured HA recorder interval is over. The default HA recorder history interval is 10 days.
 
 Starting with HA 2024.04, there is a new option to 'Reconfigure' an active integration hub configuration. This integration reconfiguration capability has been implemented with integration version 2.1.0 and allows a simplified, direct account reconfiguration from the integration's menu as shown in following example:
 ![Reconfigure][reconfigure-img]
 
 > [!NOTE]
-> While changing your active configuration to another account, the same actions and validations will be performed in background as via configuration entry deletion and re-creation. Using another account that shares any system or device with any active configuration except the modified one is not allowed. Once the configuration change is confirmed for the new or same account, all devices and entities will be unregistered and therefore removed, and afterwards recreated to adjust for the manageable entities of that modified account. Confirming a reconfiguration to the same account can therefore be used as workaround to clear orphaned entities. Those can occur when you recreate or reconfigure your power systems in the Anker app or change alias names for existing devices, since that alias name is used for automated entity_id generation.
+> While changing your active configuration to another account, the same actions and validations will be performed in background as via configuration entry deletion and re-creation. Using another account that shares any system or device with any active hub configuration except the modified one is not allowed. Once the configuration change is confirmed for the new or same account, all devices and entities will be unregistered and therefore removed, and afterwards recreated to adjust for the manageable entities of that modified account. Confirming a reconfiguration to the same account can therefore be used as workaround to clear orphaned entities. Those can occur when you recreate or reconfigure your power systems in the Anker app or change alias names for existing devices, since that alias name is used for automated entity_id generation.
 
 
 ## How to create a second Anker Power account
@@ -620,7 +623,7 @@ While not the full value ranges supported by the integration can be applied to t
 
 ## Modification of Solarbank AC settings
 
-The Solarbank 2 AC model includes a hybrid inverter that supports also AC charging. Therefore this model supports some unique capabilities that require an additional set of sensors, control entities and actions. Note that the control entities are only present and the actions will only work for your admin account, that has permission to query and modify system and device settings.
+The Solarbank 2 AC model includes a hybrid inverter that supports also AC charging. Therefore this model supports some unique capabilities that require an additional set of sensors, control entities and actions. Note that the control entities are only present and the actions will only work for your owner account, that has permission to query and modify system and device settings.
 Version 2.5.0 of the integration provided initial support for toggling the usage mode to Time of Use mode or enabling the backup charge option for the next 3 hours. Further control entities have been provided to individually set the backup charge start and end times, or to enable and disable the backup charge setting.
 Version 2.6.0 added additional Time of Use plan control entities for the actual tariff and tariff price, as well as actions to modify multiple settings of these unique AC modes easily.
 
