@@ -11,6 +11,7 @@
                 "solar_energy": "Solar energy stats",
                 "solarbank_energy": "Solarbank energy stats",
                 "solarbank": "Solarbanks",
+                "solarbank_pps": "Solarbank power stations",
                 "inverter": "Inverter",
                 "pps": "Portable power stations",
                 "powerpanel": "Power panels",
@@ -23,7 +24,10 @@
                 "smartplug_energy": "Smart plug energy stats",
                 "hes": "Home energy systems",
                 "hes_energy": "HES energy stats",
-                "hes_avg_power": "HES ⌀-power"
+                "hes_avg_power": "HES ⌀-power",
+                "vehicle": "Vehicles",
+                "ev_charger": "EV Charger",
+                "charger": "Power charger"
             }
         },
         "plan": {
@@ -186,6 +190,12 @@
         "button": {
             "refresh_device": {
                 "name": "Refresh details"
+            },
+            "refresh_vehicles": {
+                "name": "Refresh vehicles"
+            },
+            "restore_attributes": {
+                "name": "Restore attributes"
             }
         },
         "binary_sensor": {
@@ -198,6 +208,9 @@
                 "state_attributes": {
                     "bt_mac": {
                         "name": "Bluetooth MAC"
+                    },
+                    "wifi_mac": {
+                        "name": "Wifi MAC"
                     },
                     "wifi_ssid": {
                         "name": "Wifi SSID"
@@ -346,6 +359,20 @@
                     "on": "Yes",
                     "off": "No"
                 }
+            },
+            "smart_charging": {
+                "name": "Smart charging",
+                "state": {
+                    "on": "Yes",
+                    "off": "No"
+                }
+            },
+            "connected_to_enodeapi": {
+                "name": "Enode Api",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                }
             }
         },
         "datetime": {
@@ -385,6 +412,12 @@
                         "name": "Customized"
                     }
                 }
+            },
+            "ac_max_charging_power": {
+                "name": "Max charge"
+            },
+            "energy_consumption_per_100km": {
+                "name": "Consumption"
             },
             "dynamic_price_fee": {
                 "name": "Dyn. price fee",
@@ -479,6 +512,18 @@
             },
             "preset_inverter_limit": {
                 "name": "Inverter limit"
+            },
+            "vehicle_brand": {
+                "name": "1. Brand"
+            },
+            "vehicle_model": {
+                "name": "2. Model"
+            },
+            "vehicle_year": {
+                "name": "3. Year"
+            },
+            "vehicle_variant": {
+                "name": "4. Variant (ID/Cap/AC)"
             }
         },
         "sensor": {
@@ -512,6 +557,7 @@
                     "charge": "Charge",
                     "charge_bypass": "Charge bypass",
                     "charge_priority":  "Charge priority",
+                    "charge_ac":  "Charge AC",
                     "full_bypass": "Full bypass",
                     "wakeup": "Wakeup",
                     "cold_wakeup": "Cold wakeup",
@@ -1194,6 +1240,9 @@
                         "name": "Runtime sec"
                     }
                 }
+            },
+            "update_timestamp": {
+                "name": "Updated"
             }
         },
         "switch": {
@@ -1219,6 +1268,9 @@
                         "name": "Requests last hour"
                     }
                 }
+            },
+            "default_vehicle": {
+                "name": "Default vehicle"
             }
         }
     },

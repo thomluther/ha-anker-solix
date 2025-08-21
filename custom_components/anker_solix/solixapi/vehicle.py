@@ -5,7 +5,7 @@ from pathlib import Path
 import random
 import string
 
-from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixVehicle
+from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType, SolixVehicle
 
 
 async def get_vehicle_list(
@@ -41,8 +41,19 @@ async def get_vehicle_list(
     vehicles = {}
     for vehicle in data.get("vehicle_list") or []:
         if vehicle_id := vehicle.get("vehicle_id"):
-            vehicles[vehicle_id] = (old_vehicles.get(vehicle_id) or {}) | vehicle
+            vehicles[vehicle_id] = (
+                (old_vehicles.get(vehicle_id) or {})
+                | {"type": SolixDeviceType.VEHICLE.value}
+                | vehicle
+            )
     self._update_account({"vehicles": vehicles})
+    # check if vehicles are registered, then used vehicle options should be loaded to cache
+    if "vehicles_registered" in self.account:
+        registered = self.account.get("vehicles_registered") or []
+        for vid, vehicle in vehicles.items():
+            if vid not in registered:
+                await self.update_vehicle_options(vehicle=vehicle, fromFile=fromFile)
+        self.account["vehicles_registered"] = list(vehicles.keys())
     return data
 
 
@@ -79,7 +90,27 @@ async def get_vehicle_details(
     # update account details with vehicle details
     if vehicleId := data.get("vehicle_id"):
         vehicles = self.account.get("vehicles") or {}
-        vehicle = (vehicles.get(vehicleId) or {}) | data
+        vehicle = vehicles.get(vehicleId) or {}
+        # check if model id must be updated because other values have changed
+        check_id = SolixVehicle(vehicle=vehicle | {"model_id": ""}) != SolixVehicle(
+            vehicle=data
+        )
+        # update vehicle details
+        vehicle = vehicle | {"type": SolixDeviceType.VEHICLE.value} | data
+        # check if vehicle is registered
+        if "vehicles_registered" in self.account:
+            # used vehicle options should be loaded to cache
+            if vehicleId not in (registered := self.account["vehicles_registered"]):
+                await self.update_vehicle_options(vehicle=vehicle, fromFile=fromFile)
+                registered.append(vehicleId)
+            # try to find model id from loaded options in cache
+            if check_id and (
+                v := await self.get_vehicle_attributes(
+                    vehicle=vehicle, fromFile=fromFile
+                )
+            ):
+                vehicle["model_id"] = v.model_id
+        # add updated vehicle data to cache
         self._update_account({"vehicles": vehicles | {vehicleId: vehicle}})
     return data
 
@@ -176,7 +207,7 @@ async def get_model_years(
         old = (oldroot.get(brand) or {}).get(model) or {}
         new = {}
         for item in data.get("year_list") or []:
-            new[item] = old.get(item) or {}
+            new[str(item)] = old.get(str(item)) or {}
         oldroot[brand] = oldroot.get(brand) or {}
         oldroot[brand][model] = new | {"cached": True}
         self._update_account({"vehicle_brands": oldroot})
@@ -225,13 +256,13 @@ async def get_model_year_attributes(
     return data
 
 
-async def get_vehicle_options(
+async def update_vehicle_options(
     self,
-    vehicle: SolixVehicle | str | dict | None,
-    updateCache: bool = True,
+    vehicle: SolixVehicle | str | dict | None = None,
+    cacheChain: bool = True,
     fromFile: bool = False,
 ) -> list:
-    """Get the vehicle options for selection of parent option in the order brands -> brand models -> model years -> model IDs.
+    """Optionally update and get the vehicle options for selection of parent option in the order brands -> brand models -> model years -> model IDs.
 
     Example data for brand model options:
     ["i3 120 Ah","i3 60 Ah",...,"iX2 xDrive30","iX3"]
@@ -243,7 +274,7 @@ async def get_vehicle_options(
             vehicle
             if isinstance(vehicle, SolixVehicle)
             else SolixVehicle(vehicle=vehicle)
-            if isinstance(vehicle, str | dict)
+            if isinstance(vehicle, str | dict | None)
             else None
         )
     ):
@@ -252,55 +283,93 @@ async def get_vehicle_options(
         vehicle.model and not vehicle.brand
     ):
         return options
-    if vehicle.brand:
-        if vehicle.model:
-            if vehicle.productive_year:
+    if (cacheChain or not vehicle.brand) and "cached" not in (
+        self.account.get("vehicle_brands") or {}
+    ):
+        # load brand options to cache
+        await self.get_brand_list(fromFile=fromFile)
+    if vehicle.brand and vehicle.brand in (
+        brands := self.account.get("vehicle_brands") or {}
+    ):
+        if (cacheChain or not vehicle.model) and "cached" not in (
+            brands.get(vehicle.brand) or {}
+        ):
+            # load model options to cache
+            await self.get_brand_models(brand=vehicle.brand, fromFile=fromFile)
+        if vehicle.model and vehicle.model in (
+            models := brands.get(vehicle.brand) or {}
+        ):
+            if (cacheChain or not vehicle.productive_year) and "cached" not in (
+                models.get(vehicle.model) or {}
+            ):
+                # get year options
+                await self.get_model_years(
+                    brand=vehicle.brand, model=vehicle.model, fromFile=fromFile
+                )
+            if vehicle.productive_year and str(vehicle.productive_year) in (
+                years := models.get(vehicle.model) or {}
+            ):
                 # get year attribute options if not cached already
-                if updateCache and "cached" not in (
-                    (
-                        (
-                            (self.account.get("vehicle_brands") or {}).get(
-                                vehicle.brand
-                            )
-                            or {}
-                        ).get(vehicle.model)
-                        or {}
-                    ).get(str(vehicle.productive_year))
-                    or {}
-                ):
+                if "cached" not in (years.get(str(vehicle.productive_year)) or {}):
                     await self.get_model_year_attributes(
                         brand=vehicle.brand,
                         model=vehicle.model,
                         year=vehicle.productive_year,
                         fromFile=fromFile,
                     )
-                options = list(
-                    (
-                        (
-                            (
-                                (self.account.get("vehicle_brands") or {}).get(
-                                    vehicle.brand
-                                )
-                                or {}
-                            ).get(vehicle.model)
-                            or {}
-                        ).get(str(vehicle.productive_year))
-                        or {}
-                    ).keys()
-                )
-            else:
-                # get year options
-                if updateCache and "cached" not in (
+    # get requested options from cache
+    return self.get_vehicle_options(vehicle=vehicle)
+
+
+def get_vehicle_options(
+    self,
+    vehicle: SolixVehicle | str | dict | None = None,
+    extendAttributes: bool = False,
+) -> list:
+    """Get the vehicle options from cache for selection of parent options in the order brands -> brand models -> model years -> model IDs with attributes.
+
+    If extendAttributes = True, the model IDs will be extended with some attributes
+    Example data for brand model options:
+    ["i3 120 Ah","i3 60 Ah",...,"iX2 xDrive30","iX3"]
+    """
+    options = set()
+    # validate parameters
+    if not (
+        vehicle := (
+            vehicle
+            if isinstance(vehicle, SolixVehicle)
+            else SolixVehicle(vehicle=vehicle)
+            if isinstance(vehicle, str | dict | None)
+            else None
+        )
+    ):
+        return list(options)
+    if (vehicle.productive_year and not vehicle.model) or (
+        vehicle.model and not vehicle.brand
+    ):
+        return list(options)
+    if vehicle.brand:
+        if vehicle.model:
+            if vehicle.productive_year:
+                # get year attribute options
+                model_ids = (
                     (
                         (self.account.get("vehicle_brands") or {}).get(vehicle.brand)
                         or {}
                     ).get(vehicle.model)
                     or {}
-                ):
-                    await self.get_model_years(
-                        brand=vehicle.brand, model=vehicle.model, fromFile=fromFile
-                    )
-                options = list(
+                ).get(str(vehicle.productive_year)) or {}
+                if extendAttributes:
+                    options = {
+                        SolixVehicle(vehicle=value).idAttributes()
+                        for key, value in model_ids.items()
+                        if key != "cached"
+                    }
+                else:
+                    options = set(model_ids.keys())
+            else:
+                # get year options
+                options = set(
                     (
                         (
                             (self.account.get("vehicle_brands") or {}).get(
@@ -313,24 +382,75 @@ async def get_vehicle_options(
                 )
         else:
             # get model options
-            if updateCache and "cached" not in (
-                (self.account.get("vehicle_brands") or {}).get(vehicle.brand) or {}
-            ):
-                await self.get_brand_models(brand=vehicle.brand, fromFile=fromFile)
-            options = list(
+            options = set(
                 (
                     (self.account.get("vehicle_brands") or {}).get(vehicle.brand) or {}
                 ).keys()
             )
     else:
         # get brand options
-        if updateCache and "cached" not in (self.account.get("vehicle_brands") or {}):
-            await self.get_brand_list(fromFile=fromFile)
-        options = list((self.account.get("vehicle_brands") or {}).keys())
+        options = set((self.account.get("vehicle_brands") or {}).keys())
     # Remove optional cache flag from list
-    if "cached" in options:
-        options.remove("cached")
-    return options
+    options.discard("cached")
+    return list(options)
+
+
+async def get_vehicle_attributes(
+    self,
+    vehicle: SolixVehicle | str | dict | None = None,
+    fromFile: bool = False,
+) -> SolixVehicle | None:
+    """Get the vehicle model ID and attributes from cache or refresh for provided vehicle details."""
+    # validate parameters
+    if not (
+        vehicle := (
+            vehicle
+            if isinstance(vehicle, SolixVehicle)
+            else SolixVehicle(vehicle=vehicle)
+            if isinstance(vehicle, str | dict | None)
+            else None
+        )
+    ):
+        return None
+    # try lookup only if required details provided
+    attributes = {}
+    if vehicle.brand and vehicle.model and vehicle.productive_year:
+        # get year options with optional cache update and filter best match
+        for option in [
+            self.account["vehicle_brands"][vehicle.brand][vehicle.model][
+                str(vehicle.productive_year)
+            ][str(o)]
+            for o in await self.update_vehicle_options(
+                vehicle=vehicle,
+                fromFile=fromFile,
+            )
+        ]:
+            if (
+                not attributes
+                or option.get("id") == vehicle.model_id
+                or (
+                    not vehicle.model_id
+                    and (
+                        option.get("battery_capacity") == vehicle.battery_capacity
+                        or (
+                            attributes.get("battery_capacity")
+                            != vehicle.battery_capacity
+                            and (
+                                option.get("ac_max_power")
+                                == vehicle.ac_max_charging_power
+                                or (
+                                    attributes.get("ac_max_power")
+                                    != vehicle.ac_max_charging_power
+                                    and option.get("hundred_fuel_consumption")
+                                    == vehicle.energy_consumption_per_100km
+                                )
+                            )
+                        )
+                    )
+                )
+            ):
+                attributes = option
+    return SolixVehicle(vehicle=attributes) if attributes else None
 
 
 async def create_vehicle(
@@ -366,38 +486,13 @@ async def create_vehicle(
     )
     # try lookup for missing attributes prior creation
     if (
-        vehicle.brand
-        and vehicle.model
-        and vehicle.productive_year
-        and (
-            not vehicle.battery_capacity
-            or not vehicle.ac_max_charging_power
-            or not vehicle.energy_consumption_per_100km
-        )
+        not vehicle.battery_capacity
+        or not vehicle.ac_max_charging_power
+        or not vehicle.energy_consumption_per_100km
     ):
-        # get year options with optional cache udate and filter best match
-        attributes = {}
-        for option in [
-            self.account["vehicle_brands"][vehicle.brand][vehicle.model][vehicle.productive_year][o]
-            for o in await self.get_vehicle_options(
-                vehicle=vehicle,
-                fromFile=toFile,
-            )
-        ]:
-            if (
-                not attributes
-                or option.get("id") == vehicle.id
-                or (
-                    not vehicle.id
-                    and (
-                        option.get("battery_capacity") == vehicle.battery_capacity
-                        or option.get("ac_max_power") == vehicle.ac_max_charging_power
-                        or option.get("hundred_fuel_consumption") == vehicle.energy_consumption_per_100km
-                    )
-                )
-            ):
-                attributes = option
-        vehicle.update(attributes=attributes)
+        # get year options with optional cache update and filter best match
+        if v := await self.get_vehicle_attributes(vehicle=vehicle, fromFile=toFile):
+            vehicle = v
     if toFile:
         # generate random vehicle ID
         id_temp = "70d8e951-c4dc-53ea-f35b-0bbfeee44ddc"
@@ -465,7 +560,8 @@ async def create_vehicle(
             "user_vehicle_info": [
                 {
                     "vehicle_name": name,
-                } | vehicle.asdict(skip_empty=True)
+                }
+                | vehicle.asdict(skip_empty=True)
             ]
         }
         code = (
@@ -484,9 +580,16 @@ async def create_vehicle(
         )
         if v.get("vehicle_name") == name
     ]:
-        response = await self.get_vehicle_details(
-            vehicleId=v.get("vehicle_id"), fromFile=toFile
-        )
+        vehicleId = v.get("vehicle_id")
+        response = await self.get_vehicle_details(vehicleId=vehicleId, fromFile=toFile)
+        # check if vehicle is registered, then used vehicle options should be loaded to cache
+        if (
+            "vehicles_registered" in self.account
+            and vehicleId
+            and vehicleId not in (registered := self.account["vehicles_registered"])
+        ):
+            await self.update_vehicle_options(vehicle=vehicle, fromFile=toFile)
+            registered.append(vehicleId)
     return response
 
 
@@ -501,7 +604,7 @@ async def manage_vehicle(  # noqa: C901
     """Manage an existing vehicle of the user account. Every vehicle attribute except the name can be updated.
 
     - vehicleId is the ID of the vehicle to manage
-    - action is either update, setdefault, setcharge or delete
+    - action is either update, restore, setdefault, setcharge, or delete
     - vehicle is a SolixVehicle instance or a representation of it, including attributes like brand, model, productive_year, id of model,
       battery_capacity in kWh, ac_max_charging_power in kW and energy_consumption_per_100km in kWh
     - chargeOrder({'device_sn': deviceSn, 'transaction_id': transactionId}) will set defined transactionId to deviceSn, which is the EV charger device
@@ -515,7 +618,7 @@ async def manage_vehicle(  # noqa: C901
     )
     action = (
         action.lower()
-        if action.lower() in ["setdefault", "setcharge", "update", "delete"]
+        if action.lower() in ["setdefault", "setcharge", "update", "restore", "delete"]
         else None
     )
     vehicle = (
@@ -551,7 +654,7 @@ async def manage_vehicle(  # noqa: C901
                 # set first vehicle default if deleted was default
                 if old_vehicle.get("is_default_vehicle") and len(new_list) > 0:
                     new_list[0]["is_default_vehicle"] = True
-                filedata["vehicle_list"]  = new_list
+                filedata["vehicle_list"] = new_list
         else:
             code = (
                 await self.apisession.request(
@@ -560,6 +663,11 @@ async def manage_vehicle(  # noqa: C901
             ).get("code")
             if not isinstance(code, int) or int(code) != 0:
                 return False
+        # check if vehicle is registered, then remove it from list
+        if vehicleId in (registered := self.account.get("vehicles_registered") or []):
+            self.account["vehicles_registered"] = [
+                v for v in registered if v != vehicleId
+            ]
     elif action == "setdefault":
         # set the vehicle as default
         if toFile:
@@ -657,7 +765,18 @@ async def manage_vehicle(  # noqa: C901
             ).get("code")
             if not isinstance(code, int) or int(code) != 0:
                 return False
-    elif action == "update":
+    elif action in ["update", "restore"]:
+        # For restore, try to get attributes from cache with optional lookup
+        if action == "restore" and (
+            not vehicle.battery_capacity
+            or not vehicle.ac_max_charging_power
+            or not vehicle.energy_consumption_per_100km
+        ):
+            # get year options with optional cache udate and filter best match
+            if v := await self.get_vehicle_attributes(vehicle=vehicle, fromFile=toFile):
+                vehicle = v
+            else:
+                return False
         if vehicle.brand:
             data["brand"] = vehicle.brand
         if vehicle.model:
@@ -700,6 +819,9 @@ async def manage_vehicle(  # noqa: C901
                     "post", API_ENDPOINTS["vehicle_update"], json=data
                 )
             ).get("code")
+        # check if vehicle is registered, then updated options should be loaded to cache
+        if vehicleId in (registered := self.account.get("vehicles_registered") or []):
+            await self.update_vehicle_options(vehicle=vehicle, fromFile=toFile)
     # update list data file if required
     if filedata:
         if not await self.apisession.saveToFile(

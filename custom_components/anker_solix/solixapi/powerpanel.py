@@ -815,19 +815,26 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                     else float(new_total)
                                 )
                                 # spread total Wh delta across time since last valid time
+                                interval = 300
                                 factor = 3600 / max(
-                                    (
-                                        datetime.fromisoformat(avg_data["valid_time"])
-                                        - datetime.fromisoformat(old_valid)
-                                    ).total_seconds(),
-                                    60,
+                                    interval
+                                    * round(
+                                        (
+                                            datetime.fromisoformat(
+                                                avg_data["valid_time"]
+                                            )
+                                            - datetime.fromisoformat(old_valid)
+                                        ).total_seconds()
+                                        / interval
+                                    ),
+                                    interval,
                                 )
                                 # consider unit conversion since totals are always converted to kwh
                                 avg_data["grid_export_avg"] = (
                                     f"{(avg_data['grid_export_avg'] * factor * (1 if 'k' in avg_data['power_unit'].lower() else 1000)):.2f}"
                                 )
                             else:
-                                # first total value, calculate an approximate for first interval (remainder from other avg values)
+                                # first total value, calculate an approximate for first interval (remainder from other avg values without loss)
                                 with contextlib.suppress(ValueError):
                                     avg_data["grid_export_avg"] = (
                                         f"{max(0, float(avg_data.get('solar_power_avg')) - float(avg_data.get('charge_power_avg')) + float(avg_data.get('discharge_power_avg')) - float(avg_data.get('home_usage_avg')) + float(avg_data.get('grid_import_avg'))):.2f}"

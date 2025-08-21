@@ -11,6 +11,7 @@
                 "solar_energy": "Solar Energiestatistik",
                 "solarbank_energy": "Solarbank Energiestatistik",
                 "solarbank": "Solarbänke",
+                "solarbank_pps": "Solarbank Power Stationen",
                 "inverter": "Wechselrichter",
                 "pps": "Power Stationen",
                 "powerpanel": "Power Panels",
@@ -23,7 +24,10 @@
                 "smartplug_energy": "Smarte Steckdosen Energiestatistik",
                 "hes": "Heim Energie Systeme",
                 "hes_energy": "HES Energiestatistik",
-                "hes_avg_power": "HES ⌀-Leistung"
+                "hes_avg_power": "HES ⌀-Leistung",
+                "vehicle": "Fahrzeuge",
+                "ev_charger": "EV Ladestationen",
+                "charger": "Power Ladestationen"
             }
         },
         "plan": {
@@ -186,6 +190,12 @@
         "button": {
             "refresh_device": {
                 "name": "Details aktualisieren"
+            },
+            "refresh_vehicles": {
+                "name": "Fahrzeuge aktualisieren"
+            },
+            "restore_attributes": {
+                "name": "Attribute zurücksetzen"
             }
         },
         "binary_sensor": {
@@ -198,6 +208,9 @@
                 "state_attributes": {
                     "bt_mac": {
                         "name": "Bluetooth MAC"
+                    },
+                    "wifi_mac": {
+                        "name": "Wifi MAC"
                     },
                     "wifi_ssid": {
                         "name": "Wifi SSID"
@@ -346,6 +359,20 @@
                     "on": "Ja",
                     "off": "Nein"
                 }
+            },
+            "smart_charging": {
+                "name": "Intelligentes Laden",
+                "state": {
+                    "on": "Ja",
+                    "off": "Nein"
+                }
+            },
+            "connected_to_enodeapi": {
+                "name": "Enode Api",
+                "state": {
+                    "on": "Verbunden",
+                    "off": "Getrennt"
+                }
             }
         },
         "datetime": {
@@ -385,6 +412,12 @@
                         "name": "Angepasst"
                     }
                 }
+            },
+            "ac_max_charging_power": {
+                "name": "Max Ladeleistung"
+            },
+            "energy_consumption_per_100km": {
+                "name": "Consumption"
             },
             "dynamic_price_fee": {
                 "name": "Dyn. Preis Gebühr",
@@ -479,6 +512,18 @@
             },
             "preset_inverter_limit": {
                 "name": "MWR Limit"
+            },
+            "vehicle_brand": {
+                "name": "1. Marke"
+            },
+            "vehicle_model": {
+                "name": "2. Modell"
+            },
+            "vehicle_year": {
+                "name": "3. Baujahr"
+            },
+            "vehicle_variant": {
+                "name": "4. Variante (ID/Kap/AC)"
             }
         },
         "sensor": {
@@ -512,6 +557,7 @@
                     "charge": "Aufladung",
                     "charge_bypass": "Überschussladung",
                     "charge_priority":  "Ladepriorität",
+                    "charge_ac":  "AC Aufladung",
                     "full_bypass": "Voller Bypass",
                     "wakeup": "Wachzustand",
                     "cold_wakeup": "Kalter Wachzustand",
@@ -1194,6 +1240,9 @@
                         "name": "Laufzeit Sek"
                     }
                 }
+            },
+            "update_timestamp": {
+                "name": "Aktualisiert"
             }
         },
         "switch": {
@@ -1219,6 +1268,9 @@
                         "name": "Abfragen letzte Stunde"
                     }
                 }
+            },
+            "default_vehicle": {
+                "name": "Standardfahrzeug"
             }
         }
     },

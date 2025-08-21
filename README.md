@@ -52,6 +52,8 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Solarbank 2 AC devices](#solarbank-2-ac-devices)
    * [Combined Solarbank 2 systems containing cascaded Solarbank 1 devices](#combined-solarbank-2-systems-containing-cascaded-solarbank-1-devices)
    * [Solarbank 3 devices](#solarbank-3-devices)
+   * [Solarbank Multisystem with Power Dock](#solarbank-multisystem-with-power-dock)
+   * [Electric Vehicle devices](#electric-vehicle-devices)
    * [Power Panels](#power-panels)
    * [Home Energy Systems (HES)](#home-energy-systems-hes)
    * [Other devices](#other-devices)
@@ -77,8 +79,8 @@ The Anker Solix Cloud allowed only one login token per account at any time. Each
 > [!NOTE]
 > System members cannot manage any devices of the shared system or view any device details. You can only see the system overview in the app. Likewise you have the same behavior when using the Api: You cannot query device details with the shared account because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
 
-> [!IMPORTANT]
-> Starting end of July 2025 and with version 3.10 of the Anker mobile app, one account can now be used across multiple devices in parallel. That means active login tokens are no longer deleted upon login of another client and parallel account usage becomes possible. Actually there is **NO NEED ANYMORE** to create a second account and share the system with it, since the main account can now be used in parallel across multiple devices and clients.
+> [!TIP]
+> Starting end of July 2025 and with version 3.10 of the Anker mobile app, one account can now be used across multiple devices in parallel. That means active login tokens are no longer deleted upon login of another client and parallel account usage becomes possible. Actually there is **NO NEED ANYMORE** to create a second account and share the system with it, since the main account can now be used in parallel across multiple devices and clients. To switch your account, refer to [Switching between different Anker Power accounts](#switching-between-different-anker-power-accounts)
 
 For detailed usage instructions, please refer to the [INFO](INFO.md)
 
@@ -122,6 +124,7 @@ Device type | Description
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No individual device setting supported)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(only basic monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(only basic monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
+`vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the announced [Anker Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (🇩🇪).
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
 
@@ -194,6 +197,8 @@ Solarbank 3 devices behave similar to Solarbank 2 AC devices, but they will prov
   - New 'Time Slot' usage mode (based on dynamic prices) to automate AC charging and discharging
   - 24h solar forecast data while 'Smart' mode is active, which can be seen in the App intraday solar chart
 
+However, it was noticed that the Solarbank charging status code is not longer being used by models that contain a hybrid inverter (since Solarbank 2 AC). The code remains always '0' which is translated into a `Detection` status as used by earlier solarbank models. Since that is no longer meaningful for Solarbank 2+ models, starting with version 3.2.0 an appropriate charging status description is assumed for code '0' of Solarbank 2+ devices, which is based on the actual power and SOC value constellation. A new description for AC charging was also implemented to better distinguish the various charging modes for hybrid inverter models.
+
 > [!IMPORTANT]
 > Neither 'Smart' mode nor 'Time Slot' mode configuration options are provided in the known cloud Api structures. Therefore these new modes can only be toggled, but not configured or modified via the integration. If you want the toggle to these new modes, they must be configured initially through the mobile app. For example, the Smart mode requires your data usage authorization as well as confirmation of device location via Google Maps before it can be enabled.
 
@@ -202,8 +207,26 @@ Solarbank 3 devices behave similar to Solarbank 2 AC devices, but they will prov
 > [!NOTE]
 > The Solarbank 3 dynamic price VAT and fee actually cannot be determined or modified through the cloud Api. While those entities can be customized in the integration, the changes are only applied as customization to the Api cache, but **NOT** to your real system configuration. However, they are required to calculate the total dynamic prices (actual and forecast) as used by your system to evaluate charge and discharge slots as well as saving calculations. To monitor total dynamic prices and forecast also as system member, those entities have been made customizable in the Api cache for now. They will be initialized with an average default for your country if defined. Refer to [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for more details on their behavior.
 
+
+### Solarbank Multisystem with Power Dock
+
+Anker announced the [Solarbank Multisystem solution for early testing in Germany](https://www.ankersolix.com/de/balkonkraftwerk-mit-speicher/solarbank3-a17c5-multisystem) (DE) with common delivery planned in September 2025. A Solarbank Multisystem with the Power Dock will support up to 4 Solarbank devices. Initially this is only supported for Solarbank 3, but the various Solarbank 2 models are announced to follow end of 2025.
+
 > [!IMPORTANT]
-> Anker announced their [Solarbank 3 Multisystem solution for early testing in Germany](https://www.ankersolix.com/de/balkonkraftwerk-mit-speicher/solarbank3-a17c5-multisystem). It is expected, that such multi-system configurations will cause issues with the integration. There is already a feature request [#310](https://github.com/thomluther/ha-anker-solix/issues/310) where owners can contribute with data exports and Api exploration for such multi-system configurations.
+> Actually there are significant consumption data update issues for such systems during the initial deployment phase and cloud values may be wrong or lagging hours behind. This becomes especially visible via the Api or the Anker mobile App once using a member account.
+
+The Api library implemented enhancements to mask some value errors, but this can be done only on a limited base. It also does not help for proper total value breakdown to individual devices, if the breakdown is missing in the cloud data. Therefore some of the Solarbank device power values may reflect the appliance totals instead of individual breakdown. For that reason, Solarbank devices in Multisystem constellations are not supported yet by the integration and future support may be limited.
+
+> [!NOTE]
+> For more details on Multisystem support, please refer and contribute to issue [#310](https://github.com/thomluther/ha-anker-solix/issues/310)
+
+
+### Electric Vehicle devices
+
+Anker announced its [Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (DE) which can be used as stand alone system or being integrated into the X1 HES system as well as into the Solarbank Multisystem (by 4Q 2025). The EV Charger device can be shared amongst Anker cloud users, while each user can define/create its own virtual electric vehicle, or even multiple of them (up to 5 vehicles per account). The vehicles are used to manage EV charging by individual users, even if they are not the owner of the system to which the EV Charger device belongs to. Each user will need to create its own vehicle(s) to create and manage charge orders for the V1. The integration currently does **NOT** yet support the vehicle creation itself, but it creates a virtual device for each existing EV under the user account and it can modify various vehicle attributes and show all entities that belong to the vehicle. The user vehicle can also be deleted by removing the vehicle device from the integration hub.
+
+> [!TIP]
+> The integration will automatically discover added and removed vehicles under the user account during the regular device details refresh cycle (10 minutes per default). An immediate vehicle refresh can also be triggered manually by a corresponding button of the account device.
 
 
 ### Power Panels

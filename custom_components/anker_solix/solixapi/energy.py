@@ -293,7 +293,7 @@ async def energy_daily(  # noqa: C901
                     {
                         "date": daystr,
                         # grid export is negative, convert to re-use as solar_to_grid value
-                        "solar_to_grid": item.get("value", "").replace("-", "") or None,
+                        "solar_to_grid": item.get("value", "").replace("-", "",1) or None,
                     }
                 )
                 table.update({daystr: entry})
@@ -974,7 +974,7 @@ async def get_device_charge_order_stats(
     {"total_stats": {"charge_unit": "","charge_total": 0,"charge_time": 0,"charge_count": 0,"cost": 0,"cost_unit": "\u20ac","cost_saving": 0,
     "co2_saving": 0,"co2_saveing_unit": "","mile_age": 0},"date_list": []}
     """
-    # TODO: Update example once range break down is available
+    # TODO: Update example once range break down is available, will field name typo still be corrected?
     rangeType = rangeType if rangeType in ["week", "month", "year"] else "all"
     startDay = startDay if isinstance(startDay, datetime) else datetime.now()
     endDay = endDay if isinstance(endDay, datetime) else startDay

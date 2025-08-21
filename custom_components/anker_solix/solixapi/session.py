@@ -66,7 +66,9 @@ class AnkerSolixClientSession:
         self._password: str = password
         self._session: ClientSession = websession
         self._loggedIn: bool = False
-        self._testdir: str = str((Path(__file__).parent / ".." / "examples" / "example1").resolve())
+        self._testdir: str = str(
+            (Path(__file__).parent / ".." / "examples" / "example1").resolve()
+        )
 
         # Flag for retry of any or certain error
         self._retry_attempt: bool | int = False
@@ -787,10 +789,13 @@ class AnkerSolixClientSession:
             await aiofiles.os.remove(masked_filename)
             self._logger.debug("Remove modified JSON file %s:", masked_filename)
         except OSError as err:
-            self._logger.error("ERROR: Failed to remove modified JSON file %s", masked_filename)
+            self._logger.error(
+                "ERROR: Failed to remove modified JSON file %s", masked_filename
+            )
             self._logger.error(err)
             return False
         return True
+
 
 class AnkerEncryptionHandler:
     """Anker Solix encryption handler class.

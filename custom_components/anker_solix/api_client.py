@@ -52,6 +52,7 @@ API_CATEGORIES: list = [
     SolixDeviceType.SMARTMETER.value,
     SolixDeviceType.SMARTPLUG.value,
     SolixDeviceType.HES.value,
+    SolixDeviceType.VEHICLE.value,
     # SolixDeviceType.SOLARBANK_PPS.value,
     # SolixDeviceType.CHARGER.value,
     # SolixDeviceType.EV_CHARGER.value,
@@ -261,6 +262,7 @@ class AnkerSolixApiClient:
         self,
         from_cache: bool = False,
         device_details: bool = False,
+        vehicle_details: bool = False,
         reset_cache: bool = False,
     ) -> any:
         """Get data from the API."""
@@ -284,6 +286,25 @@ class AnkerSolixApiClient:
                         "Api Coordinator %s is updating data from Api cache",
                         self.api.apisession.nickname,
                     )
+                elif vehicle_details:
+                    # if vehicle refresh is requested, run only the vehicle routines if not excluded
+                    if {SolixDeviceType.VEHICLE.value} - set(self.exclude_categories):
+                        _LOGGER.log(
+                            logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                            "Api Coordinator %s is enforcing vehicle update %s",
+                            self.api.apisession.nickname,
+                            f"from folder {self.api.testDir()}"
+                            if self._testmode
+                            else "",
+                        )
+                        # Fetch vehicle details for account
+                        for vehicle in (
+                            await self.api.get_vehicle_list(fromFile=self._testmode)
+                        ).get("vehicle_list") or []:
+                            await self.api.get_vehicle_details(
+                                vehicleId=vehicle.get("vehicle_id"),
+                                fromFile=self._testmode,
+                            )
                 elif device_details:
                     # if device_details requested manually, enforce site and device refresh and reset intervals
                     # avoid consecutive executions within 60 seconds
@@ -319,10 +340,9 @@ class AnkerSolixApiClient:
                             exclude=set(self.exclude_categories),
                         )
                         # Fetch device details without excluded types or categories
-                        # TODO: Remove EV charger exclusion for non test modes
                         await self.api.update_device_details(
                             fromFile=self._testmode,
-                            exclude=set(self.exclude_categories) | (set() if ALLOW_TESTMODE else {SolixDeviceType.EV_CHARGER.value}),
+                            exclude=set(self.exclude_categories),
                         )
                         # Fetch site details without excluded types or categories
                         # This must be run after the device details, which may create virtual sites for standalone devices
@@ -375,10 +395,9 @@ class AnkerSolixApiClient:
                             else "",
                         )
                         # Fetch device details without excluded types or categories
-                        # TODO: Remove EV charger exclusion for non test modes
                         await self.api.update_device_details(
                             fromFile=self._testmode,
-                            exclude=set(self.exclude_categories) | (set() if ALLOW_TESTMODE else {SolixDeviceType.EV_CHARGER.value}),
+                            exclude=set(self.exclude_categories),
                         )
                         # Fetch site details without excluded types or categories
                         # This must be run after the device details, which may create virtual sites for standalone devices
@@ -543,3 +562,7 @@ class AnkerSolixApiClient:
                 ("ENABLED" if allow else "DISABLED"),
             )
         return self._allow_refresh
+
+    def get_registered_vehicles(self) -> list:
+        """Get the registered vehicles of api client."""
+        return self.api.account.get("vehicles_registered") or []

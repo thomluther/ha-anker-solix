@@ -87,7 +87,12 @@ class AnkerSolixBaseApi:
 
     def getCaches(self) -> dict:
         """Return a merged dictionary with api cache dictionaries."""
-        return self.sites | self.devices | {self.apisession.email: self.account}
+        return (
+            self.sites
+            | self.devices
+            | {self.apisession.email: self.account}
+            | (self.account.get("vehicles") or {})
+        )
 
     def clearCaches(self) -> None:
         """Clear the api cache dictionaries."""
@@ -289,6 +294,9 @@ class AnkerSolixBaseApi:
                     if key in ["device_sw_version"] and value:
                         # Example for key name conversion when value is given
                         device.update({"sw_version": str(value)})
+                    elif key in ["ms_device_type"] and "is_admin" not in device:
+                        # Update admin based on ms device type for standalone devices
+                        device.update({"is_admin": value in [0, 1]})
                     elif key in [
                         # Examples for boolean key values
                         "wifi_online",
@@ -516,6 +524,25 @@ class AnkerSolixBaseApi:
             resp = await self.apisession.request("post", API_ENDPOINTS["site_list"])
         return resp.get("data") or {}
 
+    async def get_site_details(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the site details for the used account.
+
+        Example data:
+        {'site_list': [{'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'site_name': 'BKW', 'site_img': '', 'device_type_list': [3], 'ms_type': 2, 'power_site_type': 2, 'is_allow_delete': True}]}
+        """
+        siteId = str(siteId) or ""
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['site_detail']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["site_detail"], json=data
+            )
+        return resp.get("data") or {}
+
     async def get_scene_info(self, siteId: str, fromFile: bool = False) -> dict:
         """Get scene info. It reflects mostly data visible in the Anker App home page for the site. It also works for shared accounts.
 
@@ -566,7 +593,8 @@ class AnkerSolixBaseApi:
                 self._update_account(
                     {"products": await self.get_products(fromFile=fromFile)}
                 )
-            if sn := self._update_dev(device.copy(), isAdmin=True):
+            # Bind devices also lists devices for shared sites since Aug 2025, device admin cannot longer be assumed per default
+            if sn := self._update_dev(device.copy()):
                 active_devices.add(sn)
         # recycle api device list and remove devices no longer used in sites or bind devices
         self.recycleDevices(extraDevices=active_devices)

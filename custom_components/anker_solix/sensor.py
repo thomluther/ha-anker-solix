@@ -74,6 +74,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
+    get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import (
     ApiCategories,
@@ -1045,8 +1046,7 @@ SITE_SENSORS = [
         )
         .upper()
         .replace("K", "k")
-        .replace("H", "h")
-        or None,
+        .replace("H", "h"),
         device_class=SensorDeviceClass.ENERGY,
         force_creation_fn=lambda d: True,
         feature=AnkerSolixEntityFeature.SYSTEM_INFO,
@@ -1935,6 +1935,19 @@ ACCOUNT_SENSORS = [
     ),
 ]
 
+VEHICLE_SENSORS = [
+    AnkerSolixSensorDescription(
+        key="update_timestamp",
+        translation_key="update_timestamp",
+        json_key="update_time",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: datetime.fromtimestamp(int(d.get(jk)))
+        if str(d.get(jk)).isdigit()
+        else None,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -1958,6 +1971,10 @@ async def async_setup_entry(
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_SENSORS
+            elif data_type == SolixDeviceType.VEHICLE.value:
+                # vehicle entry in data
+                entity_type = AnkerSolixEntityType.VEHICLE
+                entity_list = VEHICLE_SENSORS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -2160,13 +2177,22 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 self._attr_entity_picture = None
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
+            # use full context since email may contain underscores
             data = coordinator.data.get(context) or {}
             self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
             # add service attribute for account entities
             self._attr_supported_features: AnkerSolixEntityFeature = description.feature
+        elif self.entity_type == AnkerSolixEntityType.VEHICLE:
+            # get the vehicle info data from vehicle entry of coordinator data
+            data = coordinator.data.get(self._context_base) or {}
+            self._attr_device_info = get_AnkerSolixVehicleInfo(
+                data, self._context_base, coordinator.client.api.apisession.email
+            )
         else:
             # get the site info data from site context entry of coordinator data
-            data = (coordinator.data.get(self._context_base, {})).get("site_info", {})
+            data = (coordinator.data.get(self._context_base) or {}).get(
+                "site_info"
+            ) or {}
             self._attr_device_info = get_AnkerSolixSystemInfo(
                 data, self._context_base, coordinator.client.api.apisession.email
             )
@@ -2242,6 +2268,11 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         )
                     self._native_value = firmware
                 else:
+                    # update sensor unit if described by function
+                    if unit := self.entity_description.unit_fn(
+                        data, self.coordinator_context
+                    ):
+                        self._attr_native_unit_of_measurement = unit
                     if self.entity_description.check_invalid and not data.get(
                         "data_valid", True
                     ):
@@ -2250,15 +2281,22 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             CONF_SKIP_INVALID
                         ):
                             self._native_value = None
+                    elif self.state_class == SensorStateClass.TOTAL_INCREASING:
+                        # Fix #319: Skip energy rounding errors by cloud if decrease within suggested display precision
+                        old = self._native_value
+                        self._native_value = self.entity_description.value_fn(
+                            data, key, self.coordinator_context
+                        )
+                        if old is not None and (
+                            0
+                            > (float(self._native_value) - float(old))
+                            >= -1 / 10**self.suggested_display_precision
+                        ):
+                            self._native_value = old
                     else:
                         self._native_value = self.entity_description.value_fn(
                             data, key, self.coordinator_context
                         )
-                    # update sensor unit if described by function
-                    if unit := self.entity_description.unit_fn(
-                        data, self.coordinator_context
-                    ):
-                        self._attr_native_unit_of_measurement = unit
                     # Ensure to set power sensors to None if empty strings returned
                     if (
                         self.device_class == SensorDeviceClass.POWER

@@ -40,6 +40,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
+    get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import SolarbankAiemsStatus, SolixDeviceType, SolixNetworkStatus
 
@@ -82,7 +83,8 @@ DEVICE_SENSORS = [
         json_key="wired_connected",
         entity_category=EntityCategory.DIAGNOSTIC,
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s) or not d.get("is_support_wired"),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s)
+        or not d.get("is_support_wired"),
     ),
     AnkerSolixBinarySensorDescription(
         key="ota_update",
@@ -102,7 +104,9 @@ DEVICE_SENSORS = [
         json_key="enable",
         value_fn=lambda d, jk: ((d.get("schedule") or {}).get("ai_ems") or {}).get(jk),
         attrib_fn=lambda d: {
-            "status_code": (code := ((d.get("schedule") or {}).get("ai_ems") or {}).get("status")),
+            "status_code": (
+                code := ((d.get("schedule") or {}).get("ai_ems") or {}).get("status")
+            ),
             "status": next(
                 iter(
                     [
@@ -218,6 +222,22 @@ ACCOUNT_SENSORS = [
     ),
 ]
 
+VEHICLE_SENSORS = [
+    AnkerSolixBinarySensorDescription(
+        key="smart_charging",
+        translation_key="smart_charging",
+        json_key="is_smart_charging",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="connected_to_enodeapi",
+        translation_key="connected_to_enodeapi",
+        json_key="is_connected_to_enodeapi",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -257,6 +277,18 @@ async def async_setup_entry(
                     identifiers=(get_AnkerSolixAccountInfo(data, context)).get(
                         "identifiers"
                     ),
+                )
+            elif data_type == SolixDeviceType.VEHICLE.value:
+                # vehicle entry in data
+                entity_type = AnkerSolixEntityType.VEHICLE
+                entity_list = VEHICLE_SENSORS
+                device_registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers=(
+                        get_AnkerSolixVehicleInfo(
+                            data, context, coordinator.client.api.apisession.email
+                        )
+                    ).get("identifiers"),
                 )
             else:
                 # device_sn entry in data
@@ -355,6 +387,12 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
             self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
+        elif self.entity_type == AnkerSolixEntityType.VEHICLE:
+            # get the vehicle info data from vehicle entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixVehicleInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})

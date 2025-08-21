@@ -6,6 +6,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 import json
+import logging
 from typing import Any
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
@@ -19,10 +20,11 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_platform
+from homeassistant.helpers import device_registry as dr, entity_platform
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -51,6 +53,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
+    get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import (
     ApiCategories,
@@ -60,6 +63,7 @@ from .solixapi.apitypes import (
     SolixPriceProvider,
     SolixPriceTypes,
     SolixTariffTypes,
+    SolixVehicle,
 )
 
 
@@ -75,7 +79,7 @@ class AnkerSolixSelectDescription(
         lambda d, jk: None if d.get(jk) is None else str(d.get(jk))
     )
     options_fn: Callable[[dict, str], list | None] = (
-        lambda d, jk: list(d.get(jk), []) or None
+        lambda d, jk: list(d.get(jk) or []) or None
     )
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
     attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
@@ -213,6 +217,38 @@ SITE_SELECTS = [
 
 ACCOUNT_SELECTS = []
 
+VEHICLE_SELECTS = [
+    AnkerSolixSelectDescription(
+        key="vehicle_brand",
+        translation_key="vehicle_brand",
+        json_key="brand",
+        options_fn=lambda d, _: None,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.VEHICLE.value} - s),
+    ),
+    AnkerSolixSelectDescription(
+        key="vehicle_model",
+        translation_key="vehicle_model",
+        json_key="model",
+        options_fn=lambda d, _: None,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.VEHICLE.value} - s),
+    ),
+    AnkerSolixSelectDescription(
+        key="vehicle_year",
+        translation_key="vehicle_year",
+        json_key="productive_year",
+        options_fn=lambda d, _: None,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.VEHICLE.value} - s),
+    ),
+    AnkerSolixSelectDescription(
+        key="vehicle_variant",
+        translation_key="vehicle_variant",
+        json_key="id",
+        options_fn=lambda d, _: None,
+        value_fn=lambda d, jk: SolixVehicle(vehicle=d).idAttributes(),
+        exclude_fn=lambda s, _: not ({SolixDeviceType.VEHICLE.value} - s),
+    ),
+]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -229,13 +265,17 @@ async def async_setup_entry(
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
-                # Unique key for site_id entry in data
+                # site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SELECTS
             elif data_type == SolixDeviceType.ACCOUNT.value:
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_SELECTS
+            elif data_type == SolixDeviceType.VEHICLE.value:
+                # vehicle entry in data
+                entity_type = AnkerSolixEntityType.VEHICLE
+                entity_list = VEHICLE_SELECTS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -334,9 +374,17 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
             # add service attribute for account entities
             self._attr_supported_features: AnkerSolixEntityFeature = description.feature
+        elif self.entity_type == AnkerSolixEntityType.VEHICLE:
+            # get the vehicle info data from vehicle entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixVehicleInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
+            # add service attribute for vehicle entities
+            self._attr_supported_features: AnkerSolixEntityFeature = description.feature
         else:
             # get the site info data from site context entry of coordinator data
-            data = (coordinator.data.get(context, {})).get("site_info", {})
+            data = (coordinator.data.get(context) or {}).get("site_info") or {}
             self._attr_device_info = get_AnkerSolixSystemInfo(
                 data, context, coordinator.client.api.apisession.email
             )
@@ -378,6 +426,33 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 # | {"none"}
             )
             self._attr_options.sort()
+        elif self._attribute_name == "vehicle_brand":
+            self._attr_options = coordinator.client.api.get_vehicle_options()
+            self._attr_options.sort()
+        elif self._attribute_name == "vehicle_model":
+            self._attr_options = coordinator.client.api.get_vehicle_options(
+                vehicle=SolixVehicle(brand=data.get("brand"))
+            )
+            self._attr_options.sort()
+        elif self._attribute_name == "vehicle_year":
+            self._attr_options = coordinator.client.api.get_vehicle_options(
+                vehicle=SolixVehicle(brand=data.get("brand"), model=data.get("model"))
+            )
+            self._attr_options.sort()
+        elif self._attribute_name == "vehicle_variant":
+            self._attr_options = (
+                self.coordinator.client.api.get_vehicle_options(
+                    vehicle=SolixVehicle(
+                        brand=brand, model=model, productive_year=year
+                    ),
+                    extendAttributes=True,
+                )
+                if (brand := data.get("brand"))
+                and (model := data.get("model"))
+                and (year := data.get("productive_year"))
+                else []
+            )
+            self._attr_options.sort()
         # Make sure that options are limited to existing state if entity cannot be changed
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
@@ -391,6 +466,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the selected entity option to represent the entity state."""
+        if self._attribute_name == ("vehicle_variant"):
+            # Make sure that the only available option is automatically set
+            if len(self._attr_options) == 1 and self._attr_current_option in [
+                "unknown",
+                None,
+            ]:
+                self._attr_current_option = self._attr_options[0]
         return self._attr_current_option
 
     @property
@@ -426,9 +508,51 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             options = set(self._attr_options)
             # Add actual power setting to options if not included
             options.add(self._attr_current_option)
-            if set(self._attr_options) != options:
+            if options != set(self._attr_options):
                 self._attr_options = list(options)
                 self._attr_options.sort()
+        elif self._attribute_name == "vehicle_brand":
+            self._attr_options = self.coordinator.client.api.get_vehicle_options()
+            self._attr_options.sort()
+        elif self._attribute_name == "vehicle_model":
+            data = (self.coordinator.data or {}).get(self.coordinator_context) or {}
+            self._attr_options = (
+                self.coordinator.client.api.get_vehicle_options(
+                    vehicle=SolixVehicle(brand=brand)
+                )
+                if (brand := data.get("brand"))
+                else []
+            )
+            self._attr_options.sort()
+        elif self._attribute_name == "vehicle_year":
+            data = (self.coordinator.data or {}).get(self.coordinator_context) or {}
+            self._attr_options = (
+                self.coordinator.client.api.get_vehicle_options(
+                    vehicle=SolixVehicle(brand=brand, model=model)
+                )
+                if (brand := data.get("brand")) and (model := data.get("model"))
+                else []
+            )
+            self._attr_options.sort()
+        elif self._attribute_name == "vehicle_variant":
+            data = (self.coordinator.data or {}).get(self.coordinator_context) or {}
+            if (
+                (brand := data.get("brand"))
+                and (model := data.get("model"))
+                and (year := data.get("productive_year"))
+            ):
+                self._attr_options = self.coordinator.client.api.get_vehicle_options(
+                    vehicle=SolixVehicle(
+                        brand=brand, model=model, productive_year=year
+                    ),
+                    extendAttributes=True,
+                )
+                # If current state should be added as option although no model ID could be identified
+                # if (state := SolixVehicle(vehicle=data).idAttributes()) not in self._attr_options:
+                #     self._attr_options.append(state)
+                self._attr_options.sort()
+            else:
+                self._attr_options = []
         # Make sure that options are limited to existing state if entity cannot be changed
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
@@ -494,6 +618,10 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     "system_price_unit",
                     "system_price_type",
                     "preset_inverter_limit",
+                    "vehicle_brand",
+                    "vehicle_model",
+                    "vehicle_year",
+                    "vehicle_variant",
                 ]
                 and not self.entity_description.restore
             ):
@@ -650,6 +778,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
+
             elif self._attribute_name == "system_price_unit":
                 LOGGER.debug(
                     "'%s' selection change to option '%s' will be applied",
@@ -717,6 +846,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                     indent=2 if len(json.dumps(resp)) < 200 else None,
                                 ),
                             )
+
             elif self._attribute_name == "preset_inverter_limit":
                 with suppress(ValueError, TypeError):
                     LOGGER.debug(
@@ -739,6 +869,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
+
             # Ensure site price type changes only performed by site owners
             elif self._attribute_name in [
                 "system_price_type",
@@ -778,6 +909,67 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             id=self.coordinator_context,
                             key=self.entity_description.json_key,
                             value=str(option),
+                        )
+
+            elif self._attribute_name.startswith("vehicle_"):
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied",
+                    self.entity_id,
+                    option,
+                )
+                data = (self.coordinator.data or {}).get(self.coordinator_context) or {}
+                if self._attribute_name == "vehicle_brand":
+                    vehicle = SolixVehicle(brand=str(option))
+                elif self._attribute_name == "vehicle_model":
+                    vehicle = SolixVehicle(brand=data.get("brand"), model=str(option))
+                elif self._attribute_name == "vehicle_year":
+                    vehicle = SolixVehicle(
+                        brand=data.get("brand"),
+                        model=data.get("model"),
+                        productive_year=str(option),
+                    )
+                else:
+                    # extract model ID from selected option
+                    vehicle = SolixVehicle(
+                        brand=data.get("brand"),
+                        model=data.get("model"),
+                        productive_year=data.get("productive_year"),
+                        model_id=str(option).split("/")[0],
+                    )
+                # restore attributes if variant was selected, otherwise just update selected option
+                resp = await self.coordinator.client.api.manage_vehicle(
+                    vehicleId=self.coordinator_context,
+                    action="restore"
+                    if self._attribute_name == "vehicle_variant"
+                    else "update",
+                    vehicle=vehicle,
+                    toFile=self.coordinator.client.testmode(),
+                )
+                if isinstance(resp, dict):
+                    LOGGER.log(
+                        logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                        "%s: Applied vehicle '%s' change to '%s':\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
+                        self.entity_id,
+                        option,
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
+                    )
+                    # trigger cache update for selected vehicle option
+                    await self.coordinator.client.api.update_vehicle_options(
+                        vehicle=vehicle
+                    )
+                    # get device registry and update the device entry attribute
+                    if self._attribute_name != "vehicle_variant":
+                        dev_registry = dr.async_get(self.coordinator.hass)
+                        dev_registry.async_update_device(
+                            self.device_entry.id,
+                            manufacturer=vehicle.brand or UNDEFINED,
+                            model_id=vehicle.model or UNDEFINED,
+                            hw_version=str(vehicle.productive_year or "") or UNDEFINED,
                         )
             # trigger coordinator update with api dictionary data
             await self.coordinator.async_refresh_data_from_apidict()

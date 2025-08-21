@@ -10,6 +10,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api_client import (
@@ -20,6 +21,7 @@ from .api_client import (
     AnkerSolixApiClientRetryExceededError,
 )
 from .const import ALLOW_TESTMODE, DOMAIN, LOGGER, PLATFORMS
+from .solixapi.apitypes import SolixDeviceType
 
 
 # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
@@ -30,6 +32,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
     client: AnkerSolixApiClient
     details_delayed: datetime | None
     update_handler: TimerHandle | None
+    registered_devices: set
 
     def __init__(
         self,
@@ -43,6 +46,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
         self.details_delayed = None
         self.update_handler = None
+        self.registered_devices = set()
 
         super().__init__(
             hass=hass,
@@ -66,15 +70,26 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                 await self.async_refresh_delay()
                 await self.async_details_delay()
             data = await self.client.async_get_data()
+            # get device IDs for dynamic entity and device creation
+            ids = set(data.keys())
             # make sure deferred data will create additional entities
             if self.client.deferred_data and self.config_entry:
-                if await self.hass.config_entries.async_unload_platforms(
-                    self.config_entry, PLATFORMS
-                ):
+                # trigger reload and register all current devices
+                if await self.async_reload_config(register_devices=data):
                     self.client.deferred_data = False
-                    await self.hass.config_entries.async_forward_entry_setups(
-                        self.config_entry, PLATFORMS
-                    )
+            # initial device registration
+            elif self.client.startup:
+                self.registered_devices = ids
+            # trigger reload if additional devices are found
+            elif ids - self.registered_devices:
+                await self.async_reload_config(register_devices=data)
+            # trigger device removal if not found anymore
+            elif (
+                ids
+                and self.registered_devices
+                and (removed := self.registered_devices - ids)
+            ):
+                await self.async_remove_device(devices=removed)
         except (
             AnkerSolixApiClientAuthenticationError,
             AnkerSolixApiClientRetryExceededError,
@@ -121,31 +136,111 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         # inform listeners about changed data
         self.async_update_listeners()
 
-    async def async_refresh_device_details(self, reset_cache: bool = False) -> None:
-        """Update data including device details and reset update interval."""
-        data = await self.client.async_get_data(
-            device_details=True, reset_cache=reset_cache
+    async def async_refresh_device_details(
+        self, reset_cache: bool = False, categories: set | str | None = None
+    ) -> None:
+        """Update data including device details or dedicated categories only and reset update interval."""
+        categories = (
+            categories
+            if isinstance(categories, set)
+            else {categories}
+            if isinstance(categories, str)
+            else None
         )
+        if SolixDeviceType.VEHICLE.value in categories:
+            # Refresh only device details for user account
+            data = await self.client.async_get_data(vehicle_details=True)
+        else:
+            data = await self.client.async_get_data(
+                device_details=True, reset_cache=reset_cache
+            )
         if reset_cache:
             # ensure to refresh entity setup when cache was reset to unload all entities and reload remaining entities
             # This will also restore states from previous state in state machine if required
             self.data = data
-            if await self.hass.config_entries.async_unload_platforms(
-                self.config_entry, PLATFORMS
-            ):
-                # refresh restore state cache
-                await self.hass.config_entries.async_forward_entry_setups(
-                    self.config_entry, PLATFORMS
-                )
+            await self.async_reload_config(register_devices=data)
         else:
-            # update only coordinator data and notify listeners
+            # update coordinator data and notify listeners
             self.async_set_updated_data(data)
+            # get device IDs for dynamic entity and device creation
+            ids = set(data.keys())
+            # trigger reload if additional devices are found
+            if ids - self.registered_devices:
+                await self.async_reload_config(register_devices=data)
+            # trigger device removal if not found anymore
+            elif (
+                ids
+                and self.registered_devices
+                and (removed := self.registered_devices - ids)
+            ):
+                await self.async_remove_device(devices=removed)
 
-    async def async_execute_command(self, command: str, option: Any = None) -> None:
+    async def async_reload_config(
+        self, register_devices: set | dict | None = None
+    ) -> bool:
+        """Reload the configuration entry for all platforms to add missing entities and devices and register found devices."""
+        # Wait until client cache is valid before running api action
+        await self.client.validate_cache()
+        # ensure to refresh entity setup to unload all entities and reload found entities
+        if await self.hass.config_entries.async_unload_platforms(
+            self.config_entry, PLATFORMS
+        ):
+            # refresh restore state cache
+            await self.hass.config_entries.async_forward_entry_setups(
+                self.config_entry, PLATFORMS
+            )
+            # register current devices to monitor changes
+            self.registered_devices = (
+                register_devices
+                if isinstance(register_devices, set)
+                else set(register_devices.keys())
+                if isinstance(register_devices, dict)
+                else set()
+            )
+            return True
+        return False
+
+    async def async_remove_device(self, devices: set) -> None:
+        """Remove given devices if they have no active data."""
+        device_entries = dr.async_entries_for_config_entry(
+            dr.async_get(self.hass), self.config_entry.entry_id
+        )
+        for dev_entry in [
+            dev for dev in device_entries if dev.serial_number in devices
+        ]:
+            # check that device has no active entity
+            if not any(
+                identifier
+                for identifier in dev_entry.identifiers
+                if identifier[0] == DOMAIN
+                for device_serial in self.data
+                if device_serial == identifier[1]
+            ):
+                # remove config entry from device to trigger cleanup
+                dr.async_get(self.hass).async_update_device(
+                    dev_entry.id,
+                    remove_config_entry_id=self.config_entry.entry_id,
+                )
+                self.registered_devices.discard(dev_entry.serial_number)
+                LOGGER.warning(
+                    "Api Coordinator %s removed orphaned %s device %s, ID %s",
+                    self.config_entry.title,
+                    dev_entry.model,
+                    dev_entry.name,
+                    dev_entry.serial_number,
+                )
+
+    async def async_execute_command(
+        self, command: str, option: Any = None
+    ) -> bool | None:
         """Execute the given command."""
         match command:
             case "refresh_device":
                 await self.async_refresh_device_details()
+            case "refresh_vehicles":
+                await self.async_refresh_device_details(
+                    categories=SolixDeviceType.VEHICLE.value
+                )
             case "allow_refresh":
                 if isinstance(option, bool):
                     self.client.allow_refresh(allow=option)
@@ -157,6 +252,26 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                     else:
                         # refresh states from cache that is virtually empty while refresh not allowed
                         await self.async_refresh_data_from_apidict()
+            case "remove_vehicle":
+                # Wait until client cache is valid before running api action
+                await self.client.validate_cache()
+                if option in self.data and isinstance(
+                    await self.client.api.manage_vehicle(
+                        vehicleId=option,
+                        action="delete",
+                        toFile=self.client.testmode(),
+                    ),
+                    dict,
+                ):
+                    vehicle = self.data.pop(option)
+                    self.registered_devices.discard(option)
+                    LOGGER.info(
+                        "Api Coordinator %s removed vehicle %s device %s",
+                        self.config_entry.title,
+                        vehicle.get("model") or "",
+                        option,
+                    )
+        return None
 
     async def async_refresh_delay(self) -> None:
         """Introduce a refresh delay for staggered data collection."""

@@ -54,6 +54,7 @@ from .const import (
     TESTMODE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
+from .solixapi.apitypes import SolixDeviceType
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
@@ -227,16 +228,19 @@ async def async_remove_config_entry_device(
     coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(
         config_entry.entry_id
     )
-    # Allow only removal of orphaned devices not contained in actual api data
-    if coordinator and (
-        active := any(
+    active = False
+    if coordinator:
+        # remove vehicle device types from cloud
+        if device_entry.model == SolixDeviceType.VEHICLE.value.capitalize():
+            await coordinator.async_execute_command(
+                command="remove_vehicle", option=device_entry.serial_number
+            )
+        # Allow only removal of orphaned devices not contained in actual api data
+        active = any(
             identifier
             for identifier in device_entry.identifiers
             if identifier[0] == DOMAIN
             for device_serial in coordinator.data
             if device_serial == identifier[1]
         )
-    ):
-        pass
-        # TODO(#0): Raise alert to frontend, ServiceValidationError does not work for Frontend in Config Flow
     return not active

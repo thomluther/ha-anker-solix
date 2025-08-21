@@ -69,7 +69,7 @@ class RequestCounter:
 
 def md5(data: str | bytes) -> str:
     """Return MD5 hash in hex for given string or bytes."""
-    return hashlib.md5(data.encode() if isinstance(data,str) else data).hexdigest()
+    return hashlib.md5(data.encode() if isinstance(data, str) else data).hexdigest()
 
 
 def getTimezoneGMTString() -> str:
@@ -77,9 +77,11 @@ def getTimezoneGMTString() -> str:
     tzo = datetime.now().astimezone().strftime("%z")
     return f"GMT{tzo[:3]}:{tzo[3:5]}"
 
-def generateTimestamp(in_ms : bool = False) -> str:
+
+def generateTimestamp(in_ms: bool = False) -> str:
     """Generate unix epoche timestamp from local time in seconds or milliseconds."""
-    return str(int(datetime.now().timestamp()*(1000 if in_ms else 1)))
+    return str(int(datetime.now().timestamp() * (1000 if in_ms else 1)))
+
 
 def convertToKwh(val: str | float, unit: str) -> str | float | None:
     """Convert a given value to kWh depending on unit."""

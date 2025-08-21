@@ -29,6 +29,7 @@ class AnkerSolixPicturePath:
     POWERCOOLER: str = str(Path(IMAGEPATH) / "Everfrost_2_40L_A17A4_pub.png")
     CHARGER: str = str(Path(IMAGEPATH) / "Charger_250W_A2345_pub.png")
     EV_CHARGER: str = str(Path(IMAGEPATH) / "EV_Charger_A5191_pub.png")
+    VEHICLE: str = str(Path(IMAGEPATH) / "Electric_Vehicle.png")
 
     A17B1: str = str(Path(IMAGEPATH) / "Power_Panel_A17B1.png")
 
@@ -102,6 +103,7 @@ class AnkerSolixEntityType:
     ACCOUNT: str = "account"
     SITE: str = "site"
     DEVICE: str = "device"
+    VEHICLE: str = "vehicle"
 
 
 @dataclass(frozen=True)
@@ -194,4 +196,19 @@ def get_AnkerSolixAccountInfo(
         model=str(data.get("type")).capitalize(),
         model_id=data.get("server"),
         name=f"{data.get('nickname')} ({str(data.get('country') or '--').upper()})",
+    )
+
+
+def get_AnkerSolixVehicleInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
+    """Return an Anker Solix Vehicle DeviceInfo."""
+
+    return DeviceInfo(
+        identifiers={(DOMAIN, identifier)},
+        manufacturer=data.get("brand"),
+        serial_number=identifier,
+        model=str(data.get("type")).capitalize(),
+        model_id=data.get("model"),
+        hw_version=data.get("productive_year"),
+        name=data.get("vehicle_name"),
+        via_device=(DOMAIN, account),
     )

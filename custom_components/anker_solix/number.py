@@ -23,6 +23,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfEnergy,
+    UnitOfEnergyDistance,
     UnitOfPower,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -41,6 +42,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
+    get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
 
@@ -205,6 +207,45 @@ SITE_NUMBERS = [
 
 ACCOUNT_NUMBERS = []
 
+VEHICLE_NUMBERS = [
+    AnkerSolixNumberDescription(
+        key="battery_capacity",
+        translation_key="battery_capacity",
+        json_key="battery_capacity",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=NumberDeviceClass.ENERGY_STORAGE,
+        native_min_value=1,
+        native_max_value=1000,
+        native_step=0.1,
+        mode=NumberMode.BOX,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixNumberDescription(
+        key="ac_max_charging_power",
+        translation_key="ac_max_charging_power",
+        json_key="ac_max_charging_power",
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        device_class=NumberDeviceClass.POWER,
+        native_min_value=1,
+        native_max_value=1000,
+        native_step=0.1,
+        mode=NumberMode.BOX,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixNumberDescription(
+        key="energy_consumption_per_100km",
+        translation_key="energy_consumption_per_100km",
+        json_key="energy_consumption_per_100km",
+        native_unit_of_measurement=UnitOfEnergyDistance.KILO_WATT_HOUR_PER_100_KM,
+        device_class=NumberDeviceClass.ENERGY_DISTANCE,
+        native_min_value=1,
+        native_max_value=100,
+        native_step=0.1,
+        mode=NumberMode.BOX,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -228,6 +269,10 @@ async def async_setup_entry(
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_NUMBERS
+            elif data_type == SolixDeviceType.VEHICLE.value:
+                # vehicle entry in data
+                entity_type = AnkerSolixEntityType.VEHICLE
+                entity_list = VEHICLE_NUMBERS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -325,6 +370,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
             self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
+        elif self.entity_type == AnkerSolixEntityType.VEHICLE:
+            # get the vehicle info data from vehicle entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixVehicleInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context, {})).get("site_info") or {}
@@ -399,6 +450,9 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 "preset_charge_priority",
                 "preset_tariff_price",
                 "system_price",
+                "battery_capacity",
+                "ac_max_charging_power",
+                "energy_consumption_per_100km",
             ]
             and not self.entity_description.restore
         ):
@@ -613,6 +667,35 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied site price settings:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+                elif (
+                    self._attribute_name
+                    in [
+                        "battery_capacity",
+                        "ac_max_charging_power",
+                        "energy_consumption_per_100km",
+                    ]
+                    and data.get("type") == SolixDeviceType.VEHICLE.value
+                ):
+                    LOGGER.debug(
+                        "%s change to %s will be applied", self.entity_id, value
+                    )
+                    # change vehicle setting
+                    resp = await self.coordinator.client.api.manage_vehicle(
+                        vehicleId=self.coordinator_context,
+                        action="update",
+                        vehicle={self._attribute_name: value},
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied vehicle settings:\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",

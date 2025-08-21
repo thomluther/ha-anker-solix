@@ -3,6 +3,12 @@
         "button": {
             "refresh_device": {
                 "default": "mdi:cog-refresh"
+            },
+            "refresh_vehicles": {
+                "default": "mdi:car-search"
+            },
+            "restore_attributes": {
+                "default": "mdi:car-cog"
             }
         },
         "binary_sensor": {
@@ -68,6 +74,20 @@
                     "on": "mdi:file-document-refresh-outline",
                     "off": "mdi:web-sync"
                 }
+            },
+            "smart_charging": {
+                "default": "mdi:car-off",
+                "state": {
+                    "on": "mdi:car-electric",
+                    "off": "mdi:car-outline"
+                }
+            },
+            "connected_to_enodeapi": {
+                "default": "mdi:car-off",
+                "state": {
+                    "on": "mdi:car-connected",
+                    "off": "mdi:car-outline"
+                }
             }
         },
         "datetime": {
@@ -99,6 +119,12 @@
             },
             "dynamic_price_vat": {
                 "default": "mdi:cash-plus"
+            },
+            "ac_max_charging_power": {
+                "default": "mdi:ev-station"
+            },
+            "energy_consumption_per_100km": {
+                "default": "mdi:car-electric"
             }
         },
         "select": {
@@ -135,6 +161,18 @@
             },
             "preset_inverter_limit": {
                 "default": "mdi:speedometer"
+            },
+            "vehicle_brand": {
+                "default": "mdi:car-info"
+            },
+            "vehicle_model": {
+                "default": "mdi:car-info"
+            },
+            "vehicle_year": {
+                "default": "mdi:car-info"
+            },
+            "vehicle_variant": {
+                "default": "mdi:car-info"
             }
         },
         "sensor": {
@@ -157,6 +195,7 @@
                     "charge": "mdi:battery-plus",
                     "charge_bypass": "mdi:home-battery",
                     "charge_priority":  "mdi:home-battery-outline",
+                    "charge_ac": "mdi:power-plug-battery",
                     "wakeup": "mdi:battery-clock",
                     "cold_wakeup": "mdi:battery-clock",
                     "fully_charged": "mdi:battery-check",
@@ -421,6 +460,9 @@
             },
             "energy_poll_time": {
                 "default": "mdi:sun-clock-outline"
+            },
+            "update_timestamp": {
+                "default": "mdi:weather-cloudy-clock"
             }
         },
         "switch": {
@@ -457,6 +499,13 @@
                 "state": {
                     "on": "mdi:sync",
                     "off": "mdi:sync-off"
+                }
+            },
+            "default_vehicle": {
+                "default": "mdi:car",
+                "state": {
+                    "on": "mdi:car-select",
+                    "off": "mdi:car"
                 }
             }
         }

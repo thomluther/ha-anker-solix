@@ -433,7 +433,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     if {ApiCategories.site_price} - exclude:
                         if dp := self.extractPriceData(siteId=myid):
                             # save the actual extracted dynamic price details
-                            self._update_site(siteId=myid, details={"dynamic_price_details": dp})
+                            self._update_site(
+                                siteId=myid, details={"dynamic_price_details": dp}
+                            )
 
                     new_sites.update({myid: mysite})
         # Write back the updated sites
@@ -1050,7 +1052,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             items = resp.get("energy") or []
             # No daystring in response, count the index for proper date and skip previous items
             # for file usage ensure that last item is used if today is included
-            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            start = (
+                len(items) - 1
+                if fromFile and datetime.now().date() == startDay.date()
+                else 0
+            )
             for idx, item in enumerate(items[start : start + numDays]):
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
@@ -1135,7 +1141,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             items = resp.get("energy") or []
             # No daystring in response, count the index for proper date and skip previous items
             # for file usage ensure that last item is used if today is included
-            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            start = (
+                len(items) - 1
+                if fromFile and datetime.now().date() == startDay.date()
+                else 0
+            )
             for idx, item in enumerate(items[start : start + numDays]):
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
@@ -1219,7 +1229,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             items = resp.get("energy") or []
             # No daystring in response, count the index for proper date and skip previous items
             # for file usage ensure that last item is used if today is included
-            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            start = (
+                len(items) - 1
+                if fromFile and datetime.now().date() == startDay.date()
+                else 0
+            )
             for idx, item in enumerate(items[start : start + numDays]):
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
@@ -1302,7 +1316,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         items = resp.get("energy") or []
         # No daystring in response, count the index for proper date and skip previous items
         # for file usage ensure that last item is used if today is included
-        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
         for idx, item in enumerate(items[start : start + numDays]):
             daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
             entry = table.get(daystr, {"date": daystr})
@@ -1604,8 +1622,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "siteId": siteId,
             "dateType": rangeType if rangeType in ["week", "month", "year"] else "day",
             "start": startDay.strftime("%Y")
-            if rangeType == "year" else
-            startDay.strftime("%Y-%m") if rangeType == "month" else  startDay.strftime("%Y-%m-%d")
+            if rangeType == "year"
+            else startDay.strftime("%Y-%m")
+            if rangeType == "month"
+            else startDay.strftime("%Y-%m-%d"),
         }
         if fromFile:
             resp = await self.apisession.loadFromFile(
@@ -1618,10 +1638,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             )
         data = resp.get("data") or {}
         # update profit in site details
-        if (site := self.sites.get(siteId) or {}):
+        if site := self.sites.get(siteId) or {}:
             details = site.get("site_details") or {}
             details.update({"profit": data})
             site.update({"site_details": details})
             self.sites.update({siteId: site})
         return data
-

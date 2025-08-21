@@ -52,11 +52,12 @@ SHARED_ACCOUNT: str = "shared_account"
 IMAGEFOLDER: str = "images"
 EXPORTFOLDER: str = "exports"
 
-ALLOW_TESTMODE: bool = (
-    False  # True will enable configuration options for testmode and testfolder
-)
-TEST_NUMBERVARIANCE: bool = False  # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
-CREATE_ALL_ENTITIES: bool = False  # True will create all entities per device type for testing even if no values available
+# True will enable configuration options for testmode and testfolder
+ALLOW_TESTMODE: bool = False
+# True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
+TEST_NUMBERVARIANCE: bool = False
+# True will create all entities per device type for testing even if no values available
+CREATE_ALL_ENTITIES: bool = False
 
 SERVICE_GET_SYSTEM_INFO = "get_system_info"
 SERVICE_EXPORT_SYSTEMS = "export_systems"

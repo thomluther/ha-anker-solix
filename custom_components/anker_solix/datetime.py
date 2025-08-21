@@ -28,6 +28,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
+    get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import SolixDeviceType
 
@@ -71,6 +72,8 @@ SITE_DATETIMES = []
 
 ACCOUNT_DATETIMES = []
 
+VEHICLE_DATETIMES = []
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -94,6 +97,10 @@ async def async_setup_entry(
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_DATETIMES
+            elif data_type == SolixDeviceType.VEHICLE.value:
+                # vehicle entry in data
+                entity_type = AnkerSolixEntityType.VEHICLE
+                entity_list = VEHICLE_DATETIMES
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -160,6 +167,12 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
             self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
+        elif self.entity_type == AnkerSolixEntityType.VEHICLE:
+            # get the vehicle info data from vehicle entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixVehicleInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context) or {}).get("site_info") or {}

@@ -76,6 +76,7 @@ This integration utilizes an unofficial Python library to communicate with the A
         - [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
         - [Export tariff options](#export-tariff-options)
 1. **[Solar forecast data](#solar-forecast-data)**
+1. **[Modification of vehicles](#modification-of-vehicles)**
 1. **[Markdown card to show the defined Solarbank schedule](#markdown-card-to-show-the-defined-solarbank-schedule)**
     * [Markdown card for Solarbank 1 schedules](#markdown-card-for-solarbank-1-schedules)
     * [Markdown card for Solarbank 2+ schedules](#markdown-card-for-solarbank-2-schedules)
@@ -827,6 +828,7 @@ The integration version 3.1.0 added support to query the solar forecast data and
 The cloud only provides hourly energy values for the next 24 hours. No history of past hours for today is provided. The integration enhances this data with additional information, such as forecast for this and next hour, total forecast for today, remaining forecast for today as well as the poll time and the hourly values for today and available hours for tomorrow. The integration utilizes the entity restore capability to maintain the forecast history of today whenever the integration is reloaded or HA is being restarted. Therefore you typically do not loose them if the Api cache has to be rebuilt from scratch upon new connections.
 The remaining energy for today is calculated only from the forecast data. The total forecast for today is calculated from available forecast data. If data polling started in the middle of the day and no history is available, the past hour production data is used to calculate a more accurate total forecast.
 Along the solar forecast data collection, the integration also calculates the hourly solar production for today from the provided cloud data and adds them as new attribute to the existing `sensor.system_*name*_daily_solar_yield` entity. This allows you to compare the hourly forecast data with the daily production data as demonstrated in the [forecast data example diagram](#apex-chart-card-to-show-forecast-data).
+
 ![forecast-data-diagram][forecast-data-diagram-img]
 
 If you want to track older hourly history data, you can use the state tracking of your `sensor.system_*name*_solar_forecast_this_hour` entity and compare it with the hourly averaged state values of your `sensor.system_*name*_sb_solar_power` entity. The hourly power average corresponds to the forecast energy of the hour if the power state intervals are pretty similar.
@@ -834,6 +836,28 @@ Forecast data entities and cloud polling can be excluded in your hub configurati
 
 > [!IMPORTANT]
 > None of the forecast entities can be used as solar forecast entities for your HA energy dashboard. If Smart mode is inactive, no forecast data is provided and the entities will show an unknown state. Furthermore those entities are not designed to integrate with your HA energy dashboard. Instead they are usable to monitor the behavior of the 'Smart' mode since that is acting like a black box and may show weird charging and discharging behavior that may not make much sense. If you need more accurate forecast data, I recommend any of the available solar forecast integrations.
+
+
+## Modification of vehicles
+
+Each Anker cloud user can create up to 5 Electric Vehicles (EV). Vehicles will be used to manage charge orders for an Anker Solix V1 EV Charger device, which can be shared amongst Anker cloud users. The integration currently does **NOT** yet support the vehicle creation itself, but it creates a virtual device for each existing EV under the user account. Various vehicle attributes can be modified, the possible selections depend on the EV database that is used by the Anker cloud. If you want to remove the vehicle from your user account, you can simply remove the vehicle device in your integration hub configuration as shown on following vehicle device screenshot.
+
+![vehicle-device][vehicle-device-img]
+
+Following capabilities are implemented as of version 3.2.0:
+- Any existing vehicle definition will be added as vehicle device that is connected to your account device
+- All vehicle attributes can be modified, after the default attributes have been set based on brand/model/year/model-ID selection
+- A model ID selection will reset the attributes to the defined attributes of that model ID
+- All selection options will be queried from the Anker cloud vehicle database and cached in the Api cache for better performance of electable options
+- Vehicles can be removed from your account by removing the device in HA
+- Vehicle related devices and entities can be completely deactivated by excluding the Vehicles category in your hub configuration options
+
+> [!TIP]
+> The integration will automatically discover added and removed vehicles under the user account during the regular device details refresh cycle (10 minutes per default). An immediate vehicle refresh can also be triggered manually by a corresponding button of the account device.
+
+![account-vehicle-refresh][account-vehicle-refresh-img]
+
+A future release of the integration may also provide a configuration flow to create new user vehicles via the integration.
 
 
 ## Markdown card to show the defined Solarbank schedule
@@ -1649,9 +1673,10 @@ Example of a valid request but missing system permissions (shared account only):
     - **Note:** Those endpoints are currently not supported on the EU cloud server
   - Home energy systems (HES) endpoints like X1:
     - `charging_hes_svc/*`
+  - Power Charger categories:
+    - `mini_power/v1/app/*`
   - Unknown categories:
     - `charging_disaster_prepared/*`
-    - `mini_power/v1/app/*`
 * Most endpoints use the POST method, only some need the GET method. The error typically refers to an unknown method if the wrong method was used
 * Some errors may show the missing mandatory parameters of the payload. If parameters are used in the wrong format, the error may also describe that.
   - However, most of the time the parameter usage can be discovered only by trial and error until you got it right
@@ -1699,13 +1724,13 @@ Example:
         item_1_float: 2.0
         item_1_text: "text2"
         item_1_bool: false
-        item_1_template: "{{ 'bool_result' == 'bool_result' }}"
+        item_1_template: "{{ 'string_a' == 'string_b' }}"
       - item_2_int: 3
         item_2_float: 3.0
         item_2_text: "text3"
         item_2_bool: true
-        item_1_template: |
-          {{ 1 == 0 }}
+        item_2_template: |
+          {{device_attr('sensor.sb_e1600_solar_power','serial_number')}}
 ```
 
 Templating is a big advantage when using the action in HA, since the requests often require the site_id or device_sn parameters, which can easily be pulled from the device attributes of any of your system or device entity IDs. Following is an example to query the site price settings (replace the entity IDs with any of yours):
@@ -1780,4 +1805,6 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [ac-time-of-use-service-img]: doc/ac-time-of-use-service.png
 [dynamic-price-diagram-img]: doc/dynamic-price-diagram.png
 [forecast-data-diagram-img]: doc/forecast-data-diagram.png
+[vehicle-device-img]: doc/vehicle-device.png
+[account-vehicle-refresh-img]: doc/account-vehicle-refresh.png
 

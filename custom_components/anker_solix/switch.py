@@ -52,6 +52,7 @@ from .entity import (
     get_AnkerSolixDeviceInfo,
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
+    get_AnkerSolixVehicleInfo,
 )
 from .solixapi import export
 from .solixapi.apitypes import SolixDeviceType
@@ -121,6 +122,15 @@ ACCOUNT_SWITCHES = [
     ),
 ]
 
+VEHICLE_SWITCHES = [
+    AnkerSolixSwitchDescription(
+        key="default_vehicle",
+        translation_key="default_vehicle",
+        json_key="is_default_vehicle",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -144,6 +154,10 @@ async def async_setup_entry(
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_SWITCHES
+            elif data_type == SolixDeviceType.VEHICLE.value:
+                # vehicle entry in data
+                entity_type = AnkerSolixEntityType.VEHICLE
+                entity_list = VEHICLE_SWITCHES
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
@@ -245,6 +259,14 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             self._attr_device_info = get_AnkerSolixAccountInfo(data, context)
             # add service attribute for account entities
             self._attr_supported_features: AnkerSolixEntityFeature = description.feature
+        elif self.entity_type == AnkerSolixEntityType.VEHICLE:
+            # get the vehicle info data from vehicle entry of coordinator data
+            data = coordinator.data.get(context) or {}
+            self._attr_device_info = get_AnkerSolixVehicleInfo(
+                data, context, coordinator.client.api.apisession.email
+            )
+            # add service attribute for vehicle entities
+            self._attr_supported_features: AnkerSolixEntityFeature = description.feature
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})
@@ -326,6 +348,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             "preset_allow_export",
             "preset_discharge_priority",
             "preset_backup_option",
+            "default_vehicle",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -345,9 +368,23 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     "Applied upgrade settings for '%s' change to '%s':\n%s",
                     self.entity_id,
                     "ON",
-                    json.dumps(
-                        resp, indent=2 if len(json.dumps(resp)) < 200 else None
-                    ),
+                    json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
+                )
+            await self.coordinator.async_refresh_data_from_apidict()
+        elif self._attribute_name == "default_vehicle":
+            resp = await self.coordinator.client.api.manage_vehicle(
+                vehicleId=self.coordinator_context,
+                action="setdefault",
+                vehicle=(self.coordinator.data or {}).get(self.coordinator_context)
+                or {},
+                toFile=self.coordinator.client.testmode(),
+            )
+            if isinstance(resp, dict) and ALLOW_TESTMODE:
+                LOGGER.info(
+                    "Applied toggle for '%s' change to '%s':\n%s",
+                    self.entity_id,
+                    "ON",
+                    json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
                 )
             await self.coordinator.async_refresh_data_from_apidict()
         elif self._attribute_name in [
@@ -422,6 +459,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             "preset_allow_export",
             "preset_discharge_priority",
             "preset_backup_option",
+            "default_vehicle",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -441,11 +479,35 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     "Applied upgrade settings for '%s' change to '%s':\n%s",
                     self.entity_id,
                     "OFF",
-                    json.dumps(
-                        resp, indent=2 if len(json.dumps(resp)) < 200 else None
-                    ),
+                    json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
                 )
             await self.coordinator.async_refresh_data_from_apidict()
+        elif self._attribute_name == "default_vehicle":
+            # if default is disabled, another registered vehicle must be enabled or disabling being skipped
+            if (
+                len(
+                    registered := set(self.coordinator.client.get_registered_vehicles())
+                )
+                > 1
+            ):
+                # get first other vehicle from list to set as new default
+                vehicleId = list(registered - {self.coordinator_context})[0]
+                resp = await self.coordinator.client.api.manage_vehicle(
+                    vehicleId=vehicleId,
+                    action="setdefault",
+                    vehicle=(self.coordinator.data or {}).get(vehicleId) or {},
+                    toFile=self.coordinator.client.testmode(),
+                )
+                if isinstance(resp, dict) and ALLOW_TESTMODE:
+                    LOGGER.info(
+                        "Applied toggle for '%s' change to '%s' by enabling other vehicle as default:\n%s",
+                        self.entity_id,
+                        "OFF",
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
+                    )
+                await self.coordinator.async_refresh_data_from_apidict()
         elif self._attribute_name in [
             "preset_allow_export",
             "preset_discharge_priority",

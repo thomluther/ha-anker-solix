@@ -80,10 +80,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         get_brand_models,
         get_model_year_attributes,
         get_model_years,
+        get_vehicle_attributes,
         get_vehicle_details,
         get_vehicle_list,
         get_vehicle_options,
         manage_vehicle,
+        update_vehicle_options,
     )
 
     def __init__(
@@ -222,6 +224,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "platform_tag",
                         "ota_version",
                         "bat_charge_power",
+                        "bat_discharge_power",
                     ] or (
                         key
                         in [
@@ -383,16 +386,29 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "to_home_load"
                         )
                         demand = devData.get("home_load_power") or 0
+                        ac_input = (
+                            devData.get("other_input_power")
+                            or device.get("other_input_power")
+                            or 0
+                        )
+                        soc = (
+                            devData.get("battery_power")
+                            or device.get("battery_soc")
+                            or 0
+                        )
                         # use house demand for preset if in auto mode
                         if generation >= 2 and (
                             (
                                 device.get("preset_usage_mode")
+                                or devData.get("scene_mode")
                                 or SolixDefaults.USAGE_MODE
                             )
                             in [
                                 SolarbankUsageMode.smartmeter.value,
                                 SolarbankUsageMode.smartplugs.value,
                                 SolarbankUsageMode.use_time.value,
+                                SolarbankUsageMode.time_slot.value,
+                                SolarbankUsageMode.smart.value,
                             ]
                         ):
                             preset = demand
@@ -404,7 +420,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         ):
                             with contextlib.suppress(ValueError):
                                 if (
-                                    int(out) == 0 and int(solar) > int(preset)
+                                    int(out) == 0
+                                    and int(solar) > int(preset)
+                                    and int(charge) > 0
                                     # and generation < 2
                                 ):
                                     # Charge and 0 W output while solar larger than preset must be active charge priority
@@ -419,10 +437,32 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             and homeload is not None
                             and preset is not None
                         ):
+                            # Solarbank models with hybrid inverter no longer use charge status, translate detection into proper description
                             with contextlib.suppress(ValueError):
-                                # Charge > 0 and home load < demand must be enforced charging
-                                if int(charge) > 0 and int(homeload) < int(preset):
-                                    description = SolarbankStatus.protection_charge.name
+                                if int(charge) > 0:
+                                    # charge modes
+                                    description = (
+                                        SolarbankStatus.charge_bypass.name
+                                        if int(out) > 0
+                                        else SolarbankStatus.charge_ac.name
+                                        if int(ac_input) > 0 or int(solar) == 0
+                                        # Charge > 0 and home load < demand must be enforced charging (if home load value reliable)
+                                        else SolarbankStatus.protection_charge.name
+                                        if int(homeload) < int(preset)
+                                        else SolarbankStatus.charge.name
+                                    )
+                                elif int(charge) < 0:
+                                    # discharge modes
+                                    description = (
+                                        SolarbankStatus.bypass_discharge.name
+                                        if int(solar) > 0
+                                        else SolarbankStatus.discharge.name
+                                    )
+                                elif int(soc) == 100:
+                                    # other modes
+                                    description = SolarbankStatus.fully_charged.name
+                                elif int(solar) > 0:
+                                    description = SolarbankStatus.bypass.name
                         elif (
                             description == SolarbankStatus.bypass.name
                             and generation >= 2

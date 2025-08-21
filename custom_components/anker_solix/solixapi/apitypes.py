@@ -174,6 +174,11 @@ API_ENDPOINTS = {
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
     "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
     "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
+    "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list",  # {"device_sn": deviceSn}
+    "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
+    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
+    "charger_get_device_setting": "mini_power/v1/app/setting/get_device_setting",  # {"device_sn": deviceSn}
+    "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"device_sn": deviceSn, "product_code": "A2345"} => Prime charger
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -402,19 +407,14 @@ related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/disaster_detail',
 
-related to Prime charger models: 12 + 0 used => 12 total
-    'mini_power/v1/app/charging/get_charging_mode_list',
+related to Prime charger models: 7 + 5 used => 12 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
     'mini_power/v1/app/setting/set_charging_mode_status',
-    'mini_power/v1/app/egg/get_easter_egg_trigger_list',
     'mini_power/v1/app/egg/add_easter_egg_trigger_record',
-    'mini_power/v1/app/egg/report_easter_egg_trigger_status',
-    'mini_power/v1/app/setting/get_device_setting',
-    'mini_power/v1/app/power/get_day_power_data',
+    'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
     'mini_power/v1/app/setting/set_compatibility_status',
-    'mini_power/v1/app/style/get_clock_screensavers',  # works for {'product_code': 'A2345'} => Prime charger
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -496,6 +496,12 @@ API_FILEPREFIXES = {
     "get_device_pv_total_statistics": "device_pv_total_statistics",
     "get_device_pv_statistics": "device_pv_statistics",
     "get_device_pv_price": "device_pv_price",
+    # power charger endpoint file prefixes
+    "charger_get_charging_modes": "charger_charging_modes",
+    "charger_get_triggers": "charger_triggers",
+    "charger_get_statistics": "charger_statistics",
+    "charger_get_device_setting": "charger_device_setting",
+    "charger_get_screensavers": "charger_screensavers",
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
@@ -594,6 +600,7 @@ class SolixDeviceType(Enum):
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
     EV_CHARGER = "ev_charger"
+    VEHICLE = "vehicle"
 
 
 class SolixParmType(Enum):
@@ -933,7 +940,7 @@ class SolarbankDeviceMetrics:
         "micro_inverter_power_limit",
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
-        "other_input_power",
+        "other_input_power",  # This is AC input for charging typically
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -963,7 +970,7 @@ class SolarbankDeviceMetrics:
         # "micro_inverter_power_limit",  # external inverter input not supported by SB3
         # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
-        "other_input_power",
+        "other_input_power",  # This is AC input for charging typically
     }
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
@@ -1064,6 +1071,7 @@ class SolarbankStatus(StrEnum):
     discharge = "2"  # only seen if no solar available
     charge = "3"  # normal charge for battery
     charge_bypass = "31"  # pseudo state, the solarbank does not distinguish this
+    charge_ac = "32"  # pseudo state, the solarbank does not distinguish this
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
     cold_wakeup = "116"  # At cold temperatures, 116 was observed instead of 4. Not sure why this state is different at low temps?
@@ -1175,39 +1183,82 @@ class SolixVehicle:
     brand: str = ""
     model: str = ""
     productive_year: int = 0
-    id: int | None = None
+    model_id: int | None = None
     battery_capacity: float = 0
     ac_max_charging_power: float = 0
     energy_consumption_per_100km: float = 0
     vehicle: InitVar[dict | str | None] = None
 
     def __post_init__(self, vehicle) -> None:
-        """Init the dataclass from an optional vehicle representation or dictionary."""
+        """Post init the dataclass from an optional vehicle representation or dictionary."""
         if isinstance(vehicle, dict):
             self.update(attributes=vehicle)
         elif isinstance(vehicle, str) and (keys := vehicle.split("/")):
-            self.brand = s if (s := (keys[0:1] or [None])[0]) != "-" else ""
-            self.model = s if (s := (keys[1:2] or [None])[0]) != "-" else ""
-            self.productive_year = (
-                int(s) if str(s := (keys[2:3] or [None])[0]).isdigit() else 0
+            self.update(
+                attributes={
+                    "brand:": s if (s := (keys[0:1] or [None])[0]) != "-" else "",
+                    "model": s if (s := (keys[1:2] or [None])[0]) != "-" else "",
+                    "productive_year": (keys[2:3] or [None])[0],
+                    "model_id": (keys[3:4] or [None])[0],
+                }
             )
-            self.id = int(s) if str(s := (keys[3:4] or [None])[0]).isdigit() else None
+        else:
+            # General type conversion for parameters as required
+            self.brand = str(self.brand) if self.brand else ""
+            self.model = str(self.model) if self.model else ""
+            self.productive_year = (
+                int(self.productive_year) if str(self.productive_year).isdigit() else 0
+            )
+            self.model_id = int(self.model_id) if str(self.model_id).isdigit() else None
+            self.battery_capacity = (
+                float(self.battery_capacity)
+                if str(self.battery_capacity).replace(".", "", 1).isdigit()
+                else 0
+            )
+            self.ac_max_charging_power = (
+                float(self.ac_max_charging_power)
+                if str(self.ac_max_charging_power).replace(".", "", 1).isdigit()
+                else 0
+            )
+            self.energy_consumption_per_100km = (
+                float(self.energy_consumption_per_100km)
+                if str(self.energy_consumption_per_100km).replace(".", "", 1).isdigit()
+                else 0
+            )
 
     def __str__(self) -> str:
         """Print the class fields."""
-        return f"{self.brand or '-'}/{self.model or '-'}/{self.productive_year or '-'}"
+        return f"{(self.brand or '-')!s}/{(self.model or '-')!s}/{(self.productive_year or '-')!s}"
+
+    def idAttributes(self) -> str:
+        """Print the model ID with key attribute fields."""
+        return f"{('-' if self.model_id is None else self.model_id)!s}/{(self.battery_capacity or '-')!s} kWh/{(self.ac_max_charging_power or '-')!s} kW"
 
     def update(self, attributes: dict) -> None:
         """Update attributes based on provided dictionary fields."""
         if isinstance(attributes, dict):
-            self.brand = attributes.get("brand") or attributes.get("brand_name") or self.brand
-            self.model = attributes.get("model") or attributes.get("model_name") or self.model
+            self.brand = (
+                str(brand)
+                if (brand := attributes.get("brand") or attributes.get("brand_name"))
+                else self.brand
+            )
+            self.model = (
+                str(model)
+                if (model := attributes.get("model") or attributes.get("model_name"))
+                else self.model
+            )
             self.productive_year = (
                 int(year)
                 if str(year := attributes.get("productive_year")).isdigit()
                 else self.productive_year
             )
-            self.id = int(vid) if str(vid := attributes.get("id")).isdigit() else self.id
+            self.model_id = (
+                int(mid)
+                if str(
+                    mid := attributes.get("id") or attributes.get("model_id")
+                ).isdigit()
+                else self.model_id
+            )
             self.battery_capacity = (
                 float(capacity)
                 if str(capacity := attributes.get("battery_capacity"))
@@ -1217,14 +1268,20 @@ class SolixVehicle:
             )
             self.ac_max_charging_power = (
                 float(limit)
-                if str(limit := attributes.get("ac_max_charging_power") or attributes.get("ac_max_power"))
+                if str(
+                    limit := attributes.get("ac_max_charging_power")
+                    or attributes.get("ac_max_power")
+                )
                 .replace(".", "", 1)
                 .isdigit()
                 else self.ac_max_charging_power
             )
             self.energy_consumption_per_100km = (
                 float(consumption)
-                if str(consumption := attributes.get("energy_consumption_per_100km") or attributes.get("hundred_fuel_consumption"))
+                if str(
+                    consumption := attributes.get("energy_consumption_per_100km")
+                    or attributes.get("hundred_fuel_consumption")
+                )
                 .replace(".", "", 1)
                 .isdigit()
                 else self.energy_consumption_per_100km

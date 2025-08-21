@@ -496,16 +496,24 @@ async def async_check_and_remove_devices(
     obsolete_user_devs = {}
     # ensure device type is also excluded when subcategories are excluded to remove device entities with reload from registry
     if excluded:
+        # Subcategories for Account devices
+        if {
+            SolixDeviceType.VEHICLE.value,
+        } & excluded:
+            excluded = excluded | {SolixDeviceType.ACCOUNT.value}
         # Subcategories for System devices
         if {
             ApiCategories.site_price,
             SolixDeviceType.SOLARBANK.value,
+            SolixDeviceType.SOLARBANK_PPS.value,
             SolixDeviceType.INVERTER.value,
             SolixDeviceType.PPS.value,
             SolixDeviceType.POWERPANEL.value,
             SolixDeviceType.SMARTMETER.value,
             SolixDeviceType.SMARTPLUG.value,
             SolixDeviceType.HES.value,
+            SolixDeviceType.EV_CHARGER.value,
+            SolixDeviceType.CHARGER.value,
             ApiCategories.solarbank_energy,
             ApiCategories.smartmeter_energy,
             ApiCategories.smartplug_energy,
@@ -543,12 +551,14 @@ async def async_check_and_remove_devices(
         } & excluded:
             excluded = excluded | {
                 SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.SOLARBANK_PPS.value,
                 SolixDeviceType.INVERTER.value,
                 SolixDeviceType.PPS.value,
                 SolixDeviceType.POWERPANEL.value,
                 SolixDeviceType.SMARTMETER.value,
                 SolixDeviceType.SMARTPLUG.value,
                 SolixDeviceType.HES.value,
+                SolixDeviceType.EV_CHARGER.value,
             }
 
     # get all device entries for a domain

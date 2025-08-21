@@ -11,6 +11,7 @@
                 "solar_energy": "Statistiques sur l'énergie solaire",
                 "solarbank_energy": "Statistiques sur l'énergie de Solarbank",
                 "solarbank": "Solarbanks",
+                "solarbank_pps": "Centrales électrique Solarbank",
                 "inverter": "Onduleurs",
                 "pps": "Centrales électriques portables",
                 "powerpanel": "Panneaux électriques",
@@ -23,7 +24,10 @@
                 "smartplug_energy": "Statistiques énergétiques des prises intelligentes",
                 "hes": "Systèmes énergétiques domestiques (HES)",
                 "hes_energy": "Statistiques énergétiques du HES",
-                "hes_avg_power": "⌀-puissance du HES"
+                "hes_avg_power": "⌀-puissance du HES",
+                "vehicle": "Véhicules",
+                "ev_charger": "Chargeur de véhicule électrique",
+                "charger": "Chargeur électrique"
             }
         },
         "plan": {
@@ -186,6 +190,12 @@
         "button": {
             "refresh_device": {
                 "name": "Actualiser les détails"
+            },
+            "refresh_vehicles": {
+                "name": "Actualiser les véhicules"
+            },
+            "restore_attributes": {
+                "name": "Restaurer les attributs"
             }
         },
         "binary_sensor": {
@@ -197,7 +207,10 @@
                 },
                 "state_attributes": {
                     "bt_mac": {
-                        "name": "Bluetooth MAC"
+                        "name": "MAC Bluetooth"
+                    },
+                    "wifi_mac": {
+                        "name": "MAC Wifi"
                     },
                     "wifi_ssid": {
                         "name": "SSID Wifi"
@@ -346,6 +359,20 @@
                     "on": "Oui",
                     "off": "Non"
                 }
+            },
+            "smart_charging": {
+                "name": "Chargement intelligent",
+                "state": {
+                    "on": "Oui",
+                    "off": "Non"
+                }
+            },
+            "connected_to_enodeapi": {
+                "name": "Enode Api",
+                "state": {
+                    "on": "Connecté",
+                    "off": "Déconnecté"
+                }
             }
         },
         "datetime": {
@@ -385,6 +412,12 @@
                         "name": "Personnalisé"
                     }
                 }
+            },
+            "ac_max_charging_power": {
+                "name": "Charge max"
+            },
+            "energy_consumption_per_100km": {
+                "name": "Consommation"
             },
             "dynamic_price_fee": {
                 "name": "Redevance de prix dynamique",
@@ -479,6 +512,18 @@
             },
             "preset_inverter_limit": {
                 "name": "Limite de l'onduleur"
+            },
+            "vehicle_brand": {
+                "name": "1. Marque"
+            },
+            "vehicle_model": {
+                "name": "2. Modèle"
+            },
+            "vehicle_year": {
+                "name": "3. Année"
+            },
+            "vehicle_variant": {
+                "name": "4. Variante (ID/Cap/AC)"
             }
         },
         "sensor": {
@@ -512,6 +557,7 @@
                     "charge": "Charge",
                     "charge_bypass": "Charge et Bypass",
                     "charge_priority":  "Charge prioritaire",
+                    "charge_ac":  "Charge CA",
                     "full_bypass": "Bypass 100%",
                     "wakeup": "Réveil",
                     "cold_wakeup": "Réveil froid",
@@ -1194,6 +1240,9 @@
                         "name": "Durée sec"
                     }
                 }
+            },
+            "update_timestamp": {
+                "name": "Actualisé"
             }
         },
         "switch": {
@@ -1219,6 +1268,9 @@
                         "name": "Demandes de la dernière heure"
                     }
                 }
+            },
+            "default_vehicle": {
+                "name": "Véhicule par défaut"
             }
         }
     },
