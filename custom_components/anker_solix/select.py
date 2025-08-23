@@ -395,13 +395,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         self._attr_options = self.entity_description.options_fn(
             data, self.entity_description.json_key
         )
-        # update options based on other devices configured in system
-        if self._attribute_name == "preset_usage_mode":
-            self._attr_options = list(
-                coordinator.client.api.solarbank_usage_mode_options(deviceSn=context)
-            )
-            self._attr_options.sort()
-        elif self._attribute_name == "system_price_unit":
+        # Initial options update for static information not changed during Api session
+        if self._attribute_name == "system_price_unit":
             # merge currencies from entity description and from Api currency list
             options = set(self._attr_options) | {
                 item.get("symbol")
@@ -414,46 +409,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 )
             }
             self._attr_options = list(options)
-        elif self._attribute_name == "system_price_type":
-            self._attr_options = list(
-                coordinator.client.api.price_type_options(siteId=context)
-            )
             self._attr_options.sort()
-        elif self._attribute_name == "dynamic_price_provider":
-            self._attr_options = list(
-                coordinator.client.api.price_provider_options(siteId=context)
-                # TODO(SB3): Add None as option only if the provider can ever be removed
-                # | {"none"}
-            )
-            self._attr_options.sort()
-        elif self._attribute_name == "vehicle_brand":
-            self._attr_options = coordinator.client.api.get_vehicle_options()
-            self._attr_options.sort()
-        elif self._attribute_name == "vehicle_model":
-            self._attr_options = coordinator.client.api.get_vehicle_options(
-                vehicle=SolixVehicle(brand=data.get("brand"))
-            )
-            self._attr_options.sort()
-        elif self._attribute_name == "vehicle_year":
-            self._attr_options = coordinator.client.api.get_vehicle_options(
-                vehicle=SolixVehicle(brand=data.get("brand"), model=data.get("model"))
-            )
-            self._attr_options.sort()
-        elif self._attribute_name == "vehicle_variant":
-            self._attr_options = (
-                self.coordinator.client.api.get_vehicle_options(
-                    vehicle=SolixVehicle(
-                        brand=brand, model=model, productive_year=year
-                    ),
-                    extendAttributes=True,
-                )
-                if (brand := data.get("brand"))
-                and (model := data.get("model"))
-                and (year := data.get("productive_year"))
-                else []
-            )
-            self._attr_options.sort()
-        # Make sure that options are limited to existing state if entity cannot be changed
+        # Make sure that options are set to existing state if no options defined
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
 
@@ -492,6 +449,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             )
             if options != set(self._attr_options):
                 self._attr_options = list(options)
+                self._attr_options.sort()
         elif self._attribute_name == "dynamic_price_provider":
             options = self.coordinator.client.api.price_provider_options(
                 siteId=self.coordinator_context
@@ -553,7 +511,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 self._attr_options.sort()
             else:
                 self._attr_options = []
-        # Make sure that options are limited to existing state if entity cannot be changed
+        # Make sure that options are limited to existing state if no options defined
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
         return self._attr_options

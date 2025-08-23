@@ -348,24 +348,6 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 self._attr_device_info = get_AnkerSolixDeviceInfo(
                     data, context, coordinator.client.api.apisession.email
                 )
-            # update number limits based on solarbank count in system or active max
-            if self._attribute_name == "preset_system_output_power":
-                if (data.get("generation") or 0) >= 2:
-                    # SB2 has min limit of 0W, they are typically correctly set in the schedule depending on device settings
-                    self.native_min_value = (data.get("schedule") or {}).get(
-                        "min_load"
-                    ) or 0
-                    self.native_max_value = (data.get("schedule") or {}).get(
-                        "max_load"
-                    ) or self.native_max_value
-                else:
-                    self.native_max_value = int(
-                        self.native_max_value * (data.get("solarbank_count") or 1)
-                    )
-            if self._attribute_name == "preset_device_output_power":
-                self.native_min_value = int(
-                    self.native_min_value / (data.get("solarbank_count") or 1)
-                )
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -428,6 +410,41 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 # get dynamic unit if defined
                 if unit := self.entity_description.unit_fn(data):
                     self._attr_native_unit_of_measurement = unit
+                # update number limits for presets based on solarbank count in system or active max
+                if self._attribute_name == "preset_system_output_power":
+                    if (data.get("generation") or 0) >= 2:
+                        # SB2 has min limit of 0W, they are typically correctly set in the schedule depending on device settings
+                        self.native_min_value = (data.get("schedule") or {}).get(
+                            "min_load"
+                        ) or 0
+                        self.native_max_value = (data.get("schedule") or {}).get(
+                            "max_load"
+                        ) or self.native_max_value
+                    else:
+                        # Use minimum from schedule fields (depends on defined interter)
+                        self.native_min_value = (data.get("schedule") or {}).get(
+                            "min_load"
+                        ) or self.native_min_value
+                        # SB1 max must consider multiple devices with MI80 inverter
+                        self.native_max_value = int(
+                            (
+                                (data.get("schedule") or {}).get("max_load")
+                                or self.native_max_value
+                            )
+                            * (data.get("solarbank_count") or 1)
+                        )
+                elif self._attribute_name == "preset_device_output_power":
+                    # Multiple SB1 with device setting only supported for MI80 whose limits apply
+                    self.native_min_value = int(
+                        (
+                            (data.get("schedule") or {}).get("min_load")
+                            or self.native_min_value
+                        )
+                        / (data.get("solarbank_count") or 1)
+                    )
+                    self.native_max_value = (data.get("schedule") or {}).get(
+                        "max_load"
+                    ) or self.native_max_value
         else:
             self._native_value = None
         self._assumed_state = False

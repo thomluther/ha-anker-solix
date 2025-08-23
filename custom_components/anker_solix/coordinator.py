@@ -147,9 +147,10 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             if isinstance(categories, str)
             else None
         )
-        if SolixDeviceType.VEHICLE.value in categories:
-            # Refresh only device details for user account
-            data = await self.client.async_get_data(vehicle_details=True)
+        if categories:
+            if SolixDeviceType.VEHICLE.value in categories:
+                # Refresh only device details for user account
+                data = await self.client.async_get_data(vehicle_details=True)
         else:
             data = await self.client.async_get_data(
                 device_details=True, reset_cache=reset_cache
