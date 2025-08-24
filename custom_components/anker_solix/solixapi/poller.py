@@ -362,7 +362,7 @@ async def poll_sites(  # noqa: C901
                         if (charge_calc := power_in - power_out) > 0:
                             # No discharging, use the bat charge value if available in response
                             charge_calc = max(charge_calc, batt_charge)
-                        elif batt_discharge >= 0:
+                        elif batt_discharge > 0:
                             # use new field preferably if discharge value available
                             charge_calc = -1 * batt_discharge
                         # allow negative values for the field being used as battery power
