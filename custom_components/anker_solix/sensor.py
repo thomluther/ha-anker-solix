@@ -1239,14 +1239,15 @@ SITE_SENSORS = [
         json_key="scene_mode",
         device_class=SensorDeviceClass.ENUM,
         options=list({m.name for m in SolarbankUsageMode} | {"unknown"}),
+        # Use new field for scene mode optionally, which reports scene also for member accounts
         value_fn=lambda d, jk, _: None
-        if not ((mode := d.get(jk)) and str(mode).isdigit())
+        if not ((mode := d.get(jk) or d.get("user_scene_mode")) and str(mode).isdigit())
         else next(
             iter([m.name for m in SolarbankUsageMode if m.value == mode]),
             "unknown",
         ),
         attrib_fn=lambda d, _: {
-            "mode_type": d.get("scene_mode"),
+            "mode_type": d.get("scene_mode") or d.get("user_scene_mode"),
         },
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),

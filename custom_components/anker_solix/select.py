@@ -398,7 +398,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         # Initial options update for static information not changed during Api session
         if self._attribute_name == "system_price_unit":
             # merge currencies from entity description and from Api currency list
-            options = set(self._attr_options) | {
+            options = set(self._attr_options or []) | {
                 item.get("symbol")
                 for item in (
                     (
@@ -440,14 +440,14 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             options = self.coordinator.client.api.solarbank_usage_mode_options(
                 deviceSn=self.coordinator_context
             )
-            if options != set(self._attr_options):
+            if options != set(self._attr_options or []):
                 self._attr_options = list(options)
                 self._attr_options.sort()
         elif self._attribute_name == "system_price_type":
             options = self.coordinator.client.api.price_type_options(
                 siteId=self.coordinator_context
             )
-            if options != set(self._attr_options):
+            if options != set(self._attr_options or []):
                 self._attr_options = list(options)
                 self._attr_options.sort()
         elif self._attribute_name == "dynamic_price_provider":
@@ -456,17 +456,17 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             )
             # TODO(SB3): Add None as option only if the provider can ever be removed
             # options.add("none")
-            if options != set(self._attr_options):
+            if options != set(self._attr_options or []):
                 self._attr_options = list(options)
                 self._attr_options.sort()
         elif (
             self._attribute_name == "preset_inverter_limit"
             and self._attr_current_option is not None
         ):
-            options = set(self._attr_options)
+            options = set(self._attr_options or [])
             # Add actual power setting to options if not included
             options.add(self._attr_current_option)
-            if options != set(self._attr_options):
+            if options != set(self._attr_options or []):
                 self._attr_options = list(options)
                 self._attr_options.sort()
         elif self._attribute_name == "vehicle_brand":
