@@ -286,10 +286,12 @@ async def poll_sites(  # noqa: C901
                     sb_total_battery_discharge_calc = 0
                     sb_total_soc_calc = []
                 else:
-                    sb_total_output_calc = sb_total_output
-                    sb_total_solar_calc = sb_total_solar
-                    sb_total_battery_discharge_calc = sb_total_battery_discharge
-                    sb_total_soc_calc = sb_total_soc
+                    sb_total_output_calc = float(sb_total_output or 0)
+                    sb_total_solar_calc = float(sb_total_solar or 0)
+                    sb_total_battery_discharge_calc = float(
+                        sb_total_battery_discharge or 0
+                    )
+                    sb_total_soc_calc = float(sb_total_soc or 0)
 
                 for index, solarbank in enumerate(sb_list):
                     # work around for device_name which is actually the device_alias in scene info
@@ -337,9 +339,10 @@ async def poll_sites(  # noqa: C901
                     # Consider correction of totals for combined SB1/SB2 systems which reflect only SB2 totals, which likely also causes wrong energy statistics in the cloud
                     with contextlib.suppress(ValueError):
                         charge_calc = 0
-                        power_in = int(solarbank.get("photovoltaic_power"))
-                        power_out = int(solarbank.get("output_power"))
-                        soc = int(solarbank.get("battery_power"))
+                        power_in = int(solarbank.get("photovoltaic_power") or 0)
+                        power_out = int(solarbank.get("output_power") or 0)
+                        soc = int(solarbank.get("battery_power") or 0)
+                        grid_in = int(sb_grid_charge or 0)
                         # power_charge = int(solarbank.get("charging_power", "")) # This value seems to reflect the output or discharge power, which is correct for status 2, but may be wrong for other states
                         # charge and discharge power will be combined into charging_power field to eliminate cloud field inconsistency and use negative values for discharge power
                         # The cloud introduced new solarbank field bat_charge_power which seems to reflect the positive charging power. It will be used if larger than calculated power
@@ -353,20 +356,35 @@ async def poll_sites(  # noqa: C901
                             # ceil output which must not be smaller than PV + discharge, considering no losses according to other cloud calculations
                             if (batt_discharge + power_in) > power_out:
                                 power_out = batt_discharge + power_in
-                                solarbank["output_power"] = str(power_out)
-                            # cap output which must not be larger than PV - discharge
-                            elif 0 < (power_in - batt_charge) < power_out:
-                                power_out = power_in - batt_charge
-                                solarbank["output_power"] = str(power_out)
+                                solarbank["output_power"] = f"{power_out:.0f}"
+                            # cap output which must not be larger than PV +/- net battery power
+                            elif (
+                                0
+                                < (power_in - batt_charge + batt_discharge)
+                                < power_out
+                            ):
+                                power_out = power_in - batt_charge + batt_discharge
+                                solarbank["output_power"] = f"{power_out:.0f}"
+                            # breakdown of grid charge which is provided for all solarbanks
+                            if grid_in > 0:
+                                # grid charge should be battery charge - pv charge
+                                grid_in = (
+                                    0
+                                    if power_out > 0
+                                    else max(0, batt_charge - power_in)
+                                )
                         # Calculate battery power for all solarbank devices, that had no batt_* fields yet but reliable output power
-                        if (charge_calc := power_in - power_out) > 0:
-                            # No discharging, use the bat charge value if available in response
-                            charge_calc = max(charge_calc, batt_charge)
+                        if batt_charge > 0:
+                            # Use the bat charge value if available in response
+                            charge_calc = batt_charge
                         elif batt_discharge > 0:
                             # use new field preferably if discharge value available
                             charge_calc = -1 * batt_discharge
+                        else:
+                            # calculate difference between all input and output power
+                            charge_calc = power_in + grid_in - power_out
                         # allow negative values for the field being used as battery power
-                        solarbank["charging_power"] = str(charge_calc)
+                        solarbank["charging_power"] = f"{charge_calc:.0f}"
                         # calculate correct totals, only used for cascaded SB1 systems
                         sb_total_charge_calc += charge_calc
                         if cascaded_system:
@@ -385,10 +403,13 @@ async def poll_sites(  # noqa: C901
                                 # Solarbank is last device
                                 sb_total_output_calc += power_out
                         elif multisystem:
-                            # set device grid charge to battery charge for proper breakdown reporting
-                            sb_grid_charge = batt_charge
-                            # calculate total battery charge based on device values for other input power adoption of device breakdown
-                            sb_total_battery_charge_calc += batt_charge
+                            # set device grid charge to calculated battery grid charge for proper breakdown reporting
+                            sb_grid_charge = round(grid_in)
+                            # calculate total battery charge and discharge based on device values for other input power adoption of device breakdown
+                            # ignore negative values for total charge
+                            sb_total_battery_charge_calc += max(0, charge_calc)
+                            # ignore positive values for total discharge
+                            sb_total_battery_discharge_calc -= min(0, charge_calc)
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                     new_sites.update({myid: mysite})
                     # add count of same solarbanks to device details and other metrics that might be device related
@@ -421,8 +442,11 @@ async def poll_sites(  # noqa: C901
                             "micro_inverter_low_power_limit": sb_info.get(
                                 "micro_inverter_low_power_limit"
                             ),
+                            # TODO(MULTISYSTEM): Is there a AC socket breakdown available or must it be calculated?
                             "ac_power": sb_info.get("ac_power"),
+                            # MULTISYSTEM: Breakdown made later based on total
                             "other_input_power": sb_info.get("other_input_power"),
+                            # MULTISYSTEM: Grid charge breakdown calculated per device
                             "grid_to_battery_power": str(sb_grid_charge),
                             "pei_heating_power": solarbank.get("heating_power")
                             or sb_info.get("pei_heating_power"),
@@ -450,17 +474,17 @@ async def poll_sites(  # noqa: C901
                     # Add info for cascaded solarbanks
                     mysite["solarbank_info"]["sb_cascaded"] = True
                     # subtract cascaded output total from pv total
-                    mysite["solarbank_info"]["total_photovoltaic_power"] = str(
-                        max(0, sb_total_solar_calc - sb_total_casc_out_calc)
+                    mysite["solarbank_info"]["total_photovoltaic_power"] = (
+                        f"{(max(0, sb_total_solar_calc - sb_total_casc_out_calc)):.0f}"
                     )
-                    mysite["solarbank_info"]["total_charging_power"] = str(
-                        sb_total_charge_calc
+                    mysite["solarbank_info"]["total_charging_power"] = (
+                        f"{sb_total_charge_calc:.0f}"
                     )
-                    mysite["solarbank_info"]["total_output_power"] = str(
-                        sb_total_output_calc
+                    mysite["solarbank_info"]["total_output_power"] = (
+                        f"{sb_total_output_calc:.0f}"
                     )
-                    mysite["solarbank_info"]["total_battery_power"] = str(
-                        round(sum(sb_total_soc_calc) / len(sb_total_soc_calc) / 100, 2)
+                    mysite["solarbank_info"]["total_battery_power"] = (
+                        f"{(sum(sb_total_soc_calc) / len(sb_total_soc_calc) / 100):.2f}"
                     )
                     # adjust new battery discharge total if available
                     if str(
@@ -468,16 +492,17 @@ async def poll_sites(  # noqa: C901
                             "battery_discharge_power"
                         )
                     ).isdigit():
-                        mysite["solarbank_info"]["battery_discharge_power"] = str(
-                            sb_total_battery_discharge_calc
+                        mysite["solarbank_info"]["battery_discharge_power"] = (
+                            f"{sb_total_battery_discharge_calc:.0f}"
                         )
                 # multisystem corrections for totals and missing break down
                 elif multisystem:
                     # use calculated overall battery power like in cascaded systems
                     # In multisystem there should not be parallel charge and discharge of batteries, therefore (calculated) device values should reflect net total
-                    mysite["solarbank_info"]["total_charging_power"] = str(
-                        sb_total_charge_calc
+                    mysite["solarbank_info"]["total_charging_power"] = (
+                        f"{sb_total_charge_calc:.0f}"
                     )
+                    # TODO(MULTISYSTEM): Adjust other totals as necessary once value examples are available
                     # adjust breakdown for multisystem if possible
                     with contextlib.suppress(ValueError):
                         factor = min(
@@ -502,14 +527,12 @@ async def poll_sites(  # noqa: C901
                             sb_total_charge = float(sb_total_solar) - float(
                                 sb_total_output
                             )
-                            mysite["solarbank_info"]["total_charging_power"] = str(
-                                sb_total_charge
+                            mysite["solarbank_info"]["total_charging_power"] = (
+                                f"{sb_total_charge:.0f}"
                             )
                     for sn, charge in sb_charges.items():
-                        api.devices[sn]["charging_power"] = str(
-                            0
-                            if sb_total_charge_calc == 0
-                            else round(sb_total_charge / sb_total_charge_calc * charge)
+                        api.devices[sn]["charging_power"] = (
+                            f"{0 if sb_total_charge_calc == 0 else (sb_total_charge / sb_total_charge_calc * charge):.0f}"
                         )
                         # Update also the charge status description which may change after charging power correction
                         charge_status = api.devices[sn].get("charging_status")
@@ -728,6 +751,13 @@ async def poll_site_details(
                         api.apisession.nickname,
                     )
                     await api.get_site_price(siteId=site_id, fromFile=fromFile)
+                # Fetch power limits for solarbank systems
+                if {SolixDeviceType.SOLARBANK.value} - exclude:
+                    api._logger.debug(
+                        "Getting api %s power limits for site",
+                        api.apisession.nickname,
+                    )
+                    await api.get_power_limit(siteId=site_id, fromFile=fromFile)
             # Fetch CO2 Ranking if not excluded
             if not ({ApiCategories.solarbank_energy} & exclude):
                 api._logger.debug(
@@ -997,6 +1027,14 @@ async def poll_device_details(  # noqa: C901
                         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
                         deviceSn=sn,
                         fromFile=fromFile,
+                    )
+                    # Fetch power solarbank specific attributes
+                    api._logger.debug(
+                        "Getting api %s device specific attributes",
+                        api.apisession.nickname,
+                    )
+                    await api.get_device_attributes(
+                        deviceSn=sn, attributes=["pv_power_limit"], fromFile=fromFile
                     )
 
         # Merge additional powerpanel data

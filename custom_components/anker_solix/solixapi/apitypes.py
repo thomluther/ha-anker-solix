@@ -132,7 +132,8 @@ API_ENDPOINTS = {
     "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
     "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
     "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
-    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? only "rssi" attribute shows output
+    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank and/or smart meter? {"device_sn":sn,"attributes":["rssi","pv_power_limit"]}
+    "set_device_attributes": "power_service/v1/app/device/set_device_attrs",  # attr name may be different than for get, {"device_sn":sn,"attributes":{"pv_power_limit":800,"ac_power_limit":1200,"power_limit":800}}
     "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
     "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
     "set_installation": "power_service/v1/app/compatible/set_installation",  # not explored yet
@@ -218,7 +219,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 60 + 65 used => 125
+""" Other endpoints neither implemented nor explored: 59 + 66 used => 125
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message', # payload format unknown
@@ -253,7 +254,6 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/app/device/remove_param_config_key'
-    'power_service/v1/app/device/set_device_attrs', # attributes must be list of strings, only 'rssi' found working so far
     'power_service/v1/app/group/replace_group_devices',
     'power_service/v1/app/group/save_group_devices',
     'power_service/v1/app/group/force_save_group_devices',
@@ -921,11 +921,6 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        # Following Only used correctly by AC model!
-        # "micro_inverter_power",
-        # "micro_inverter_power_limit",
-        # "micro_inverter_low_power_limit",
-        # "other_input_power",
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -949,11 +944,6 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "to_home_load",
         "pei_heating_power",
-        # Following Only used correctly by AC model!
-        # "micro_inverter_power",
-        # "micro_inverter_power_limit",
-        # "micro_inverter_low_power_limit",
-        # "other_input_power",
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {

@@ -193,6 +193,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "pv_name",
                         "pv_power",
                         "group_info",
+                        "power_limit_option",
+                        "power_limit_option_real",
                     ]:
                         # keys to be updated independent of value
                         device[key] = value
@@ -387,8 +389,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         )
                         demand = devData.get("home_load_power") or 0
                         ac_input = (
-                            devData.get("other_input_power")
-                            or device.get("other_input_power")
+                            devData.get("grid_to_battery_power")
+                            or device.get("grid_to_battery_power")
                             or 0
                         )
                         soc = (
@@ -475,7 +477,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
                         device["charging_status_desc"] = description
                     elif (
-                        key in ["power_cutoff", "output_cutoff_data"]
+                        # items with int value
+                        key
+                        in [
+                            "power_cutoff",
+                            "output_cutoff_data",
+                            "power_limit",
+                            "pv_power_limit",
+                            "ac_input_limit",
+                        ]
                         and str(value).isdigit()
                     ):
                         device[key] = int(value)
@@ -917,6 +927,32 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                         device[key] = value
 
+                    # EV charger specific keys
+                    elif (
+                        key
+                        in [
+                            "ocpp_connect_status",
+                        ]
+                        and device.get("type") == SolixDeviceType.EV_CHARGER.value
+                    ):
+                        if key == "ocpp_connect_status":
+                            # decode the status into a description, assuming same code translation as for device connection status
+                            device.update(
+                                {
+                                    key: value,
+                                    "ocpp_status_desc": next(
+                                        iter(
+                                            [
+                                                item.name
+                                                for item in SolixDeviceStatus
+                                                if item.value == str(value)
+                                            ]
+                                        ),
+                                        SolixDeviceStatus.unknown.name,
+                                    ),
+                                }
+                            )
+
                     # generate extra values when certain conditions are met
                     if key in ["battery_power"] or calc_capacity:
                         # generate battery values when soc updated or device name changed or PN is known or exp packs changed
@@ -1343,6 +1379,231 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             fittings[fitting.get("device_sn")] = fitting
         self._update_dev({"device_sn": deviceSn, "fittings": fittings})
         return data
+
+    async def get_device_attributes(
+        self, deviceSn: str, attributes: list[str] | str, fromFile: bool = False
+    ) -> dict:
+        r"""Get requested device attributes.
+
+        Example data for attributes list ["rssi", "pv_power_limit"]:
+        {"device_sn": "9JVB42LJK8J0P5RY","attributes": {"pv_power_limit": 800,"rssi": "-74"}}
+        """
+        # validate parameters
+        attributes = [attributes] if isinstance(attributes, str) else attributes
+        data = {
+            "device_sn": deviceSn,
+            "attributes": attributes,
+        }
+        if fromFile:
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_attributes']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_attributes']}_{deviceSn}.json"
+                )
+            # limit attributes in file response to queried attributes since file could contain more
+            if attr := (resp.get("data") or {}).get("attributes") or {}:
+                resp["data"]["attributes"] = {
+                    key: attr[key] for key in attr if key in attributes
+                }
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_device_attributes"], json=data
+            )
+        # update devices dict with new attribute data
+        if data := resp.get("data") or {}:
+            self._update_dev({"device_sn": deviceSn} | data.get("attributes") or {})
+        return data
+
+    async def set_device_attributes(
+        self,
+        deviceSn: str,
+        attributes: dict,
+        query_attributes: list | None = None,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Set the provided site attributes.
+
+        If queried attributes are provided, these will be used to validate the actual settings. If omitted, no attribute change validation will be done.
+        Example attributes input:
+        {"pv_power_limit": 800, "ac_power_limit": 1200}
+        """
+        # validate parameter
+        if not isinstance(attributes, dict):
+            return False
+        if toFile:
+            # Get all last attributes data from file
+            if not (
+                data := await self.get_device_attributes(
+                    deviceSn=deviceSn, attributes=[], fromFile=toFile
+                )
+            ):
+                return False
+            # File mode does not support differing attribute names, they will be added to get file data as modified
+            data["attributes"] = (data.get("attributes") or {}) | attributes
+            # Write all attributes to file for testing purposes
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_device_attributes']}_modified_{deviceSn}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": data,
+                },
+            ):
+                return False
+        else:
+            # Prepare payload from parameters
+            data = {"device_sn": deviceSn, "attributes": attributes}
+            # Make the Api call and check for return code
+            code = (
+                await self.apisession.request(
+                    "post", API_ENDPOINTS["set_device_attributes"], json=data
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return False
+        # update the data in api dict and return active data
+        return (
+            await self.get_device_attributes(
+                deviceSn=deviceSn,
+                attributes=query_attributes,
+                fromFile=toFile,
+            )
+            if isinstance(query_attributes, list)
+            else {}
+        )
+
+    async def get_power_limit(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the power limit for the site.
+
+        Example data:
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_unit": "kwh","legal_power_limit": 800,"device_info": [
+            {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5RY","device_name": "Solarbank 3",
+            "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+            "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 1200}],
+        "current_power": 0,"all_power_limit": 0,"ae100_info": null,"parallel_type": "Single","ac_input_power_unit": "1200W"}
+        """
+        siteId = str(siteId) or ""
+        data = {"site_id": siteId}
+        if fromFile:
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_power_limit']}_modified_{siteId}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_power_limit']}_{siteId}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_site_power_limit"], json=data
+            )
+        # update site details in sites dict
+        if data := resp.get("data") or {}:
+            self._update_site(
+                siteId,
+                {
+                    "legal_power_limit": data.get("legal_power_limit") or 0,
+                    "all_power_limit": data.get("all_power_limit") or 0,
+                    "parallel_type": data.get("parallel_type") or "",
+                    "ac_input_power_unit": data.get("ac_input_power_unit") or "",
+                    "ae100_info": data.get("ae100_info") or None,
+                },
+            )
+        # update device details in device dict
+        for device in data.get("device_info") or []:
+            if sn := device.get("device_sn"):
+                self._update_dev(
+                    {
+                        "device_sn": sn,
+                        "power_limit": device.get("power_limit") or 0,
+                        "power_limit_option": device.get("power_limit_option") or None,
+                        "power_limit_option_real": device.get("power_limit_option_real")
+                        or None,
+                        "ac_input_limit": device.get("ac_input_limit") or 0,
+                    }
+                )
+        return data
+
+    async def set_power_limit(
+        self,
+        siteId: str,
+        deviceSn: str,
+        ac_input: float | str | None = None,
+        ac_output: float | str | None = None,
+        pv_input: float | str | None = None,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Set the provided power limits for the site and device."""
+        data = {}
+        # validate parameter
+        ac_input = (
+            round(float(ac_input))
+            if str(ac_input).replace("-", "", 1).replace(".", "", 1).isdigit()
+            else None
+        )
+        ac_output = (
+            round(float(ac_output))
+            if str(ac_output).replace("-", "", 1).replace(".", "", 1).isdigit()
+            else None
+        )
+        pv_input = (
+            round(float(pv_input))
+            if str(pv_input).replace("-", "", 1).replace(".", "", 1).isdigit()
+            else None
+        )
+        # Prepare payload from parameters for proper device attributes
+        if ac_input is not None:
+            data["ac_power_limit"] = ac_input
+        if ac_output is not None:
+            data["power_limit"] = ac_output
+        if pv_input is not None:
+            data["pv_power_limit"] = pv_input
+        # update device attributes
+        if not isinstance(
+            await self.set_device_attributes(
+                deviceSn=deviceSn,
+                attributes=data,
+                toFile=toFile,
+            ),
+            dict,
+        ):
+            return False
+        # Modify the updated attributes in the response and power limit file
+        if toFile and (
+            resp := await self.get_power_limit(siteId=siteId, fromFile=toFile)
+        ):
+            for device in [
+                d
+                for d in resp.get("device_info") or []
+                if d.get("device_sn") == deviceSn
+            ]:
+                if ac_input is not None:
+                    device["ac_input_limit"] = ac_input
+            # TODO(Multisystem): Update additional fields once supported via cloud/device
+            if ac_input is not None:
+                resp["ac_input_power_unit"] = f"{ac_input!s}W"
+            # update ac power limit in file
+            await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_site_power_limit']}_modified_{siteId}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": resp,
+                },
+            )
+        # query the actual limits and update cache
+        return await self.get_power_limit(siteId=siteId, fromFile=toFile)
 
     async def get_ota_info(
         self, solarbankSn: str = "", inverterSn: str = "", fromFile: bool = False
