@@ -979,8 +979,8 @@ content: >
         {%- set unit = sea.unit|default('-') -%}
         {%- set wk = sea.weekday|default([]) -%}
         {%- set we = sea.weekend|default([]) -%}
-        {%- set m_start = isnow.replace(month=(sea.sea|default({})).start_month|default(1)|int(1)) -%}
-        {%- set m_end = isnow.replace(month=(sea.sea|default({})).end_month|default(12)|int(12)) -%}
+        {%- set m_start = isnow.replace(day=1,month=(sea.sea|default({})).start_month|default(1)|int(1)) -%}
+        {%- set m_end = isnow.replace(day=1,month=(sea.sea|default({})).end_month|default(12)|int(12)) -%}
         {%- set is_same = sea.is_same|default(true) %}
     {{ '**Season: '~[m_start.strftime("%b"),m_end.strftime("%b")]|join(' - ')~',   Weekends: '~('SAME' if is_same else 'DIFF')~'  ('~plan_name~')**' }}
     {{ "%s | %s | %s | %s | | %s | %s | %s | %s"|format('Start', 'End', 'Type', 'Price', 'Start', 'End', 'Type', 'Price') }}

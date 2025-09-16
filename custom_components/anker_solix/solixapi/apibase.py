@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from aiohttp import ClientSession
+from aiohttp import ClientError, ClientSession
 
 from .apitypes import (
     API_ENDPOINTS,
@@ -788,9 +788,13 @@ class AnkerSolixBaseApi:
                 Path(self.testDir()) / f"{API_FILEPREFIXES['get_message_unread']}.json"
             )
         else:
-            resp = await self.apisession.request(
-                "get", API_ENDPOINTS["get_message_unread"]
-            )
+            # Ignore timeouts or other errors from endpoint
+            try:
+                resp = await self.apisession.request(
+                    "get", API_ENDPOINTS["get_message_unread"]
+                )
+            except (ClientError, TimeoutError):
+                resp = {}
         data = resp.get("data") or {}
         # New method: Save unread msg flag in account dictionary
         self._update_account(data)
