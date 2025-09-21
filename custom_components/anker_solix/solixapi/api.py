@@ -194,9 +194,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "station_sn",
                     ]:
                         if key in ["power_limit_option"]:
-                            # mark power limit option as Auto if empty like in app
-                            # TODO(Multisystem): Update limit option once various options supported
-                            device[key] = value or "Auto"
+                            if key in getattr(
+                                SolarbankDeviceMetrics, device.get("device_pn") or "", {}
+                            ):
+                                # mark power limit option as Auto if empty like in app
+                                # TODO(Multisystem): Update limit option once various options supported
+                                device[key] = value or "Auto"
                         else:
                             device[key] = value
                     elif (

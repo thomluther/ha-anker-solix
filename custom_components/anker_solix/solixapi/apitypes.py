@@ -993,6 +993,7 @@ class SolarbankDeviceMetrics:
         "power_limit",
         "pv_power_limit",
         "ac_input_limit",
+        "power_limit_option",
     }
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
