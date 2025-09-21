@@ -1,0 +1,35 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "model_list": [
+      "Macan 4 Electric",
+      "Macan 4S Electric",
+      "Macan Electric",
+      "Macan Turbo Electric",
+      "Taycan",
+      "Taycan 4",
+      "Taycan 4 Cross Turismo",
+      "Taycan 4 Plus",
+      "Taycan 4S",
+      "Taycan 4S Cross Turismo",
+      "Taycan 4S Plus",
+      "Taycan 4S Plus Sport Turismo",
+      "Taycan 4S Sport Turismo",
+      "Taycan GTS",
+      "Taycan GTS Sport Turismo",
+      "Taycan Plus",
+      "Taycan Plus Sport Turismo",
+      "Taycan Sport Turismo",
+      "Taycan Turbo",
+      "Taycan Turbo Cross Turismo",
+      "Taycan Turbo GT",
+      "Taycan Turbo GT Weissach",
+      "Taycan Turbo S",
+      "Taycan Turbo S Cross Turismo",
+      "Taycan Turbo S Sport Turismo",
+      "Taycan Turbo Sport Turismo"
+    ]
+  },
+  "trace_id": "1dafc4c2b1c49bcb3363062dedbb1206"
+}

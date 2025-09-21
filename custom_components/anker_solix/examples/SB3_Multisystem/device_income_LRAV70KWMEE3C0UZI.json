@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "income_curve": null,
+    "total_income": "0.0",
+    "history_income": "0.0",
+    "curve_unit": "$"
+  },
+  "trace_id": "eada9e0716ded4428aefdb6dada3f01f"
+}

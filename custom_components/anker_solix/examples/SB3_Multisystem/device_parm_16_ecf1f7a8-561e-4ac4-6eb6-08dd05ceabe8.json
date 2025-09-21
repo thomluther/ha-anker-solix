@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"AE100\": \"FL0YMKE7BDVF1TH41\", \"id_img\": \"https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png\"}"
+  },
+  "trace_id": "8cd51c2f0cad4ead7da1beeed3fdd2cc"
+}

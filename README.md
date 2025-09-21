@@ -57,6 +57,7 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Power Panels](#power-panels)
    * [Home Energy Systems (HES)](#home-energy-systems-hes)
    * [Other devices](#other-devices)
+1. **[MQTT data from devices](#mqtt-data-from-devices)**
 1. **[Installation via HACS (recommended)](#installation-via-hacs-recommended)**
       * [Installation Notes](#installation-notes)
 1. **[Manual installation](#manual-installation)**
@@ -119,6 +120,7 @@ Device type | Description
 `account` | Anker Solix user account used for the configured hub entry. It collects all common entities belonging to the account or api connection.
 `system` | Anker Solix 'Power System' as defined in the Anker app. It collects all entities belonging to the defined system and is referred as 'site' in the cloud api.
 `solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC<br>- A17C5: Solarbank 3 E2700
+`combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No individual device setting supported)**
@@ -215,9 +217,11 @@ Anker announced the [Solarbank Multisystem solution for early testing in Germany
 > [!IMPORTANT]
 > Actually there are significant consumption data update issues for such systems during the initial deployment phase and cloud values may be wrong or lagging hours behind. This becomes especially visible via the Api or the Anker mobile App once using a member account.
 
-The Api library implemented enhancements to mask some value errors, but this can be done only on a limited base. It also does not help for proper total value breakdown to individual devices, if the breakdown is missing in the cloud data. Therefore some of the Solarbank device power values may reflect the appliance totals instead of individual breakdown. For that reason, Solarbank devices in Multisystem constellations are not supported yet by the integration and future support may be limited.
+The Api library implemented enhancements to mask some value errors, but this can be done only on a limited base. It also does not help for proper total value breakdown to individual devices, if the breakdown is missing in the cloud data. Therefore some of the Solarbank device power values may reflect the appliance totals instead of individual breakdown.
+Many settings for Multisystems are shared across all Solarbanks in the system, like usage mode, SOC reserve and export to grid setting. In the mobile App they are managed through the station settings, and the individual device settings are greyed out. Custom plans for output presets is shared for all devices, and the individual device output is managed automatically across all solarbanks, depending on their SOC, capacity etc. That means they cannot be modified individually anymore. The integration will still show the individual device settings if applicable, but changing them will change the settings for all devices in the system. The new combiner box device type will be used for the passive power dock, which is not reported as normal device by the cloud since it is passive and has no cloud connection. The integration will use it to reflect combined sensors and control entities for such Multisystems, although those values and settings are not managed by the combiner box itself.
 
 > [!NOTE]
+> The expected Multisystem support for Solarbank 2 devices or intermix required a new system type, that allows combining parallel and different SB2 types within a system. This may be reflected in different Api structures compared to SB3 Multisystems, and it is unclear whether the integration can support them with actual Multisystem enhancements.
 > For more details on Multisystem support, please refer and contribute to issue [#310](https://github.com/thomluther/ha-anker-solix/issues/310)
 
 
@@ -260,7 +264,19 @@ To get additional Anker power devices/systems added, please review the [anker-so
 You can also explore the Anker Solix cloud Api directly within your HA instance via the integration's [Api request action](INFO.md#api-request-action).
 
 > [!IMPORTANT]
-> While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore the integration cannot be enhanced with more detailed entities of stand alone devices.
+> While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their realtime values but only for the time they are triggered by an owner account in the App. Such data can only be integrated via an optional MQTT client session.
+
+
+## MQTT data from devices
+
+The [Api library version 3.3.0](https://github.com/thomluther/anker-solix-api/releases/tag/v3.3.0) added support for an optional MQTT client session with the Anker MQTT server. Based on the MQTT server access information available from your Api connection, an MQTT client session can be connected to the MQTT server and subscribe to root topics for your owned devices and receive their MQTT published messages. All devices that you configured via your mobile App send data to the MQTT server at different intervals, depending on device type and state (3 sec - hourly). The Api cloud servers are also subscribed to the MQTT server in order to receive your individual device data, and record energy statistics or calculate other values that are relevant to your power system. The regular data publish interval may be in the range of 1-5 minutes, but real time data publish (3-5 seconds) can be triggered via the MQTT server for a certain timeout duration. This mechanism is used by the mobile App, which typically triggers real time data publish for a timeout duration of 5 minutes once you access the home screen or device details pages. After the timeout, the devices fallback to their standard publish interval. This trigger is only possible for owned devices, therefore member accounts typically do not see frequent data updates on the App home screen, but only at default publish intervals. Likewise the HA integration cannot get or trigger more frequent data updates via the Api connection.
+The optional MQTT session however can also trigger the real time date publish for owned devices. However, this mechanism is not designed to run 24x7, especially not if devices are supposed to go into standby mode. Beside additional power consumption, it may also cause lots of additional data traffic! Not only for your local MQTT client, but also in the backend between MQTT and Cloud servers.
+While the cloud Api payload is typically encrypted, the published MQTT message payload from the devices is not encrypted. But the bad news is, the payload is proprietary binary data, which is different for each device type and device constellation. The good news is, that the general MQTT data structure has been identified. The MQTT and Bluetooth data structures seem to be pretty identical. This enables byte decoding capabilities for the reported MQTT data fields.
+
+This is were YOUR contribution is required. Decoding of Anker MQTT binary data has been made as simple as possible and an [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) is available with the [Api library](https://github.com/thomluther/anker-solix-api). To get started, follow the [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222).
+
+> [!IMPORTANT]
+> Nothing of the Anker MQTT server connection or data will be used by the HA integration for the time being. There is still significant development required in the Api library as well as the HA integration to utilize any MQTT data and merge values with existing cloud Api data in a useful way. Furthermore, most device MQTT data structures still have to be decoded and documented by the community, so that byte fields can be mapped to correct values and names for utilization in the Api cache structures.
 
 
 ## Installation via HACS (recommended)

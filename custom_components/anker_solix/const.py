@@ -117,11 +117,13 @@ VALID_APPLIANCE_LOAD = vol.All(
             vol.Range(
                 # min=SolixDefaults.PRESET_MIN,  # Min for SB1 usable only
                 min=0,
-                max=SolixDefaults.PRESET_MAX * 2,
+                # max=SolixDefaults.PRESET_MAX * 2, # Max. device defaults not usable anymore since multisystem capability
+                max=SolixDefaults.PRESET_MAX_MULTISYSTEM,
             ),
         ),
     ),
 )
+# Device load settings only supported for SB1, Multisystems do not support individual device settings
 VALID_DEVICE_LOAD = vol.All(
     extractNone,
     vol.Any(

@@ -100,6 +100,7 @@ API_COUNTRIES = {
 
 """Following are the Anker Power/Solix Cloud API power_service endpoints known so far. Some are common, others are mainly for balcony power systems"""
 API_ENDPOINTS = {
+    # Power endpoints */v1/site/*
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
     "site_detail": "power_service/v1/site/get_site_detail",  # Information for given site_id, can also be used by shared accounts
@@ -109,9 +110,15 @@ API_ENDPOINTS = {
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
     "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
+    "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
+    "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
     "wifi_list": "power_service/v1/site/get_wifi_info_list",  # List of available networks for provided site id
     "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owner account
     "update_site_price": "power_service/v1/site/update_site_price",  # Update power price and CO2 for given site, works only for site owner account
+    "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
+    "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
+    "get_site_power_limit": "power_service/v1/site/get_power_limit",  # needs owner, lists power limits for system
+    # Power endpoints */v1/app/*
     "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, only works for site owner account
     "set_auto_upgrade": "power_service/v1/app/set_auto_upgrade",  # Set/Enable Auto-Upgrade configuration, works only for site owner account
     "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version, works only for owner account
@@ -124,15 +131,9 @@ API_ENDPOINTS = {
     "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, only works for owner accounts
     "compatible_process": "power_service/v1/app/compatible/get_compatible_process",  # contains solar_info plus OTA processing codes, works only with owner account
     "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Shows Accessories like Solarbank 0W Switch info
-    "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
-    "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
     "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
-    "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
-    "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
-    "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
-    "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
-    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank and/or smart meter? {"device_sn":sn,"attributes":["rssi","pv_power_limit"]}
+    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank and/or smart meter? {"device_sn":sn,"attributes":["rssi","pv_power_limit","legal_power_limit","power_limit_option","power_limit_option_real","switch_0w"]}
     "set_device_attributes": "power_service/v1/app/device/set_device_attrs",  # attr name may be different than for get, {"device_sn":sn,"attributes":{"pv_power_limit":800,"ac_power_limit":1200,"power_limit":800}}
     "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
     "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
@@ -140,30 +141,12 @@ API_ENDPOINTS = {
     "get_third_platforms": "power_service/v1/app/third/platform/list",  # list supported third party device models
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
-    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
-    "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
-    "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
-    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
-    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
-    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
     "get_device_income": "power_service/v1/app/device/get_device_income",  # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
-    "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
-    "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
-    "get_site_power_limit": "power_service/v1/site/get_power_limit",  # needs owner, lists power limits for system
-    "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
-    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
-    "get_shared_device": "app/devicerelation/get_shared_device",  # works as member, list device sharing details, {"device_sn": deviceSn}, sharing works only for EV charger or any device?
-    "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
-    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
-    "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
-    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
-    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
-    "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
-    "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
-    "get_device_rfid_cards": "power_service/v1/rfid/get_device_cards",  # needs owner. get rfid cards (for EV charger?), {"device_sn": deviceSn}
     "get_device_group": "power_service/v1/app/group/get_group_devices",  # works as member, shows whether device is grouped with sub devices, {"device_sn": deviceSn}
     "get_device_charge_order_stats": "power_service/v1/app/order/get_charge_order_stats",  # works as member, date_type[week month year all], show EV_charger stats, {"device_sn":deviceSn,"date_type":"all","start_date":"","end_date":""}))
     "get_device_charge_order_stats_list": "power_service/v1/app/order/get_charge_order_stats_list",  # works as member, date_type[week month year all], order_Status unknown, {"device_sn":deviceSn,"order_status":1,"date_type":"all","start_date":"","end_date":"","page":0,"page_size":10}
+    "get_ocpp_endpoint_list": "power_service/v1/app/get_ocpp_endpoint_list",  # lists ocpp endpoints used by Anker, including source number per endpoint
+    "get_device_ocpp_info": "power_service/v1/app/get_ocpp_info",  # works as member also for empty device SN, {"device_sn": deviceSn}, list device endpoint source number, default 0 if nothing found explicetly? (Useful only for EV charger devices)
     "get_vehicle_brands": "power_service/v1/app/get_brand_list",  # get vehicle brand list
     "get_vehicle_brand_models": "power_service/v1/app/get_models",  # get model list for given brand, {"brand_name": "BMW"}
     "get_vehicle_model_years": "power_service/v1/app/get_model_years",  # get prodictive year list for given model, {"brand_name": "BMW", "model_name": "iX3"}
@@ -175,6 +158,34 @@ API_ENDPOINTS = {
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
     "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
     "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
+    # Power endpoints */v1/device/*
+    "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
+    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
+    # Power endpoints */v1/dynamic_price/*
+    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
+    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
+    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
+    # Power endpoints */v1/*
+    "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
+    "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
+    "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
+    "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
+    # Power endpoints */v1/ai_ems/*
+    "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
+    "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
+    # App endpoints
+    "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
+    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
+    "get_shared_device": "app/devicerelation/get_shared_device",  # works as member, list device sharing details, {"device_sn": deviceSn}, sharing works only for EV charger or any device?
+    # Endpoints for standalone Anker inverter devices
+    "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
+    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
+    "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
+    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
+    "get_device_rfid_cards": "power_service/v1/rfid/get_device_cards",  # needs owner. get rfid cards (for EV charger?), {"device_sn": deviceSn}
+    # Endpoints for standalone Anker power charger devices
     "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list",  # {"device_sn": deviceSn}
     "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
     "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
@@ -219,7 +230,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 59 + 66 used => 125
+""" Other endpoints neither implemented nor explored: 63 + 68 used => 131
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message', # payload format unknown
@@ -263,7 +274,9 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/order/get_charging_order_sec_detail',  # may need real EV_Charger? {"order_id": "1","start_time": "<timestamp>"}
     'power_service/v1/app/order/get_charging_order_sec_preview',  # may need real EV_Charger? {"order_id": "1"}
     'power_service/v1/app/order/export_charge_order',
+    'power_service/v1/app/after_sale/get_popup',  # works as site member, {"site_id": siteId}, get active pop ups with code
     'power_service/v1/app/after_sale/check_popup',
+    'power_service/v1/app/after_sale/check_sn',  # checks whether any account device SN is eligable for replacement of battery (recall programs?)
     'power_service/v1/app/after_sale/mark_sn',
     'power_service/v1/app/share_site/anonymous_join_site',
     'power_service/v1/app/share_site/delete_site_member',
@@ -271,8 +284,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/share_site/delete_inviting_member',
     'power_service/v1/app/share_site/get_invited_list',
     'power_service/v1/app/share_site/join_site',
-    'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
-    "power_service/v1/app/user/set_user_param",
+    2*'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
+    2*"power_service/v1/app/user/set_user_param",
     'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list with objects for unknown feature_code e.g. {"check_list": [{"feature_code": "smartmeter", "product_code": "A17C5"}]}
     'power_service/v1/app/get_phonecode_list',
     'power_service/v1/app/get_annual_report',  # new report starting Jan 2025?
@@ -346,7 +359,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_common_svc/location/set",  # Set default and identifier location
     "charging_common_svc/location/support",
 
-Home Energy System related (X1): 43 + 17 used => 60 total
+Home Energy System related (X1): 44 + 17 used => 61 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -387,7 +400,7 @@ Home Energy System related (X1): 43 + 17 used => 60 total
     "charging_hes_svc/remove_user_fault_info",
     "charging_hes_svc/restart_peak_session",
     "charging_hes_svc/start",
-    "charging_hes_svc/set_station_evchargers",
+    2*"charging_hes_svc/set_station_evchargers",
     "charging_hes_svc/set_evcharger_station_feature",
     "charging_hes_svc/sync_back_up_history",
 
@@ -482,6 +495,8 @@ API_FILEPREFIXES = {
     "get_device_group": "device_group",
     "get_device_charge_order_stats": "charge_order_stats",
     "get_device_charge_order_stats_list": "charge_order_stats_list",
+    "get_ocpp_endpoint_list": "ocpp_endpoint_list",
+    "get_device_ocpp_info": "ocpp_info",
     "get_vehicle_brands": "vehicle_brands",
     "get_vehicle_brand_models": "vehicle_brand_models",
     "get_vehicle_model_years": "vehicle_model_years",
@@ -590,6 +605,7 @@ class SolixDeviceType(Enum):
     SYSTEM = "system"
     VIRTUAL = "virtual"
     SOLARBANK = "solarbank"
+    COMBINER_BOX = "combiner_box"
     INVERTER = "inverter"
     SMARTMETER = "smartmeter"
     SMARTPLUG = "smartplug"
@@ -611,8 +627,9 @@ class SolixParmType(Enum):
     SOLARBANK_SCHEDULE_ENFORCED = "9"  # No longer supported by cloud as of July 2025
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
-    # TODO: Add description for type 16 once known
-    # SOLARBANK_MULTIUSE = "16"
+    SOLARBANK_POWERDOCK = "16"  # get power dock SN
+    SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
+    # SOLARBANK_EV_CHARGER = "20" # to be verified
 
 
 class SolarbankPowerMode(IntEnum):
@@ -751,6 +768,7 @@ class SolixDeviceNames:
     SHEM3: str = "Shelly 3EM"
     SHEMP3: str = "Shelly Pro 3EM"
     SHPPS: str = "Shelly Plus Plug S"
+    AE100: str = "Power Dock AE100"
 
 
 @dataclass(frozen=True)
@@ -807,9 +825,15 @@ class SolixSiteType:
     t_9 = SolixDeviceType.HES.value  # Main A5103 HES
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
-    t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
+    t_12 = (
+        SolixDeviceType.SOLARBANK.value
+    )  # Main A17C5 SB3 Pro, including power dock option for SB3 multisystems
     t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782 SOLIX F3000 Portable Power Station (Solarbank PPS) with Smart Meter support for US market
     t_14 = SolixDeviceType.EV_CHARGER.value  # Main A5191 Smart EV Charger
+    # t_15 = ???  # Main A17E1 & A17X7US Smart Meter for US market
+    # t_16 = ???  # Main A1903 & 4 each A110A, A110B, A110G, A1341
+    # t_17 = ??? # Only AX170
+    t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, SHEM3, SHEMP3, A17X8, SHPPS, A5191
 
 
 @dataclass(frozen=True)
@@ -832,6 +856,8 @@ class SolixDeviceCategory:
     A17C5: str = (
         SolixDeviceType.SOLARBANK.value + "_3"
     )  # SOLIX Solarbank 3 E2700 Pro, generation 3
+    # Station
+    AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
@@ -921,6 +947,7 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
+        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -936,6 +963,7 @@ class SolarbankDeviceMetrics:
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
+        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -944,6 +972,7 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "to_home_load",
         "pei_heating_power",
+        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
@@ -961,6 +990,9 @@ class SolarbankDeviceMetrics:
         # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
     }
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
@@ -969,6 +1001,9 @@ class SolarbankDeviceMetrics:
         "A17C2": ["350", "600", "800", "1000"],
         "A17C3": ["350", "600", "800", "1000"],
         "A17C5": ["350", "600", "800", "1200"],
+    }
+    MPPT_INPUT_OPTIONS: ClassVar[dict[str, Any]] = {
+        "A17C5": ["2000", "3600"],
     }
 
 
@@ -981,6 +1016,7 @@ class SolixDefaults:
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
     PRESET_NOSCHEDULE: int = 200
+    PRESET_MAX_MULTISYSTEM: int = 3600
     # Export Switch preset for Solarbank schedule timeslot settings
     ALLOW_EXPORT: bool = True
     # Preset power mode for Solarbank schedule timeslot settings
@@ -1070,6 +1106,14 @@ class SolarbankStatus(StrEnum):
     standby = "7"
     unknown = "unknown"
     # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
+
+
+class SolarbankParallelTypes(StrEnum):
+    """Enumeration for Anker Solix Solarbank parallel types."""
+
+    single = "single"
+    cascaded = "cascaded"  # For SB1 only if SB1 is attached to SB2 in single system
+    ae100 = "ae100"  # Solarbank power dock in use
 
 
 class SmartmeterStatus(StrEnum):
@@ -1285,3 +1329,17 @@ class SolixVehicle:
             for key in [key for key in keys if not d[key] or key in ["id"]]:
                 d.pop(key, None)
         return d
+
+
+class Color(StrEnum):
+    """Define ASCII colors."""
+
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    CYAN = "\033[36m"
+    MAG = "\033[35m"
+    WHITE = "\033[37m"
+    OFF = "\033[0m"

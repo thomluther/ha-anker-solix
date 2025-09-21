@@ -1,0 +1,29 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "ecf1f7a8-561e-4ac4-6eb6-08dd05ceabe8",
+        "site_name": "KP7",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null,
+        "init_status": 0,
+        "site_device_list": null
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "solarbank_pps_list": [],
+    "combiner_box_list": [],
+    "charging_pile_list": []
+  },
+  "trace_id": "7c1b7ff9bff6edadbafafbffbafcedb9"
+}

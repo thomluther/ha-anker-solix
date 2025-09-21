@@ -113,40 +113,50 @@ Starting with version 2.3.0, the integration will also create one `account` devi
 
 Following are anonymized examples how the Anker power devices will be presented (Screenshots are from initial release without changeable entities):
 
-  **1. System Device with Solarbank E1600 and MI80 inverter**
+#### System Device with Solarbank E1600 and MI80 inverter
 
-  ![System Device][system-img]
-  ![Connected Devices][connected-img]
+![System Device][system-img]
+![Connected Devices][connected-img]
 
-  **2. Solarbank E1600 Device**
+#### Solarbank E1600 Device
 
-  ![Solarbank Device][solarbank-img]
+![Solarbank Device][solarbank-img]
 
-  **3. MI80 Inverter Device**
+#### MI80 Inverter Device
 
-  ![Inverter Device][inverter-img]
+![Inverter Device][inverter-img]
 
-  Following are screenshots from basic dashboard cards including the latest sensors and most of the changeable entities that are available when using the system main account:
+Following are screenshots from basic dashboard cards including sensors and most of the changeable entities that are available when using the system main account:
 
-  **4. Dark Theme examples of Solarbank 2 E1600 Pro with Smart Meter**
+#### Dark Theme examples of Solarbank 2 E1600 Pro with Smart Meter
 
-  ![System Dashboard][solarbank-2-system-dashboard-img]
+![System Dashboard][solarbank-2-system-dashboard-img]
 
-  **5. Light Theme examples of Solarbank E1600**
+#### Light Theme examples of Solarbank E1600**
 
-  ![Solarbank Dashboard Light Theme][solarbank-dashboard-light-img]
+![Solarbank Dashboard Light Theme][solarbank-dashboard-light-img]
 
-  **6. Additional device preset entities only available in supported dual Solarbank E1600 systems**
+Screenshots from other device types when using the system main account:
 
-  ![Dual Solarbank Entities][dual-solarbank-entities-img]
+#### Additional device preset entities only available in supported dual Solarbank E1600 systems**
 
-  **7. Solarbank 2 E1600 Pro device**
+![Dual Solarbank Entities][dual-solarbank-entities-img]
 
-  ![Solarbank 2 Pro Device][solarbank-2-pro-device-img]  ![Solarbank 2 Pro Device Diag][solarbank-2-pro-diag-img]
+#### Solarbank 2 E1600 Pro device**
 
-  **8. Smart Meter device**
+![Solarbank 2 Pro Device][solarbank-2-pro-device-img]  ![Solarbank 2 Pro Device Diag][solarbank-2-pro-diag-img]
 
-  ![Smart Meter Device][smart-meter-device-img]
+#### Smart Meter device**
+
+![Smart Meter Device][smart-meter-device-img]
+
+#### Power Dock device**
+
+![Power Dock Device][power-dock-device-img]
+
+#### Vehicle device**
+
+![Vehicle Device][vehicle-device-img]
 
 
 > [!NOTE]
@@ -220,9 +230,9 @@ The configuration workflow was completely reworked since version 1.2.0. Configur
 
 ### Option considerations for Solarbank 2 systems
 
-Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 power systems. While Solarbank 1 power systems transferred their power values every 60 seconds to the cloud, Solarbank 2 systems seem to use different intervals for Api cloud updates:
-   - Default interval is **~5 minutes**: After ~60 seconds, the cloud considered the last values obsolete at initial product release. That resulted in no longer returning valid values upon refresh requests (only 0 values), until new values have been received again from the devices. There was a change implemented in the cloud around 25. July 2024 to provide always the last known data upon Api refresh requests. This eliminated the missing value problem for shared accounts in the Anker mobile app or 0 values in any api client responses.
-   - Triggered interval is **~3 seconds**: When the mobile app is used with the main account, it triggers permanent Api cloud updates, most likely via the MQTT cloud server connection to the device. The same method is used for triggering live data updates of individual devices when watching device real time data. That means while watching the Solarbank 2 power system overview via main account in the anker app, you receive very frequent data updates from the cloud Api. Of course, this is only applied while the home screen is watched to limit cloud Api requests, data traffic and device power consumption for the remaining times.
+Anker changed the device data publish intervals with Solarbank 2 power systems. While Solarbank 1 devices publish their MQTT data every 60 seconds to the Api cloud, Solarbank 2 systems seem to use different intervals for MQTT data publishing:
+   - Default interval is **~5 minutes**: After ~60 seconds, the cloud considered the last values obsolete at initial product release. That resulted in no longer returning valid values upon refresh requests (only 0 values), until new MQTT data has been received again from the devices. There was a change implemented in the cloud around 25. July 2024 to provide always the last known data upon Api refresh requests. This eliminated the missing value problem for shared accounts in the Anker mobile app or 0 values in any api client responses.
+   - Triggered interval is **~3 seconds**: When the mobile app is used with the main account, it triggers real time MQTT publish for applicable and owned devices which will permanently refresh also the Api cloud data. The same method is used for triggering live data updates of individual devices when watching device real time data. That means while watching the Solarbank 2 power system overview via main account in the anker app, you receive very frequent data updates from the cloud Api. Of course, this real time trigger is only applied while the home screen is watched to limit cloud Api requests, data traffic and device power consumption for the remaining times. Once the real time publish trigger times out after 5 minutes, the device falls back to its default publish interval.
 
 In consequence, before the cloud change in July 2024, the HA integration typically received 1 response with valid data and another 4 responses with invalid data when using the default refresh interval of 60 seconds. **There is nothing the integration or the underlying Api library can do to trigger more frequent cloud data updates for Solarbank 2 systems**. Per default, the HA integration switched all relevant entities to unavailable while invalid data is returned. Optionally, you can change your integration configuration options to **Skip invalid data responses**, which will maintain the previous entity value until valid data is received again. While this means your entities will not become unavailable most of the time, they may present obsolete/stale data without your awareness. It is your choice how entities should reflect data that are marked invalid in the Api response, but neither of the options makes the data more current or reliable. The SB data time entity in the system device will reflect when the last data was provided by the Solarbank 2, or when the last valid data was read through the Api, since also that timestamp in the response is not always valid even if the data itself is valid. A new [action was implemented to get query system information](#get-system-info-action) that provides you a manual verification capability of available system data and power values in the cloud. Following [Anker article contains more information why data for Solarbank 2 may be inaccurate](https://support.ankersolix.com/de/s/article/Warum-ist-die-Datenanzeige-der-Solarbank-2-E1600-Pro-Plus-ungenau) (DE).
 
@@ -1805,6 +1815,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [ac-time-of-use-service-img]: doc/ac-time-of-use-service.png
 [dynamic-price-diagram-img]: doc/dynamic-price-diagram.png
 [forecast-data-diagram-img]: doc/forecast-data-diagram.png
+[power-dock-device-img]: doc/power-dock-device.png
 [vehicle-device-img]: doc/vehicle-device.png
 [account-vehicle-refresh-img]: doc/account-vehicle-refresh.png
 

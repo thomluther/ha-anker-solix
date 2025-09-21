@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"soc_list\":[{\"id\":1,\"is_selected\":1,\"soc\":10},{\"id\":2,\"is_selected\":0,\"soc\":5}],\"switch_0w\":0,\"enable_0w\":0,\"enable_0w_change\":false}"
+  },
+  "trace_id": "eeb5ee0eece4f5d4851ee902d082ae16"
+}

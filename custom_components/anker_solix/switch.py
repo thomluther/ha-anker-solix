@@ -100,6 +100,12 @@ DEVICE_SWITCHES = [
         feature=AnkerSolixEntityFeature.AC_CHARGE,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
+    AnkerSolixSwitchDescription(
+        key="allow_grid_export",
+        translation_key="allow_grid_export",
+        json_key="allow_grid_export",
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
 ]
 
 
@@ -349,6 +355,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             "preset_discharge_priority",
             "preset_backup_option",
             "default_vehicle",
+            "allow_grid_export",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -391,6 +398,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             "preset_allow_export",
             "preset_discharge_priority",
             "preset_backup_option",
+            "allow_grid_export",
         ]:
             if (
                 self.coordinator
@@ -413,6 +421,17 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         backup_switch=True,
                         toFile=self.coordinator.client.testmode(),
                     )
+                elif self._attribute_name in ["allow_grid_export"]:
+                    if data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or data.get("station_sn") is not None:
+                        # control via station setting
+                        resp = await self.coordinator.client.api.set_station_parm(
+                            deviceSn=self.coordinator_context,
+                            gridExport=True,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    else:
+                        # TODO: control via individual device setting to be implemented once supported
+                        resp = None
                 else:
                     # SB1 schedule options
                     resp = await self.coordinator.client.api.set_home_load(
@@ -428,7 +447,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     )
                 if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
-                        "%s: Applied schedule for '%s' change to '%s':\n%s",
+                        "%s: Applied settings for '%s' change to '%s':\n%s",
                         "TESTMODE"
                         if self.coordinator.client.testmode()
                         else "LIVEMODE",
@@ -460,6 +479,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             "preset_discharge_priority",
             "preset_backup_option",
             "default_vehicle",
+            "allow_grid_export",
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -512,6 +532,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             "preset_allow_export",
             "preset_discharge_priority",
             "preset_backup_option",
+            "allow_grid_export",
         ]:
             if (
                 self.coordinator
@@ -528,6 +549,17 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         backup_switch=False,
                         toFile=self.coordinator.client.testmode(),
                     )
+                elif self._attribute_name in ["allow_grid_export"]:
+                    if data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or data.get("station_sn") is not None:
+                        # control via station setting
+                        resp = await self.coordinator.client.api.set_station_parm(
+                            deviceSn=self.coordinator_context,
+                            gridExport=False,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    else:
+                        # TODO: control via individual device setting to be implemented once supported
+                        resp = None
                 else:
                     # SB1 schedule options
                     resp = await self.coordinator.client.api.set_home_load(
@@ -543,7 +575,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     )
                 if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
-                        "%s: Applied schedule for '%s' change to '%s':\n%s",
+                        "%s: Applied settings for '%s' change to '%s':\n%s",
                         "TESTMODE"
                         if self.coordinator.client.testmode()
                         else "LIVEMODE",
@@ -597,8 +629,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 },
             )
         # Ensure Export can be triggered only once
-        if self.last_run and datetime.now().astimezone() < self.last_run + timedelta(
-            minutes=10
+        if self.last_run and datetime.now().astimezone() < (
+            timeout := self.last_run + timedelta(minutes=10)
         ):
             LOGGER.debug(
                 "The action '%s' cannot be executed again while still running",
@@ -606,11 +638,12 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             )
             # Raise alert to frontend
             raise ServiceValidationError(
-                f"The action '{service_name}' cannot be executed again while still running",
+                f"The action '{service_name}' cannot be executed again while still running (Timeout at {timeout.strftime('%H:%M:%S')})",
                 translation_domain=DOMAIN,
                 translation_key="action_blocked",
                 translation_placeholders={
                     "service": service_name,
+                    "timeout": timeout.strftime('%H:%M:%S'),
                 },
             )
         # Reset last run after timeout (for unexpected exceptions)

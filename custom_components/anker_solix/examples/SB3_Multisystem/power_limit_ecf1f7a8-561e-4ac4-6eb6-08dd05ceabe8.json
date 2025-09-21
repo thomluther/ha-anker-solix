@@ -1,0 +1,67 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_id": "ecf1f7a8-561e-4ac4-6eb6-08dd05ceabe8",
+    "power_unit": "kwh",
+    "legal_power_limit": 3600,
+    "device_info": [
+      {
+        "device_pn": "A17C5",
+        "device_sn": "37H3JFKJJKPR1ATZL",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+        "power_limit": 0,
+        "power_limit_option": null,
+        "power_limit_option_real": null,
+        "status": 0,
+        "ac_input_limit": 1200
+      },
+      {
+        "device_pn": "A17C5",
+        "device_sn": "LRAV70KWMEE3C0UZI",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+        "power_limit": 0,
+        "power_limit_option": null,
+        "power_limit_option_real": null,
+        "status": 0,
+        "ac_input_limit": 1200
+      },
+      {
+        "device_pn": "A17C5",
+        "device_sn": "I6AXLY54I37ZW5MZ7",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+        "power_limit": 0,
+        "power_limit_option": null,
+        "power_limit_option_real": null,
+        "status": 0,
+        "ac_input_limit": 0
+      }
+    ],
+    "current_power": 0,
+    "all_power_limit": 0,
+    "ae100_info": {
+      "device_pn": "AE100",
+      "device_sn": "FL0YMKE7BDVF1TH41",
+      "device_name": "AE100",
+      "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png",
+      "power_limit": 0,
+      "power_limit_option": null,
+      "power_limit_option_real": null,
+      "status": 0,
+      "ac_input_limit": 0
+    },
+    "parallel_type": "AE100",
+    "ac_input_power_unit": "2400W",
+    "legal_limit": 0,
+    "power_limit_option": [
+      {
+        "limit": 3600,
+        "limit_real": 3600
+      }
+    ]
+  },
+  "trace_id": "8b6feedae399e78f0dabf9e726cbdd7f"
+}

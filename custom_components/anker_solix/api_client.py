@@ -51,6 +51,7 @@ API_CATEGORIES: list = [
     SolixDeviceType.SOLARBANK.value,
     SolixDeviceType.SMARTMETER.value,
     SolixDeviceType.SMARTPLUG.value,
+    SolixDeviceType.COMBINER_BOX.value,
     SolixDeviceType.HES.value,
     SolixDeviceType.VEHICLE.value,
     # SolixDeviceType.SOLARBANK_PPS.value,

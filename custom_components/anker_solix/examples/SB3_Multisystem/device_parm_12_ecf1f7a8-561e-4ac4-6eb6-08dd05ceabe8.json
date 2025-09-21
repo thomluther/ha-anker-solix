@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"price_type\":\"dynamic\",\"use_time\":[],\"dynamic_price\":{\"country\":\"DE\",\"company\":\"Nordpool\",\"area\":\"GER\",\"pct\":null,\"currency\":\"\u20ac\",\"adjust_coef\":null},\"fixed_price\":{\"price\":\"0.34\",\"unit\":\"\u20ac\",\"accuracy\":2},\"time_slot_data\":null}"
+  },
+  "trace_id": "4ca2edd110fae1afdfc214dc06a35c96"
+}

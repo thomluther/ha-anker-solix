@@ -1,0 +1,663 @@
+{
+  "I6AXLY54I37ZW5MZ7": {
+    "device_sn": "I6AXLY54I37ZW5MZ7",
+    "type": "solarbank",
+    "site_id": "ecf1f7a8-561e-4ac4-6eb6-08dd05ceabe8",
+    "is_admin": true,
+    "device_pn": "A17C5",
+    "battery_capacity": "8064",
+    "generation": 3,
+    "battery_energy": "8064",
+    "battery_soc": "100",
+    "charging_power": "-201",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "201",
+    "sub_package_num": 2,
+    "output_cutoff_data": 0,
+    "bat_charge_power": "0",
+    "pv_name": {
+      "micro_inverter_name": "",
+      "pv1_name": "PV1",
+      "pv2_name": "PV2",
+      "pv3_name": "PV3",
+      "pv4_name": "PV4"
+    },
+    "pv_power": {
+      "pv1": "0",
+      "pv2": "0",
+      "pv3": "0",
+      "pv4": "0",
+      "total": "0"
+    },
+    "feature_switch": {
+      "0w_feed_v2": true,
+      "enable_parallel": true,
+      "enable_timeslot": true,
+      "exceed_power": false,
+      "heating": false,
+      "meter_self_testing": false,
+      "plug_switch_report": true,
+      "show_third_party_pv_panel": true,
+      "support_AE100": false,
+      "support_p1_meter": true
+    },
+    "bat_discharge_power": "0",
+    "err_code": 0,
+    "alias": "Solarbank 3 E2700 Pro",
+    "name": "Solarbank 3 E2700 Pro",
+    "set_output_power": "67",
+    "set_system_output_power": "200",
+    "data_valid": true,
+    "solarbank_count": 3,
+    "solar_power_1": "0",
+    "solar_power_2": "0",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "other_input_power": "0",
+    "grid_to_battery_power": "0",
+    "pei_heating_power": "0",
+    "to_home_load": "0",
+    "bt_ble_mac": "71BC13FAFCBA",
+    "wifi_online": true,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.2.6",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-34",
+    "intgr_device": null,
+    "wifi_mac": "AC90CF11CBE9",
+    "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+    "group_info": null,
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v1.0.2.6",
+    "ota_children": [
+      {
+        "device_type": "A17C5_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.2.6"
+      },
+      {
+        "device_type": "A17C5_100Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.3.6"
+      },
+      {
+        "device_type": "A17C5_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.7.1"
+      }
+    ],
+    "wifi_signal": "100",
+    "is_support_wired": false,
+    "wired_connected": false,
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "power_cutoff": 10,
+    "schedule": {
+      "mode_type": 1,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 200
+            }
+          ]
+        }
+      ],
+      "blend_plan": [],
+      "use_time": [],
+      "manual_backup": {
+        "ranges": [
+          {
+            "start_time": 1757803140,
+            "end_time": 1757813940
+          }
+        ],
+        "switch": false
+      },
+      "reserved_soc": 0,
+      "dynamic_price": {
+        "country": "DE",
+        "company": "Nordpool",
+        "area": "GER",
+        "pct": null,
+        "currency": "\u20ac",
+        "adjust_coef": null
+      },
+      "ai_ems": {
+        "enable": false,
+        "status": 3
+      },
+      "time_slot": null,
+      "schedule_mode": {
+        "last_select_mode": 8
+      },
+      "default_home_load": 200,
+      "max_load": 3600,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_usage_mode": 1,
+    "preset_system_output_power": null,
+    "preset_manual_backup_start": 1757803140,
+    "preset_manual_backup_end": 1757813940,
+    "preset_backup_option": false,
+    "preset_tariff": 0,
+    "preset_tariff_price": "0.00",
+    "preset_tariff_currency": "\u20ac",
+    "station_sn": "FL0YMKE7BDVF1TH41",
+    "allow_grid_export": true,
+    "pv_power_limit": 3600,
+    "power_limit": 0,
+    "power_limit_option": "Auto",
+    "power_limit_option_real": null,
+    "ac_input_limit": 0
+  },
+  "LRAV70KWMEE3C0UZI": {
+    "device_sn": "LRAV70KWMEE3C0UZI",
+    "type": "solarbank",
+    "site_id": "ecf1f7a8-561e-4ac4-6eb6-08dd05ceabe8",
+    "is_admin": true,
+    "device_pn": "A17C5",
+    "battery_capacity": "8064",
+    "generation": 3,
+    "battery_energy": "8064",
+    "battery_soc": "100",
+    "charging_power": "-492",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "492",
+    "sub_package_num": 2,
+    "output_cutoff_data": 0,
+    "bat_charge_power": "0",
+    "pv_name": {
+      "micro_inverter_name": "",
+      "pv1_name": "PV1",
+      "pv2_name": "PV2",
+      "pv3_name": "PV3",
+      "pv4_name": "PV4"
+    },
+    "pv_power": {
+      "pv1": "0",
+      "pv2": "0",
+      "pv3": "0",
+      "pv4": "0",
+      "total": "0"
+    },
+    "feature_switch": {
+      "0w_feed_v2": true,
+      "enable_parallel": true,
+      "enable_timeslot": true,
+      "exceed_power": false,
+      "heating": false,
+      "meter_self_testing": false,
+      "plug_switch_report": true,
+      "show_third_party_pv_panel": true,
+      "support_AE100": false,
+      "support_p1_meter": true
+    },
+    "bat_discharge_power": "0",
+    "err_code": 0,
+    "alias": "Solarbank 3 E2700 Pro",
+    "name": "Solarbank 3 E2700 Pro",
+    "set_output_power": "67",
+    "set_system_output_power": "200",
+    "data_valid": true,
+    "solarbank_count": 3,
+    "solar_power_1": "0",
+    "solar_power_2": "0",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "other_input_power": "0",
+    "grid_to_battery_power": "0",
+    "pei_heating_power": "0",
+    "to_home_load": "0",
+    "bt_ble_mac": "EE7EEA31F81A",
+    "wifi_online": true,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.2.6",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-27",
+    "intgr_device": null,
+    "wifi_mac": "EFC47823AF62",
+    "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+    "group_info": null,
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v1.0.2.6",
+    "ota_children": [
+      {
+        "device_type": "A17C5_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.2.6"
+      },
+      {
+        "device_type": "A17C5_100Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.3.6"
+      },
+      {
+        "device_type": "A17C5_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.7.1"
+      }
+    ],
+    "wifi_signal": "100",
+    "is_support_wired": false,
+    "wired_connected": false,
+    "schedule": {
+      "mode_type": 1,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 200
+            }
+          ]
+        }
+      ],
+      "blend_plan": [],
+      "use_time": [],
+      "manual_backup": {
+        "ranges": [
+          {
+            "start_time": 1757803140,
+            "end_time": 1757813940
+          }
+        ],
+        "switch": false
+      },
+      "reserved_soc": 0,
+      "dynamic_price": {
+        "country": "DE",
+        "company": "Nordpool",
+        "area": "GER",
+        "pct": null,
+        "currency": "\u20ac",
+        "adjust_coef": null
+      },
+      "ai_ems": {
+        "enable": false,
+        "status": 3
+      },
+      "time_slot": null,
+      "schedule_mode": {
+        "last_select_mode": 8
+      },
+      "default_home_load": 200,
+      "max_load": 3600,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_usage_mode": 1,
+    "preset_system_output_power": null,
+    "preset_manual_backup_start": 1757803140,
+    "preset_manual_backup_end": 1757813940,
+    "preset_backup_option": false,
+    "preset_tariff": 0,
+    "preset_tariff_price": "0.00",
+    "preset_tariff_currency": "\u20ac",
+    "station_sn": "FL0YMKE7BDVF1TH41",
+    "allow_grid_export": true,
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "power_cutoff": 10,
+    "pv_power_limit": 3600,
+    "power_limit": 0,
+    "power_limit_option": "Auto",
+    "power_limit_option_real": null,
+    "ac_input_limit": 1200
+  },
+  "37H3JFKJJKPR1ATZL": {
+    "device_sn": "37H3JFKJJKPR1ATZL",
+    "type": "solarbank",
+    "site_id": "ecf1f7a8-561e-4ac4-6eb6-08dd05ceabe8",
+    "is_admin": true,
+    "device_pn": "A17C5",
+    "battery_capacity": "8064",
+    "generation": 3,
+    "battery_energy": "8064",
+    "battery_soc": "100",
+    "charging_power": "-79",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "discharge",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "79",
+    "sub_package_num": 2,
+    "output_cutoff_data": 0,
+    "bat_charge_power": "0",
+    "pv_name": {
+      "micro_inverter_name": "",
+      "pv1_name": "PV1",
+      "pv2_name": "PV2",
+      "pv3_name": "PV3",
+      "pv4_name": "PV4"
+    },
+    "pv_power": {
+      "pv1": "0",
+      "pv2": "0",
+      "pv3": "0",
+      "pv4": "0",
+      "total": "0"
+    },
+    "feature_switch": {
+      "0w_feed_v2": true,
+      "enable_parallel": true,
+      "enable_timeslot": true,
+      "exceed_power": false,
+      "heating": false,
+      "meter_self_testing": false,
+      "plug_switch_report": true,
+      "show_third_party_pv_panel": true,
+      "support_AE100": false,
+      "support_p1_meter": true
+    },
+    "bat_discharge_power": "0",
+    "err_code": 0,
+    "alias": "Solarbank 3 E2700 Pro",
+    "name": "Solarbank 3 E2700 Pro",
+    "set_output_power": "67",
+    "set_system_output_power": "200",
+    "data_valid": true,
+    "solarbank_count": 3,
+    "solar_power_1": "0",
+    "solar_power_2": "0",
+    "solar_power_3": "0",
+    "solar_power_4": "0",
+    "ac_power": "0",
+    "other_input_power": "0",
+    "grid_to_battery_power": "0",
+    "pei_heating_power": "0",
+    "to_home_load": "0",
+    "bt_ble_mac": "C98EA9EADB0F",
+    "wifi_online": true,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.0.2.6",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-29",
+    "intgr_device": null,
+    "wifi_mac": "9BCA47A3A75D",
+    "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+    "group_info": null,
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v1.0.2.6",
+    "ota_children": [
+      {
+        "device_type": "A17C5_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.0.2.6"
+      },
+      {
+        "device_type": "A17C5_100Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.3.6"
+      },
+      {
+        "device_type": "A17C5_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.7.1"
+      }
+    ],
+    "wifi_signal": "100",
+    "is_support_wired": false,
+    "wired_connected": false,
+    "schedule": {
+      "mode_type": 1,
+      "custom_rate_plan": [
+        {
+          "index": 0,
+          "week": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "ranges": [
+            {
+              "start_time": "00:00",
+              "end_time": "24:00",
+              "power": 200
+            }
+          ]
+        }
+      ],
+      "blend_plan": [],
+      "use_time": [],
+      "manual_backup": {
+        "ranges": [
+          {
+            "start_time": 1757803140,
+            "end_time": 1757813940
+          }
+        ],
+        "switch": false
+      },
+      "reserved_soc": 0,
+      "dynamic_price": {
+        "country": "DE",
+        "company": "Nordpool",
+        "area": "GER",
+        "pct": null,
+        "currency": "\u20ac",
+        "adjust_coef": null
+      },
+      "ai_ems": {
+        "enable": false,
+        "status": 3
+      },
+      "time_slot": null,
+      "schedule_mode": {
+        "last_select_mode": 8
+      },
+      "default_home_load": 200,
+      "max_load": 3600,
+      "min_load": 0,
+      "step": 10
+    },
+    "preset_usage_mode": 1,
+    "preset_system_output_power": null,
+    "preset_manual_backup_start": 1757803140,
+    "preset_manual_backup_end": 1757813940,
+    "preset_backup_option": false,
+    "preset_tariff": 0,
+    "preset_tariff_price": "0.00",
+    "preset_tariff_currency": "\u20ac",
+    "station_sn": "FL0YMKE7BDVF1TH41",
+    "allow_grid_export": true,
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "power_cutoff": 10,
+    "pv_power_limit": 3600,
+    "power_limit": 0,
+    "power_limit_option": "Auto",
+    "power_limit_option_real": null,
+    "ac_input_limit": 1200
+  },
+  "IUEFQSXVCTWNXERN": {
+    "device_sn": "IUEFQSXVCTWNXERN",
+    "type": "smartmeter",
+    "site_id": "ecf1f7a8-561e-4ac4-6eb6-08dd05ceabe8",
+    "is_admin": true,
+    "device_pn": "A17X7",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "",
+    "alias": "Smart Meter",
+    "name": "Smart Meter",
+    "data_valid": true,
+    "photovoltaic_to_grid_power": "2536",
+    "grid_to_home_power": "0",
+    "grid_status": "0",
+    "grid_status_desc": "ok",
+    "bt_ble_mac": "D5CB3CA5D02E",
+    "wifi_online": true,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.0.40",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-43",
+    "intgr_device": null,
+    "wifi_mac": "233CFA42CCBD",
+    "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+    "group_info": null,
+    "is_ota_update": false,
+    "ota_version": "v0.0.0.40",
+    "wifi_signal": "100",
+    "is_support_wired": false,
+    "wired_connected": false
+  },
+  "FL0YMKE7BDVF1TH41": {
+    "device_sn": "FL0YMKE7BDVF1TH41",
+    "site_id": "ecf1f7a8-561e-4ac4-6eb6-08dd05ceabe8",
+    "is_admin": true,
+    "alias": "Power Dock",
+    "name": "Power Dock AE100",
+    "is_passive": true,
+    "current_power": "0",
+    "all_power_limit": "0",
+    "all_ac_input_limit": "2400",
+    "device_pn": "AE100",
+    "type": "combiner_box",
+    "power_limit_option": "Auto",
+    "power_limit_option_real": null,
+    "status": "0",
+    "status_desc": "offline",
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "soc": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "soc": 5
+      }
+    ],
+    "power_cutoff": 10,
+    "allow_grid_export": true
+  }
+}

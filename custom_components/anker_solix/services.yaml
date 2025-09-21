@@ -150,7 +150,7 @@ set_solarbank_schedule:
       selector:
         number:
           min: 0
-          max: 1600
+          max: 3600
           step: 10
           unit_of_measurement: "W"
     sb1_fields:
@@ -249,7 +249,7 @@ update_solarbank_schedule:
       selector:
         number:
           min: 0
-          max: 1600
+          max: 3600
           step: 10
           unit_of_measurement: "W"
     sb1_fields:

@@ -22,6 +22,7 @@ class AnkerSolixPicturePath:
     INVERTER: str = str(Path(IMAGEPATH) / "MI80_A5143_pub.png")
     SMARTMETER: str = str(Path(IMAGEPATH) / "Smartmeter_A17X7_pub.png")
     SMARTPLUG: str = str(Path(IMAGEPATH) / "Smart_plug_A17X8.png")
+    COMBINER_BOX: str = str(Path(IMAGEPATH) / "Power_Dock_AE100_pub.png")
     PPS: str = str(Path(IMAGEPATH) / "PPS_F1200_A1771_pub.png")
     POWERPANEL: str = str(Path(IMAGEPATH) / "Power_Panel_A17B1.png")
     HES: str = str(Path(IMAGEPATH) / "HES_X1_A5101.png")
@@ -51,6 +52,8 @@ class AnkerSolixPicturePath:
 
     A17X8: str = str(Path(IMAGEPATH) / "Smart_plug_A17X8.png")
     SHPPS: str = str(Path(IMAGEPATH) / "Shelly_plus_plug_s_black.png")
+
+    AE100: str = str(Path(IMAGEPATH) / "Power_Dock_AE100_pub.png")
 
     A1722: str = str(Path(IMAGEPATH) / "PPS_C300_A1722_pub.png")
     A1723: str = str(Path(IMAGEPATH) / "PPS_C200_A1723_A1725_pub.png")

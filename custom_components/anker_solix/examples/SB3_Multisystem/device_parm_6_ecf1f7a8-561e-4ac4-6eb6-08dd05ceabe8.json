@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"mode_type\":1,\"custom_rate_plan\":[{\"index\":0,\"week\":[0,1,2,3,4,5,6],\"ranges\":[{\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":200}]}],\"blend_plan\":[],\"use_time\":[],\"manual_backup\":{\"ranges\":[{\"start_time\":1757803140,\"end_time\":1757813940}],\"switch\":false},\"reserved_soc\":0,\"dynamic_price\":{\"country\":\"DE\",\"company\":\"Nordpool\",\"area\":\"GER\",\"pct\":null,\"currency\":\"\u20ac\",\"adjust_coef\":null},\"ai_ems\":{\"enable\":false,\"status\":3},\"time_slot\":null,\"schedule_mode\":{\"last_select_mode\":8},\"default_home_load\":200,\"max_load\":3600,\"min_load\":0,\"step\":10}"
+  },
+  "trace_id": "eeda7f28b5f425ff92a5daaaeebe1fd1"
+}

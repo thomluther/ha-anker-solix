@@ -13,6 +13,7 @@
                 "solarbank": "Solarbanks",
                 "solarbank_pps": "Centrales électrique Solarbank",
                 "inverter": "Onduleurs",
+                "combiner_box": "Boîtes de jonction",
                 "pps": "Centrales électriques portables",
                 "powerpanel": "Panneaux électriques",
                 "powerpanel_energy": "Statistiques énergétiques du panneaux électriques",
@@ -513,6 +514,12 @@
             "preset_inverter_limit": {
                 "name": "Limite de l'onduleur"
             },
+            "preset_ac_input_limit": {
+                "name": "Limite d'entrée CA"
+            },
+            "preset_pv_input_limit": {
+                "name": "Limite d'entrée PV"
+            },
             "vehicle_brand": {
                 "name": "1. Marque"
             },
@@ -593,6 +600,9 @@
             "charging_power": {
                 "name": "Puissance de charge"
             },
+            "other_solar_power": {
+                "name": "Tierce partie solaire"
+            },
             "input_power": {
                 "name": "Puissance solaire"
             },
@@ -659,6 +669,15 @@
             },
             "micro_inverter_power_limit": {
                 "name": "Limite de l'onduleur"
+            },
+            "all_power_limit": {
+                "name": "Limite de puissance totale"
+            },
+            "all_ac_input_limit": {
+                "name": "Limite totale d'entrée CA"
+            },
+            "power_limit_option": {
+                "name": "Option limite de puissance"
             },
             "set_output_power": {
                 "name": "Réglage puissance de sortie",
@@ -1082,6 +1101,28 @@
                     }
                 }
             },
+            "daily_3rd_party_pv_to_bat": {
+                "name": "Solaire quotidien tiers vers batterie",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_3rd_party_pv_to_grid": {
+                "name": "Exportation quotidienne solaire par des tiers",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_ac_socket": {
                 "name": "Prise de courant journalière",
                 "state_attributes": {
@@ -1257,6 +1298,9 @@
             },
             "preset_backup_option": {
                 "name": "Option charge de secours"
+            },
+            "allow_grid_export": {
+                "name": "Exporter vers le réseau"
             },
             "allow_refresh": {
                 "name": "Utilisation de l'API",
@@ -1543,7 +1587,7 @@
             "message": "L'action {service} ne peut pas être exécuté: {error}"
         },
         "action_blocked": {
-            "message": "L'action {service} ne peut pas être exécutée à nouveau alors qu'elle est encore en cours d'exécution"
+            "message": "L'action {service} ne peut pas être exécutée à nouveau alors qu'elle est encore en cours d'exécution (temps mort à {timeout})"
         }
     }
 }

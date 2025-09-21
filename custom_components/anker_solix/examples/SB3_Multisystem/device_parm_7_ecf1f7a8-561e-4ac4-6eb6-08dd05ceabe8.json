@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"install_mode\":3}"
+  },
+  "trace_id": "e53b464f1df31deacf8e7fa50cb85f78"
+}

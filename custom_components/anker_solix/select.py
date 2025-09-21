@@ -94,10 +94,14 @@ DEVICE_SELECTS = [
         translation_key="power_cutoff",
         json_key="power_cutoff",
         options_fn=lambda d, _: [
-            str(item.get("output_cutoff_data"))
+            str(item.get("output_cutoff_data") or item.get("soc"))
             for item in d.get("power_cutoff_data") or []
         ],
         unit_of_measurement=PERCENTAGE,
+        # Allow unchangeable selection for member systems if they show non 0 value
+        value_fn=lambda d, jk: str(opt)
+        if (opt := d.get(jk) or d.get("output_cutoff_data"))
+        else None,
         exclude_fn=lambda s, _: not (
             {SolixDeviceType.SOLARBANK.value} - s
             and {ApiCategories.solarbank_cutoff} - s
@@ -153,6 +157,26 @@ DEVICE_SELECTS = [
         or [],
         unit_of_measurement=UnitOfPower.WATT,
         exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
+    ),
+    AnkerSolixSelectDescription(
+        # AC input limit supported options
+        key="preset_ac_input_limit",
+        translation_key="preset_ac_input_limit",
+        json_key="ac_input_limit",
+        # Add options once settings are supported
+        options_fn=lambda d, _: [],
+        unit_of_measurement=UnitOfPower.WATT,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixSelectDescription(
+        # PV input limit supported options
+        key="preset_pv_input_limit",
+        translation_key="preset_pv_input_limit",
+        json_key="pv_power_limit",
+        # Add options once settings are supported
+        options_fn=lambda d, _: [],
+        unit_of_measurement=UnitOfPower.WATT,
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
     ),
 ]
 
@@ -573,9 +597,12 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 not in [
                     "preset_usage_mode",
                     "preset_tariff",
+                    "power_cutoff",
                     "system_price_unit",
                     "system_price_type",
                     "preset_inverter_limit",
+                    "preset_ac_input_limit",
+                    "preset_pv_input_limit",
                     "vehicle_brand",
                     "vehicle_model",
                     "vehicle_year",
@@ -632,27 +659,59 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     option,
                 )
                 with suppress(ValueError, TypeError):
-                    if (
-                        len(
-                            selected_id := [
-                                d.get("id")
-                                for d in (data.get("power_cutoff_data") or [])
-                                if str(d.get("output_cutoff_data")) == option
-                            ]
-                        )
-                        > 0
-                    ):
-                        resp = await self.coordinator.client.api.set_power_cutoff(
-                            deviceSn=self.coordinator_context,
-                            setId=int(selected_id[0]),
-                        )
-                        if resp and ALLOW_TESTMODE:
+                    if selected_id := [
+                        d.get("id")
+                        for d in (data.get("power_cutoff_data") or [])
+                        if str(d.get("output_cutoff_data") or d.get("soc")) == option
+                    ]:
+                        if data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or data.get("station_sn") is not None:
+                            # control via station setting
+                            resp = await self.coordinator.client.api.set_station_parm(
+                                deviceSn=self.coordinator_context,
+                                socReserve=int(option),
+                                toFile=self.coordinator.client.testmode(),
+                            )
+                        else:
+                            # control via individual device setting
+                            resp = await self.coordinator.client.api.set_power_cutoff(
+                                deviceSn=self.coordinator_context,
+                                setId=int(selected_id[0]),
+                                toFile=self.coordinator.client.testmode(),
+                            )
+                        if isinstance(resp, dict) and ALLOW_TESTMODE:
                             LOGGER.info(
-                                "%s: Applied power cutoff settings for '%s' change to '%s':\n%s",
+                                "%s: Applied settings for '%s' change to '%s':\n%s",
+                                "TESTMODE"
+                                if self.coordinator.client.testmode()
+                                else "LIVEMODE",
                                 self.entity_id,
                                 option,
-                                json.dumps(selected_id[0], indent=2),
+                                json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
                             )
+
+            elif self._attribute_name in ["preset_ac_input_limit","preset_pv_input_limit"]:
+                with suppress(ValueError, TypeError):
+                    LOGGER.debug(
+                        "'%s' selection change to option '%s' will be applied",
+                        self.entity_id,
+                        option,
+                    )
+                    resp = await self.coordinator.client.api.set_power_limit(
+                        deviceSn=self.coordinator_context,
+                        ac_input=option if self._attribute_name == "preset_ac_input_limit" else None,
+                        pv_input=option if self._attribute_name == "preset_pv_input_limit" else None,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied limit setting:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
 
             elif self._attribute_name == "preset_usage_mode":
                 LOGGER.debug(

@@ -162,6 +162,12 @@
             "preset_inverter_limit": {
                 "default": "mdi:speedometer"
             },
+            "preset_ac_input_limit": {
+                "default": "mdi:speedometer"
+            },
+            "preset_pv_input_limit": {
+                "default": "mdi:speedometer"
+            },
             "vehicle_brand": {
                 "default": "mdi:car-info"
             },
@@ -224,6 +230,9 @@
             "home_load_power": {
                 "default": "mdi:home-lightning-bolt"
             },
+            "other_solar_power": {
+                "default": "mdi:solar-panel"
+            },
             "input_power": {
                 "default": "mdi:solar-power"
             },
@@ -253,6 +262,15 @@
             },
             "micro_inverter_power_limit": {
                 "default": "mdi:flash-triangle-outline"
+            },
+            "all_power_limit": {
+                "default": "mdi:flash-triangle-outline"
+            },
+            "all_ac_input_limit": {
+                "default": "mdi:flash-triangle-outline"
+            },
+            "power_limit_option": {
+                "default": "mdi:flash-auto"
             },
             "fittings": {
                 "default": "mdi:tools"
@@ -291,6 +309,12 @@
             },
             "daily_charge_energy": {
                 "default": "mdi:battery-plus-variant"
+            },
+            "daily_3rd_party_pv_to_grid": {
+                "default": "mdi:transmission-tower-import"
+            },
+            "daily_3rd_party_pv_to_bat": {
+                "default": "mdi:solar-power"
             },
             "daily_solar_production": {
                 "default": "mdi:solar-power-variant"
@@ -492,6 +516,13 @@
                 "state": {
                     "off": "mdi:power-plug-battery-outline",
                     "on": "mdi:power-plug-battery"
+                }
+            },
+            "allow_grid_export": {
+                "default": "mdi:alert-box-outline",
+                "state": {
+                    "on": "mdi:transmission-tower-import",
+                    "off": "mdi:transmission-tower-off"
                 }
             },
             "allow_refresh": {

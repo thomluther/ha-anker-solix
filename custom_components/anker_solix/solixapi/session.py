@@ -13,10 +13,11 @@ import os
 from pathlib import Path
 from random import randbytes, randrange
 import tempfile
+from types import SimpleNamespace
 
 import aiofiles
 import aiofiles.os
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientError
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, padding, serialization
@@ -331,7 +332,8 @@ class AnkerSolixClientSession:
                 ),
             )
             # clear retry attempt to allow retry for authentication refresh
-            self._retry_attempt = False
+            if isinstance(self._retry_attempt, bool):
+                self._retry_attempt = False
         else:
             self._logger.debug("Fetching new Login credentials from server")
             now = datetime.now().astimezone()
@@ -390,13 +392,14 @@ class AnkerSolixClientSession:
             # gtoken is MD5 hash of user_id from login response
             self._gtoken = md5(data.get("user_id"))
             # reset retry flag upon valid authentication response for normal request retry attempts
-            self._retry_attempt = False
+            if isinstance(self._retry_attempt, bool):
+                self._retry_attempt = False
         else:
             self._gtoken = None
             self._loggedIn = False
         return self._loggedIn
 
-    async def request(
+    async def request(  # noqa: C901
         self,
         method: str,
         endpoint: str,
@@ -522,17 +525,21 @@ class AnkerSolixClientSession:
         # enforce configured delay between any subsequent request
         await self._wait_delay(endpoint=endpoint)
         # uncompressed body must use json parameter, pre-compressed body must use data parameter
-        # make the request, auto_decompression of body enabled by default
-        async with self._session.request(
-            method,
-            url,
-            headers=mergedHeaders,
-            json=json,
-            # TODO(COMPRESSION): only response encoding seems to be accepted by servers
-            # json=None if self.compress_data else json,
-            # data=compress(str(json).encode()) if self.compress_data else None,
-        ) as resp:
-            try:
+        data = {}
+        # predefine response to handle TimeoutError like 522 timeouts from server
+        resp = SimpleNamespace(status=0)
+        try:
+            # make the request, auto_decompression of body enabled by default
+            async with self._session.request(
+                method,
+                url,
+                headers=mergedHeaders,
+                json=json,
+                # TODO(COMPRESSION): only response encoding seems to be accepted by servers
+                # json=None if self.compress_data else json,
+                # data=compress(str(json).encode()) if self.compress_data else None,
+                timeout=ClientTimeout(total=10),
+            ) as resp:
                 self._last_request_time = datetime.now()
                 self.request_count.add(
                     request_time=self._last_request_time,
@@ -547,7 +554,6 @@ class AnkerSolixClientSession:
                 # get first the body text for usage in error detail logging if necessary
 
                 body_text = await resp.text()
-                data = {}
                 resp.raise_for_status()  # any response status >= 400
                 # get json data without strict checking for json content
                 data = await resp.json(content_type=None)
@@ -580,98 +586,144 @@ class AnkerSolixClientSession:
                 # TODO(ENCRYPTION): data field has to be decoded when encrypted and signature field in response
                 if self.encrypt_payload and data.get("signature"):
                     data["data"] = self._eh.decryptApiData(data.get("data"))
-                return data  # noqa: TRY300
+                return data
 
-            # Exception from ClientSession based on standard response status codes
-            except ClientError as err:
-                # Prepare data dict for Api error lookup
-                if not data:
-                    data = {}
-                if not hasattr(data, "code"):
-                    data["code"] = resp.status
-                if not hasattr(data, "msg"):
-                    data["msg"] = body_text
-                if resp.status in [401, 403]:
-                    # Unauthorized or forbidden request
-                    self._logger.error("Api %s Request Error: %s", self.nickname, err)
-                    self._logger.error("Response Text: %s", body_text)
-                    # reattempt authentication with same credentials if cached token was kicked out
-                    # retry attempt is set if login response data were not cached to fail immediately
-                    if not self._retry_attempt:
-                        self._logger.warning(
-                            "Login failed, retrying authentication%s",
-                            (" for " + str(self.nickname)) if self.nickname else "",
-                        )
-                        if await self.async_authenticate(restart=True):
-                            return await self.request(
-                                method, endpoint, headers=headers, json=json
-                            )
-                        self._logger.error("Re-Login failed for user %s", self._email)
-                    errors.raise_error(
-                        data, prefix=f"Login failed for user {self._email}"
-                    )
-                    # catch error if Api code not defined
-                    raise errors.AuthorizationError(
-                        f"Login failed for user {self._email}"
-                    ) from err
-                if resp.status in [429]:
-                    # Too Many Requests for endpoint, repeat once after throttle delay and add endpoint to throttle
-                    if self._retry_attempt not in [True, 429] and self._endpoint_limit:
-                        self._retry_attempt = resp.status
-                        self.request_count.add_throttle(endpoint=endpoint)
-                        self._logger.warning(
-                            "Api %s exceeded request limit with %s known requests in last minute, throttle will be enabled for endpoint: %s",
-                            self.nickname,
-                            len(
-                                [
-                                    i
-                                    for i in self.request_count.last_minute(
-                                        details=True
-                                    )
-                                    if endpoint in i[1]
-                                ]
-                            ),
-                            endpoint,
-                        )
-                        return await self.request(
-                            method, endpoint, headers=headers, json=json
-                        )
-                    # Too Many Requests, add stats to message
-                    self._logger.error("Api %s Request Error: %s", self.nickname, err)
-                    self._logger.error("Response Text: %s", body_text)
-                    errors.raise_error(
-                        data, prefix=f"Too Many Requests: {self.request_count}"
-                    )
-                else:
-                    # raise Anker Solix error if code is known
-                    self._logger.error("Api %s Request Error: %s", self.nickname, err)
-                    self._logger.error("Response Text: %s", body_text)
-                    errors.raise_error(data)
-                # raise Client error otherwise
-                raise ClientError(
-                    f"Api Request Error: {err}", f"response={body_text}"
-                ) from err
-            except errors.AnkerSolixError as err:  # Other Exception from API
-                if isinstance(err, errors.BusyError):
-                    # Api fails to respond to standard query, repeat once after delay
-                    self._logger.error("Api %s Busy Error: %s", self.nickname, err)
-                    self._logger.error("Response Text: %s", body_text)
-                    if self._retry_attempt not in [True, 21105]:
-                        self._retry_attempt = 21105
-                        delay = randrange(2, 6)  # random wait time 2-5 seconds
-                        self._logger.warning(
-                            "Server busy, retrying request of api %s after delay of %s seconds for endpoint %s",
-                            self.nickname,
-                            delay,
-                            endpoint,
-                        )
-                        await self._wait_delay(delay=delay)
-                        return await self.request(
-                            method, endpoint, headers=headers, json=json
-                        )
-                self._logger.error("%s", err)
+        # Exception from ClientSession based on standard response status codes
+        except (ClientError, TimeoutError) as err:
+            if isinstance(err, TimeoutError):
+                resp.status = 522
+                body_text = "Timeout Error"
+            # Prepare data dict for Api error lookup
+            if not data:
+                data = {}
+            if not hasattr(data, "code"):
+                data["code"] = resp.status
+            if not hasattr(data, "msg"):
+                data["msg"] = body_text
+            if resp.status in [401, 403]:
+                # Unauthorized or forbidden request
+                self._logger.error("Api %s Request Error: %s", self.nickname, err)
                 self._logger.error("Response Text: %s", body_text)
-                raise
+                # reattempt authentication with same credentials if cached token was kicked out
+                # retry attempt is set if login response data were not cached to fail immediately
+                if not self._retry_attempt:
+                    self._logger.warning(
+                        "Login failed, retrying authentication%s",
+                        (" for " + str(self.nickname)) if self.nickname else "",
+                    )
+                    if await self.async_authenticate(restart=True):
+                        return await self.request(
+                            method, endpoint, headers=headers, json=json
+                        )
+                    self._logger.error("Re-Login failed for user %s", self._email)
+                errors.raise_error(data, prefix=f"Login failed for user {self._email}")
+                # catch error if Api code not defined
+                raise errors.AuthorizationError(
+                    f"Login failed for user {self._email}"
+                ) from err
+            if resp.status in [429]:
+                # Too Many Requests for endpoint, repeat once after throttle delay and add endpoint to throttle
+                if self._retry_attempt not in [True, 429] and self._endpoint_limit:
+                    self._retry_attempt = resp.status
+                    self.request_count.add_throttle(endpoint=endpoint)
+                    self._logger.warning(
+                        "Api %s exceeded request limit with %s known requests in last minute, throttle will be enabled for endpoint: %s",
+                        self.nickname,
+                        len(
+                            [
+                                i
+                                for i in self.request_count.last_minute(details=True)
+                                if endpoint in i[1]
+                            ]
+                        ),
+                        endpoint,
+                    )
+                    return await self.request(
+                        method, endpoint, headers=headers, json=json
+                    )
+                # Raise error if retry failed too, add stats to message
+                self._logger.error(
+                    "Api %s Request Error %s for endpoint: %s",
+                    self.nickname,
+                    err,
+                    endpoint,
+                )
+                self._logger.error("Response Text: %s", body_text)
+                errors.raise_error(
+                    data, prefix=f"Too Many Requests: {self.request_count}"
+                )
+            elif resp.status in [502, 504, 522]:
+                # Server may be temporarily overloaded and does not respond
+                # 502 is Gateway error
+                # 504 is Gateway timeout error
+                # 522 is Server timeout error
+                if self._retry_attempt not in [True, 502, 504, 522]:
+                    self._retry_attempt = resp.status
+                    delay = randrange(2, 6)  # random wait time 2-5 seconds
+                    self._logger.warning(
+                        "Http error '%s', retrying request of api %s after delay of %s seconds for endpoint: %s",
+                        "Timeout Error"
+                        if isinstance(err, TimeoutError)
+                        else resp.status,
+                        self.nickname,
+                        delay,
+                        endpoint,
+                    )
+                    await self._wait_delay(delay=delay)
+                    return await self.request(
+                        method, endpoint, headers=headers, json=json
+                    )
+                # Raise error if retry failed too
+                self._logger.error(
+                    "Api %s Request Error %s for endpoint: %s",
+                    self.nickname,
+                    err,
+                    endpoint,
+                )
+                self._logger.error("Response Text: %s", body_text)
+                errors.raise_error(data)
+            else:
+                # raise Anker Solix error if code is known
+                self._logger.error(
+                    "Api %s Request Error %s for endpoint: %s",
+                    self.nickname,
+                    err,
+                    endpoint,
+                )
+                self._logger.error("Response Text: %s", body_text)
+                errors.raise_error(data)
+            # raise Client error otherwise
+            raise ClientError(
+                f"Api Request Error: {err}, response={body_text}"
+            ) from err
+        except errors.AnkerSolixError as err:  # Other Exception from API
+            if isinstance(err, errors.BusyError):
+                # Api fails to respond to standard query, repeat once after delay
+                self._logger.error(
+                    "Api %s Busy Error '%s' for endpoint: %s",
+                    self.nickname,
+                    err,
+                    endpoint,
+                )
+                self._logger.error("Response Text: %s", body_text)
+                if self._retry_attempt not in [True, 21105]:
+                    self._retry_attempt = 21105
+                    delay = randrange(2, 6)  # random wait time 2-5 seconds
+                    self._logger.warning(
+                        "Server busy, retrying request of api %s after delay of %s seconds for endpoint %s",
+                        self.nickname,
+                        delay,
+                        endpoint,
+                    )
+                    await self._wait_delay(delay=delay)
+                    return await self.request(
+                        method, endpoint, headers=headers, json=json
+                    )
+            self._logger.error(
+                "Api %s Error '%s' for endpoint: %s", self.nickname, err, endpoint
+            )
+            self._logger.error("Response Text: %s", body_text)
+            raise
 
     def _rawPublicKey(self) -> bytes:
         """Generate raw client public_key in uncompressed format of points in hex (0x04 + 32 Byte + 32 Byte)."""
@@ -795,6 +847,20 @@ class AnkerSolixClientSession:
             self._logger.error(err)
             return False
         return True
+
+    async def get_mqtt_info(self) -> dict:
+        r"""Get the Anker MQTT server info with account certificates from session.
+
+        Example data:
+        {"user_id": "1541fc0a3db5a23e3c4ee27c6ed0616444e1ab8c","app_name": "anker_power","thing_name": "1541fc0a3db5a23e3c4ee27c6ed0616444e1ab8c-anker_power",
+        "certificate_id": "36167916173028037311485710012973829433","certificate_pem": "-----BEGIN CERTIFICATE-----\n<base64Cert>\n-----END CERTIFICATE-----\n",
+        "private_key": "-----BEGIN RSA PRIVATE KEY-----\n<base64Key>\n-----END RSA PRIVATE KEY-----\n","public_key": "",
+        "endpoint_addr": "aiot-mqtt-eu.anker.com","aws_root_ca1_pem": "-----BEGIN CERTIFICATE-----\n<base64Cert>\n-----END CERTIFICATE-----",
+        "origin": "","pkcs12": "<base64pkcs12Data>"}
+        """
+        return (await self.request("post", API_ENDPOINTS["get_mqtt_info"])).get(
+            "data"
+        ) or {}
 
 
 class AnkerEncryptionHandler:
@@ -940,8 +1006,7 @@ class AnkerEncryptionHandler:
                     data["msg"] = body_text
                 # raise Client error otherwise
                 raise ClientError(
-                    f"AnkerEncryptionHandler Key exchange failed: {err}",
-                    f"response={body_text}",
+                    f"AnkerEncryptionHandler Key exchange failed: {err}, response={body_text}",
                 ) from err
 
     def derive_shared_key(self, server_public_key_b64: str) -> bytes:

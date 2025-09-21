@@ -1,0 +1,55 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "37H3JFKJJKPR1ATZL",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-08-14 05:00:46",
+        "upgrade_version": "v1.0.2.6",
+        "pre_version": "v1.0.1.14",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "37H3JFKJJKPR1ATZL",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      },
+      {
+        "upgrade_time": "2025-08-11 14:43:32",
+        "upgrade_version": "v1.0.1.14",
+        "pre_version": "v1.0.0.24",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "37H3JFKJJKPR1ATZL",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      },
+      {
+        "upgrade_time": "2025-07-15 18:27:48",
+        "upgrade_version": "v1.0.0.24",
+        "pre_version": "v1.0.0.18",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "37H3JFKJJKPR1ATZL",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      },
+      {
+        "upgrade_time": "2025-07-07 08:58:48",
+        "upgrade_version": "v1.0.0.18",
+        "pre_version": "v1.0.0.9",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "37H3JFKJJKPR1ATZL",
+        "device_name": "Solarbank 3 E2700 Pro",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "fd1b03ff3851f18d3f1d5d0ac32e3b5b"
+}

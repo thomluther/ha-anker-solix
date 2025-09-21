@@ -1,10 +1,4 @@
-"""Base Class for interacting with the Anker Power / Solix API.
-
-Required Python modules:
-pip install cryptography
-pip install aiohttp
-pip install aiofiles
-"""
+"""Base Class for interacting with the Anker Power / Solix API."""
 
 from __future__ import annotations
 
@@ -25,8 +19,6 @@ from .apitypes import (
     SolixPriceTypes,
 )
 from .session import AnkerSolixClientSession
-
-_LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class AnkerSolixBaseApi:
@@ -595,8 +587,12 @@ class AnkerSolixBaseApi:
                 self._update_account(
                     {"products": await self.get_products(fromFile=fromFile)}
                 )
-            # Bind devices also lists devices for shared sites since Aug 2025, device admin cannot longer be assumed per default
+            # Bind devices also lists shared devices, device admin cannot longer be assumed per default and must be determined
             if sn := self._update_dev(device.copy()):
+                active_devices.add(sn)
+        # avoid removal of passive devices from active sites, since they are not listed in bind_devices
+        for sn, device in self.devices.items():
+            if device.get("is_passive") and (device.get("site_id") or "") in self.sites:
                 active_devices.add(sn)
         # recycle api device list and remove devices no longer used in sites or bind devices
         self.recycleDevices(extraDevices=active_devices)
@@ -788,16 +784,16 @@ class AnkerSolixBaseApi:
                 Path(self.testDir()) / f"{API_FILEPREFIXES['get_message_unread']}.json"
             )
         else:
-            # Ignore timeouts or other errors from endpoint
+            # Ignore timeouts or other errors from endpoint wrapped into a ClientError
             try:
                 resp = await self.apisession.request(
                     "get", API_ENDPOINTS["get_message_unread"]
                 )
-            except (ClientError, TimeoutError):
+            except ClientError:
                 resp = {}
-        data = resp.get("data") or {}
-        # New method: Save unread msg flag in account dictionary
-        self._update_account(data)
+        # Save unread msg flag in account dictionary
+        if data := (resp.get("data") or {}):
+            self._update_account(data)
         return data
 
     async def get_product_platforms_list(self, fromFile: bool = False) -> list:
@@ -901,41 +897,49 @@ class AnkerSolixBaseApi:
             "Getting api %s Anker platform list",
             self.apisession.nickname,
         )
-        for platform in await self.get_product_platforms_list(fromFile=fromFile):
-            plat_name = platform.get("name") or ""
-            for prod in platform.get("products") or []:
-                products[prod.get("product_code") or ""] = {
-                    "name": str(prod.get("name") or "").strip(),
-                    "platform": str(plat_name).strip(),
-                    # "img_url": prod.get("img_url"),
-                }
-        self._logger.debug(
-            "Getting api %s HES product list",
-            self.apisession.nickname,
-        )
-        for platform in await self.get_hes_platforms_list(fromFile=fromFile):
-            if (pn := platform.get("code") or "") and pn not in products:
-                products[pn] = {
-                    "name": str(platform.get("name") or "").strip(),
-                    "platform": str(platform.get("category") or "").strip(),
-                    # "img_url": platform.get("imgUrl"),
-                }
-        # get_third_platforms_list does no longer show 3rd platform products, skip query until data provided again
-        # see https://github.com/thomluther/anker-solix-api/issues/172
-        # self._logger.debug(
-        #     "Getting api %s 3rd party platform list",
-        #     self.apisession.nickname,
-        # )
-        # for platform in await self.get_third_platforms_list(fromFile=fromFile):
-        #     plat_name = platform.get("name") or ""
-        #     countries = platform.get("countries") or ""
-        #     for prod in platform.get("products") or []:
-        #         products[prod.get("product_code") or ""] = {
-        #             "name": " ".join([plat_name, prod.get("name")]),
-        #             "platform": plat_name,
-        #             "countries": countries,
-        #             # "img_url": prod.get("img_url"),
-        #         }
+        # Ignore timeouts or other errors wrapped into a ClientError from queries, but return data only if all worked
+        try:
+            for platform in await self.get_product_platforms_list(fromFile=fromFile):
+                plat_name = platform.get("name") or ""
+                for prod in platform.get("products") or []:
+                    products[prod.get("product_code") or ""] = {
+                        "name": str(prod.get("name") or "").strip(),
+                        "platform": str(plat_name).strip(),
+                        # "img_url": prod.get("img_url"),
+                    }
+            self._logger.debug(
+                "Getting api %s HES product list",
+                self.apisession.nickname,
+            )
+            for platform in await self.get_hes_platforms_list(fromFile=fromFile):
+                if (pn := platform.get("code") or "") and pn not in products:
+                    products[pn] = {
+                        "name": str(platform.get("name") or "").strip(),
+                        "platform": str(platform.get("category") or "").strip(),
+                        # "img_url": platform.get("imgUrl"),
+                    }
+            # get_third_platforms_list does no longer show 3rd platform products, skip query until data provided again
+            # see https://github.com/thomluther/anker-solix-api/issues/172
+            # self._logger.debug(
+            #     "Getting api %s 3rd party platform list",
+            #     self.apisession.nickname,
+            # )
+            # for platform in await self.get_third_platforms_list(fromFile=fromFile):
+            #     plat_name = platform.get("name") or ""
+            #     countries = platform.get("countries") or ""
+            #     for prod in platform.get("products") or []:
+            #         products[prod.get("product_code") or ""] = {
+            #             "name": " ".join([plat_name, prod.get("name")]),
+            #             "platform": plat_name,
+            #             "countries": countries,
+            #             # "img_url": prod.get("img_url"),
+            #         }
+        except ClientError as err:
+            self._logger.error(
+                "Api %s failed to get product list: %s",
+                self.apisession.nickname,
+                err,
+            )
         return products
 
     async def get_co2_ranking(self, siteId: str, fromFile: bool = False) -> dict:

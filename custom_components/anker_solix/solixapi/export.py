@@ -39,7 +39,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.2.0.1"
+VERSION: str = "3.3.0.1"
 
 
 class AnkerSolixApiExport:
@@ -269,9 +269,9 @@ class AnkerSolixApiExport:
                     filename := f"{API_FILEPREFIXES['api_account']}.json",
                 )
                 # update account dictionary with number of requests during export and randomized email
-                self.api_power._update_account(
+                self.api_power._update_account( # noqa: SLF001
                     {"email": self._randomize(self.api_power.apisession.email, "email")}
-                )  # noqa: SLF001
+                )
                 # Skip randomizing dictionary for account data to prevent double randomizaiton of other account fields
                 await self._export(
                     Path(self.export_path) / filename,
@@ -579,6 +579,12 @@ class AnkerSolixApiExport:
                                 "productive_year": year,
                             },
                         )
+            # get OCCP endpoint list
+            self._logger.info("Exporting OCPP endpoints...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_ocpp_endpoint_list"],
+                filename=f"{API_FILEPREFIXES['get_ocpp_endpoint_list']}.json",
+            )
 
             # loop through all found sites
             for siteId in self.api_power.sites:
@@ -741,7 +747,20 @@ class AnkerSolixApiExport:
                     #         replace=[(siteId, "<siteId>")],
                     #     )
 
-                for parmtype in ["4", "6", "12", "13", "16"]:
+                for parmtype in [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "12",
+                    "13",
+                    "16",
+                    "18",
+                    "20",
+                ]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
                     )
@@ -912,9 +931,10 @@ class AnkerSolixApiExport:
                             "rssi",
                             "pv_power_limit",
                             "temperature",
-                            "auto_switch",  # Smart plug attribute?
-                            "running_time",  # Smart plug attribute?
-                            "wifi_signal",
+                            "legal_power_limit",
+                            "power_limit_option",
+                            "power_limit_option_real",
+                            "switch_0w",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
@@ -932,14 +952,6 @@ class AnkerSolixApiExport:
                     replace=[(sn, "<deviceSn>")],
                     admin=admin,
                 )
-                self._logger.info("Exporting device RFID cards...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["get_device_rfid_cards"],
-                    filename=f"{API_FILEPREFIXES['get_device_rfid_cards']}_{self._randomize(sn, '_sn')}.json",
-                    payload={"device_sn": sn},
-                    replace=[(sn, "<deviceSn>")],
-                    admin=admin,
-                )
                 self._logger.info("Exporting device group...")
                 await self.query(
                     endpoint=API_ENDPOINTS["get_device_group"],
@@ -951,6 +963,14 @@ class AnkerSolixApiExport:
 
                 # export EV charger status and statistics
                 if device.get("type") == api.SolixDeviceType.EV_CHARGER.value:
+                    self._logger.info("Exporting EV charger RFID cards...")
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_rfid_cards"],
+                        filename=f"{API_FILEPREFIXES['get_device_rfid_cards']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                        admin=admin,
+                    )
                     self._logger.info("Exporting EV charger order statistics...")
                     # TODO: Update order status types once known, may have to be limited for time range
                     for stat_type in ["week", "all"]:
@@ -988,6 +1008,13 @@ class AnkerSolixApiExport:
                             },
                             replace=[(sn, "<deviceSn>")],
                         )
+                    self._logger.info("Exporting EV charger OCPP info...")
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_ocpp_info"],
+                        filename=f"{API_FILEPREFIXES['get_device_ocpp_info']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                    )
 
                 # export device pv status and statistics for inverters
                 if device.get("type") == api.SolixDeviceType.INVERTER.value:

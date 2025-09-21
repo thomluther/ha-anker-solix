@@ -13,6 +13,7 @@
                 "solarbank": "Solarbanks",
                 "solarbank_pps": "Solarbank power stations",
                 "inverter": "Inverter",
+                "combiner_box": "Combiner boxes",
                 "pps": "Portable power stations",
                 "powerpanel": "Power panels",
                 "powerpanel_energy": "Power panel energy stats",
@@ -513,6 +514,12 @@
             "preset_inverter_limit": {
                 "name": "Inverter limit"
             },
+            "preset_ac_input_limit": {
+                "name": "AC input limit"
+            },
+            "preset_pv_input_limit": {
+                "name": "PV input limit"
+            },
             "vehicle_brand": {
                 "name": "1. Brand"
             },
@@ -593,6 +600,9 @@
             "charging_power": {
                 "name": "Battery power"
             },
+            "other_solar_power": {
+                "name": "Solar 3rd party"
+            },
             "input_power": {
                 "name": "Solar power"
             },
@@ -659,6 +669,15 @@
             },
             "micro_inverter_power_limit": {
                 "name": "Inverter limit"
+            },
+            "all_power_limit": {
+                "name": "Total power limit"
+            },
+            "all_ac_input_limit": {
+                "name": "Total AC Input limit"
+            },
+            "power_limit_option": {
+                "name": "Power limit option"
             },
             "set_output_power": {
                 "name": "Home preset",
@@ -1082,6 +1101,28 @@
                     }
                 }
             },
+            "daily_3rd_party_pv_to_bat": {
+                "name": "Daily 3rd party PV charge",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_3rd_party_pv_to_grid": {
+                "name": "Daily 3rd party PV export",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_ac_socket": {
                 "name": "Daily AC socket",
                 "state_attributes": {
@@ -1257,6 +1298,9 @@
             },
             "preset_backup_option": {
                 "name": "Backup option"
+            },
+            "allow_grid_export": {
+                "name": "Allow grid export"
             },
             "allow_refresh": {
                 "name": "Api Usage",
@@ -1543,7 +1587,7 @@
             "message": "The action {service} cannot be executed: {error}"
         },
         "action_blocked": {
-            "message": "The action {service} cannot be executed again while still running"
+            "message": "The action {service} cannot be executed again while still running (timeout at {timeout})"
         }
     }
 }

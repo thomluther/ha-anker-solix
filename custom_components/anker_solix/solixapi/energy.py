@@ -42,6 +42,11 @@ async def energy_daily(  # noqa: C901
     elif (startDay + timedelta(days=numDays)) > future:
         numDays = (future - startDay).days + 1
     numDays = min(366, max(1, numDays))
+    other_pv = bool(
+        ((self.sites.get(siteId) or {}).get("feature_switch") or {}).get(
+            "show_third_party_pv_panel"
+        )
+    )
 
     # first get solarbank export
     if SolixDeviceType.SOLARBANK.value in devTypes:
@@ -122,6 +127,9 @@ async def energy_daily(  # noqa: C901
                         "ac_socket": resp.get("ac_out_put_total") or None,
                         "battery_to_home": resp.get("battery_to_home_total") or None,
                         "grid_to_battery": resp.get("grid_to_battery_total") or None,
+                        "3rd_party_pv_to_bat": resp.get("third_party_pv_to_bat") or None
+                        if other_pv
+                        else None,
                     }
                 )
                 table.update({daystr: entry})
@@ -255,9 +263,9 @@ async def energy_daily(  # noqa: C901
             )
 
     # Add grid stats from smart reader only if solarbank not requested, otherwise grid data available in solarbank and solar responses
-    if (
-        SolixDeviceType.SMARTMETER.value in devTypes
-        and SolixDeviceType.SOLARBANK.value not in devTypes
+    # 3rd party export to grid only available in grid stats, query only required if 3rd party PV supported by site
+    if SolixDeviceType.SMARTMETER.value in devTypes and (
+        SolixDeviceType.SOLARBANK.value not in devTypes or other_pv
     ):
         if fromFile:
             resp = (
@@ -293,7 +301,8 @@ async def energy_daily(  # noqa: C901
                     {
                         "date": daystr,
                         # grid export is negative, convert to re-use as solar_to_grid value
-                        "solar_to_grid": item.get("value", "").replace("-", "",1) or None,
+                        "solar_to_grid": item.get("value", "").replace("-", "", 1)
+                        or None,
                     }
                 )
                 table.update({daystr: entry})
@@ -318,6 +327,61 @@ async def energy_daily(  # noqa: C901
                     }
                 )
                 table.update({daystr: entry})
+        # Only Grid has 3rd party to grid value for given interval. If requested, make daily queries for given interval
+        if justify_daytotals and table:
+            for day in [
+                startDay + timedelta(days=x)
+                for x in range(min(len(items), numDays) if fromFile else numDays)
+            ]:
+                daystr = day.strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                # update response only for real requests if not first day which was already queried
+                if not fromFile and day != startDay:
+                    resp = await self.energy_analysis(
+                        siteId=siteId,
+                        deviceSn=deviceSn,
+                        rangeType="week",
+                        startDay=day,
+                        endDay=day,
+                        devType="grid",
+                    )
+                    # get first item from breakdown list for single day queries
+                    item = next(iter(resp.get("power") or []), {})
+                    if daystr == item.get("time"):
+                        entry.update(
+                            {
+                                "date": daystr,
+                                # grid export is negative, convert to re-use as solar_to_grid value
+                                "solar_to_grid": item.get("value", "").replace(
+                                    "-", "", 1
+                                )
+                                or None,
+                            }
+                        )
+                    item = next(iter(resp.get("charge_trend") or []), {})
+                    if daystr == item.get("time"):
+                        entry.update(
+                            {
+                                "date": daystr,
+                                "grid_to_home": item.get("value") or None,
+                            }
+                        )
+                entry.update(
+                    {
+                        "date": daystr,
+                        "3rd_party_pv_to_grid": resp.get("third_party_pv_to_grid")
+                        or None
+                        if other_pv
+                        else None,
+                    }
+                )
+                table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info(
+                        "Received api %s grid energy for %s",
+                        self.apisession.nickname,
+                        daystr,
+                    )
         if showProgress:
             self._logger.info(
                 "Received api %s grid energy for period",
@@ -501,11 +565,11 @@ async def energy_analysis(
     Responses for solar_production_*:
     Daily: Solar Energy
     Responses for solarbank:
-    Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home, grid_to_battery
+    Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home, grid_to_battery, third_party_pv_to_bat
     Responses for home_usage:
     Daily: Home Usage Energy, Extra Totals: discharge, grid_to_home, battery_to_home, smart_plugs, solar_to_home
     Responses for grid:
-    Daily: solar_to_grid, grid_to_home, Extra Totals: grid_to_battery, grid_imported
+    Daily: solar_to_grid, grid_to_home, Extra Totals: grid_to_battery, grid_imported, third_party_pv_to_grid
     """
     data = {
         "site_id": siteId,

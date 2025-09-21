@@ -13,6 +13,7 @@
                 "solarbank": "Solarbänke",
                 "solarbank_pps": "Solarbank Power Stationen",
                 "inverter": "Wechselrichter",
+                "combiner_box": "Anschlussboxen",
                 "pps": "Power Stationen",
                 "powerpanel": "Power Panels",
                 "powerpanel_energy": "Power Panel Energiestatistik",
@@ -513,6 +514,12 @@
             "preset_inverter_limit": {
                 "name": "MWR Limit"
             },
+            "preset_ac_input_limit": {
+                "name": "AC Eingangslimit"
+            },
+            "preset_pv_input_limit": {
+                "name": "PV Eingangslimit"
+            },
             "vehicle_brand": {
                 "name": "1. Marke"
             },
@@ -593,6 +600,9 @@
             "charging_power": {
                 "name": "Akkuleistung"
             },
+            "other_solar_power": {
+                "name": "Solar Drittanbieter"
+            },
             "input_power": {
                 "name": "Solarleistung"
             },
@@ -659,6 +669,15 @@
             },
             "micro_inverter_power_limit": {
                 "name": "MWR Limit"
+            },
+            "all_power_limit": {
+                "name": "Leistungslimit gesamt"
+            },
+            "all_ac_input_limit": {
+                "name": "AC Eingangslimit gesamt"
+            },
+            "power_limit_option": {
+                "name": "Leistungslimit Option"
             },
             "set_output_power": {
                 "name": "Einspeisevorgabe",
@@ -1082,6 +1101,28 @@
                     }
                 }
             },
+            "daily_3rd_party_pv_to_bat": {
+                "name": "Tägliche Drittanbieter PV Aufladung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_3rd_party_pv_to_grid": {
+                "name": "Tägliche Drittanbieter PV Netzeinspeisung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_ac_socket": {
                 "name": "Tägliche AC Steckdose",
                 "state_attributes": {
@@ -1257,6 +1298,9 @@
             },
             "preset_backup_option": {
                 "name": "Notladeoption"
+            },
+            "allow_grid_export": {
+                "name": "Erlaube Netzeinspeisung"
             },
             "allow_refresh": {
                 "name": "Api Nutzung",
@@ -1543,7 +1587,7 @@
             "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}"
         },
         "action_blocked": {
-            "message": "Die Aktion {service} kann nicht erneut ausgeführt werden solange sie noch aktiv ist"
+            "message": "Die Aktion {service} kann nicht erneut ausgeführt werden solange sie noch aktiv ist (Abgelaufen um {timeout})"
         }
     }
 }

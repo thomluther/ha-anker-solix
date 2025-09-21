@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "IUEFQSXVCTWNXERN",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-08-27 17:20:12",
+        "upgrade_version": "v0.0.0.40",
+        "pre_version": "v0.0.0.36",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "IUEFQSXVCTWNXERN",
+        "device_name": "Smart Meter",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "e17a6ac6daba37dddbf4a6da02df6de3"
+}

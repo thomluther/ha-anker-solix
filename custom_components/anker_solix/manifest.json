@@ -14,7 +14,8 @@
   "requirements": [
     "aiohttp>=3.10.11",
     "aiofiles>=23.2.0",
-    "cryptography>=3.4.8"
+    "cryptography>=3.4.8",
+    "paho-mqtt>=2.1.0"
   ],
-  "version": "3.2.4"
+  "version": "3.3.0"
 }

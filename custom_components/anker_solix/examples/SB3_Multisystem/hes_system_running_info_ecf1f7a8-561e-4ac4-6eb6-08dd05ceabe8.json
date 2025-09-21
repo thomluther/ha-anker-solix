@@ -1,0 +1,31 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "mainSn": "",
+    "pcsSns": null,
+    "mainDeviceModel": "",
+    "connected": false,
+    "totalSystemSavings": 0,
+    "systemSavingsPriceUnit": "",
+    "saveCarbonFootprint": 0,
+    "saveCarbonUnit": "",
+    "saveCarbonC": 0.997,
+    "totalSystemPowerGeneration": 0,
+    "systemPowerGenerationUnit": "",
+    "numberOfParallelDevice": 0,
+    "batCount": 0,
+    "rePostTime": 5,
+    "supportDiesel": false,
+    "net": 0,
+    "isAddHeatPump": false,
+    "realNet": 0,
+    "systemCode": "",
+    "emsDisable": false,
+    "enwgs": null,
+    "hasEvCharger": false,
+    "evChargerInfos": null,
+    "countryCode": ""
+  },
+  "trace_id": "93e7dc99bbbc4ca6e2b44dbc8fa41c03"
+}

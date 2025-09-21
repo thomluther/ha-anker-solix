@@ -323,6 +323,30 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
+        key="all_power_limit",
+        translation_key="all_power_limit",
+        json_key="all_power_limit",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="all_ac_input_limit",
+        translation_key="all_ac_input_limit",
+        json_key="all_ac_input_limit",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="power_limit_option",
+        translation_key="power_limit_option",
+        json_key="power_limit_option",
+        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixSensorDescription(
         key="micro_inverter_power",
         translation_key="micro_inverter_power",
         json_key="micro_inverter_power",
@@ -960,6 +984,19 @@ SITE_SENSORS = [
         else None,
     ),
     AnkerSolixSensorDescription(
+        # third party PV as calculated by cloud
+        key="other_solar_power",
+        translation_key="other_solar_power",
+        json_key="third_party_pv",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda d, jk, _: d.get(jk) or None
+        if (d.get("feature_switch") or {}).get("show_third_party_pv_panel")
+        else None,
+    ),
+    AnkerSolixSensorDescription(
         key="total_co2_saving",
         translation_key="total_co2_saving",
         json_key="total",
@@ -1536,6 +1573,50 @@ SITE_SENSORS = [
                 ApiCategories.hes_energy,
             }
             - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_3rd_party_pv_to_bat",
+        translation_key="daily_3rd_party_pv_to_bat",
+        json_key="3rd_party_pv_to_bat",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("3rd_party_pv_to_bat"),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SMARTMETER.value} - s
+            and {ApiCategories.solarbank_energy} - s
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_3rd_party_pv_to_grid",
+        translation_key="daily_3rd_party_pv_to_grid",
+        json_key="3rd_party_pv_to_grid",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: None
+        if not (items := (d.get("energy_details") or {}).get("today") or {})
+        else items.get(jk),
+        attrib_fn=lambda d, _: {
+            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "last_period": (
+                (d.get("energy_details") or {}).get("last_period") or {}
+            ).get("3rd_party_pv_to_grid"),
+        },
+        exclude_fn=lambda s, _: not (
+            {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SMARTMETER.value} - s
+            and {ApiCategories.solarbank_energy} - s
         ),
     ),
     AnkerSolixSensorDescription(

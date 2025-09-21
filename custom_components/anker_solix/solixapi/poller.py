@@ -404,7 +404,7 @@ async def poll_sites(  # noqa: C901
                                 sb_total_output_calc += power_out
                         elif multisystem:
                             # set device grid charge to calculated battery grid charge for proper breakdown reporting
-                            sb_grid_charge = round(grid_in)
+                            sb_grid_charge = int(grid_in)
                             # calculate total battery charge and discharge based on device values for other input power adoption of device breakdown
                             # ignore negative values for total charge
                             sb_total_battery_charge_calc += max(0, charge_calc)
@@ -505,16 +505,24 @@ async def poll_sites(  # noqa: C901
                     # TODO(MULTISYSTEM): Adjust other totals as necessary once value examples are available
                     # adjust breakdown for multisystem if possible
                     with contextlib.suppress(ValueError):
-                        factor = min(
-                            1,
-                            (sb_total_battery_charge_calc / int(sb_grid_charge))
-                            if int(sb_grid_charge) > 0
-                            else 1,
-                        )
                         for sb in sb_list:
-                            if (ac_input := int(sb.get("other_input_power") or 0)) and (
-                                sn := sb.get("device_sn")
+                            if (sn := sb.get("device_sn")) and (
+                                ac_input := int(
+                                    api.devices[sn].get("other_input_power") or 0
+                                )
                             ):
+                                factor = min(
+                                    1,
+                                    (
+                                        int(
+                                            api.devices[sn].get("grid_to_battery_power")
+                                            or 0
+                                        )
+                                        / sb_total_battery_charge_calc
+                                    )
+                                    if sb_total_battery_charge_calc > 0
+                                    else 1,
+                                )
                                 api.devices[sn]["other_input_power"] = (
                                     f"{ac_input * factor:.0f}"
                                 )
@@ -903,6 +911,7 @@ async def poll_device_details(  # noqa: C901
             api.hesApi.devices[sn] = merged_dev
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
+    queried_sites: set[str] = set()
     for sn, device in api.devices.items():
         site_id: str = device.get("site_id") or ""
         dev_Type: str = device.get("type") or ""
@@ -994,18 +1003,19 @@ async def poll_device_details(  # noqa: C901
                             api.apisession.nickname,
                         )
                         await api.get_solar_info(solarbankSn=sn, fromFile=fromFile)
-                    # Fetch schedule for Solarbank 1
+                    # Fetch schedule for Solarbank 1 once per site
                     # Note: There may be different schedules for SB1 devices when used in combined system with SB2
                     # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
                     # SB2 is using Manual mode and sync its settings to SB1
                     # get_device_parm with param for SB1 schedule seems to return always the full SB1 schedule, even if not active
-                    api._logger.debug(
-                        "Getting api %s schedule details for device",
-                        api.apisession.nickname,
-                    )
-                    await api.get_device_load(
-                        siteId=site_id, deviceSn=sn, fromFile=fromFile
-                    )
+                    if site_id not in queried_sites:
+                        api._logger.debug(
+                            "Getting api %s schedule details for device",
+                            api.apisession.nickname,
+                        )
+                        await api.get_device_load(
+                            siteId=site_id, deviceSn=sn, fromFile=fromFile
+                        )
                     # Fetch device fittings for device types supporting it
                     if {ApiCategories.solarbank_fittings} - exclude:
                         api._logger.debug(
@@ -1016,26 +1026,41 @@ async def poll_device_details(  # noqa: C901
                             siteId=site_id, deviceSn=sn, fromFile=fromFile
                         )
                 else:
-                    # Fetch schedule for Solarbank 2
-                    # Note: get_device_load always seems to return SB1 schedule format, which does not contain usefull values for the SB2
-                    api._logger.debug(
-                        "Getting api %s schedule details for device",
-                        api.apisession.nickname,
-                    )
-                    await api.get_device_parm(
-                        siteId=site_id,
-                        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
-                        deviceSn=sn,
-                        fromFile=fromFile,
-                    )
-                    # Fetch power solarbank specific attributes
+                    # Note: get_device_load always seems to return SB1 schedule format, which does not contain useful values for the SB2+
+                    # Fetch Solarbank 2+ device parameters once per site
+                    if site_id not in queried_sites:
+                        # Fetch SB2+ schedule once and add to each SB2+ device in site
+                        api._logger.debug(
+                            "Getting api %s schedule details for device",
+                            api.apisession.nickname,
+                        )
+                        await api.get_device_parm(
+                            siteId=site_id,
+                            paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                            deviceSn=sn,
+                            fromFile=fromFile,
+                        )
+                        # Fetch SB2+ station details and add to site details
+                        api._logger.debug(
+                            "Getting api %s station details for device",
+                            api.apisession.nickname,
+                        )
+                        await api.get_device_parm(
+                            siteId=site_id,
+                            paramType=SolixParmType.SOLARBANK_STATION.value,
+                            deviceSn=sn,
+                            fromFile=fromFile,
+                        )
+                    # Fetch solarbank power specific attributes for each device
                     api._logger.debug(
                         "Getting api %s device specific attributes",
                         api.apisession.nickname,
                     )
                     await api.get_device_attributes(
-                        deviceSn=sn, attributes=["pv_power_limit"], fromFile=fromFile
+                        deviceSn=sn, attributes=["pv_power_limit", "switch_0w"], fromFile=fromFile
                     )
+            # add queried site ID to skip same queries for other parallel devices in site
+            queried_sites.add(site_id)
 
         # Merge additional powerpanel data
         if api.powerpanelApi:
@@ -1154,7 +1179,11 @@ async def poll_device_energy(  # noqa: C901
             ):
                 query_types.add(SolixDeviceType.INVERTER.value)
                 query_sn = sn
-            if sn := (site.get("grid_info") or {}).get("device_sn"):
+            if (
+                (dev_list := (site.get("grid_info") or {}).get("grid_list") or [])
+                and isinstance(dev_list, list)
+                and (sn := dev_list[0].get("device_sn"))
+            ):
                 query_types.discard(SolixDeviceType.INVERTER.value)
                 if not (
                     {
