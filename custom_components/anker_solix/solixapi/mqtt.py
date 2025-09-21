@@ -59,7 +59,7 @@ class AnkerSolixMqttSession:
         reason_code: mqtt.ReasonCode,
         properties: mqtt.Properties | None,
     ):
-        """Callback for when the client receives a CONNACK response from the server."""
+        """Define callback when the client receives a CONNACK response from the server."""
         if reason_code.is_failure:
             self._logger.error(
                 "MQTT client failed to connect to Anker Solix MQTT server: %s(%s)",
@@ -89,7 +89,7 @@ class AnkerSolixMqttSession:
     def on_message(
         self, client: mqtt.Client, userdata: mqtt.Any, msg: mqtt.MQTTMessage
     ):
-        """Callback for when a PUBLISH message is received from the server."""
+        """Define callback when a PUBLISH message is received from the server."""
         # update mqtt stats
         self.mqtt_stats.add_bytes(count=len(msg.payload))
         # default MQTT payload decode is UTF-8
@@ -131,7 +131,7 @@ class AnkerSolixMqttSession:
         reason_code: mqtt.ReasonCode,
         properties: mqtt.Properties | None,
     ):
-        """Callback for when the client disconnects from the server."""
+        """Define callback when the client disconnects from the server."""
         self._logger.debug(
             "MQTT client disconnected from Anker Solix MQTT server: %s(%s)",
             reason_code,
@@ -146,7 +146,7 @@ class AnkerSolixMqttSession:
         reason_code_list: list[mqtt.ReasonCode],
         properties: mqtt.Properties | None,
     ):
-        """Callback for when the client subscribes to a topic."""
+        """Define callback when the client subscribes to a topic."""
         # Since we subscribe only for a single channel, reason_code_list contains a single entry
         if reason_code_list[0].is_failure:
             # save the message ID as reference for subscription failures
@@ -170,7 +170,7 @@ class AnkerSolixMqttSession:
         reason_code_list: list[mqtt.ReasonCode],
         properties: mqtt.Properties | None,
     ):
-        """Callback for when the client unsubscribes from a topic."""
+        """Define callback when the client unsubscribes from a topic."""
         # The reason_code_list is only present in MQTTv5,in MQTTv3 it will always be empty
         if not reason_code_list or not reason_code_list[0].is_failure:
             self._logger.debug("MQTT client unsubscribed from topic")
@@ -191,7 +191,7 @@ class AnkerSolixMqttSession:
         reason_code: mqtt.ReasonCode,
         properties: mqtt.Properties,
     ):
-        """Callback for when the client subscribes to a topic."""
+        """Define callback when the client subscribes to a topic."""
         if reason_code.is_failure:
             # save the message ID as reference for publish failures
             self.mids[str(mid)] = reason_code
