@@ -559,7 +559,7 @@ class AnkerSolixClientSession:
                 # TODO(COMPRESSION): only response encoding seems to be accepted by servers
                 # json=None if self.compress_data else json,
                 # data=compress(str(json).encode()) if self.compress_data else None,
-                timeout=ClientTimeout(total=self._request_delay),
+                timeout=ClientTimeout(total=self._request_timeout),
             ) as resp:
                 self._last_request_time = datetime.now()
                 self.request_count.add(
@@ -1001,7 +1001,7 @@ class AnkerEncryptionHandler:
             url,
             headers=headers,
             json=data,
-            timeout=ClientTimeout(total=self._request_delay),
+            timeout=ClientTimeout(total=self._request_timeout),
         ) as resp:
             try:
                 self._logger.debug("AnkerEncryptionHandler request response received")
