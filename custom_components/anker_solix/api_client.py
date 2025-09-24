@@ -17,6 +17,7 @@ from homeassistant.const import (
     CONF_DELAY_TIME,
     CONF_EXCLUDE,
     CONF_PASSWORD,
+    CONF_TIMEOUT,
     CONF_USERNAME,
 )
 
@@ -43,6 +44,8 @@ DEFAULT_DEVICE_MULTIPLIER: int = 10
 DEFAULT_ENDPOINT_LIMIT: int = SolixDefaults.ENDPOINT_LIMIT_DEF
 # default delay for subsequent api requests
 DEFAULT_DELAY_TIME: float = SolixDefaults.REQUEST_DELAY_DEF
+# default timeout for api requests
+DEFAULT_TIMEOUT: int = SolixDefaults.REQUEST_TIMEOUT_DEF
 # Api categories and device types supported for exclusion from integration
 API_CATEGORIES: list = [
     SolixDeviceType.PPS.value,
@@ -58,6 +61,7 @@ API_CATEGORIES: list = [
     # SolixDeviceType.CHARGER.value,
     # SolixDeviceType.EV_CHARGER.value,
     # SolixDeviceType.POWERCOOLER.value,
+    ApiCategories.account_info,
     ApiCategories.solarbank_energy,
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
@@ -155,6 +159,7 @@ class AnkerSolixApiClient:
         self.api.apisession.requestDelay(
             float(data.get(CONF_DELAY_TIME, DEFAULT_DELAY_TIME))
         )
+        self.api.apisession.requestTimeout(int(data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
         self.api.apisession.endpointLimit(
             int(data.get(CONF_ENDPOINT_LIMIT, DEFAULT_ENDPOINT_LIMIT))
         )
@@ -529,13 +534,29 @@ class AnkerSolixApiClient:
             and float(seconds) != float(self.api.apisession.requestDelay())
         ):
             _LOGGER.info(
-                "Api Coordinator %s request delay time was changed from %.3f to %.3f seconds",
+                "Api Coordinator %s request delay time will be changed from %.3f to %.3f seconds",
                 self.api.apisession.nickname,
                 self.api.apisession.requestDelay(),
                 float(seconds),
             )
             self.api.apisession.requestDelay(float(seconds))
         return self.api.apisession.requestDelay()
+
+    def timeout(self, seconds: int | None = None) -> int:
+        """Query or set Api request timeout for client."""
+        if (
+            seconds is not None
+            and isinstance(seconds, float | int)
+            and round(seconds) != self.api.apisession.requestTimeout()
+        ):
+            _LOGGER.info(
+                "Api Coordinator %s request timeout will be changed from %s to %s seconds",
+                self.api.apisession.nickname,
+                str(self.api.apisession.requestTimeout()),
+                str(round(seconds)),
+            )
+            self.api.apisession.requestTimeout(round(seconds))
+        return self.api.apisession.requestTimeout()
 
     def endpoint_limit(self, limit: int | None = None) -> int:
         """Query or set Api endpoint request limit for client."""
@@ -545,7 +566,7 @@ class AnkerSolixApiClient:
             and int(limit) != int(self.api.apisession.endpointLimit())
         ):
             _LOGGER.info(
-                "Api Coordinator %s endpoint request limit was changed from %s to %s",
+                "Api Coordinator %s endpoint request limit will be changed from %s to %s",
                 self.api.apisession.nickname,
                 self.api.apisession.endpointLimit(),
                 str(int(limit)) + " requests" if limit else "disabled",

@@ -2,6 +2,7 @@
     "selector": {
         "exclude": {
             "options": {
+                "account_info": "Kontoinformationen",
                 "site_price": "System Preiswerte",
                 "device_auto_upgrade": "Auto-Updates",
                 "device_tag": "Geräte Etiketten",
@@ -130,6 +131,7 @@
                     "scan_interval": "Update Intervall",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "timeout": "Zeitüberschreitung für Api Anfragen",
                     "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
                     "skip_invalid": "Ignoriere ungültige Antwortdaten",
                     "exclude": "Ausgeschlossene Entitäts-Kategorien",
@@ -168,6 +170,7 @@
                     "scan_interval": "Update Intervall",
                     "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
                     "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                    "timeout": "Zeitüberschreitung für Api Anfragen",
                     "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
                     "skip_invalid": "Ignoriere ungültige Antwortdaten",
                     "exclude": "Ausgeschlossene Entitäts-Kategorien",

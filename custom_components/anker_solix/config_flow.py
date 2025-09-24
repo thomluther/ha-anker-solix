@@ -15,11 +15,17 @@ from homeassistant.const import (
     CONF_EXCLUDE,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
+    CONF_TIMEOUT,
     CONF_USERNAME,
     __version__ as HAVERSION,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, restore_state, selector
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    restore_state,
+    selector,
+)
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from . import api_client
@@ -45,6 +51,7 @@ from .solixapi.apitypes import ApiCategories, SolixDeviceType
 SCAN_INTERVAL_DEF: int = api_client.DEFAULT_UPDATE_INTERVAL
 INTERVALMULT_DEF: int = api_client.DEFAULT_DEVICE_MULTIPLIER
 DELAY_TIME_DEF: float = api_client.DEFAULT_DELAY_TIME
+TIMEOUT_DEF: int = api_client.DEFAULT_TIMEOUT
 ENDPOINT_LIMIT_DEF: int = api_client.DEFAULT_ENDPOINT_LIMIT
 
 _SCAN_INTERVAL_MIN: int = 10 if ALLOW_TESTMODE else 30
@@ -53,9 +60,12 @@ _SCAN_INTERVAL_STEP: int = 10
 _INTERVALMULT_MIN: int = 2
 _INTERVALMULT_MAX: int = 60
 _INTERVALMULT_STEP: int = 2
-_DELAY_TIME_MIN: float = 0.0
+_DELAY_TIME_MIN: float = api_client.SolixDefaults.REQUEST_DELAY_MIN
 _DELAY_TIME_MAX: float = 2.0
 _DELAY_TIME_STEP: float = 0.1
+_TIMEOUT_MIN: int = api_client.SolixDefaults.REQUEST_TIMEOUT_MIN
+_TIMEOUT_MAX: int = api_client.SolixDefaults.REQUEST_TIMEOUT_MAX
+_TIMEOUT_STEP: int = 1
 _ENDPOINT_LIMIT_MIN: int = 0
 _ENDPOINT_LIMIT_MAX: int = 30
 _ENDPOINT_LIMIT_STEP: int = 1
@@ -142,7 +152,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     LOGGER.error(exception)
                     errors["base"] = "exceeded"
                     placeholders[ERROR_DETAIL] = str(exception)
-                except (api_client.AnkerSolixApiClientError, Exception) as exception:  # pylint: disable=broad-except
+                except (api_client.AnkerSolixApiClientError, Exception) as exception:  # pylint: disable=broad-except  # noqa: BLE001
                     LOGGER.error(exception)
                     errors["base"] = "unknown"
                     placeholders[ERROR_DETAIL] = (
@@ -247,7 +257,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     LOGGER.error(exception)
                     errors["base"] = "exceeded"
                     placeholders[ERROR_DETAIL] = str(exception)
-                except (api_client.AnkerSolixApiClientError, Exception) as exception:  # pylint: disable=broad-except
+                except (api_client.AnkerSolixApiClientError, Exception) as exception:  # pylint: disable=broad-except  # noqa: BLE001
                     LOGGER.error(exception)
                     errors["base"] = "unknown"
                     placeholders[ERROR_DETAIL] = (
@@ -389,25 +399,31 @@ async def get_options_schema(entry: dict | None = None) -> dict:
                 CONF_SCAN_INTERVAL,
                 SCAN_INTERVAL_DEF,
             ),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=_SCAN_INTERVAL_MIN,
-                max=_SCAN_INTERVAL_MAX,
-                step=_SCAN_INTERVAL_STEP,
-                unit_of_measurement="sec",
-                mode=selector.NumberSelectorMode.BOX,
+        ): vol.All(
+            cv.positive_int,
+            selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_SCAN_INTERVAL_MIN,
+                    max=_SCAN_INTERVAL_MAX,
+                    step=_SCAN_INTERVAL_STEP,
+                    unit_of_measurement="sec",
+                    mode=selector.NumberSelectorMode.BOX,
+                ),
             ),
         ),
         vol.Optional(
             INTERVALMULT,
             default=entry.get(INTERVALMULT, INTERVALMULT_DEF),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=_INTERVALMULT_MIN,
-                max=_INTERVALMULT_MAX,
-                step=_INTERVALMULT_STEP,
-                unit_of_measurement="updates",
-                mode=selector.NumberSelectorMode.SLIDER,
+        ): vol.All(
+            cv.positive_int,
+            selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_INTERVALMULT_MIN,
+                    max=_INTERVALMULT_MAX,
+                    step=_INTERVALMULT_STEP,
+                    unit_of_measurement="updates",
+                    mode=selector.NumberSelectorMode.SLIDER,
+                ),
             ),
         ),
         vol.Optional(
@@ -423,15 +439,33 @@ async def get_options_schema(entry: dict | None = None) -> dict:
             ),
         ),
         vol.Optional(
+            CONF_TIMEOUT,
+            default=entry.get(CONF_TIMEOUT, TIMEOUT_DEF),
+        ): vol.All(
+            cv.positive_int,
+            selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_TIMEOUT_MIN,
+                    max=_TIMEOUT_MAX,
+                    step=_TIMEOUT_STEP,
+                    unit_of_measurement="sec",
+                    mode=selector.NumberSelectorMode.SLIDER,
+                ),
+            ),
+        ),
+        vol.Optional(
             CONF_ENDPOINT_LIMIT,
             default=entry.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=_ENDPOINT_LIMIT_MIN,
-                max=_ENDPOINT_LIMIT_MAX,
-                step=_ENDPOINT_LIMIT_STEP,
-                unit_of_measurement="requests",
-                mode=selector.NumberSelectorMode.SLIDER,
+        ): vol.All(
+            cv.positive_int,
+            selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_ENDPOINT_LIMIT_MIN,
+                    max=_ENDPOINT_LIMIT_MAX,
+                    step=_ENDPOINT_LIMIT_STEP,
+                    unit_of_measurement="requests",
+                    mode=selector.NumberSelectorMode.SLIDER,
+                ),
             ),
         ),
         vol.Optional(
@@ -499,6 +533,7 @@ async def async_check_and_remove_devices(
         # Subcategories for Account devices
         if {
             SolixDeviceType.VEHICLE.value,
+            ApiCategories.account_info,
         } & excluded:
             excluded = excluded | {SolixDeviceType.ACCOUNT.value}
         # Subcategories for System devices

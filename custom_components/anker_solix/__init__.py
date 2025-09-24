@@ -16,6 +16,7 @@ from homeassistant.const import (
     CONF_DELAY_TIME,
     CONF_EXCLUDE,
     CONF_SCAN_INTERVAL,
+    CONF_TIMEOUT,
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
@@ -30,6 +31,7 @@ from .config_flow import (
     ENDPOINT_LIMIT_DEF,
     INTERVALMULT_DEF,
     SCAN_INTERVAL_DEF,
+    TIMEOUT_DEF,
     async_check_and_remove_devices,
 )
 from .const import (
@@ -93,6 +95,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             coordinator.client.delay_time(
                 entry.options.get(CONF_DELAY_TIME, DELAY_TIME_DEF)
             )
+            # set Api request timeout
+            coordinator.client.timeout(entry.options.get(CONF_TIMEOUT, TIMEOUT_DEF))
             # set Api request endpoint limit
             coordinator.client.endpoint_limit(
                 entry.options.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF)
@@ -180,6 +184,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             coordinator.client.deviceintervals(entry.options.get(INTERVALMULT))
             # update Api request delay time
             coordinator.client.delay_time(entry.options.get(CONF_DELAY_TIME))
+            # update Api request timeout
+            coordinator.client.timeout(entry.options.get(CONF_TIMEOUT))
             # update Api request delay time
             coordinator.client.endpoint_limit(entry.options.get(CONF_ENDPOINT_LIMIT))
             # add modified coordinator back to hass

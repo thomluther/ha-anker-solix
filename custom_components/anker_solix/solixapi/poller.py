@@ -115,7 +115,9 @@ async def poll_sites(  # noqa: C901
             )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
             mysite["site_admin"] = admin
             # get currency list once if valid site found for account
-            if "currency_list" not in api.account:
+            if "currency_list" not in api.account and (
+                {ApiCategories.site_price} - exclude
+            ):
                 data = await api.get_currency_list(fromFile=fromFile)
                 api._update_account(
                     {
@@ -124,7 +126,11 @@ async def poll_sites(  # noqa: C901
                     }
                 )
             # Get product list once for device names if no admin and save it in account cache
-            if not admin and "products" not in api.account:
+            if (
+                not admin
+                and "products" not in api.account
+                and ({ApiCategories.account_info} - exclude)
+            ):
                 api._update_account(
                     {"products": await api.get_products(fromFile=fromFile)}
                 )
@@ -695,12 +701,13 @@ async def poll_site_details(
         "Updating api %s sites details",
         api.apisession.nickname,
     )
-    # Fetch unread account messages once and put in site details for all sites as well as into account dictionary
-    api._logger.debug(
-        "Getting api %s unread messages indicator",
-        api.apisession.nickname,
-    )
-    await api.get_message_unread(fromFile=fromFile)
+    # Fetch unread account messages and put into account dictionary
+    if {ApiCategories.account_info} - exclude:
+        api._logger.debug(
+            "Getting api %s unread messages indicator",
+            api.apisession.nickname,
+        )
+        await api.get_message_unread(fromFile=fromFile)
     # refresh other api class site details if used
     if api.powerpanelApi:
         await api.powerpanelApi.update_site_details(fromFile=fromFile, exclude=exclude)
@@ -1057,7 +1064,9 @@ async def poll_device_details(  # noqa: C901
                         api.apisession.nickname,
                     )
                     await api.get_device_attributes(
-                        deviceSn=sn, attributes=["pv_power_limit", "switch_0w"], fromFile=fromFile
+                        deviceSn=sn,
+                        attributes=["pv_power_limit", "switch_0w"],
+                        fromFile=fromFile,
                     )
             # add queried site ID to skip same queries for other parallel devices in site
             queried_sites.add(site_id)

@@ -2,6 +2,7 @@
     "selector": {
         "exclude": {
             "options": {
+                "account_info": "Account info",
                 "site_price": "System price values",
                 "device_auto_upgrade": "Auto-Updates",
                 "device_tag": "Device Labels",
@@ -130,6 +131,7 @@
                     "scan_interval": "Update interval",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "delay_time": "Delay for subsequent Api requests",
+                    "timeout": "Timeout for Api requests",
                     "endpoint_limit": "Endpoint request limit per minute",
                     "skip_invalid": "Skip invalid data responses",
                     "exclude": "Excluded entity categories",
@@ -168,6 +170,7 @@
                     "scan_interval": "Update interval",
                     "dev_interval_mult": "Interval multiplier for device details",
                     "delay_time": "Delay for subsequent Api requests",
+                    "timeout": "Timeout for Api requests",
                     "endpoint_limit": "Endpoint request limit per minute",
                     "skip_invalid": "Skip invalid data responses",
                     "exclude": "Excluded entity categories",

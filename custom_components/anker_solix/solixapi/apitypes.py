@@ -745,6 +745,7 @@ class ApiEndpointServices:
 class ApiCategories:
     """Dataclass to specify supported Api categories for regular Api cache refresh cycles."""
 
+    account_info: str = "account_info"
     site_price: str = "site_price"
     device_auto_upgrade: str = "device_auto_upgrade"
     device_tag: str = "device_tag"
@@ -1039,6 +1040,10 @@ class SolixDefaults:
     REQUEST_DELAY_MIN: float = 0.0
     REQUEST_DELAY_MAX: float = 10.0
     REQUEST_DELAY_DEF: float = 0.3
+    # Seconds timeout for all Api requests
+    REQUEST_TIMEOUT_MIN: int = 5
+    REQUEST_TIMEOUT_MAX: int = 60
+    REQUEST_TIMEOUT_DEF: int = 10
     # Request limit per endpoint per minute
     ENDPOINT_LIMIT_DEF: int = 10
     # Inverter limit

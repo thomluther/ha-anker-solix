@@ -322,7 +322,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     admin = site_info.get("ms_type", 0) in [0, 1]
                     mysite["site_admin"] = admin
                     # get currency list once if valid site found for account
-                    if "currency_list" not in self.account:
+                    if "currency_list" not in self.account and (
+                        {ApiCategories.site_price} - exclude
+                    ):
                         data = await self.get_currency_list(fromFile=fromFile)
                         self._update_account(
                             {
@@ -331,7 +333,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             }
                         )
                     # Get product list once for device names and save it in account cache
-                    if "products" not in self.account:
+                    if "products" not in self.account and (
+                        {ApiCategories.account_info} - exclude
+                    ):
                         self._update_account(
                             {"products": await self.get_products(fromFile=fromFile)}
                         )

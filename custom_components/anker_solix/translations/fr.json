@@ -2,6 +2,7 @@
     "selector": {
         "exclude": {
             "options": {
+                "account_info": "Informations de compte",
                 "site_price": "Valeurs de prix du système",
                 "device_auto_upgrade": "Mises à jour automatiques",
                 "device_tag": "Étiquettes des appareils",
@@ -130,6 +131,7 @@
                     "scan_interval": "Intervalle de mise à jour",
                     "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
                     "delay_time": "Délai pour les requêtes Api suivantes",
+                    "timeout": "Délai d'attente pour les requêtes Api",
                     "endpoint_limit": "Limite des demandes de points d'extrémité par minute (0 = désactivé)",
                     "skip_invalid": "Ignorer les réponses de données non valides",
                     "exclude": "Catégories d'entités exclues",
@@ -168,6 +170,7 @@
                     "scan_interval": "Intervalle de mise à jour",
                     "dev_interval_mult": "Multiplicateur d'intervalle pour les détails de l'appareil",
                     "delay_time": "Délai pour les requêtes Api suivantes",
+                    "timeout": "Délai d'attente pour les requêtes Api",
                     "endpoint_limit": "Limite des demandes de points d'extrémité par minute (0 = désactivé)",
                     "skip_invalid": "Ignorer les réponses de données non valides",
                     "exclude": "Catégories d'entités exclues",

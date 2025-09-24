@@ -91,6 +91,7 @@ class AnkerSolixClientSession:
         self._token_expiration: datetime | None = None
         self._login_response: dict = {}
         self._request_delay: float = SolixDefaults.REQUEST_DELAY_DEF
+        self._request_timeout: int = SolixDefaults.REQUEST_TIMEOUT_DEF
         self._last_request_time: datetime | None = None
         # define limit of same endpoint requests per minute
         self._endpoint_limit: int = SolixDefaults.ENDPOINT_LIMIT_DEF
@@ -194,6 +195,26 @@ class AnkerSolixClientSession:
                 self._request_delay,
             )
         return self._request_delay
+
+    def requestTimeout(self, seconds: int | None = None) -> int:
+        """Get or set the api request timeout in seconds."""
+        if (
+            seconds is not None
+            and isinstance(seconds, float | int)
+            and round(seconds) != self._request_timeout
+        ):
+            self._request_timeout = round(
+                min(
+                    SolixDefaults.REQUEST_TIMEOUT_MAX,
+                    max(SolixDefaults.REQUEST_TIMEOUT_MIN, seconds),
+                )
+            )
+            self._logger.info(
+                "Set api %s request timeout to %s seconds",
+                self.nickname,
+                str(self._request_timeout),
+            )
+        return self._request_timeout
 
     def endpointLimit(self, limit: int | None = None) -> int:
         """Get or set the api request limit per endpoint per minute."""
@@ -538,7 +559,7 @@ class AnkerSolixClientSession:
                 # TODO(COMPRESSION): only response encoding seems to be accepted by servers
                 # json=None if self.compress_data else json,
                 # data=compress(str(json).encode()) if self.compress_data else None,
-                timeout=ClientTimeout(total=10),
+                timeout=ClientTimeout(total=self._request_delay),
             ) as resp:
                 self._last_request_time = datetime.now()
                 self.request_count.add(
@@ -547,7 +568,7 @@ class AnkerSolixClientSession:
                 )
                 # request handler has auto-decompression enabled
                 self._logger.debug(
-                    "Api %s request %s %s response received", self.nickname, method, url
+                    "Api %s response received for request: %s %s", self.nickname, method, url
                 )
                 # print response headers
                 self._logger.debug("Response Headers: %s", resp.headers)
@@ -558,8 +579,14 @@ class AnkerSolixClientSession:
                 # get json data without strict checking for json content
                 data = await resp.json(content_type=None)
                 if not data:
-                    self._logger.error("Response Text: %s", body_text)
-                    raise ClientError(f"No data response while requesting {endpoint}")  # noqa: TRY301
+                    self._logger.error(
+                        "Api %s no data response for request: %s %s\nResponse Text: %s",
+                        self.nickname,
+                        method.upper(),
+                        url,
+                        body_text,
+                    )
+                    raise ClientError(f"Api {self.nickname} no data response for request: {method.upper()} {url}")  # noqa: TRY301
                 if endpoint == API_LOGIN:
                     self._logger.debug(
                         "Response Data: %s",
@@ -602,20 +629,26 @@ class AnkerSolixClientSession:
                 data["msg"] = body_text
             if resp.status in [401, 403]:
                 # Unauthorized or forbidden request
-                self._logger.error("Api %s Request Error: %s", self.nickname, err)
-                self._logger.error("Response Text: %s", body_text)
+                self._logger.error(
+                    "Api %s Error %s for request: %s %s\nResponse Text: %s",
+                    self.nickname,
+                    err,
+                    method.upper(),
+                    url,
+                    body_text,
+                )
                 # reattempt authentication with same credentials if cached token was kicked out
                 # retry attempt is set if login response data were not cached to fail immediately
                 if not self._retry_attempt:
                     self._logger.warning(
-                        "Login failed, retrying authentication%s",
+                        "Invalid Login, retrying authentication%s",
                         (" for " + str(self.nickname)) if self.nickname else "",
                     )
                     if await self.async_authenticate(restart=True):
                         return await self.request(
                             method, endpoint, headers=headers, json=json
                         )
-                    self._logger.error("Re-Login failed for user %s", self._email)
+                    self._logger.error("Login failed for user %s", self._email)
                 errors.raise_error(data, prefix=f"Login failed for user {self._email}")
                 # catch error if Api code not defined
                 raise errors.AuthorizationError(
@@ -643,14 +676,15 @@ class AnkerSolixClientSession:
                     )
                 # Raise error if retry failed too, add stats to message
                 self._logger.error(
-                    "Api %s Request Error %s for endpoint: %s",
+                    "Api %s Error %s for request: %s %s\nResponse Text: %s",
                     self.nickname,
                     err,
-                    endpoint,
+                    method.upper(),
+                    url,
+                    body_text,
                 )
-                self._logger.error("Response Text: %s", body_text)
                 errors.raise_error(
-                    data, prefix=f"Too Many Requests: {self.request_count}"
+                    data, prefix=f"Api {self.nickname} Too Many Requests: {self.request_count}"
                 )
             elif resp.status in [502, 504, 522]:
                 # Server may be temporarily overloaded and does not respond
@@ -660,7 +694,7 @@ class AnkerSolixClientSession:
                 if self._retry_attempt not in [True, 502, 504, 522]:
                     self._retry_attempt = resp.status
                     delay = randrange(2, 6)  # random wait time 2-5 seconds
-                    self._logger.warning(
+                    self._logger.info(
                         "Http error '%s', retrying request of api %s after delay of %s seconds for endpoint: %s",
                         "Timeout Error"
                         if isinstance(err, TimeoutError)
@@ -673,39 +707,31 @@ class AnkerSolixClientSession:
                     return await self.request(
                         method, endpoint, headers=headers, json=json
                     )
-                # Raise error if retry failed too
-                self._logger.error(
-                    "Api %s Request Error %s for endpoint: %s",
-                    self.nickname,
-                    err,
-                    endpoint,
-                )
-                self._logger.error("Response Text: %s", body_text)
-                errors.raise_error(data)
-            else:
-                # raise Anker Solix error if code is known
-                self._logger.error(
-                    "Api %s Request Error %s for endpoint: %s",
-                    self.nickname,
-                    err,
-                    endpoint,
-                )
-                self._logger.error("Response Text: %s", body_text)
-                errors.raise_error(data)
+            self._logger.error(
+                "Api %s Error %s for request: %s %s\nResponse Text: %s",
+                self.nickname,
+                err,
+                method.upper(),
+                url,
+                body_text,
+            )
+            # raise Anker Solix error if code is known
+            errors.raise_error(data)
             # raise Client error otherwise
             raise ClientError(
-                f"Api Request Error: {err}, response={body_text}"
+                f"Api {self.nickname} Request Error: {str(err) or 'Timeout'}, response={body_text}"
             ) from err
         except errors.AnkerSolixError as err:  # Other Exception from API
             if isinstance(err, errors.BusyError):
                 # Api fails to respond to standard query, repeat once after delay
                 self._logger.error(
-                    "Api %s Busy Error '%s' for endpoint: %s",
+                    "Api %s Busy Error %s for request: %s %s\nResponse Text: %s",
                     self.nickname,
                     err,
-                    endpoint,
+                    method.upper(),
+                    url,
+                    body_text,
                 )
-                self._logger.error("Response Text: %s", body_text)
                 if self._retry_attempt not in [True, 21105]:
                     self._retry_attempt = 21105
                     delay = randrange(2, 6)  # random wait time 2-5 seconds
@@ -720,9 +746,13 @@ class AnkerSolixClientSession:
                         method, endpoint, headers=headers, json=json
                     )
             self._logger.error(
-                "Api %s Error '%s' for endpoint: %s", self.nickname, err, endpoint
+                "Api %s Error %s for request: %s %s\nResponse Text: %s",
+                self.nickname,
+                err,
+                method.upper(),
+                url,
+                body_text,
             )
-            self._logger.error("Response Text: %s", body_text)
             raise
 
     def _rawPublicKey(self) -> bytes:
@@ -971,6 +1001,7 @@ class AnkerEncryptionHandler:
             url,
             headers=headers,
             json=data,
+            timeout=ClientTimeout(total=self._request_delay),
         ) as resp:
             try:
                 self._logger.debug("AnkerEncryptionHandler request response received")
