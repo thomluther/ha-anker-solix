@@ -38,7 +38,7 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Previous work around to overcome parallel usage restriction](#previous-work-around-to-overcome-parallel-usage-restriction-of-owner-account-no-longer-required-since-august-2025)
 1. **[Data refresh configuration options](#data-refresh-configuration-options)**
     * [Option considerations for Solarbank 2 systems](#option-considerations-for-solarbank-2-systems)
-    * [Default options as of version 2.5.5](#default-options-as-of-version-255)
+    * [Default options as of version 3.3.1](#default-options-as-of-version-331)
 1. **[Switching between different Anker Power accounts](#switching-between-different-anker-power-accounts)**
 1. **[How to create a second Anker Power account](#how-to-create-a-second-anker-power-account)**
 1. **[Automation to send and clear sticky, actionable notifications to your smart phone based on Api switch setting](#automation-to-send-and-clear-sticky-actionable-notifications-to-your-smart-phone-based-on-api-switch-setting)**
@@ -241,7 +241,7 @@ In consequence, before the cloud change in July 2024, the HA integration typical
 > [!NOTE]
 > The cloud change in July 2024 did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
 
-### Default options as of version 2.5.5
+### Default options as of version 3.3.1
 
 ![Options][options-img]
 
