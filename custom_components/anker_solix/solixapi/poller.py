@@ -918,7 +918,7 @@ async def poll_device_details(  # noqa: C901
             api.hesApi.devices[sn] = merged_dev
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
-    queried_sites: set[str] = set()
+    queried_sites_parm: set[str] = set()
     for sn, device in api.devices.items():
         site_id: str = device.get("site_id") or ""
         dev_Type: str = device.get("type") or ""
@@ -1015,7 +1015,9 @@ async def poll_device_details(  # noqa: C901
                     # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
                     # SB2 is using Manual mode and sync its settings to SB1
                     # get_device_parm with param for SB1 schedule seems to return always the full SB1 schedule, even if not active
-                    if site_id not in queried_sites:
+                    if f"{site_id}_{SolixParmType.SOLARBANK_SCHEDULE.value}" not in queried_sites_parm:
+                        # add queried site ID and parm to skip same queries for other parallel devices in site
+                        queried_sites_parm.add(f"{site_id}_{SolixParmType.SOLARBANK_SCHEDULE.value}")
                         api._logger.debug(
                             "Getting api %s schedule details for device",
                             api.apisession.nickname,
@@ -1035,7 +1037,9 @@ async def poll_device_details(  # noqa: C901
                 else:
                     # Note: get_device_load always seems to return SB1 schedule format, which does not contain useful values for the SB2+
                     # Fetch Solarbank 2+ device parameters once per site
-                    if site_id not in queried_sites:
+                    if f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}" not in queried_sites_parm:
+                        # add queried site ID and parm to skip same queries for other parallel devices in site
+                        queried_sites_parm.add(f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}")
                         # Fetch SB2+ schedule once and add to each SB2+ device in site
                         api._logger.debug(
                             "Getting api %s schedule details for device",
@@ -1068,8 +1072,6 @@ async def poll_device_details(  # noqa: C901
                         attributes=["pv_power_limit", "switch_0w"],
                         fromFile=fromFile,
                     )
-            # add queried site ID to skip same queries for other parallel devices in site
-            queried_sites.add(site_id)
 
         # Merge additional powerpanel data
         if api.powerpanelApi:

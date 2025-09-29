@@ -82,7 +82,7 @@ DEVICE_NUMBERS = [
         key="preset_device_output_power",
         translation_key="preset_device_output_power",
         json_key="preset_device_output_power",
-        mode=NumberMode.SLIDER,
+        mode=NumberMode.BOX,
         native_min_value=SolixDefaults.PRESET_MIN,
         native_max_value=SolixDefaults.PRESET_MAX,
         native_step=5,
@@ -425,13 +425,19 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         self.native_min_value = (data.get("schedule") or {}).get(
                             "min_load"
                         ) or self.native_min_value
-                        # SB1 max must consider multiple devices with MI80 inverter
-                        self.native_max_value = int(
-                            (
-                                (data.get("schedule") or {}).get("max_load")
-                                or self.native_max_value
+                        # SB1 max must consider multiple SB1 devices with MI80 inverter
+                        # newer schedule limits could already contain adopted appliance limit instead of device limit
+                        max_load = int(
+                            (data.get("schedule") or {}).get("max_load")
+                            or self.native_max_value
+                        )
+                        self.native_max_value = (
+                            max_load
+                            if max_load > SolixDefaults.PRESET_MAX
+                            else int(
+                                SolixDefaults.PRESET_MAX
+                                * (data.get("solarbank_count") or 1),
                             )
-                            * (data.get("solarbank_count") or 1)
                         )
                 elif self._attribute_name == "preset_device_output_power":
                     # Multiple SB1 with device setting only supported for MI80 whose limits apply
@@ -442,9 +448,16 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                         / (data.get("solarbank_count") or 1)
                     )
-                    self.native_max_value = (data.get("schedule") or {}).get(
-                        "max_load"
-                    ) or self.native_max_value
+                    self.native_max_value = max(
+                        SolixDefaults.PRESET_MAX,
+                        int(
+                            (
+                                (data.get("schedule") or {}).get("max_load")
+                                or self.native_max_value
+                            )
+                            / (data.get("solarbank_count") or 1)
+                        ),
+                    )
         else:
             self._native_value = None
         self._assumed_state = False
