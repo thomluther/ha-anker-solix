@@ -1,6 +1,6 @@
 colorlog==6.10.1
 homeassistant>=2025.3.0
 pip>=21.0,<25.4
-ruff==0.14.5
+ruff==0.14.6
 aiofiles>=23.2.0
 paho-mqtt>=2.1.0
