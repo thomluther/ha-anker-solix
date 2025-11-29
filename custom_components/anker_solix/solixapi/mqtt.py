@@ -9,6 +9,7 @@ from functools import partial
 import json
 import os
 from pathlib import Path
+from random import randint
 import ssl
 import tempfile
 from typing import Any
@@ -458,7 +459,7 @@ class AnkerSolixMqttSession:
             # Create client instance
             self.client = mqtt.Client(
                 callback_api_version=CallbackAPIVersion.VERSION2,
-                client_id=self.mqtt_info.get("thing_name"),
+                client_id=f"{self.mqtt_info.get('thing_name')}_{randint(1, 10000):05}",
                 clean_session=True,
             )
             # Set userdata for client
