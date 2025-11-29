@@ -19,7 +19,14 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 # from homeassistant.util.dt import UTC
-from .const import ALLOW_TESTMODE, ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
+from .const import (
+    ALLOW_TESTMODE,
+    ATTRIBUTION,
+    CREATE_ALL_ENTITIES,
+    DOMAIN,
+    LOGGER,
+    MQTT_OVERLAY,
+)
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -40,6 +47,7 @@ class AnkerSolixDateTimeDescription(
     """DateTime entity description with optional keys."""
 
     force_creation: bool = False
+    mqtt: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
@@ -89,6 +97,8 @@ async def async_setup_entry(
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
+            mdev = None
+            mdata = {}
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
@@ -105,6 +115,11 @@ async def async_setup_entry(
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_DATETIMES
+                # get MQTT device combined values for creation of entities
+                if mdev := coordinator.client.get_mqtt_device(sn=context):
+                    mdata = mdev.get_combined_cache(
+                        fromFile=coordinator.client.testmode()
+                    )
 
             for description in (
                 desc
@@ -114,7 +129,17 @@ async def async_setup_entry(
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
                         desc.force_creation
-                        or desc.value_fn(data, desc.json_key) is not None
+                        # filter MQTT entities and provide combined or only api cache
+                        # Entities that should not be created without MQTT data need to use exclude option
+                        or (
+                            desc.mqtt
+                            and desc.value_fn(mdata or data, desc.json_key) is not None
+                        )
+                        # filter API only entities
+                        or (
+                            not desc.mqtt
+                            and desc.value_fn(data, desc.json_key) is not None
+                        )
                     )
                 )
             ):
@@ -133,7 +158,6 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixDateTimeDescription
     _attr_has_entity_name = True
-    _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset()
 
     def __init__(
@@ -147,6 +171,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
         super().__init__(coordinator, context)
 
         self._attribute_name = description.key
+        self._attr_attribution = f"{ATTRIBUTION}{' + MQTT' if description.mqtt else ''}"
         self._attr_unique_id = (f"{context}_{description.key}").lower()
         self.entity_description = description
         self.entity_type = entity_type
@@ -208,7 +233,18 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             and (hasattr(self.coordinator, "data"))
             and self.coordinator_context in self.coordinator.data
         ):
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             with suppress(ValueError, TypeError):
                 self._attr_extra_state_attributes = self.entity_description.attrib_fn(
                     data, self.coordinator_context
@@ -218,7 +254,18 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
     def update_state_value(self):
         """Update the state value of the entity based on the coordinator data."""
         if self.coordinator and self.coordinator_context in self.coordinator.data:
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
                 self._native_value = self.entity_description.value_fn(data, key)

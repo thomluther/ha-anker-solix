@@ -14,6 +14,7 @@ from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
+    PowerdockStatus,
     SmartmeterStatus,
     SolarbankAiemsRuntimeStatus,
     SolarbankDeviceMetrics,
@@ -33,6 +34,7 @@ from .apitypes import (
     SolixRoleStatus,
     SolixTariffTypes,
 )
+from .helpers import get_enum_name
 from .hesapi import AnkerSolixHesApi
 from .poller import (
     poll_device_details,
@@ -125,23 +127,31 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 device["type"] = devType.lower()
             if siteId:
                 device["site_id"] = str(siteId)
-            if isAdmin:
-                device["is_admin"] = True
-            elif isAdmin is False and device.get("is_admin") is None:
-                device["is_admin"] = False
+            if isAdmin is not None:
+                device["is_admin"] = isAdmin
+            elif (
+                device.get("is_admin") is None
+                and (value := devData.get("ms_device_type")) is not None
+            ):
+                # Update admin based on ms device type for standalone devices
+                device["is_admin"] = value in [0, 1]
             calc_capacity = False  # Flag whether capacity may need recalculation
             for key, value in devData.items():
                 try:
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
-                        # try to get capacity from category definitions
-                        if hasattr(SolixDeviceCapacity, str(value)):
-                            # get battery capacity from known PNs
-                            if not device.get("battery_capacity"):
-                                device["battery_capacity"] = str(
-                                    getattr(SolixDeviceCapacity, str(value))
-                                )
-                                calc_capacity = True
+                        # Flag device for supported mqtt trigger if admin and device not passive
+                        if device.get("is_admin") and not device.get("is_passive"):
+                            device["mqtt_supported"] = True
+                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            device["mqtt_overlay"] = bool(
+                                device.get("mqtt_overlay") or False
+                            )
+                        # check if capacity should be calculated
+                        if not device.get("battery_capacity") and hasattr(
+                            SolixDeviceCapacity, str(value)
+                        ):
+                            calc_capacity = True
                         # try to get type for standalone device from category definitions if not defined yet
                         if hasattr(SolixDeviceCategory, str(value)):
                             dev_type = str(
@@ -195,7 +205,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     ]:
                         if key in ["power_limit_option"]:
                             if key in getattr(
-                                SolarbankDeviceMetrics, device.get("device_pn") or "", {}
+                                SolarbankDeviceMetrics,
+                                device.get("device_pn") or "",
+                                {},
                             ):
                                 # mark power limit option as Auto if empty like in app
                                 # TODO(Multisystem): Update limit option once various options supported
@@ -249,6 +261,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         and value
                     ):
                         device[key] = str(value)
+                    elif key in ["mqtt_overlay"] and value is not None:
+                        # keys that are customized
+                        custom = (device.get("customized") or {}).get(key)
+                        device[key] = custom if custom is not None else value
                     elif (
                         key in ["bt_ble_id"] and value and not devData.get("bt_ble_mac")
                     ):
@@ -263,7 +279,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device[key] = str(value)
                         # calculate the wifi_signal percentage if that is not provided for the device while rssi is available
                         with contextlib.suppress(ValueError):
-                            if float(value) and str(devData.get("wifi_signal")) == "":
+                            if float(value) and not devData.get("wifi_signal"):
                                 # the percentage will be calculated in the range between -50 dBm (very good) and -85 dBm (no connection) as following.
                                 dbmmax = -50
                                 dbmmin = -85
@@ -287,6 +303,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["battery_power"] and value:
                         # This is a percentage value for the battery state of charge, not power
                         device["battery_soc"] = str(value)
+                        calc_capacity = True
                     elif key in ["photovoltaic_power"]:
                         device["input_power"] = str(value)
                     elif (
@@ -337,7 +354,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device[key] = int(value)
                             calc_capacity = True
                     elif key in ["battery_capacity"] and str(value).isdigit():
-                        # This is used as trigger for customization to recalculate modified capacity dependent values
+                        # This key is only used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         calc_capacity = True
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
@@ -384,15 +401,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["charging_status"]:
                         device[key] = str(value)
                         # decode the charging status into a description
-                        description = next(
-                            iter(
-                                [
-                                    item.name
-                                    for item in SolarbankStatus
-                                    if item.value == str(value)
-                                ]
-                            ),
-                            SolarbankStatus.unknown.name,
+                        description = get_enum_name(
+                            SolarbankStatus, str(value), SolarbankStatus.unknown.name
                         )
                         # check if battery has bypass during charge (if output during charge)
                         # This key can be passed separately, make sure the other values are looked up in provided data first, then in device details
@@ -621,15 +631,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
                                 SolarbankRatePlan,
-                                next(
-                                    iter(
-                                        [
-                                            item.name
-                                            for item in SolarbankUsageMode
-                                            if item.value == mode_type
-                                        ]
-                                    ),
-                                    SolarbankUsageMode.manual.name,
+                                get_enum_name(
+                                    SolarbankUsageMode,
+                                    mode_type,
+                                    default=SolarbankUsageMode.manual.name,
                                 ),
                                 SolarbankRatePlan.manual,
                             )
@@ -896,6 +901,25 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["err_code", "priority", "auto_switch", "running_time"]:
                         device[key] = value
 
+                    # power dock specific keys
+                    elif key in ["dock_status"]:
+                        # decode the dock status into a description
+                        device.update(
+                            {
+                                key: str(value),
+                                "dock_status_desc": next(
+                                    iter(
+                                        [
+                                            item.name
+                                            for item in PowerdockStatus
+                                            if item.value == str(value)
+                                        ]
+                                    ),
+                                    PowerdockStatus.unknown.name,
+                                ),
+                            }
+                        )
+
                     # hes specific keys
                     elif key in ["hes_data"] and isinstance(value, dict):
                         # decode the status into a description
@@ -976,65 +1000,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 }
                             )
 
-                    # generate extra values when certain conditions are met
-                    if key in ["battery_power"] or calc_capacity:
-                        # generate battery values when soc updated or device name changed or PN is known or exp packs changed
-                        # recalculate only with valid data, otherwise init extra fields with 0
-                        if devData.get("data_valid", True):
-                            if (
-                                not (cap := device.get("battery_capacity"))
-                                or calc_capacity
-                            ):
-                                pn = device.get("device_pn") or ""
-                                if hasattr(SolixDeviceCapacity, pn):
-                                    # get battery capacity from known PNs
-                                    cap = getattr(SolixDeviceCapacity, pn)
-                                # consider battery packs for total device capacity
-                                exp = (
-                                    devData.get("sub_package_num")
-                                    or device.get("sub_package_num")
-                                    or 0
-                                )
-                                # Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
-                                if str(cap).isdigit() and str(exp).isdigit():
-                                    cap = int(cap) * (1 + int(exp))
-                            soc = devData.get("battery_power", "") or device.get(
-                                "battery_soc", ""
-                            )
-                            # Calculate remaining energy in Wh and add values
-                            if (
-                                cap
-                                and soc
-                                and str(cap).isdigit()
-                                and str(soc).isdigit()
-                            ):
-                                # Get optional customized capacity for correct energy calculation if adjusted externally
-                                custom_cap = (
-                                    custom_cap
-                                    if (
-                                        custom_cap := (
-                                            device.get("customized") or {}
-                                        ).get("battery_capacity")
-                                    )
-                                    and str(custom_cap).isdigit()
-                                    else cap
-                                )
-                                device.update(
-                                    {
-                                        "battery_capacity": str(cap),
-                                        "battery_energy": str(
-                                            int(int(custom_cap) * int(soc) / 100)
-                                        ),
-                                    }
-                                )
-                        else:
-                            # init calculated fields with 0 if not existing
-                            if "battery_capacity" not in device:
-                                device["battery_capacity"] = "0"
-                            if "battery_energy" not in device:
-                                device["battery_energy"] = "0"
-                        calc_capacity = False
-
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
                         "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",
@@ -1045,11 +1010,73 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         err,
                     )
 
+            # generate extra values when certain conditions are met
+            if calc_capacity:
+                # generate battery values when soc updated or device name changed or PN is known or exp packs changed
+                # recalculate only with valid data, otherwise init extra fields with 0
+                if device.get("data_valid", True):
+                    # get some data optionally from mqtt data
+                    mqtt = device.get("mqtt_data") or {}
+                    cap_change = False
+                    # calculate size only once based on PN
+                    if not (size := device.get("battery_size")):
+                        size = getattr(
+                            SolixDeviceCapacity, str(device.get("device_pn")), 0
+                        )
+                        device["battery_size"] = size
+                        cap_change = True
+                    if (
+                        exp := device.get("sub_package_num")
+                        or mqtt.get("expansion_packs")
+                        or 0
+                    ) != device.get("expansion_packs"):
+                        # update calculated exp number in Api cache
+                        device["expansion_packs"] = exp
+                        cap_change = True
+                    # recalculate capacity if required
+                    if cap_change and str(size).isdigit() and str(exp).isdigit():
+                        # NOTE: Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
+                        device["battery_capacity"] = f"{size * (1 + exp):.0f}"
+                    cap = device.get("battery_capacity")
+                    # get total SOC, prefer Api value if provided
+                    soc = (
+                        device.get("battery_soc", "")
+                        or mqtt.get("battery_soc_total", "")
+                        or mqtt.get("battery_soc", "")
+                    )
+                    # Calculate remaining energy in Wh and add values
+                    if cap and soc and str(cap).isdigit() and str(soc).isdigit():
+                        # Get optional customized capacity for correct energy calculation if adjusted externally
+                        custom_cap = (
+                            custom_cap
+                            if (
+                                custom_cap := (device.get("customized") or {}).get(
+                                    "battery_capacity"
+                                )
+                            )
+                            and str(custom_cap).isdigit()
+                            else cap
+                        )
+                        device.update(
+                            {
+                                "battery_capacity": str(cap),
+                                "battery_energy": str(
+                                    int(int(custom_cap) * int(soc) / 100)
+                                ),
+                            }
+                        )
+                else:
+                    # init calculated fields with 0 if not existing
+                    if "battery_capacity" not in device:
+                        device["battery_capacity"] = "0"
+                    if "battery_energy" not in device:
+                        device["battery_energy"] = "0"
+
             self.devices[str(sn)] = device
         return sn
 
     def clearCaches(self) -> None:
-        """Clear the api cache dictionaries except the account cache."""
+        """Clear the api cache dictionaries and close active MQTT client."""
         super().clearCaches()
         if self.powerpanelApi:
             self.powerpanelApi.clearCaches()
@@ -1653,6 +1680,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             station_sn = station.get("device_sn") or ""
             # Name can be completed by model definition
             station.pop("device_name", None)
+            # Power dock status need to be renamed to avoid conflict with device status
+            station["dock_status"] = station.pop("status", 0)
             if station_param := (site_details.get("station_settings") or {}):
                 station["power_cutoff_data"] = station_param.get("soc_list") or []
                 # extract active setting for station
@@ -1670,8 +1699,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # drop same name device limits as those field may be used to control individual device settings
             self._update_dev(
                 {
-                    "alias_name": "Power Dock",
-                    "is_passive": True,
+                    "alias_name": (self.devices.get(station_sn) or {}).get("alias")
+                    or "Power Dock",
+                    "is_passive": "wifi_online"
+                    not in (self.devices.get(station_sn) or {}),
                     "current_power": data.get("current_power"),
                     "all_power_limit": station.pop("power_limit", None)
                     or data.get("all_power_limit")

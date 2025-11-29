@@ -37,6 +37,7 @@ from .const import (
     END_HOUR,
     END_MONTH,
     LOGGER,
+    MQTT_OVERLAY,
     SERVICE_MODIFY_SOLIX_USE_TIME,
     SOLIX_USE_TIME_SCHEMA,
     START_HOUR,
@@ -65,6 +66,7 @@ from .solixapi.apitypes import (
     SolixTariffTypes,
     SolixVehicle,
 )
+from .solixapi.helpers import get_enum_name
 
 
 @dataclass(frozen=True)
@@ -73,8 +75,11 @@ class AnkerSolixSelectDescription(
 ):
     """Select entity description with optional keys."""
 
-    force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
+    feature: AnkerSolixEntityFeature | None = None
+    mqtt: bool = False
+    restore: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
+    force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
     value_fn: Callable[[dict, str], str | None] = (
         lambda d, jk: None if d.get(jk) is None else str(d.get(jk))
     )
@@ -83,8 +88,6 @@ class AnkerSolixSelectDescription(
     )
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
     attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
-    feature: AnkerSolixEntityFeature | None = None
-    restore: bool = False
 
 
 DEVICE_SELECTS = [
@@ -115,9 +118,8 @@ DEVICE_SELECTS = [
         options_fn=lambda d, _: [
             mode.name for mode in SolarbankUsageMode if "unknown" not in mode.name
         ],
-        value_fn=lambda d, jk: next(
-            iter([item.name for item in SolarbankUsageMode if item.value == d.get(jk)]),
-            str(d.get(jk)) if jk in d else None,
+        value_fn=lambda d, jk: get_enum_name(
+            SolarbankUsageMode, d.get(jk), str(d.get(jk)) if jk in d else None
         ),
         attrib_fn=lambda d, jk: {"mode": d.get(jk)},
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
@@ -132,16 +134,8 @@ DEVICE_SELECTS = [
             for item in SolixTariffTypes
             if "unknown" not in item.name.lower()
         ],
-        value_fn=lambda d, jk: next(
-            iter(
-                [
-                    item.name.lower()
-                    for item in SolixTariffTypes
-                    if item.value == d.get(jk)
-                ]
-            ),
-            None,
-        ),
+        value_fn=lambda d, jk: get_enum_name(SolixTariffTypes, d.get(jk), "").lower()
+        or None,
         attrib_fn=lambda d, jk: {"tariff": d.get(jk)},
         feature=AnkerSolixEntityFeature.AC_CHARGE,
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
@@ -281,13 +275,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up select platform."""
 
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
+            mdev = None
+            mdata = {}
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
@@ -304,6 +300,11 @@ async def async_setup_entry(
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_SELECTS
+                # get MQTT device combined values for creation of entities
+                if mdev := coordinator.client.get_mqtt_device(sn=context):
+                    mdata = mdev.get_combined_cache(
+                        fromFile=coordinator.client.testmode()
+                    )
 
             for description in (
                 desc
@@ -313,7 +314,17 @@ async def async_setup_entry(
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
                         desc.force_creation_fn(data, desc.json_key)
-                        or desc.value_fn(data, desc.json_key) is not None
+                        # filter MQTT entities and provide combined or only api cache
+                        # Entities that should not be created without MQTT data need to use exclude option
+                        or (
+                            desc.mqtt
+                            and desc.value_fn(mdata or data, desc.json_key) is not None
+                        )
+                        # filter API only entities
+                        or (
+                            not desc.mqtt
+                            and desc.value_fn(data, desc.json_key) is not None
+                        )
                     )
                 )
             ):
@@ -346,7 +357,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixSelectDescription
     _attr_has_entity_name = True
-    _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset(
         {
             "power_cutoff",
@@ -372,6 +382,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         super().__init__(coordinator, context)
 
         self._attribute_name = description.key
+        self._attr_attribution = f"{ATTRIBUTION}{' + MQTT' if description.mqtt else ''}"
         self._attr_unique_id = (f"{context}_{description.key}").lower()
         self.entity_description = description
         self.entity_type = entity_type
@@ -548,7 +559,18 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             and (hasattr(self.coordinator, "data"))
             and self.coordinator_context in self.coordinator.data
         ):
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
                 self._attr_extra_state_attributes = self.entity_description.attrib_fn(
@@ -565,7 +587,18 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
     def update_state_value(self):
         """Update the state value of the number based on the coordinator data."""
         if self.coordinator and self.coordinator_context in self.coordinator.data:
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
                 self._attr_current_option = self.entity_description.value_fn(data, key)
@@ -664,7 +697,10 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         for d in (data.get("power_cutoff_data") or [])
                         if str(d.get("output_cutoff_data") or d.get("soc")) == option
                     ]:
-                        if data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or data.get("station_sn") is not None:
+                        if (
+                            data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                            or data.get("station_sn") is not None
+                        ):
                             # control via station setting
                             resp = await self.coordinator.client.api.set_station_parm(
                                 deviceSn=self.coordinator_context,
@@ -686,10 +722,16 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 else "LIVEMODE",
                                 self.entity_id,
                                 option,
-                                json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
+                                json.dumps(
+                                    resp,
+                                    indent=2 if len(json.dumps(resp)) < 200 else None,
+                                ),
                             )
 
-            elif self._attribute_name in ["preset_ac_input_limit","preset_pv_input_limit"]:
+            elif self._attribute_name in [
+                "preset_ac_input_limit",
+                "preset_pv_input_limit",
+            ]:
                 with suppress(ValueError, TypeError):
                     LOGGER.debug(
                         "'%s' selection change to option '%s' will be applied",
@@ -698,8 +740,12 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     )
                     resp = await self.coordinator.client.api.set_power_limit(
                         deviceSn=self.coordinator_context,
-                        ac_input=option if self._attribute_name == "preset_ac_input_limit" else None,
-                        pv_input=option if self._attribute_name == "preset_pv_input_limit" else None,
+                        ac_input=option
+                        if self._attribute_name == "preset_ac_input_limit"
+                        else None,
+                        pv_input=option
+                        if self._attribute_name == "preset_pv_input_limit"
+                        else None,
                         toFile=self.coordinator.client.testmode(),
                     )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:

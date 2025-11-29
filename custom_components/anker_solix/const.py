@@ -26,7 +26,9 @@ MANUFACTURER: str = "Anker"
 ATTRIBUTION: str = "Data provided by Anker Solix Api"
 ACCEPT_TERMS: str = "accept_terms"
 TERMS_LINK: str = "terms_link"
+MQTT_LINK: str = "mqtt_link"
 TC_LINK: str = "https://github.com/thomluther/ha-anker-solix/blob/main/README.md"
+MQ_LINK: str = "https://github.com/thomluther/ha-anker-solix#mqtt-data-from-devices"
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
@@ -38,11 +40,17 @@ PLATFORMS: list[Platform] = [
 ]
 TESTMODE: str = "testmode"
 TESTFOLDER: str = "testfolder"
+CONF_MQTT_TEST_SPEED: str = "mqtt_test_speed"
 INTERVALMULT: str = "dev_interval_mult"
 UPDT_INTV_MIN: str = "updt_interval_min"
 UPDT_INTV_MAX: str = "updt_interval_max"
 CONF_SKIP_INVALID: str = "skip_invalid"
 CONF_ENDPOINT_LIMIT: str = "endpoint_limit"
+CONF_API_OPTIONS: str = "api_options"
+CONF_MQTT_OPTIONS: str = "mqtt_options"
+CONF_TEST_OPTIONS: str = "test_options"
+CONF_MQTT_USAGE: str = "mqtt_usage"
+CONF_TRIGGER_TIMEOUT: str = "trigger_timeout"
 EXAMPLESFOLDER: str = "examples"
 REGISTERED_EXCLUDES: str = "registered_excludes"
 ERROR_DETAIL: str = "error_detail"
@@ -51,6 +59,7 @@ LAST_RESET: str = "last_reset"
 SHARED_ACCOUNT: str = "shared_account"
 IMAGEFOLDER: str = "images"
 EXPORTFOLDER: str = "exports"
+MQTT_OVERLAY: str = "mqtt_overlay"
 
 # True will enable configuration options for testmode and testfolder
 ALLOW_TESTMODE: bool = False
@@ -58,6 +67,8 @@ ALLOW_TESTMODE: bool = False
 TEST_NUMBERVARIANCE: bool = False
 # True will create all entities per device type for testing even if no values available
 CREATE_ALL_ENTITIES: bool = False
+# True will enable MQTT usage per default
+DEFAULT_MQTT_USAGE: bool = False
 
 SERVICE_GET_SYSTEM_INFO = "get_system_info"
 SERVICE_EXPORT_SYSTEMS = "export_systems"
@@ -80,6 +91,7 @@ CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
 ALLOW_EXPORT = "allow_export"
 DISCHARGE_PRIORITY = "discharge_priority"
 INCLUDE_CACHE = "include_cache"
+INCLUDE_MQTT = "include_mqtt"
 BACKUP_START = "backup_start"
 BACKUP_END = "backup_end"
 BACKUP_DURATION = "backup_duration"
@@ -252,6 +264,17 @@ SOLIX_ENTITY_SCHEMA: vol.Schema = vol.All(
             **cv.TARGET_SERVICE_FIELDS,
             vol.Optional(
                 INCLUDE_CACHE,
+            ): VALID_SWITCH,
+        }
+    ),
+)
+
+SOLIX_EXPORT_SCHEMA: vol.Schema = vol.All(
+    cv.make_entity_service_schema(
+        {
+            **cv.TARGET_SERVICE_FIELDS,
+            vol.Optional(
+                INCLUDE_MQTT,
             ): VALID_SWITCH,
         }
     ),

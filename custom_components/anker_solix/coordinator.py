@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from asyncio import TimerHandle, sleep
+from asyncio import TimerHandle, run_coroutine_threadsafe, sleep
 from datetime import datetime, timedelta
 import logging
 from typing import Any
@@ -33,6 +33,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
     details_delayed: datetime | None
     update_handler: TimerHandle | None
     registered_devices: set
+    mqtt_values: int
 
     def __init__(
         self,
@@ -47,6 +48,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         self.details_delayed = None
         self.update_handler = None
         self.registered_devices = set()
+        self.mqtt_values = 0
 
         super().__init__(
             hass=hass,
@@ -69,9 +71,13 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             if not self.client.startup:
                 await self.async_refresh_delay()
                 await self.async_details_delay()
+            # register callback for MQTT updates if not existing
+            if self.client.mqtt_usage and not self.client.api.mqtt_update_callback():
+                self.client.api.mqtt_update_callback(self.update_callback)
             data = await self.client.async_get_data()
             # get device IDs for dynamic entity and device creation
             ids = set(data.keys())
+            mcount = self.client.get_mqtt_valuecount()
             # make sure deferred data will create additional entities
             if self.client.deferred_data and self.config_entry:
                 # trigger reload and register all current devices
@@ -80,8 +86,15 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             # initial device registration
             elif self.client.startup:
                 self.registered_devices = ids
+                self.mqtt_values = mcount
             # trigger reload if additional devices are found
-            elif ids - self.registered_devices:
+            elif ids - self.registered_devices or mcount > self.mqtt_values:
+                LOGGER.log(
+                    logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                    "Coordinator %s found additional %s, reloading platforms to setup entities",
+                    self.client.api.apisession.nickname,
+                    "MQTT values" if mcount > self.mqtt_values else "devices",
+                )
                 await self.async_reload_config(register_devices=data)
             # trigger device removal if not found anymore
             elif (
@@ -90,15 +103,28 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                 and (removed := self.registered_devices - ids)
             ):
                 await self.async_remove_device(devices=removed)
+            # adjust mqtt count to recognize new values
+            elif mcount < self.mqtt_values:
+                LOGGER.log(
+                    logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                    "Coordinator %s found only %s of %s registered MQTT values, adjusting registered MQTT counter",
+                    self.client.api.apisession.nickname,
+                    str(mcount),
+                    str(self.mqtt_values),
+                )
+                self.mqtt_values = mcount
         except (
             AnkerSolixApiClientAuthenticationError,
             AnkerSolixApiClientRetryExceededError,
         ) as exception:
             raise ConfigEntryAuthFailed(exception) from exception
-        except (
-            AnkerSolixApiClientError,
-            AnkerSolixApiClientCommunicationError,
-        ) as exception:
+        except AnkerSolixApiClientCommunicationError as exception:
+            # TODO: Evaluate implementation of retry parameter, see
+            # https://developers.home-assistant.io/blog/2025/11/17/retry-after-update-failed
+            # may require HA 2025.12 or later...
+            # raise UpdateFailed(retry_after=60) from exception
+            raise UpdateFailed(exception) from exception
+        except AnkerSolixApiClientError as exception:
             raise UpdateFailed(exception) from exception
         else:
             return data
@@ -107,7 +133,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         """Update data from client api dictionaries without resetting update interval.
 
         The delayed option will wait 2 seconds before listeners are notified to allow
-        consolidating parallel update requests during the state restore processing.
+        consolidating parallel update requests during the state restore processing or MQTT data updates.
         """
         self.data = await self.client.async_get_data(from_cache=True)
         if delayed and not self.update_handler:
@@ -115,9 +141,8 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             self.update_handler = self.hass.loop.call_later(
                 delay=(delay := 2.0), callback=self.async_update_listeners
             )
-            LOGGER.log(
-                logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
-                "Coordinator %s delayed listener update for %s seconds during entity restore processing",
+            LOGGER.debug(
+                "Coordinator %s delayed listener update for %s seconds during MQTT data or entity restore processing",
                 self.client.api.apisession.nickname,
                 int(delay),
             )
@@ -159,14 +184,24 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             # ensure to refresh entity setup when cache was reset to unload all entities and reload remaining entities
             # This will also restore states from previous state in state machine if required
             self.data = data
+            self.mqtt_values = self.client.get_mqtt_valuecount()
             await self.async_reload_config(register_devices=data)
         else:
             # update coordinator data and notify listeners
             self.async_set_updated_data(data)
             # get device IDs for dynamic entity and device creation
             ids = set(data.keys())
+            mcount = self.client.get_mqtt_valuecount()
             # trigger reload if additional devices are found
-            if ids - self.registered_devices:
+            if ids - self.registered_devices or mcount > self.mqtt_values:
+                LOGGER.log(
+                    logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                    "Coordinator %s found additional %s, reloading platforms to setup entities",
+                    self.client.api.apisession.nickname,
+                    f"{mcount - self.mqtt_values} MQTT values"
+                    if mcount > self.mqtt_values
+                    else f"devices {(ids - self.registered_devices)!s}",
+                )
                 await self.async_reload_config(register_devices=data)
             # trigger device removal if not found anymore
             elif (
@@ -176,6 +211,30 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             ):
                 await self.async_remove_device(devices=removed)
 
+    def update_callback(self, sn: str | None = None, **args) -> None:
+        """Define callback for coordinator updates upon MQTT value changes."""
+        LOGGER.debug(
+            "Coordinator %s received new MQTT data for device %s:\n%s",
+            self.client.api.apisession.nickname,
+            sn,
+            str(
+                self.client.get_mqtt_device(sn).mqttdata
+                if sn in self.client.mqtt_devices
+                else {}
+            ),
+        )
+        # wrap the async method to refresh coordinator from cache
+        run_coroutine_threadsafe(
+            self.async_refresh_data_from_apidict(delayed=True), self.hass.loop
+        )
+
+    async def async_shutdown(self) -> None:
+        """Clear Api cache to close any active MQTT loop and then call super method."""
+        # Ensue any MQTT connection is closed by clearing cache upon shutdown
+        if self and self.client and self.client.api:
+            self.client.api.clearCaches()
+        await super().async_shutdown()
+
     async def async_reload_config(
         self, register_devices: set | dict | None = None
     ) -> bool:
@@ -183,7 +242,14 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         # Wait until client cache is valid before running api action
         await self.client.validate_cache()
         # ensure to refresh entity setup to unload all entities and reload found entities
-        if await self.hass.config_entries.async_unload_platforms(
+        loaded_entry = bool(
+            [
+                e
+                for e in self.hass.config_entries.async_loaded_entries(DOMAIN)
+                if e.entry_id == self.config_entry.entry_id
+            ]
+        )
+        if loaded_entry and await self.hass.config_entries.async_unload_platforms(
             self.config_entry, PLATFORMS
         ):
             # refresh restore state cache
@@ -198,6 +264,8 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                 if isinstance(register_devices, dict)
                 else set()
             )
+            # save actual mqtt device value count
+            self.mqtt_values = self.client.get_mqtt_valuecount()
             return True
         return False
 
@@ -223,6 +291,9 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                     remove_config_entry_id=self.config_entry.entry_id,
                 )
                 self.registered_devices.discard(dev_entry.serial_number)
+                # update MQTT devices
+                self.client.mqtt_devices.pop(dev_entry.serial_number, None)
+                self.mqtt_values = self.client.get_mqtt_valuecount()
                 LOGGER.warning(
                     "Api Coordinator %s removed orphaned %s device %s, ID %s",
                     self.config_entry.title,
@@ -281,10 +352,12 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         sites_shift = timedelta(
             seconds=5
         )  # if self.client.startup else timedelta(seconds=10)
-        # get all defined config entries
+        # get all defined config entries which are not disabled
         cfg_ids: list[str] = [
             cfg.entry_id
-            for cfg in self.hass.config_entries.async_entries(domain=DOMAIN)
+            for cfg in self.hass.config_entries.async_entries(
+                domain=DOMAIN, include_disabled=False
+            )
         ]
         # hass data contains only completely loaded configuration IDs (with coordinators)
         # exclude own coordinator if active already

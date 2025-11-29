@@ -28,6 +28,13 @@ export_systems:
       # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
       supported_features:
         - update.UpdateEntityFeature.SPECIFIC_VERSION
+  fields:
+    include_mqtt:
+      required: true
+      example: true
+      default: true
+      selector:
+        boolean:
 
 # Service to query solarbank schedule from Api
 get_solarbank_schedule:

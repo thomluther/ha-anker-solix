@@ -23,15 +23,25 @@ from homeassistant.const import (
 
 from .const import (
     ALLOW_TESTMODE,
+    CONF_API_OPTIONS,
     CONF_ENDPOINT_LIMIT,
+    CONF_MQTT_OPTIONS,
+    CONF_MQTT_TEST_SPEED,
+    CONF_MQTT_USAGE,
+    CONF_TEST_OPTIONS,
+    CONF_TRIGGER_TIMEOUT,
+    DEFAULT_MQTT_USAGE,
     EXAMPLESFOLDER,
     INTERVALMULT,
     LOGGER,
+    TESTFOLDER,
     TESTMODE,
 )
 from .solixapi import errors
 from .solixapi.api import AnkerSolixApi
 from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.mqtt_device import SolixMqttDevice
+from .solixapi.mqtt_factory import SolixMqttDeviceFactory
 
 _LOGGER = LOGGER
 # min device refresh delay in seconds
@@ -46,6 +56,10 @@ DEFAULT_ENDPOINT_LIMIT: int = SolixDefaults.ENDPOINT_LIMIT_DEF
 DEFAULT_DELAY_TIME: float = SolixDefaults.REQUEST_DELAY_DEF
 # default timeout for api requests
 DEFAULT_TIMEOUT: int = SolixDefaults.REQUEST_TIMEOUT_DEF
+# default MQTT usage
+DEFAULT_MQTT: bool = DEFAULT_MQTT_USAGE
+# default timeout for MQTT realtime trigger
+DEFAULT_TRIGGER_TIMEOUT: int = SolixDefaults.TRIGGER_TIMEOUT_DEF
 # Api categories and device types supported for exclusion from integration
 API_CATEGORIES: list = [
     SolixDeviceType.PPS.value,
@@ -57,8 +71,8 @@ API_CATEGORIES: list = [
     SolixDeviceType.COMBINER_BOX.value,
     SolixDeviceType.HES.value,
     SolixDeviceType.VEHICLE.value,
-    # SolixDeviceType.SOLARBANK_PPS.value,
     # SolixDeviceType.CHARGER.value,
+    # SolixDeviceType.SOLARBANK_PPS.value,
     # SolixDeviceType.EV_CHARGER.value,
     # SolixDeviceType.POWERCOOLER.value,
     ApiCategories.account_info,
@@ -153,20 +167,58 @@ class AnkerSolixApiClient:
             session,
             _LOGGER,
         )
-        # Initialize the api nickname from config title
+        # Initialize the api nickname from config title or extra data field
         if hasattr(entry, "title"):
             self.api.apisession.nickname = entry.title
+        else:
+            self.api.apisession.nickname = data.get("nickname", "")
         self.api.apisession.requestDelay(
-            float(data.get(CONF_DELAY_TIME, DEFAULT_DELAY_TIME))
+            float(
+                (data.get(CONF_API_OPTIONS) or {}).get(
+                    CONF_DELAY_TIME, DEFAULT_DELAY_TIME
+                )
+            )
         )
-        self.api.apisession.requestTimeout(int(data.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
+        self.api.apisession.requestTimeout(
+            int((data.get(CONF_API_OPTIONS) or {}).get(CONF_TIMEOUT, DEFAULT_TIMEOUT))
+        )
         self.api.apisession.endpointLimit(
-            int(data.get(CONF_ENDPOINT_LIMIT, DEFAULT_ENDPOINT_LIMIT))
+            int(
+                (data.get(CONF_API_OPTIONS) or {}).get(
+                    CONF_ENDPOINT_LIMIT, DEFAULT_ENDPOINT_LIMIT
+                )
+            )
         )
-        self._deviceintervals = int(data.get(INTERVALMULT, DEFAULT_DEVICE_MULTIPLIER))
-        self._testmode = bool(data.get(TESTMODE, False))
+        self._testmode = bool((data.get(CONF_TEST_OPTIONS) or {}).get(TESTMODE, False))
+        if self._testmode and (
+            testfolder := (data.get(CONF_TEST_OPTIONS) or {}).get(TESTFOLDER)
+        ):
+            # set json test file folder for api
+            self.api.testDir(
+                subfolder=str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
+            )
+        self._deviceintervals = int(
+            (data.get(CONF_API_OPTIONS) or {}).get(
+                INTERVALMULT, DEFAULT_DEVICE_MULTIPLIER
+            )
+        )
         self._intervalcount = 0
         self._allow_refresh = True
+        self._mqtt_usage = bool(
+            (data.get(CONF_MQTT_OPTIONS) or {}).get(CONF_MQTT_USAGE, DEFAULT_MQTT_USAGE)
+        )
+        self._trigger_timeout: int = int(
+            (data.get(CONF_MQTT_OPTIONS) or {}).get(
+                CONF_TRIGGER_TIMEOUT, DEFAULT_TRIGGER_TIMEOUT
+            )
+        )
+        self._mqtt_task: asyncio.Task | None = None
+        self._task_dict: dict = {}
+        self._mqtt_test_speed: float = float(
+            (data.get(CONF_TEST_OPTIONS) or {}).get(CONF_MQTT_TEST_SPEED, 1)
+        )
+        # track created MQTT device instances
+        self.mqtt_devices: dict[str, SolixMqttDevice] = {}
         self.active_device_refresh = False
         self.last_site_refresh = None
         self.last_device_refresh = None
@@ -176,7 +228,7 @@ class AnkerSolixApiClient:
         self.cache_valid = True
 
     def toggle_cache(self, toggle: bool) -> None:
-        """Toggle the cache valid or invalid."""
+        """Define export callback to toggle the cache valid or invalid."""
         if self.cache_valid != toggle:
             self.cache_valid = bool(toggle)
             _LOGGER.log(
@@ -283,7 +335,14 @@ class AnkerSolixApiClient:
                     # reset last refresh time to allow details refresh
                     self.last_site_refresh = None
                     self.last_device_refresh = None
+                    # stop any active file poller task
+                    if self._mqtt_task:
+                        self._mqtt_task.cancel()
+                        self._mqtt_task = None
+                    # Clear cache, this will also stop active MQTT session
                     self.api.clearCaches()
+                    # drop MQTT device instances
+                    self.mqtt_devices = {}
                     self.startup = True
                     self.deferred_data = False
                 if from_cache:
@@ -356,6 +415,8 @@ class AnkerSolixApiClient:
                             fromFile=self._testmode,
                             exclude=set(self.exclude_categories),
                         )
+                        # Re-Start MQTT session if usage enabled
+                        await self.check_mqtt_session()
                         # Fetch energy if not excluded via options
                         if self.startup:
                             _LOGGER.info(
@@ -425,6 +486,8 @@ class AnkerSolixApiClient:
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
                         self.active_device_refresh = False
+                        # ensure MQTT session status is as required
+                        await self.check_mqtt_session()
                     elif self.startup and not self.deferred_data:
                         self.active_device_refresh = True
                         # Fetch deferred energy skipped from first device refresh
@@ -453,33 +516,30 @@ class AnkerSolixApiClient:
                 data = {}
             _LOGGER.debug("Coordinator %s data: %s", self.api.apisession.nickname, data)
             return data  # noqa: TRY300
-        # Ensure to disable active device refresh flag in case of any exception
         except TimeoutError as exception:
-            self.active_device_refresh = False
             raise AnkerSolixApiClientCommunicationError(
                 f"Timeout error fetching information: {exception}",
             ) from exception
         except (aiohttp.ClientError, socket.gaierror, errors.ConnectError) as exception:
-            self.active_device_refresh = False
             raise AnkerSolixApiClientCommunicationError(
                 f"Api Connection Error: {exception}",
             ) from exception
         except (errors.AuthorizationError, errors.InvalidCredentialsError) as exception:
-            self.active_device_refresh = False
             raise AnkerSolixApiClientAuthenticationError(
                 f"Authentication failed: {exception}",
             ) from exception
         except errors.RetryExceeded as exception:
-            self.active_device_refresh = False
             raise AnkerSolixApiClientRetryExceededError(
                 f"Retries exceeded: {exception}",
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
-            self.active_device_refresh = False
             _LOGGER.exception("Api Client Exception:")
             raise AnkerSolixApiClientError(
                 f"Api Client Error: {type(exception)}: {exception}"
             ) from exception
+        # Ensure to disable active device refresh flag in case of any exception
+        finally:
+            self.active_device_refresh = False
 
     def testmode(self, mode: bool | None = None) -> bool:
         """Query or set testmode for client."""
@@ -534,7 +594,7 @@ class AnkerSolixApiClient:
             and float(seconds) != float(self.api.apisession.requestDelay())
         ):
             _LOGGER.info(
-                "Api Coordinator %s request delay time will be changed from %.3f to %.3f seconds",
+                "Api Coordinator %s request delay time was changed from %.3f to %.3f seconds",
                 self.api.apisession.nickname,
                 self.api.apisession.requestDelay(),
                 float(seconds),
@@ -550,7 +610,7 @@ class AnkerSolixApiClient:
             and round(seconds) != self.api.apisession.requestTimeout()
         ):
             _LOGGER.info(
-                "Api Coordinator %s request timeout will be changed from %s to %s seconds",
+                "Api Coordinator %s request timeout was changed from %s to %s seconds",
                 self.api.apisession.nickname,
                 str(self.api.apisession.requestTimeout()),
                 str(round(seconds)),
@@ -566,7 +626,7 @@ class AnkerSolixApiClient:
             and int(limit) != int(self.api.apisession.endpointLimit())
         ):
             _LOGGER.info(
-                "Api Coordinator %s endpoint request limit will be changed from %s to %s",
+                "Api Coordinator %s endpoint request limit was changed from %s to %s",
                 self.api.apisession.nickname,
                 self.api.apisession.endpointLimit(),
                 str(int(limit)) + " requests" if limit else "disabled",
@@ -585,6 +645,150 @@ class AnkerSolixApiClient:
             )
         return self._allow_refresh
 
+    def mqtt_test_speed(self, factor: float | None = None) -> float:
+        """Query or set factor for MQTT file polling speed in test mode."""
+        if (
+            factor is not None
+            and isinstance(factor, float | int)
+            and float(factor) != float(self._mqtt_test_speed)
+        ):
+            _LOGGER.info(
+                "Api Coordinator %s MQTT file polling speed factor was changed from %.2f to %.2f",
+                self.api.apisession.nickname,
+                self._mqtt_test_speed,
+                float(factor),
+            )
+            self._mqtt_test_speed = float(factor)
+            # update speed also in task dictionary for active task
+            self._task_dict["speed"] = self._mqtt_test_speed
+        return self._mqtt_test_speed
+
     def get_registered_vehicles(self) -> list:
         """Get the registered vehicles of api client."""
         return self.api.account.get("vehicles_registered") or []
+
+    async def mqtt_usage(self, enable: bool | None = None) -> bool:
+        """Query or set MQTT usage for Api, which will also start or stop the MQTT session upon change."""
+        if (
+            enable is not None
+            and isinstance(enable, bool)
+            and enable != self._mqtt_usage
+        ):
+            _LOGGER.info(
+                "Api Coordinator %s MQTT usage was changed from %s to %s",
+                self.api.apisession.nickname,
+                self._mqtt_usage,
+                enable,
+            )
+            self._mqtt_usage = enable
+            if enable:
+                await self.check_mqtt_session()
+            else:
+                self.api.stopMqttSession()
+                # drop MQTT device instances
+                self.mqtt_devices = {}
+        return self._mqtt_usage
+
+    def trigger_timeout(self, seconds: int | None = None) -> int:
+        """Query or set Api MQTT real time trigger timeout for client."""
+        if (
+            seconds is not None
+            and isinstance(seconds, float | int)
+            and (seconds := round(seconds)) != self._trigger_timeout
+        ):
+            _LOGGER.info(
+                "Api Coordinator %s MQTT real time trigger timeout was changed from %s to %s seconds",
+                self.api.apisession.nickname,
+                str(self._trigger_timeout),
+                str(seconds),
+            )
+            self._trigger_timeout = seconds
+        return self._trigger_timeout
+
+    def get_mqtt_device(self, sn: str) -> SolixMqttDevice | None:
+        """Get the MQTT device instance for given SN."""
+        return (isinstance(sn, str) and self.mqtt_devices.get(sn)) or None
+
+    def get_mqtt_valuecount(self, sn: str | None = None) -> int:
+        """Get the MQTT value count for all or the provided device serial."""
+        count = 0
+        for mdev in self.mqtt_devices.values():
+            count += len(mdev.mqttdata) if (not sn or sn == mdev.sn) else 0
+        return count
+
+    async def check_mqtt_session(self) -> None:
+        """Check mqtt usage and status of session, restart if required."""
+        if self._mqtt_usage and (
+            not self.api.mqttsession or not self.api.mqttsession.is_connected()
+        ):
+            _LOGGER.info(
+                "Api Coordinator %s is (re-)starting MQTT session",
+                self.api.apisession.nickname,
+            )
+            if await self.api.startMqttSession(fromFile=self._testmode):
+                mqtt_devs = [
+                    dev
+                    for dev in self.api.devices.values()
+                    if dev.get("mqtt_supported")
+                ]
+                if self._testmode:
+                    # start MQTT file poller in file mode
+                    # update the folder in the task dictionary for MQTT file polling
+                    self._task_dict["folder"] = self.api.testDir()
+                    self._task_dict["speed"] = self._mqtt_test_speed
+                    # Create task for polling mqtt messages from files for testing
+                    self._mqtt_task = asyncio.get_running_loop().create_task(
+                        self.api.mqttsession.file_poller(
+                            folderdict=self._task_dict,
+                        )
+                    )
+                    _LOGGER.info(
+                        "Api Coordinator %s MQTT file data poller task was started with speed %s for folder: %s",
+                        self.api.apisession.nickname,
+                        self._task_dict["speed"],
+                        self._task_dict["folder"],
+                    )
+                else:
+                    # subscribe eligible devices in live mode
+                    _LOGGER.info(
+                        "Api Coordinator %s MQTT session connected, subscribing eligible devices",
+                        self.api.apisession.nickname,
+                    )
+                    for dev in mqtt_devs:
+                        topic = (
+                            f"{self.api.mqttsession.get_topic_prefix(deviceDict=dev)}#"
+                        )
+                        resp = self.api.mqttsession.subscribe(topic)
+                        if resp and resp.is_failure:
+                            _LOGGER.warning(
+                                "Api Coordinator %s failed subscription for MQTT topic: %s",
+                                self.api.apisession.nickname,
+                                topic,
+                            )
+                        else:
+                            _LOGGER.log(
+                                logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                                "Api Coordinator %s subscribed to MQTT topic %s",
+                                self.api.apisession.nickname,
+                                topic,
+                            )
+                    if not mqtt_devs:
+                        _LOGGER.warning(
+                            "Api Coordinator %s did not find eligible devices for MQTT subscription",
+                            self.api.apisession.nickname,
+                        )
+                # create MQTT device instances
+                for dev in mqtt_devs:
+                    sn = dev.get("device_sn")
+                    if sn and (
+                        mdev := SolixMqttDeviceFactory(
+                            api_instance=self.api, device_sn=sn
+                        ).create_device()
+                    ):
+                        self.mqtt_devices[sn] = mdev
+                # Note: The method for update callback will be checked and set during coordinator updates
+            else:
+                _LOGGER.error(
+                    "Api Coordinator %s failed to start MQTT session",
+                    self.api.apisession.nickname,
+                )

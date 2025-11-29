@@ -14,11 +14,21 @@ import urllib.parse
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE, CONF_METHOD, CONF_PAYLOAD, EntityCategory
+from homeassistant.const import (
+    CONF_EXCLUDE,
+    CONF_METHOD,
+    CONF_PAYLOAD,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    EntityCategory,
+)
 from homeassistant.core import HomeAssistant, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import UTC
 
@@ -34,12 +44,14 @@ from .const import (
     ENABLE_BACKUP,
     ENDPOINT,
     EXPORTFOLDER,
+    INCLUDE_MQTT,
     LOGGER,
+    MQTT_OVERLAY,
     SERVICE_API_REQUEST,
     SERVICE_EXPORT_SYSTEMS,
     SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
     SOLIX_BACKUP_CHARGE_SCHEMA,
-    SOLIX_ENTITY_SCHEMA,
+    SOLIX_EXPORT_SCHEMA,
     SOLIX_REQUEST_SCHEMA,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
@@ -64,11 +76,13 @@ class AnkerSolixSwitchDescription(
 ):
     """Switch entity description with optional keys."""
 
+    feature: AnkerSolixEntityFeature | None = None
+    restore: bool = False
+    mqtt: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
-    attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, ctx: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
-    feature: AnkerSolixEntityFeature | None = None
     force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
 
 
@@ -83,14 +97,14 @@ DEVICE_SWITCHES = [
         key="preset_allow_export",
         translation_key="preset_allow_export",
         json_key="preset_allow_export",
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
         force_creation_fn=lambda d, jk: jk in d and d.get("cascaded"),
     ),
     AnkerSolixSwitchDescription(
         key="preset_discharge_priority",
         translation_key="preset_discharge_priority",
         json_key="preset_discharge_priority",
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
         force_creation_fn=lambda d, jk: jk in d and d.get("cascaded"),
     ),
     AnkerSolixSwitchDescription(
@@ -98,13 +112,26 @@ DEVICE_SWITCHES = [
         translation_key="preset_backup_option",
         json_key="preset_backup_option",
         feature=AnkerSolixEntityFeature.AC_CHARGE,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSwitchDescription(
         key="allow_grid_export",
         translation_key="allow_grid_export",
         json_key="allow_grid_export",
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSwitchDescription(
+        # Customizable device option for MQTT value overlay
+        key=MQTT_OVERLAY,
+        translation_key=MQTT_OVERLAY,
+        json_key=MQTT_OVERLAY,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        attrib_fn=lambda d, _: {"customized": c}
+        if (c := (d.get("customized") or {}).get(MQTT_OVERLAY)) is not None
+        else {},
+        exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
+        restore=True,
+        mqtt=True,
     ),
 ]
 
@@ -145,13 +172,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensor platform."""
 
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
+            mdev = None
+            mdata = {}
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
@@ -168,6 +197,11 @@ async def async_setup_entry(
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_SWITCHES
+                # get MQTT device combined values for creation of entities
+                if mdev := coordinator.client.get_mqtt_device(sn=context):
+                    mdata = mdev.get_combined_cache(
+                        fromFile=coordinator.client.testmode()
+                    )
 
             for description in (
                 desc
@@ -177,14 +211,29 @@ async def async_setup_entry(
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
                         desc.force_creation_fn(data, desc.json_key)
-                        or desc.value_fn(data, desc.json_key) is not None
+                        # filter MQTT entities and provide combined or only api cache
+                        # Entities that should not be created without MQTT data need to use exclude option
+                        or (
+                            desc.mqtt
+                            and desc.value_fn(mdata or data, desc.json_key) is not None
+                        )
+                        # filter API only entities
+                        or (
+                            not desc.mqtt
+                            and desc.value_fn(data, desc.json_key) is not None
+                        )
                     )
                 )
             ):
-                sensor = AnkerSolixSwitch(
-                    coordinator, description, context, entity_type
-                )
-                entities.append(sensor)
+                if description.restore:
+                    entity = AnkerSolixRestoreSwitch(
+                        coordinator, description, context, entity_type
+                    )
+                else:
+                    entity = AnkerSolixSwitch(
+                        coordinator, description, context, entity_type
+                    )
+                entities.append(entity)
 
     # create the sensors from the list
     async_add_entities(entities)
@@ -193,7 +242,7 @@ async def async_setup_entry(
     platform = entity_platform.async_get_current_platform()
     platform.async_register_entity_service(
         name=SERVICE_EXPORT_SYSTEMS,
-        schema=SOLIX_ENTITY_SCHEMA,
+        schema=SOLIX_EXPORT_SCHEMA,
         func=SERVICE_EXPORT_SYSTEMS,
         required_features=[AnkerSolixEntityFeature.ACCOUNT_INFO],
         supports_response=SupportsResponse.ONLY,
@@ -219,11 +268,11 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixSwitchDescription
     _attr_has_entity_name = True
-    _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset(
         {
             "requests_last_min",
             "requests_last_hour",
+            "customized",
         }
     )
 
@@ -238,6 +287,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         super().__init__(coordinator, context)
 
         self._attribute_name = description.key
+        self._attr_attribution = f"{ATTRIBUTION}{' + MQTT' if description.mqtt else ''}"
         self._attr_unique_id = (f"{context}_{description.key}").lower()
         self.entity_description = description
         self.entity_type = entity_type
@@ -299,7 +349,18 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             and (hasattr(self.coordinator, "data"))
             and self.coordinator_context in self.coordinator.data
         ):
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             with suppress(ValueError, TypeError):
                 self._attr_extra_state_attributes = self.entity_description.attrib_fn(
                     data, self.coordinator_context
@@ -329,7 +390,18 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         if self.coordinator and not (hasattr(self.coordinator, "data")):
             self._attr_is_on = None
         elif self.coordinator_context in self.coordinator.data:
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             key = self.entity_description.json_key
             self._attr_is_on = self.entity_description.value_fn(data, key)
         else:
@@ -345,17 +417,20 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         # Skip Api calls if entity does not change
         if self._attr_is_on in [None, True]:
             return
+
         if self._attribute_name == "allow_refresh":
             await self.coordinator.async_execute_command(
                 command=self.entity_description.key, option=True
             )
+            return
         # When running in Test mode do not switch for entities not supporting test mode
-        elif self.coordinator.client.testmode() and self._attribute_name not in [
+        if self.coordinator.client.testmode() and self._attribute_name not in [
             "preset_allow_export",
             "preset_discharge_priority",
             "preset_backup_option",
             "default_vehicle",
             "allow_grid_export",
+            MQTT_OVERLAY,
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -366,6 +441,25 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     "entity_id": self.entity_id,
                 },
             )
+        # Wait until client cache is valid before applying any api change
+        await self.coordinator.client.validate_cache()
+        if self.entity_description.restore:
+            LOGGER.info("%s will be enabled", self.entity_id)
+            # Customize cache if restore entity
+            value = True
+            self.coordinator.client.api.customizeCacheId(
+                id=self.coordinator_context,
+                key=self.entity_description.json_key,
+                value=bool(value),
+            )
+            if ALLOW_TESTMODE:
+                LOGGER.info(
+                    "%s: State value of entity '%s' has been customized in Api cache to: %s",
+                    "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
+                    self.entity_id,
+                    value,
+                )
+            await self.coordinator.async_refresh_data_from_apidict()
         elif self._attribute_name == "auto_upgrade":
             resp = await self.coordinator.client.api.set_auto_upgrade(
                 {self.coordinator_context: True}
@@ -422,7 +516,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         toFile=self.coordinator.client.testmode(),
                     )
                 elif self._attribute_name in ["allow_grid_export"]:
-                    if data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or data.get("station_sn") is not None:
+                    if (
+                        data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        or data.get("station_sn") is not None
+                    ):
                         # control via station setting
                         resp = await self.coordinator.client.api.set_station_parm(
                             deviceSn=self.coordinator_context,
@@ -473,13 +570,15 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             await self.coordinator.async_execute_command(
                 command=self.entity_description.key, option=False
             )
+            return
         # When running in Test mode do not switch for entities not supporting test mode
-        elif self.coordinator.client.testmode() and self._attribute_name not in [
+        if self.coordinator.client.testmode() and self._attribute_name not in [
             "preset_allow_export",
             "preset_discharge_priority",
             "preset_backup_option",
             "default_vehicle",
             "allow_grid_export",
+            MQTT_OVERLAY,
         ]:
             # Raise alert to frontend
             raise ServiceValidationError(
@@ -490,6 +589,25 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     "entity_id": self.entity_id,
                 },
             )
+        # Wait until client cache is valid before applying any api change
+        await self.coordinator.client.validate_cache()
+        if self.entity_description.restore:
+            LOGGER.info("%s will be disabled", self.entity_id)
+            # Customize cache if restore entity
+            value = False
+            self.coordinator.client.api.customizeCacheId(
+                id=self.coordinator_context,
+                key=self.entity_description.json_key,
+                value=bool(value),
+            )
+            if ALLOW_TESTMODE:
+                LOGGER.info(
+                    "%s: State value of entity '%s' has been customized in Api cache to: %s",
+                    "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
+                    self.entity_id,
+                    value,
+                )
+            await self.coordinator.async_refresh_data_from_apidict()
         elif self._attribute_name == "auto_upgrade":
             resp = await self.coordinator.client.api.set_auto_upgrade(
                 {self.coordinator_context: False}
@@ -550,7 +668,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         toFile=self.coordinator.client.testmode(),
                     )
                 elif self._attribute_name in ["allow_grid_export"]:
-                    if data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or data.get("station_sn") is not None:
+                    if (
+                        data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        or data.get("station_sn") is not None
+                    ):
                         # control via station setting
                         resp = await self.coordinator.client.api.set_station_parm(
                             deviceSn=self.coordinator_context,
@@ -628,22 +749,24 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     "action_name": service_name,
                 },
             )
-        # Ensure Export can be triggered only once
+        # Ensure Export can be triggered only once and startup is finished
+        if self.coordinator.client.startup and not self.last_run:
+            self.last_run = datetime.now().astimezone() - timedelta(minutes=9)
         if self.last_run and datetime.now().astimezone() < (
             timeout := self.last_run + timedelta(minutes=10)
         ):
             LOGGER.debug(
-                "The action '%s' cannot be executed again while still running",
+                "The action '%s' cannot be executed again while still running or startup in progress",
                 service_name,
             )
             # Raise alert to frontend
             raise ServiceValidationError(
-                f"The action '{service_name}' cannot be executed again while still running (Timeout at {timeout.strftime('%H:%M:%S')})",
+                f"The action '{service_name}' cannot be executed again while still running or startup in progress (Timeout at {timeout.strftime('%H:%M:%S')})",
                 translation_domain=DOMAIN,
                 translation_key="action_blocked",
                 translation_placeholders={
                     "service": service_name,
-                    "timeout": timeout.strftime('%H:%M:%S'),
+                    "timeout": timeout.strftime("%H:%M:%S"),
                 },
             )
         # Reset last run after timeout (for unexpected exceptions)
@@ -663,22 +786,32 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     Path(wwwroot) / "community" / DOMAIN / EXPORTFOLDER
                 )
                 # Toogle coordinator client cache invalid during the cache export randomization of the randomized system export
-                if await myexport.export_data(
-                    export_path=exportpath,
-                    toggle_cache=self.coordinator.client.toggle_cache,
-                ):
-                    # convert path to public available url folder and filename
-                    result = urllib.parse.quote(
-                        myexport.zipfilename.replace(
-                            wwwroot, AnkerSolixPicturePath.LOCALPATH
+                try:
+                    if await myexport.export_data(
+                        export_path=exportpath,
+                        mqttdata=bool(kwargs.get(INCLUDE_MQTT)),
+                        toggle_cache=self.coordinator.client.toggle_cache,
+                    ):
+                        # convert path to public available url folder and filename
+                        result = urllib.parse.quote(
+                            myexport.zipfilename.replace(
+                                wwwroot, AnkerSolixPicturePath.LOCALPATH
+                            )
                         )
-                    )
-                else:
-                    result = None
-                # Ensure to validate the coordinator client cache again
-                self.coordinator.client.toggle_cache(True)
-                # reset action blocker
-                self.last_run = None
+                    else:
+                        result = None
+                except (
+                    AnkerSolixApiClientError,
+                    AnkerSolixApiClientCommunicationError,
+                ) as exception:
+                    result = {
+                        "error": str(exception),
+                    }
+                finally:
+                    # Ensure to validate the coordinator client cache again
+                    self.coordinator.client.toggle_cache(True)
+                    # reset action blocker
+                    self.last_run = None
                 return {"export_filename": result}
             if service_name in [SERVICE_API_REQUEST]:
                 LOGGER.debug("%s action will be applied", service_name)
@@ -808,3 +941,46 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 )
             await self.coordinator.async_refresh_data_from_apidict()
         return None
+
+
+class AnkerSolixRestoreSwitch(AnkerSolixSwitch, RestoreEntity):
+    """anker_solix switch class with restore capability."""
+
+    def __init__(
+        self,
+        coordinator: AnkerSolixDataUpdateCoordinator,
+        description: AnkerSolixSwitchDescription,
+        context: str,
+        entity_type: str,
+    ) -> None:
+        """Initialize the switch class."""
+        super().__init__(coordinator, description, context, entity_type)
+        self._assumed_state = True
+
+    async def async_added_to_hass(self) -> None:
+        """Load the last known state when added to hass."""
+        await super().async_added_to_hass()
+        if last_state := await self.async_get_last_state():
+            # First try to get customization from state attributes if last state was unknown
+            if last_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+                if (customized := last_state.attributes.get("customized")) is not None:
+                    last_state.state = STATE_ON if customized else STATE_OFF
+            if (
+                last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+                and self._attr_is_on is not None
+            ):
+                # set the customized value if it was modified
+                # NOTE: State may have string representation of boolean according to device class
+                if self._attr_is_on != (last_state.state == STATE_ON):
+                    self._attr_is_on = (last_state.state == STATE_ON)
+                    LOGGER.info(
+                        "Restored state value of entity '%s' to: %s",
+                        self.entity_id,
+                        last_state.state,
+                    )
+                    self.coordinator.client.api.customizeCacheId(
+                        id=self.coordinator_context,
+                        key=self.entity_description.json_key,
+                        value=self._attr_is_on,
+                    )
+                    await self.coordinator.async_refresh_data_from_apidict(delayed=True)

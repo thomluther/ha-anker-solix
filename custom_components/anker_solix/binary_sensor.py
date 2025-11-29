@@ -29,6 +29,7 @@ from .const import (
     ATTRIBUTION,
     CREATE_ALL_ENTITIES,
     DOMAIN,
+    MQTT_OVERLAY,
     TEST_NUMBERVARIANCE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
@@ -43,6 +44,8 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import SolarbankAiemsStatus, SolixDeviceType, SolixNetworkStatus
+from .solixapi.helpers import get_enum_name
+from .solixapi.mqtt_device import SolixMqttDevice
 
 
 @dataclass(frozen=True)
@@ -52,6 +55,7 @@ class AnkerSolixBinarySensorDescription(
     """Binary Sensor entity description with optional keys."""
 
     force_creation: bool = False
+    mqtt: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
     attrib_fn: Callable[[dict], dict | None] = lambda d: None
@@ -107,15 +111,8 @@ DEVICE_SENSORS = [
             "status_code": (
                 code := ((d.get("schedule") or {}).get("ai_ems") or {}).get("status")
             ),
-            "status": next(
-                iter(
-                    [
-                        item.name
-                        for item in SolarbankAiemsStatus
-                        if str(item.value) == str(code)
-                    ]
-                ),
-                SolarbankAiemsStatus.unknown.name,
+            "status": get_enum_name(
+                SolarbankAiemsStatus, str(code), SolarbankAiemsStatus.unknown.name
             ),
         },
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -175,14 +172,9 @@ SITE_SENSORS = [
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         value_fn=lambda d, jk: (d.get("hes_info") or {}).get(jk),
         attrib_fn=lambda d: {
-            "network": next(
-                iter(
-                    [
-                        item.name
-                        for item in SolixNetworkStatus
-                        if item.value == str((d.get("hes_info") or {}).get("net"))
-                    ]
-                ),
+            "network": get_enum_name(
+                SolixNetworkStatus,
+                str((d.get("hes_info") or {}).get("net")),
                 SolixNetworkStatus.unknown.name,
             ),
             "network_code": (d.get("hes_info") or {}).get("net"),
@@ -220,6 +212,13 @@ ACCOUNT_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda d, _: not ALLOW_TESTMODE,
     ),
+    AnkerSolixBinarySensorDescription(
+        key="mqtt_connection",
+        translation_key="mqtt_connection",
+        json_key="mqtt_connection",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+    ),
 ]
 
 VEHICLE_SENSORS = [
@@ -246,9 +245,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up binary sensor platform."""
 
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
-
+    mdev: SolixMqttDevice | None = None
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
@@ -256,6 +255,8 @@ async def async_setup_entry(
         device_registry = dr.async_get(hass)
         excluded = set(entry.options.get(CONF_EXCLUDE, []))
         for context, data in coordinator.data.items():
+            mdev = None
+            mdata = {}
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
@@ -304,6 +305,11 @@ async def async_setup_entry(
                             )
                         ).get("identifiers"),
                     )
+                # get MQTT device combined values for creation of entities
+                if mdev := coordinator.client.get_mqtt_device(sn=context):
+                    mdata = mdev.get_combined_cache(
+                        fromFile=coordinator.client.testmode()
+                    )
 
             for description in (
                 desc
@@ -313,7 +319,17 @@ async def async_setup_entry(
                     not desc.exclude_fn(excluded, data)
                     and (
                         desc.force_creation
-                        or desc.value_fn(data, desc.json_key) is not None
+                        # filter MQTT entities and provide combined or only api cache
+                        # Entities that should not be created without MQTT data need to use exclude option
+                        or (
+                            desc.mqtt
+                            and desc.value_fn(mdata or data, desc.json_key) is not None
+                        )
+                        # filter API only entities
+                        or (
+                            not desc.mqtt
+                            and desc.value_fn(data, desc.json_key) is not None
+                        )
                     )
                 )
             ):
@@ -332,7 +348,6 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixBinarySensorDescription
     _attr_has_entity_name = True
-    _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset(
         {
             "wifi_ssid",
@@ -367,6 +382,7 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         super().__init__(coordinator, context)
 
         self._attribute_name = description.key
+        self._attr_attribution = f"{ATTRIBUTION}{' + MQTT' if description.mqtt else ''}"
         self._attr_unique_id = (f"{context}_{description.key}").lower()
         self.entity_description = description
         self.entity_type = entity_type
@@ -422,7 +438,18 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             and (hasattr(self.coordinator, "data"))
             and self.coordinator_context in self.coordinator.data
         ):
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             self._attr_extra_state_attributes = self.entity_description.attrib_fn(data)
         return self._attr_extra_state_attributes
 
@@ -431,7 +458,18 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         if self.coordinator and not (hasattr(self.coordinator, "data")):
             self._attr_is_on = None
         elif self.coordinator_context in self.coordinator.data:
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             key = self.entity_description.json_key
             self._attr_is_on = self.entity_description.value_fn(data, key)
 

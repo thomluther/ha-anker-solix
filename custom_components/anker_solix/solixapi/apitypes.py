@@ -28,7 +28,6 @@ API_COUNTRIES = {
         "EG",
         "LY",
         "TN",
-        "IL",
         "MA",
         "JO",
         "PS",
@@ -95,6 +94,7 @@ API_COUNTRIES = {
         "AM",
         "BY",
         "AZ",
+        "IL",
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
@@ -230,7 +230,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 63 + 68 used => 131
+""" Other endpoints neither implemented nor explored: 63 + 72 used => 135
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message', # payload format unknown
@@ -276,7 +276,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/order/export_charge_order',
     'power_service/v1/app/after_sale/get_popup',  # works as site member, {"site_id": siteId}, get active pop ups with code
     'power_service/v1/app/after_sale/check_popup',
-    'power_service/v1/app/after_sale/check_sn',  # checks whether any account device SN is eligable for replacement of battery (recall programs?)
+    'power_service/v1/app/after_sale/check_sn',  # checks whether any account device SN is eligible for replacement of battery (recall programs?)
     'power_service/v1/app/after_sale/mark_sn',
     'power_service/v1/app/share_site/anonymous_join_site',
     'power_service/v1/app/share_site/delete_site_member',
@@ -292,6 +292,10 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/report_tlv_event',  # tamper event? unknown what events to report, {"device_sn": deviceSn, "events": [{}]}
     'power_service/v1/app/shelly_ctrl_device', # {"device_sn": deviceSn, "op_type": "parameter", "value": value})) # Control shelly device settings, may require owner, usage known
     'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
+    'power_service/v1/app/mothly_report_show',  # This is no typo in the endpoint! Get link to actual html report, but App is required to view
+    'power_service/v1/app/mothly_report_list',  # This is no typo in the endpoint! List existing monthly reports {"site_id": siteId}
+    'power_service/v1/app/get_monthly_report_configs', # get the monthly report messages {"site_id": siteId}
+    'power_service/v1/app/set_monthly_report_configs', # configure the monthly report messages
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -359,7 +363,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_common_svc/location/set",  # Set default and identifier location
     "charging_common_svc/location/support",
 
-Home Energy System related (X1): 44 + 17 used => 61 total
+Home Energy System related (X1): 44 + 20 used => 64 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -403,6 +407,9 @@ Home Energy System related (X1): 44 + 17 used => 61 total
     2*"charging_hes_svc/set_station_evchargers",
     "charging_hes_svc/set_evcharger_station_feature",
     "charging_hes_svc/sync_back_up_history",
+    "charging_hes_svc/share_device/delete_installer_inviting_member",
+    "charging_hes_svc/share_device/invite_installer_member",
+    "charging_hes_svc/share_device/get_installer_invited_list",
 
 Home Energy System related (X1): 5 + 0 used => 5 total
     "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
@@ -420,7 +427,7 @@ related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/disaster_detail',
 
-related to Prime charger models: 7 + 5 used => 12 total
+related to Prime charger models: 7 + 9 used => 16 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
@@ -428,6 +435,10 @@ related to Prime charger models: 7 + 5 used => 12 total
     'mini_power/v1/app/egg/add_easter_egg_trigger_record',
     'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
     'mini_power/v1/app/setting/set_compatibility_status',
+    'mini_power/v1/app/style/get_manual_clock_screensavers',
+    'mini_power/v1/app/style/add_manual_clock_screensavers',
+    'mini_power/v1/app/style/delete_manual_clock_screensavers',
+    'mini_power/v1/app/style/get_url',
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -443,6 +454,8 @@ the cached JSON file. Other instances should recognize an update of the cached J
 
 # Following are the JSON filename prefixes for exported endpoint names as defined previously
 API_FILEPREFIXES = {
+    # mqtt message prefixes
+    "mqtt_message": "mqtt_msg",
     # power_service endpoint file prefixes
     "homepage": "homepage",
     "site_list": "site_list",
@@ -571,6 +584,70 @@ API_FILEPREFIXES = {
 }
 
 
+""" Anker Solix Device overview
+Model  Name                                     Platform
+----------------------------------------------------------------------------------------------------
+A110A  26K Prime Power Bank                     Power Bank
+A1722  SOLIX C300                               Portable Power Station
+A1723  SOLIX C300X                              Portable Power Station
+A1725  SOLIX C200(X)                            Portable Power Station
+A1726  SOLIX C300 DC                            Portable Power Station
+A1727  SOLIX C200 DC                            Portable Power Station
+A1728  SOLIX C300X DC                           Portable Power Station
+A1729  SOLIX C200X DC                           Portable Power Station
+A1753  SOLIX C800                               Portable Power Station
+A1754  SOLIX C800 Plus                          Portable Power Station
+A1755  SOLIX C800X                              Portable Power Station
+A1761  SOLIX C1000(X)                           Portable Power Station
+A1762  Portable Power Station 1000              Portable Power Station
+A1770  F1200 (Bluetooth)                        Portable Power Station
+A1771  F1200 (Bluetooth and WLAN)               Portable Power Station
+A1772  SOLIX F1500                              Portable Power Station
+A1780  767 PowerHouse (SOLIX F2000)             Portable Power Station
+A1780P 767 Power House (SOLIX F2000) with WLAN  Portable Power Station
+A1781  SOLIX F2600                              Portable Power Station
+A1790  SOLIX F3800                              Portable Power Station
+A1790P SOLIX F3800 Plus                         Portable Power Station
+A17A0  Powered Cooler 30                        Powered Cooler
+A17A1  Powered Cooler 40                        Powered Cooler
+A17A2  Powered Cooler 50                        Powered Cooler
+A17A3  SOLIX Everfrost 2 23L                    Powered Cooler
+A17A4  SOLIX Everfrost 2 40L                    Powered Cooler
+A17A5  SOLIX Everfrost 2 58L                    Powered Cooler
+A17C0  Solarbank E1600                          Balcony Solar Power System
+A17C1  Solarbank 2 E1600 Pro                    Balcony Solar Power System
+A17C2  Solarbank 2 E1600 AC                     Balcony Solar Power System
+A17C3  Solarbank 2 E1600 Plus                   Balcony Solar Power System
+A17C5  Solarbank 3 E2700 Pro                    Balcony Solar Power System
+A17X7  Smart Meter                              Accessory
+A17X8  Smart Plug                               Accessory
+A2345  250W Prime Charger                       Charger
+A25X7  Prime Wireless Charger                   Charger
+A5101  X1-P6K-US/S                              Residential Storage System
+A5102  X1-H(3.68~6)K-S                          Residential Storage System
+A5103  X1-H (5~12)K-T                           Residential Storage System
+A5140  MI60 Microinverter                       Balcony Solar Power System
+A5143  MI80 Microinverter(BLE)                  Balcony Solar Power System
+A5150  Microinverter                            Residential Storage System
+A5191  V1 Smart EV Charger                      Smart EV Charger
+A5220  Battery Module                           Residential Storage System
+A5341  Backup Controller                        Residential Storage System
+A5450  Zigbee Dongle                            Residential Storage System
+A91B2  240W Charging Station                    Charger
+AE100  SOLIX Power Dock                         Balcony Solar Power System
+AE1R0  Anker SOLIX P1 Meter                     Accessory
+----------------------------------------------------------------------------------------------------
+Summary: 49 Models
+ 1 Power Bank
+20 Portable Power Station
+ 6 Powered Cooler
+ 8 Balcony Solar Power System
+ 3 Accessory
+ 3 Charger
+ 7 Residential Storage System
+ 1 Smart EV Charger
+"""
+
 LOGIN_RESPONSE: dict = {
     "user_id": str,
     "email": str,
@@ -615,6 +692,7 @@ class SolixDeviceType(Enum):
     HES = "hes"
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
+    POWERBANK = "powerbank"
     EV_CHARGER = "ev_charger"
     VEHICLE = "vehicle"
 
@@ -633,7 +711,7 @@ class SolixParmType(Enum):
 
 
 class SolarbankPowerMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 1 Power setting modes."""
+    """Int Enumeration for Anker Solix Solarbank 1 Power setting modes."""
 
     unknown = 0
     normal = 1
@@ -641,7 +719,7 @@ class SolarbankPowerMode(IntEnum):
 
 
 class SolarbankDischargePriorityMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
+    """Int Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
 
     unknown = -1
     off = 0
@@ -649,7 +727,7 @@ class SolarbankDischargePriorityMode(IntEnum):
 
 
 class SolarbankAiemsStatus(IntEnum):
-    """Enumeration for Anker Solix Solarbank Anker Intelligence status."""
+    """Int Enumeration for Anker Solix Solarbank Anker Intelligence status."""
 
     unknown = 0
     untrained = 3
@@ -658,7 +736,7 @@ class SolarbankAiemsStatus(IntEnum):
 
 
 class SolarbankAiemsRuntimeStatus(IntEnum):
-    """Enumeration for Anker Solix Solarbank Anker Intelligence runtime status.
+    """Int Enumeration for Anker Solix Solarbank Anker Intelligence runtime status.
 
     Following combinations of ai_ems status abd ai_ems runtime information were seen:
     - left_time > 0 with runtime status 0 => learning phase status 4 without runtime failure
@@ -673,7 +751,7 @@ class SolarbankAiemsRuntimeStatus(IntEnum):
 
 
 class SolixTariffTypes(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
+    """Int Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
     UNKNOWN = 0  # Pseudo type to reflect no known tariff defined
     PEAK = 1  # maximize PV and Battery usage, no AC charge
@@ -685,7 +763,7 @@ class SolixTariffTypes(IntEnum):
 
 
 class SolixPriceTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
+    """Str Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
     UNKNOWN = "unknown"
     FIXED = "fixed"
@@ -694,7 +772,7 @@ class SolixPriceTypes(StrEnum):
 
 
 class SolixDayTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Day Types."""
+    """Str Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Day Types."""
 
     WEEKDAY = "weekday"
     WEEKEND = "weekend"
@@ -702,7 +780,7 @@ class SolixDayTypes(StrEnum):
 
 
 class SolarbankUsageMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2/3 Power Usage modes."""
+    """Int Enumeration for Anker Solix Solarbank 2/3 Power Usage modes."""
 
     unknown = 0  # AC output based on measured smart meter power
     smartmeter = 1  # AC output based on measured smart meter power
@@ -760,6 +838,7 @@ class ApiCategories:
     powerpanel_avg_power: str = "powerpanel_avg_power"
     hes_energy: str = "hes_energy"
     hes_avg_power: str = "hes_avg_power"
+    mqtt_devices: str = "mqtt_devices"
 
 
 @dataclass(frozen=True)
@@ -795,18 +874,19 @@ class SolixDeviceCapacity:
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
     A1762: int = 1056  # SOLIX Portable Power Station 1000
-    # A17C1: int = 1056  # SOLIX C1000 Expansion Battery # same PN as Solarbank 2?
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
     A1780: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1780_1: int = 2048  # Expansion Battery for F2000
-    A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WIFI
+    A1780P: int = (
+        2048  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767) with WIFI
+    )
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1782: int = 3072  # SOLIX F3000 Portable Power Station with Smart Meter support
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
-    A1790P: int = 3840  # SOLIX F3800 Portable Power Station
+    A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
 
 
@@ -899,11 +979,18 @@ class SolixDeviceCategory:
     A1772: str = SolixDeviceType.PPS.value  # SOLIX F1500 Portable Power Station
     A1780: str = (
         SolixDeviceType.PPS.value
-    )  # SOLIX F2000 Portable Power Station (PowerHouse 767)
+    )  # SOLIX F2000 Portable Power Station (PowerHouse 767) with Wifi
+    A1780P: str = (
+        SolixDeviceType.PPS.value
+    )  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX F3000 Portable Power Station with SM support (US Market)
+    A17E1: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX Solarbank Prime E10 Power Module (US Market)
+
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
@@ -927,7 +1014,10 @@ class SolixDeviceCategory:
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
     # Charging Stations
     A2345: str = SolixDeviceType.CHARGER.value  # Anker 250W Prime Charger
+    A25X7: str = SolixDeviceType.CHARGER.value  # Prime Wireless Charger
     A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
+    # Power Bank
+    A110A: str = SolixDeviceType.POWERBANK.value  # Anker Prime Power Bank 300 W, 250mAh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
 
@@ -1046,6 +1136,10 @@ class SolixDefaults:
     REQUEST_TIMEOUT_DEF: int = 10
     # Request limit per endpoint per minute
     ENDPOINT_LIMIT_DEF: int = 10
+    # Seconds timeout for MQTT realtime trigger
+    TRIGGER_TIMEOUT_MIN: int = 30
+    TRIGGER_TIMEOUT_MAX: int = 600
+    TRIGGER_TIMEOUT_DEF: int = 300
     # Inverter limit
     MICRO_INVERTER_LIMIT_MIN: int = 0
     MICRO_INVERTER_LIMIT_MAX: int = 800
@@ -1083,7 +1177,7 @@ class SolixDefaults:
 
 
 class SolixDeviceStatus(StrEnum):
-    """Enumeration for Anker Solix Device status."""
+    """Str Enumeration for Anker Solix Device status."""
 
     # The device status code seems to be used for cloud connection status.
     offline = "0"
@@ -1092,7 +1186,7 @@ class SolixDeviceStatus(StrEnum):
 
 
 class SolarbankStatus(StrEnum):
-    """Enumeration for Anker Solix Solarbank status."""
+    """Str Enumeration for Anker Solix Solarbank status."""
 
     detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
     protection_charge = "03"  # For SB2 only when there is charge while output below demand in detection mode
@@ -1114,24 +1208,50 @@ class SolarbankStatus(StrEnum):
     # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
+class SolarbankLightMode(StrEnum):
+    """Str Enumeration for Anker Solix Solarbank light modes."""
+
+    normal = "0"
+    mood = "1"
+    unknown = "unknown"
+
+
 class SolarbankParallelTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank parallel types."""
+    """Str Enumeration for Anker Solix Solarbank parallel types."""
 
     single = "single"
     cascaded = "cascaded"  # For SB1 only if SB1 is attached to SB2 in single system
     ae100 = "ae100"  # Solarbank power dock in use
+    ae100v2 = "ae100v2"
 
 
 class SmartmeterStatus(StrEnum):
-    """Enumeration for Anker Solix Smartmeter status."""
+    """Str Enumeration for Anker Solix Smartmeter status."""
 
     # TODO(#106) Update Smartmeter grid status description once known
     ok = "0"  # normal grid state when smart meter is measuring
     unknown = "unknown"
 
 
+class PowerdockStatus(StrEnum):
+    """Str Enumeration for Anker Solix Power Dock status."""
+
+    # TODO(#MS) Update status description once known
+    ok = "0"  # normal power dock state
+    unknown = "unknown"
+
+
+class SolarbankGridStatus(StrEnum):
+    """Str Enumeration for Anker Solarbank grid status."""
+
+    connected = "1"  # normal grid state
+    connecting = "3"  # Grid detected, going into normal state
+    disconnected = "6"  # No grid available
+    unknown = "unknown"
+
+
 class SolixGridStatus(StrEnum):
-    """Enumeration for Anker Solix grid status."""
+    """Str Enumeration for Anker Solix grid status."""
 
     # TODO(X1) Update grid status description once known
     ok = "0"  # normal grid state when hes pcu grid status is ok
@@ -1139,7 +1259,7 @@ class SolixGridStatus(StrEnum):
 
 
 class SolixRoleStatus(StrEnum):
-    """Enumeration for Anker Solix role status of devices."""
+    """Str Enumeration for Anker Solix role status of devices."""
 
     # The device role status codes as used for HES devices
     # TODO(X1): The proper description of those codes has to be confirmed
@@ -1149,12 +1269,66 @@ class SolixRoleStatus(StrEnum):
 
 
 class SolixNetworkStatus(StrEnum):
-    """Enumeration for Anker Solix HES network status."""
+    """Str Enumeration for Anker Solix HES network status."""
 
     # TODO(X1): The proper description of those codes has to be confirmed
     wifi = "1"  # to be confirmed
     lan = "2"  # this was seen on LAN connected systems
     mobile = "3"  # HES systems support also 5G connections, code to be confirmed
+    unknown = "unknown"
+
+
+class SolixSwitchMode(IntEnum):
+    """Int Enumeration for generic Anker Solix switch modes."""
+
+    off = 0
+    on = 1
+    unknown = -1
+
+
+class SolixPpsOutputStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS output status."""
+
+    smart = "0"
+    normal = "1"
+    unknown = "unknown"
+
+
+class SolixPpsOutputMode(StrEnum):
+    """Str Enumeration for Anker Solix PPS output modes."""
+
+    normal = "1"
+    smart = "2"
+    unknown = "unknown"
+
+
+class SolixPpsChargingStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS charging status."""
+
+    inactive = "0"
+    solar = "1"
+    input_power = "2"  # could be AC or DC input depending on device
+    both = "3"
+    unknown = "unknown"
+
+
+class SolixPpsPortStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS port status."""
+
+    inactive = "0"
+    discharging = "1"
+    charging = "2"
+    unknown = "unknown"
+
+
+class SolixPpsDisplayMode(StrEnum):
+    """Str Enumeration for Anker Solix PPS display and light modes."""
+
+    off = "0"
+    low = "1"
+    medium = "2"
+    high = "3"
+    blinking = "4"
     unknown = "unknown"
 
 
@@ -1338,7 +1512,7 @@ class SolixVehicle:
 
 
 class Color(StrEnum):
-    """Define ASCII colors."""
+    """Str Enumeration defining ASCII colors."""
 
     BLACK = "\033[30m"
     RED = "\033[31m"
@@ -1349,3 +1523,24 @@ class Color(StrEnum):
     MAG = "\033[35m"
     WHITE = "\033[37m"
     OFF = "\033[0m"
+
+
+class DeviceHexDataTypes(Enum):
+    """Enumeration for Anker Solix MQTT HEX data value types."""
+
+    str = bytes.fromhex("00")  # various number of bytes, string (Base type)
+    ui = bytes.fromhex("01")  # 1 byte fix, unsigned int (Base type)
+    sile = bytes.fromhex("02")  # 2 bytes fix, signed int LE (Base type)
+    # var is always 4 bytes, but could be 1-4 * int, 1-2 * signed int LE or 4 Byte signed int LE
+    # mapping must specify "values" to indicate number of values in bytes from beginning. Default is 0 for 1 value in 4 bytes
+    var = bytes.fromhex("03")
+    # bin is multiple bytes, mostly 00 or 01 but also others, bitmap pattern for settings
+    # mapping must specify start byte string ("00"-"xx") for fields and field description is a list, since single field can be used for various named settings
+    # each named setting must describe a "mask" integer to indicate which bit(s) are relevant for the named setting, e.g. mask 0x64 => 0100 0000
+    bin = bytes.fromhex("04")
+    sfle = bytes.fromhex("05")  # 4 bytes, signed float LE (Base type)
+    # 06 can be many bytes, mix of Str and Byte values
+    # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
+    # The "length" with int for byte count can be specified (default is 1 Byte), where Length of 0 indicates that first byte contains variable field length
+    strb = bytes.fromhex("06")
+    unk = bytes.fromhex("FF")  # unkonwn marker

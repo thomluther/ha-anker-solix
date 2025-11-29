@@ -126,24 +126,56 @@
             },
             "user_options": {
                 "title": "Anker Solix Optionen",
-                "description": "Ändere die Nutzung der Schnittstelle",
+                "description": "Ändere die Nutzung der Hub Konfiguration",
                 "data": {
-                    "scan_interval": "Update Intervall",
-                    "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
-                    "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
-                    "timeout": "Zeitüberschreitung für Api Anfragen",
-                    "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
-                    "skip_invalid": "Ignoriere ungültige Antwortdaten",
-                    "exclude": "Ausgeschlossene Entitäts-Kategorien",
-                    "testmode": "Benutze den Testmode für die Integration",
-                    "testfolder": "Ordner mit json Dateien für den Integrationstest"
+                    "exclude": "Ausgeschlossene Entitäts-Kategorien"
                 },
                 "data_description": {
-                    "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
-                    "endpoint_limit": "Hinweis: Die Anker Cloud erzwingt ein Api Endpunkt Anfragelimit pro Minute. Standardmäßig werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, um Api Fehler zu vermeiden. Die Drosselung kann mit 0 deaktiviert werden.",
-                    "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
-                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
-                    "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
+                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)"
+                },
+                "sections": {
+                    "api_options": {
+                        "name": "Api Optionen",
+                        "description": "Ändere Optionen der Anker Power Cloud Server Api",
+                        "data": {
+                            "scan_interval": "Update Intervall",
+                            "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
+                            "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                            "timeout": "Zeitüberschreitung für Api Anfragen",
+                            "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
+                            "skip_invalid": "Ignoriere ungültige Antwortdaten"
+                        },
+                        "data_description": {
+                            "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert, wenn kein MQTT Real Time Data Update getriggert wurde. Ein Update Intervall kleiner 60 Sekunden bringt deswegen nur Vorteile in Verbindung mit MQTT Nutzung.",
+                            "endpoint_limit": "Hinweis: Die Anker Cloud Api erzwingt ein Anfragelimit pro Minute und Endpunkt. Um Api Fehler zu vermeiden, werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, sobald das Limit überschritten wurde. Die Drosselung kann mit 0 deaktiviert werden.",
+                            "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden."
+                        }
+                    },
+                    "mqtt_options": {
+                        "name": "MQTT Optionen",
+                        "description": "Ändere Optionen der Anker MQTT Server Nutzung",
+                        "data": {
+                            "mqtt_usage": "MQTT Server Nutzung",
+                            "trigger_timeout": "Echtzeitdaten Trigger Zeitüberschreitung"
+                        },
+                        "data_description": {
+                            "mqtt_usage": "Hinweis: Die Verwendung von MQTT kann zusätzliche Funktionen und Steuerungsmöglichkeiten für deine verwalteten Geräte aktivieren. Dies hängt stark von der bekannten MQTT Nachrichtenentschlüsselung des Gerätetyps ab.\nWeitere Informationen: {mqtt_link}",
+                            "trigger_timeout": "Geräte veröffentlichen Echtzeitdaten nur nachdem sie getriggert wurden. Die Zeitüberschreitung ist die Veröffentlichungsdauer, falls sie nicht erneut getriggert werden."
+                        }
+                    },
+                    "test_options": {
+                        "name": "Test Optionen",
+                        "description": "Ändere Optionen zum Testen der Integration",
+                        "data": {
+                            "testmode": "Benutze den Testmode für die Integration",
+                            "testfolder": "Ordner mit json Dateien für den Integrationstest",
+                            "mqtt_test_speed": "Geschwindigkeitsfaktor für MQTT Nachrichtensimulation"
+                        },
+                        "data_description": {
+                            "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt.",
+                            "mqtt_test_speed": "Falls der Ordner eine Abfolge an MQTT Dateien enthält, werden diese mit dem gewählten Geschwindigkeitsfaktor simuliert."
+                        }
+                    }
                 }
             }
         },
@@ -151,7 +183,7 @@
             "auth": "Benutzername/Passwort ist ungültig: {error_detail}",
             "connection": "Verbindung zum Server fehlgeschlagen: {error_detail}",
             "exceeded": "Anzahl Loginversuche überschritten: {error_detail}",
-            "duplicate_devices": "{username} teilt Geräte mit dem konfigurierten Konto {shared_account}, es können nicht beide gleichzeitig konfiguriert werden!",
+            "duplicate_devices": "{username} teilt Geräte mit dem bestehenden Konto {shared_account}, das im Hub {name} konfiguriert ist. Es können nicht beide Hubs gleichzeitig konfiguriert werden!",
             "accept_terms": "Nutzungsbedingungen müssen akzeptiert werden",
             "folder_invalid": "Gültiger Ordner erforderlich für den Testmode",
             "unknown": "Unbekannter Fehler aufgetreten: {error_detail}"
@@ -165,29 +197,67 @@
         "step": {
             "init": {
                 "title": "Anker Solix Optionen",
-                "description": "Ändere die Nutzung der Schnittstelle",
+                "description": "Ändere die Nutzung der Hub Konfiguration",
                 "data": {
-                    "scan_interval": "Update Intervall",
-                    "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
-                    "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
-                    "timeout": "Zeitüberschreitung für Api Anfragen",
-                    "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
-                    "skip_invalid": "Ignoriere ungültige Antwortdaten",
-                    "exclude": "Ausgeschlossene Entitäts-Kategorien",
-                    "testmode": "Benutze den Testmode für die Integration",
-                    "testfolder": "Ordner mit json Dateien für den Integrationstest"
+                    "exclude": "Ausgeschlossene Entitäts-Kategorien"
                 },
                 "data_description": {
-                    "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert. Ein Update Intervall kleiner 60 Sekunden bringt deswegen keinerlei Vorteil.",
-                    "endpoint_limit": "Hinweis: Die Anker Cloud erzwingt ein Api Endpunkt Anfragelimit pro Minute. Standardmäßig werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt (sobald aktiviert), um Api Fehler zu vermeiden. Die Endpunkt Drosselung kann mit 0 deaktiviert und zurückgesetzt werden.",
-                    "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden.",
-                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)",
-                    "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt."
+                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)"
+                },
+                "sections": {
+                    "api_options": {
+                        "name": "Api Optionen",
+                        "description": "Ändere Optionen der Anker Power Cloud Server Api",
+                        "data": {
+                            "scan_interval": "Update Intervall",
+                            "dev_interval_mult": "Interval Multiplikator für Gerätedetails",
+                            "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
+                            "timeout": "Zeitüberschreitung für Api Anfragen",
+                            "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
+                            "skip_invalid": "Ignoriere ungültige Antwortdaten"
+                        },
+                        "data_description": {
+                            "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert, wenn kein MQTT Real Time Data Update getriggert wurde. Ein Update Intervall kleiner 60 Sekunden bringt deswegen nur Vorteile in Verbindung mit MQTT Nutzung.",
+                            "endpoint_limit": "Hinweis: Die Anker Cloud Api erzwingt ein Anfragelimit pro Minute und Endpunkt. Um Api Fehler zu vermeiden, werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, sobald das Limit überschritten wurde. Die Drosselung kann mit 0 deaktiviert werden.",
+                            "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden."
+                        }
+                    },
+                    "mqtt_options": {
+                        "name": "MQTT Optionen",
+                        "description": "Ändere Optionen der Anker MQTT Server Nutzung",
+                        "data": {
+                            "mqtt_usage": "MQTT Server Nutzung",
+                            "trigger_timeout": "Echtzeitdaten Trigger Zeitüberschreitung"
+                        },
+                        "data_description": {
+                            "mqtt_usage": "Hinweis: Die Verwendung von MQTT kann zusätzliche Funktionen und Steuerungsmöglichkeiten für deine verwalteten Geräte aktivieren. Dies hängt stark von der bekannten MQTT Nachrichtenentschlüsselung des Gerätetyps ab.\nWeitere Informationen: {mqtt_link}",
+                            "trigger_timeout": "Geräte veröffentlichen Echtzeitdaten nur nachdem sie getriggert wurden. Die Zeitüberschreitung ist die Veröffentlichungsdauer, falls sie nicht erneut getriggert werden."
+                        }
+                    },
+                    "test_options": {
+                        "name": "Test Optionen",
+                        "description": "Ändere Optionen zum Testen der Integration",
+                        "data": {
+                            "testmode": "Benutze den Testmode für die Integration",
+                            "testfolder": "Ordner mit json Dateien für den Integrationstest",
+                            "mqtt_test_speed": "Geschwindigkeitsfaktor für MQTT Nachrichtensimulation"
+                        },
+                        "data_description": {
+                            "testmode": "Im Testmode benutzt die Konfiguration lediglich die json Dateien im ausgewählen Ordner zum Erstellen der Geräte und Sensoren für Testzwecke. Eine Server Kommunikation findet dann nicht mehr statt.",
+                            "mqtt_test_speed": "Falls der Ordner eine Abfolge an MQTT Dateien enthält, werden diese mit dem gewählten Geschwindigkeitsfaktor simuliert."
+                        }
+                    }
                 }
             }
         },
         "error": {
             "folder_invalid": "Gültiger Ordner erforderlich für den Testmode"
+        }
+    },
+    "issues": {
+        "duplicate_devices": {
+            "description": "{username} teilt Geräte mit dem bestehenden Konto {shared_account}, das im Hub {name} konfiguriert ist. Es können nicht beide Hubs gleichzeitig konfiguriert werden!",
+            "title": "Doppelte Seriennummern von Anker Solix Geräten gefunden"
         }
     },
     "entity": {
@@ -200,6 +270,9 @@
             },
             "restore_attributes": {
                 "name": "Attribute zurücksetzen"
+            },
+            "mqtt_realtime_trigger": {
+                "name": "MQTT Echtzeitdaten"
             }
         },
         "binary_sensor": {
@@ -232,6 +305,13 @@
             },
             "wired_connection": {
                 "name": "Kabelverbindung",
+                "state": {
+                    "on": "Verbunden",
+                    "off": "Getrennt"
+                }
+            },
+            "mqtt_connection": {
+                "name": "MQTT Verbindung",
                 "state": {
                     "on": "Verbunden",
                     "off": "Getrennt"
@@ -600,20 +680,37 @@
                     }
                 }
             },
-            "charging_power": {
+            "bat_charge_power": {
+                "name": "Aufladeleistung"
+            },
+            "bat_discharge_power": {
+                "name": "Entladeleistung"
+            },
+            "battery_power_signed": {
                 "name": "Akkuleistung"
             },
             "other_solar_power": {
                 "name": "Solar Drittanbieter"
             },
             "input_power": {
-                "name": "Solarleistung"
+                "name": "Solarleistung",
+                "state_attributes": {
+                    "pv_1_voltage": {
+                        "name": "PV 1 Volt"
+                    },
+                    "pv_2_voltage": {
+                        "name": "PV 2 Volt"
+                    }
+                }
             },
             "solar_power_1": {
                 "name": "Solar PV1",
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Volt"
                     }
                 }
             },
@@ -622,6 +719,9 @@
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Volt"
                     }
                 }
             },
@@ -630,6 +730,9 @@
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Volt"
                     }
                 }
             },
@@ -638,6 +741,9 @@
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Volt"
                     }
                 }
             },
@@ -649,8 +755,29 @@
                     }
                 }
             },
-            "output_power": {
+            "dc_input_power": {
+                "name": "DC Eingangsleistung"
+            },
+            "dc_input_power_total": {
+                "name": "DC Eingangsleistung gesamt"
+            },
+            "ac_input_power": {
+                "name": "AC Eingangsleistung"
+            },
+            "ac_input_power_total": {
+                "name": "AC Eingangsleistung gesamt"
+            },
+            "dc_output_power": {
                 "name": "DC Ausgangsleistung"
+            },
+            "dc_output_power_total": {
+                "name": "DC Ausgangsleistung gesamt"
+            },
+            "ac_output_power": {
+                "name": "AC Ausgangsleistung"
+            },
+            "ac_output_power_total": {
+                "name": "AC Ausgangsleistung gesamt"
             },
             "ac_socket": {
                 "name": "AC Steckdose"
@@ -704,7 +831,15 @@
                 }
             },
             "state_of_charge": {
-                "name": "Ladestand"
+                "name": "Ladestand",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "state_of_health": {
+                        "name": "Gesundheit %"
+                    }
+                }
             },
             "battery_energy": {
                 "name": "Akkuenergie",
@@ -713,6 +848,24 @@
                         "name": "Kapazität"
                     }
                 }
+            },
+            "discharged_energy": {
+                "name": "Energie entladen"
+            },
+            "charged_energy": {
+                "name": "Energie geladen"
+            },
+            "output_energy": {
+                "name": "Energie geliefert"
+            },
+            "solar_energy": {
+                "name": "Energie produziert"
+            },
+            "device_efficiency": {
+                "name": "Geräteeffizienz"
+            },
+            "battery_efficiency": {
+                "name": "Akkueffizienz"
             },
             "bws_surplus": {
                 "name": "BWS Überhang"
@@ -793,7 +946,7 @@
             "hes_list": {
                 "name": "Heim Energie Systeme"
             },
-            "solarbank_charging_power": {
+            "solarbank_battery_power_signed": {
                 "name": "SB Akkuleistung"
             },
             "solarbank_input_power": {
@@ -831,7 +984,7 @@
                     }
                 }
             },
-            "pps_charging_power": {
+            "pps_battery_power_signed": {
                 "name": "PPS Akkuleistung"
             },
             "pps_output_power": {
@@ -928,9 +1081,6 @@
             "set_system_output_power": {
                 "name": "System Einspeisevorgabe"
             },
-            "site_charging_power": {
-                "name": "System Ladeleistung"
-            },
             "grid_status_desc": {
                 "name": "Netz Status",
                 "state": {
@@ -948,6 +1098,15 @@
             },
             "photovoltaic_to_grid_power": {
                 "name": "Netzeinspeisung"
+            },
+            "grid_power_signed": {
+                "name": "Netzleistung"
+            },
+            "grid_import_energy": {
+                "name": "Netzenergie Bezug"
+            },
+            "grid_export_energy": {
+                "name": "Netzenergie Einspeisung"
             },
             "solar_forecast_today": {
                 "name": "Solar Prognose heute",
@@ -1255,6 +1414,14 @@
                     }
                 }
             },
+            "mqtt_timestamp": {
+                "name": "MQTT Zeit",
+                "state_attributes": {
+                    "messages": {
+                        "name": "Nachrichten"
+                    }
+                }
+            },
             "charge_power": {
                 "name": "Aufladeleistung"
             },
@@ -1287,6 +1454,195 @@
             },
             "update_timestamp": {
                 "name": "Aktualisiert"
+            },
+            "mqtt_statistic": {
+                "name": "MQTT Statistik",
+                "state_attributes": {
+                    "start_time": {
+                        "name": "Startzeit"
+                    },
+                    "bytes_received": {
+                        "name": "Bytes empfangen"
+                    },
+                    "bytes_sent": {
+                        "name": "Bytes gesendet"
+                    },
+                    "messages": {
+                        "name": "Nachrichten"
+                    }
+                }
+            },
+            "usbc_1_power": {
+                "name": "USB-C Port 1",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    }
+                }
+            },
+            "usbc_2_power": {
+                "name": "USB-C Port 2",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    }
+                }
+            },
+            "usbc_3_power": {
+                "name": "USB-C Port 3",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    }
+                }
+            },
+            "usbc_4_power": {
+                "name": "USB-C Port 4",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    }
+                }
+            },
+            "usba_1_power": {
+                "name": "USB-A Port 1",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    }
+                }
+            },
+            "usba_2_power": {
+                "name": "USB-A Port 2",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    }
+                }
+            },
+            "dc_12v_1_power": {
+                "name": "DC 12V Port 1"
+            },
+            "dc_12v_2_power": {
+                "name": "DC 12V Port 2"
+            },
+            "remaining_time_hours": {
+                "name": "Verbleibende Zeit"
+            },
+            "exp_1_soc": {
+                "name": "Erw. 1 Ladestand",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Seriennumber"
+                    },
+                    "state_of_health": {
+                        "name": "Gesundheit %"
+                    },
+                    "type": {
+                        "name": "Typ"
+                    }
+                }
+            },
+            "exp_1_temperature": {
+                "name": "Erw. 1 Temperatur"
+            },
+            "exp_2_soc": {
+                "name": "Erw. 1 Ladestand",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Seriennumber"
+                    },
+                    "state_of_health": {
+                        "name": "Gesundheit %"
+                    },
+                    "type": {
+                        "name": "Typ"
+                    }
+                }
+            },
+            "exp_2_temperature": {
+                "name": "Erw. 2 Temperatur"
+            },
+            "exp_3_soc": {
+                "name": "Erw. 2 Ladestand",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Seriennumber"
+                    },
+                    "state_of_health": {
+                        "name": "Gesundheit %"
+                    },
+                    "type": {
+                        "name": "Typ"
+                    }
+                }
+            },
+            "exp_3_temperature": {
+                "name": "Erw. 3 Temperatur"
+            },
+            "exp_4_soc": {
+                "name": "Erw. 3 Ladestand",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Seriennumber"
+                    },
+                    "state_of_health": {
+                        "name": "Gesundheit %"
+                    },
+                    "type": {
+                        "name": "Typ"
+                    }
+                }
+            },
+            "exp_4_temperature": {
+                "name": "Erw. 4 Temperatur"
+            },
+            "exp_5_soc": {
+                "name": "Erw. 4 Ladestand",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Seriennumber"
+                    },
+                    "state_of_health": {
+                        "name": "Gesundheit %"
+                    },
+                    "type": {
+                        "name": "Typ"
+                    }
+                }
+            },
+            "exp_5_temperature": {
+                "name": "Erw. 5 Temperatur"
             }
         },
         "switch": {
@@ -1304,6 +1660,14 @@
             },
             "allow_grid_export": {
                 "name": "Erlaube Netzeinspeisung"
+            },
+            "mqtt_overlay": {
+                "name": "MQTT Überlagerung",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Angepasst"
+                    }
+                }
             },
             "allow_refresh": {
                 "name": "Api Nutzung",
@@ -1349,7 +1713,13 @@
         },
         "export_systems": {
             "name": "Export von anonymisierten Api Informationen aller zugänglichen Systeme und Geräte als gezippte JSON Dateien",
-            "description": "Die aktuellen Api Antworten deiner Anker Solix Systeme und Geräte werden anonymisiert in JSON Dateien gespeichert. Der gezippte Export Ordner wird als Antwort zurückgegeben. Diese Aktion kann 10 Sekunden oder mehrere Minuten dauern falls Endpunkt Drosselung angewendet wird! Der Ausführen Knopf wird erst grün wenn die Aktion beendet ist."
+            "description": "Die aktuellen Api Antworten deiner Anker Solix Systeme und Geräte werden anonymisiert in JSON Dateien gespeichert. Der gezippte Export Ordner wird als Antwort zurückgegeben. Diese Aktion kann 10 Sekunden oder mehrere Minuten dauern falls Endpunkt Drosselung angewendet wird! Der Ausführen Knopf wird erst grün wenn die Aktion beendet ist.",
+            "fields": {
+                "include_mqtt": {
+                    "name": "MQTT Nachrichten einbeziehen",
+                    "description": "Standard MQTT Nachrichten können Intervalle von mehreren Minuten haben, sodass der Export länger als 5 Minuten dauert.\nHinweis: Andere Geräteseriennummern in binären MQTT Daten können nicht anonymisiert werden."
+                }
+            }
         },
         "get_solarbank_schedule": {
             "name": "Abfrage des aktuellen Solarbank Zeitplans",
@@ -1589,8 +1959,11 @@
         "slot_time_error": {
             "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}"
         },
+        "mqtt_command_failed": {
+            "message": "Der MQTT Befehl '{command}' von {coordinator} für Gerät {device_alias} ({device_sn}) ist fehlgeschlagen"
+        },
         "action_blocked": {
-            "message": "Die Aktion {service} kann nicht erneut ausgeführt werden solange sie noch aktiv ist (Abgelaufen um {timeout})"
+            "message": "Die Aktion {service} kann nicht erneut ausgeführt werden solange sie noch aktiv ist oder der Startvorgang läuft (Abgelaufen um {timeout})"
         }
     }
 }

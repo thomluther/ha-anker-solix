@@ -126,24 +126,56 @@
             },
             "user_options": {
                 "title": "Anker Solix options",
-                "description": "Change usage of the Api",
+                "description": "Change usage of hub configuration",
                 "data": {
-                    "scan_interval": "Update interval",
-                    "dev_interval_mult": "Interval multiplier for device details",
-                    "delay_time": "Delay for subsequent Api requests",
-                    "timeout": "Timeout for Api requests",
-                    "endpoint_limit": "Endpoint request limit per minute",
-                    "skip_invalid": "Skip invalid data responses",
-                    "exclude": "Excluded entity categories",
-                    "testmode": "Use integration test mode",
-                    "testfolder": "Folder with json files for integration testing"
+                    "exclude": "Excluded entity categories"
                 },
                 "data_description": {
-                    "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
-                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate endpoint throttling.",
-                    "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
-                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
-                    "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
+                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)"
+                },
+                "sections": {
+                    "api_options": {
+                        "name": "Api options",
+                        "description": "Modify options for Anker power cloud server Api",
+                        "data": {
+                            "scan_interval": "Update interval",
+                            "dev_interval_mult": "Interval multiplier for device details",
+                            "delay_time": "Delay for subsequent Api requests",
+                            "timeout": "Timeout for Api requests",
+                            "endpoint_limit": "Endpoint request limit per minute",
+                            "skip_invalid": "Skip invalid data responses"
+                        },
+                        "data_description": {
+                            "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most if no MQTT real-time data update has been triggered. An update interval of less than 60 seconds therefore only offers advantages in conjunction with MQTT use.",
+                            "endpoint_limit": "Note: The Anker cloud Api enforces a request limit per minute and endpoint. To avoid Api errors, identical endpoint requests are throttled to 10 per minute once the limit has been exceeded. With 0 you can deactivate endpoint throttling.",
+                            "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again."
+                        }
+                    },
+                    "mqtt_options": {
+                        "name": "MQTT options",
+                        "description": "Modify options for Anker MQTT server usage",
+                        "data": {
+                            "mqtt_usage": "MQTT server usage",
+                            "trigger_timeout": "Real time data trigger timeout"
+                        },
+                        "data_description": {
+                            "mqtt_usage": "Note: MQTT usage may enable additional entities and controls for your owned devices. This heavily depends on known MQTT message decoding of your device.\nFurther information: {mqtt_link}",
+                            "trigger_timeout": "Devices publish real time data only if triggered. The timeout is the publish duration if not triggered again."
+                        }
+                    },
+                    "test_options": {
+                        "name": "Test options",
+                        "description": "Modify options for testing the integration",
+                        "data": {
+                            "testmode": "Integration test mode usage",
+                            "testfolder": "Folder with json files for integration testing",
+                            "mqtt_test_speed": "Speed factor for MQTT message simulation"
+                        },
+                        "data_description": {
+                            "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place.",
+                            "mqtt_test_speed": "If the folder contains a sequence of MQTT message files, these are simulated using the selected speed factor."
+                        }
+                    }
                 }
             }
         },
@@ -151,7 +183,7 @@
             "auth": "Username/Password is wrong: {error_detail}",
             "connection": "Unable to connect to the server: {error_detail}",
             "exceeded": "Login attempts exceeded: {error_detail}",
-            "duplicate_devices": "{username} has shared devices with existing account {shared_account}, you cannot configure both at the same time!",
+            "duplicate_devices": "{username} has shared devices with existing account {shared_account} configured in hub {name}, you cannot configure both hubs at the same time!",
             "accept_terms": "Usage terms and conditions must be accepted",
             "folder_invalid": "Valid folder required for testmode",
             "unknown": "Unknown error occurred: {error_detail}"
@@ -165,29 +197,67 @@
         "step": {
             "init": {
                 "title": "Anker Solix options",
-                "description": "Change usage of the Api",
+                "description": "Change usage of hub configuration",
                 "data": {
-                    "scan_interval": "Update interval",
-                    "dev_interval_mult": "Interval multiplier for device details",
-                    "delay_time": "Delay for subsequent Api requests",
-                    "timeout": "Timeout for Api requests",
-                    "endpoint_limit": "Endpoint request limit per minute",
-                    "skip_invalid": "Skip invalid data responses",
-                    "exclude": "Excluded entity categories",
-                    "testmode": "Use integration test mode",
-                    "testfolder": "Folder with json files for integration testing"
+                    "exclude": "Excluded entity categories"
                 },
                 "data_description": {
-                    "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most. An update interval less than 60 seconds therefore does not give you any benefits.",
-                    "endpoint_limit": "Note: An api endpoint request limit per minute is enforced by the Anker Cloud. Default throttling (once active) allows 10 requests for same endpoint per minute to avoid api errors. With 0 you can deactivate and reset active endpoint throttling.",
-                    "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again.",
-                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)",
-                    "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place."
+                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)"
+                },
+                "sections": {
+                    "api_options": {
+                        "name": "Api options",
+                        "description": "Modify options for Anker power cloud server Api",
+                        "data": {
+                            "scan_interval": "Update interval",
+                            "dev_interval_mult": "Interval multiplier for device details",
+                            "delay_time": "Delay for subsequent Api requests",
+                            "timeout": "Timeout for Api requests",
+                            "endpoint_limit": "Endpoint request limit per minute",
+                            "skip_invalid": "Skip invalid data responses"
+                        },
+                        "data_description": {
+                            "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most if no MQTT real-time data update has been triggered. An update interval of less than 60 seconds therefore only offers advantages in conjunction with MQTT use.",
+                            "endpoint_limit": "Note: The Anker cloud Api enforces a request limit per minute and endpoint. To avoid Api errors, identical endpoint requests are throttled to 10 per minute once the limit has been exceeded. With 0 you can deactivate endpoint throttling.",
+                            "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again."
+                        }
+                    },
+                    "mqtt_options": {
+                        "name": "MQTT options",
+                        "description": "Modify options for Anker MQTT server usage",
+                        "data": {
+                            "mqtt_usage": "MQTT server usage",
+                            "trigger_timeout": "Real time data trigger timeout"
+                        },
+                        "data_description": {
+                            "mqtt_usage": "Note: MQTT usage may enable additional entities and controls for your owned devices. This heavily depends on known MQTT message decoding of your device.\nFurther information: {mqtt_link}",
+                            "trigger_timeout": "Devices publish real time data only if triggered. The timeout is the publish duration if not triggered again."
+                        }
+                    },
+                    "test_options": {
+                        "name": "Test options",
+                        "description": "Modify options for testing the integration",
+                        "data": {
+                            "testmode": "Integration test mode usage",
+                            "testfolder": "Folder with json files for integration testing",
+                            "mqtt_test_speed": "Speed factor for MQTT message simulation"
+                        },
+                        "data_description": {
+                            "testmode": "In test mode, the configuration only uses the json files in the selected folder to create devices and sensors for test purposes. Server communication then no longer takes place.",
+                            "mqtt_test_speed": "If the folder contains a sequence of MQTT message files, these are simulated using the selected speed factor."
+                        }
+                    }
                 }
             }
         },
         "error": {
             "folder_invalid": "Valid folder required for testmode"
+        }
+    },
+    "issues": {
+        "duplicate_devices": {
+            "description": "{username} has shared devices with existing account {shared_account} configured in hub {name}, you cannot configure both hubs at the same time!",
+            "title": "Duplicate Anker Solix device serials found"
         }
     },
     "entity": {
@@ -200,6 +270,9 @@
             },
             "restore_attributes": {
                 "name": "Restore attributes"
+            },
+            "mqtt_realtime_trigger": {
+                "name": "MQTT realtime trigger"
             }
         },
         "binary_sensor": {
@@ -232,6 +305,13 @@
             },
             "wired_connection": {
                 "name": "Wired connection",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                }
+            },
+            "mqtt_connection": {
+                "name": "MQTT connection",
                 "state": {
                     "on": "Connected",
                     "off": "Disconnected"
@@ -600,20 +680,37 @@
                     }
                 }
             },
-            "charging_power": {
+            "bat_charge_power": {
+                "name": "Charge power"
+            },
+            "bat_discharge_power": {
+                "name": "Discharge power"
+            },
+            "battery_power_signed": {
                 "name": "Battery power"
             },
             "other_solar_power": {
                 "name": "Solar 3rd party"
             },
             "input_power": {
-                "name": "Solar power"
+                "name": "Solar power",
+                "state_attributes": {
+                    "pv_1_voltage": {
+                        "name": "PV 1 Volt"
+                    },
+                    "pv_2_voltage": {
+                        "name": "PV 2 Volt"
+                    }
+                }
             },
             "solar_power_1": {
                 "name": "Solar PV1",
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Voltage"
                     }
                 }
             },
@@ -622,6 +719,9 @@
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Voltage"
                     }
                 }
             },
@@ -630,6 +730,9 @@
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Voltage"
                     }
                 }
             },
@@ -638,6 +741,9 @@
                 "state_attributes": {
                     "name": {
                         "name": "Name"
+                    },
+                    "voltage": {
+                        "name": "Voltage"
                     }
                 }
             },
@@ -649,8 +755,29 @@
                     }
                 }
             },
-            "output_power": {
+            "dc_input_power": {
+                "name": "DC input power"
+            },
+            "dc_input_power_total": {
+                "name": "DC input power total"
+            },
+            "ac_input_power": {
+                "name": "AC input power"
+            },
+            "ac_input_power_total": {
+                "name": "AC input power_total"
+            },
+            "dc_output_power": {
                 "name": "DC output power"
+            },
+            "dc_output_power_total": {
+                "name": "DC output power total"
+            },
+            "ac_output_power": {
+                "name": "AC output power"
+            },
+            "ac_output_power_total": {
+                "name": "AC output power total"
             },
             "ac_socket": {
                 "name": "AC socket power"
@@ -704,7 +831,15 @@
                 }
             },
             "state_of_charge": {
-                "name": "State of charge"
+                "name": "State of charge",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "state_of_health": {
+                        "name": "Health %"
+                    }
+                }
             },
             "battery_energy": {
                 "name": "Battery energy",
@@ -714,8 +849,26 @@
                     }
                 }
             },
+            "discharged_energy": {
+                "name": "Energy discharged"
+            },
+            "charged_energy": {
+                "name": "Energy charged"
+            },
+            "output_energy": {
+                "name": "Energy delivered"
+            },
+            "solar_energy": {
+                "name": "Energy generated"
+            },
+            "device_efficiency": {
+                "name": "Device efficiency"
+            },
+            "battery_efficiency": {
+                "name": "Battery efficiency"
+            },
             "bws_surplus": {
-                "name": "BWS surplus"
+                "name": "BWS Surplus"
             },
             "inverter_info": {
                 "name": "Inverter info",
@@ -793,7 +946,7 @@
             "hes_list": {
                 "name": "Home energy systems"
             },
-            "solarbank_charging_power": {
+            "solarbank_battery_power_signed": {
                 "name": "SB battery power"
             },
             "solarbank_input_power": {
@@ -831,7 +984,7 @@
                     }
                 }
             },
-            "pps_charging_power": {
+            "pps_battery_power_signed": {
                 "name": "PPS battery power"
             },
             "pps_output_power": {
@@ -928,9 +1081,6 @@
             "set_system_output_power": {
                 "name": "System home preset"
             },
-            "site_charging_power": {
-                "name": "System charging power"
-            },
             "grid_status_desc": {
                 "name": "Grid status",
                 "state": {
@@ -948,6 +1098,15 @@
             },
             "photovoltaic_to_grid_power": {
                 "name": "Grid export"
+            },
+            "grid_power_signed": {
+                "name": "Grid power"
+            },
+            "grid_import_energy": {
+                "name": "Grid energy imported"
+            },
+            "grid_export_energy": {
+                "name": "Grid energy exported"
             },
             "solar_forecast_today": {
                 "name": "Solar forecast today",
@@ -1255,6 +1414,14 @@
                     }
                 }
             },
+            "mqtt_timestamp": {
+                "name": "MQTT time",
+                "state_attributes": {
+                    "messages": {
+                        "name": "Messages"
+                    }
+                }
+            },
             "charge_power": {
                 "name": "Charge power"
             },
@@ -1287,6 +1454,195 @@
             },
             "update_timestamp": {
                 "name": "Updated"
+            },
+            "mqtt_statistic": {
+                "name": "MQTT statistics",
+                "state_attributes": {
+                    "start_time": {
+                        "name": "Start time"
+                    },
+                    "bytes_received": {
+                        "name": "Bytes received"
+                    },
+                    "bytes_sent": {
+                        "name": "Bytes sent"
+                    },
+                    "messages": {
+                        "name": "Messages"
+                    }
+                }
+            },
+            "usbc_1_power": {
+                "name": "USB-C port 1",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    }
+                }
+            },
+            "usbc_2_power": {
+                "name": "USB-C port 2",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    }
+                }
+            },
+            "usbc_3_power": {
+                "name": "USB-C port 3",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    }
+                }
+            },
+            "usbc_4_power": {
+                "name": "USB-C port 4",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    }
+                }
+            },
+            "usba_1_power": {
+                "name": "USB-A port 1",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    }
+                }
+            },
+            "usba_2_power": {
+                "name": "USB-A port 2",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    }
+                }
+            },
+            "dc_12v_1_power": {
+                "name": "DC 12V port 1"
+            },
+            "dc_12v_2_power": {
+                "name": "DC 12V port 2"
+            },
+            "remaining_time_hours": {
+                "name": "Remaining time"
+            },
+            "exp_1_soc": {
+                "name": "Exp. 1 SoC",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_health": {
+                        "name": "Health %"
+                    },
+                    "type": {
+                        "name": "Type"
+                    }
+                }
+            },
+            "exp_1_temperature": {
+                "name": "Exp. 1 temperature"
+            },
+            "exp_2_soc": {
+                "name": "Exp. 2 SoC",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_health": {
+                        "name": "Health %"
+                    },
+                    "type": {
+                        "name": "Type"
+                    }
+                }
+            },
+            "exp_2_temperature": {
+                "name": "Exp. 2 temperature"
+            },
+            "exp_3_soc": {
+                "name": "Exp. 3 SoC",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_health": {
+                        "name": "Health %"
+                    },
+                    "type": {
+                        "name": "Type"
+                    }
+                }
+            },
+            "exp_3_temperature": {
+                "name": "Exp. 3 temperature"
+            },
+            "exp_4_soc": {
+                "name": "Exp. 4 SoC",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_health": {
+                        "name": "Health %"
+                    },
+                    "type": {
+                        "name": "Type"
+                    }
+                }
+            },
+            "exp_4_temperature": {
+                "name": "Exp. 4 temperature"
+            },
+            "exp_5_soc": {
+                "name": "Exp. 5 SoC",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_health": {
+                        "name": "Health %"
+                    },
+                    "type": {
+                        "name": "Type"
+                    }
+                }
+            },
+            "exp_5_temperature": {
+                "name": "Exp. 5 temperature"
             }
         },
         "switch": {
@@ -1304,6 +1660,14 @@
             },
             "allow_grid_export": {
                 "name": "Allow grid export"
+            },
+            "mqtt_overlay": {
+                "name": "MQTT Overlay",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
             },
             "allow_refresh": {
                 "name": "Api Usage",
@@ -1349,7 +1713,13 @@
         },
         "export_systems": {
             "name": "Export anonymized Api information of accessible systems and devices into zipped JSON files",
-            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This action can run 10 seconds or several minutes if endpoint throttling is being applied! The Execute button toggles just green once finished."
+            "description": "The actual Api responses for your Anker Solix system and device information will be anonymized and saved into JSON files. The zipped output folder will be returned as response. This action can run 10 seconds or several minutes if endpoint throttling is being applied! The Execute button toggles just green once finished.",
+            "fields": {
+                "include_mqtt": {
+                    "name": "Include MQTT messages",
+                    "description": "Standard MQTT messages may have intervals of several minutes and therefore the export will run above 5 minutes.\nNote: Other device serials in binary MQTT data cannot be anonymized."
+                }
+            }
         },
         "get_solarbank_schedule": {
             "name": "Request actual Solarbank schedule",
@@ -1589,8 +1959,11 @@
         "slot_time_error": {
             "message": "The action {service} cannot be executed: {error}"
         },
+        "mqtt_command_failed": {
+            "message": "The MQTT command '{command}' of {coordinator} for device {device_alias} ({device_sn}) failed"
+        },
         "action_blocked": {
-            "message": "The action {service} cannot be executed again while still running (timeout at {timeout})"
+            "message": "The action {service} cannot be executed again while still running or startup in progress (timeout at {timeout})"
         }
     }
 }

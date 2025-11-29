@@ -20,6 +20,7 @@ from homeassistant.const import (
     __version__ as HAVERSION,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import (
     config_validation as cv,
     device_registry as dr,
@@ -32,13 +33,21 @@ from . import api_client
 from .const import (
     ACCEPT_TERMS,
     ALLOW_TESTMODE,
+    CONF_API_OPTIONS,
     CONF_ENDPOINT_LIMIT,
+    CONF_MQTT_OPTIONS,
+    CONF_MQTT_TEST_SPEED,
+    CONF_MQTT_USAGE,
     CONF_SKIP_INVALID,
+    CONF_TEST_OPTIONS,
+    CONF_TRIGGER_TIMEOUT,
     DOMAIN,
     ERROR_DETAIL,
     EXAMPLESFOLDER,
     INTERVALMULT,
     LOGGER,
+    MQ_LINK,
+    MQTT_LINK,
     SHARED_ACCOUNT,
     TC_LINK,
     TERMS_LINK,
@@ -47,12 +56,19 @@ from .const import (
 )
 from .solixapi.apitypes import ApiCategories, SolixDeviceType
 
+# Define integration configuration entry versions
+CONFIG_VERSION = 2
+CONFIG_MINOR_VERSION = 1
+
 # Define integration option limits and defaults
 SCAN_INTERVAL_DEF: int = api_client.DEFAULT_UPDATE_INTERVAL
 INTERVALMULT_DEF: int = api_client.DEFAULT_DEVICE_MULTIPLIER
 DELAY_TIME_DEF: float = api_client.DEFAULT_DELAY_TIME
 TIMEOUT_DEF: int = api_client.DEFAULT_TIMEOUT
+TRIGGER_TIMEOUT_DEF: int = api_client.DEFAULT_TRIGGER_TIMEOUT
 ENDPOINT_LIMIT_DEF: int = api_client.DEFAULT_ENDPOINT_LIMIT
+SKIP_INVALID_DEF: bool = False
+MQTT_USAGE_DEF: bool = api_client.DEFAULT_MQTT_USAGE
 
 _SCAN_INTERVAL_MIN: int = 10 if ALLOW_TESTMODE else 30
 _SCAN_INTERVAL_MAX: int = 600
@@ -71,13 +87,22 @@ _ENDPOINT_LIMIT_MAX: int = 30
 _ENDPOINT_LIMIT_STEP: int = 1
 _ALLOW_TESTMODE: bool = bool(ALLOW_TESTMODE)
 _ACCEPT_TERMS: bool = False
-_SKIP_INVALID: bool = False
+_TRIGGER_TIMEOUT_MIN: int = api_client.SolixDefaults.TRIGGER_TIMEOUT_MIN
+_TRIGGER_TIMEOUT_MAX: int = api_client.SolixDefaults.TRIGGER_TIMEOUT_MAX
+_TRIGGER_TIMEOUT_STEP: int = 10
+_MQTT_POLLER_SPEED: float = 1
+_MQTT_POLLER_SPEED_MIN: float = 0.25
+_MQTT_POLLER_SPEED_MAX: float = 10
+_MQTT_POLLER_SPEED_DEF: float = 1
 
 
 class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Anker Solix."""
 
-    VERSION = 1
+    # The schema version of the entries that it creates
+    # Home Assistant will call your migrate method if the version changes
+    VERSION = CONFIG_VERSION
+    MINOR_VERSION = CONFIG_MINOR_VERSION
 
     def __init__(self) -> None:
         """Init the FlowHandler."""
@@ -136,6 +161,9 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         self._data = user_input
                         # add some fixed configuration data
                         self._data[EXAMPLESFOLDER] = self.examplesfolder
+                        self._data["nickname"] = (
+                            self.client.api.apisession.nickname or ""
+                        )
 
                         # next step to configure initial options
                         return await self.async_step_user_options(user_options=None)
@@ -205,8 +233,12 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     # Obtain and cache authentication token for entered user
                     client = await self._authenticate_client(user_input)
                     # set testmode for client and json test file folder for api
-                    testmode = config_entry.options.get(TESTMODE, False)
-                    testfolder = config_entry.options.get(TESTFOLDER)
+                    testmode = config_entry.options.get(CONF_TEST_OPTIONS, {}).get(
+                        TESTMODE, False
+                    )
+                    testfolder = config_entry.options.get(CONF_TEST_OPTIONS, {}).get(
+                        TESTFOLDER
+                    )
                     if testmode and testfolder:
                         # set json test file folder for api to be validated
                         client.api.testDir(
@@ -232,6 +264,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         )
                         # update fields of configuration flow
                         self._data.update(user_input)
+                        self._data["nickname"] = client.api.apisession.nickname or ""
                         self.client = client
                         # update existing config entry
                         return self.async_update_reload_and_abort(
@@ -276,10 +309,12 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle a flow initialized by the user."""
         errors: dict[str, str] = {}
         placeholders: dict[str, str] = {}
+        placeholders[MQTT_LINK] = MQ_LINK
 
         if user_options:
             self._options = user_options
-            if self._options.get(TESTFOLDER) or not self._options.get(TESTMODE):
+            test_options = user_options.get(CONF_TEST_OPTIONS, {})
+            if test_options.get(TESTFOLDER) or not test_options.get(TESTMODE):
                 return self.async_create_entry(
                     title=self.client.api.apisession.nickname
                     if self.client and self.client.api
@@ -363,11 +398,13 @@ class AnkerSolixOptionsFlowHandler(config_entries.OptionsFlow):
         placeholders: dict[
             str, str
         ] = {}  # NOTE: Passed option placeholder do not work with translation files, HASS Bug?
+        placeholders[MQTT_LINK] = MQ_LINK
 
         existing_options = self.config_entry.options.copy()
 
         if user_input:
-            if user_input.get(TESTFOLDER) or not user_input.get(TESTMODE):
+            test_options = user_input.get(CONF_TEST_OPTIONS, {})
+            if test_options.get(TESTFOLDER) or not test_options.get(TESTMODE):
                 # merge new options from user form with existing options in config entry
                 return self.async_create_entry(
                     title="",
@@ -392,10 +429,11 @@ async def get_options_schema(entry: dict | None = None) -> dict:
 
     if entry is None:
         entry = {}
-    schema = {
+    api_options = entry.get(CONF_API_OPTIONS, {})
+    api_options_schema = {
         vol.Optional(
             CONF_SCAN_INTERVAL,
-            default=entry.get(
+            default=api_options.get(
                 CONF_SCAN_INTERVAL,
                 SCAN_INTERVAL_DEF,
             ),
@@ -413,7 +451,7 @@ async def get_options_schema(entry: dict | None = None) -> dict:
         ),
         vol.Optional(
             INTERVALMULT,
-            default=entry.get(INTERVALMULT, INTERVALMULT_DEF),
+            default=api_options.get(INTERVALMULT, INTERVALMULT_DEF),
         ): vol.All(
             cv.positive_int,
             selector.NumberSelector(
@@ -428,7 +466,7 @@ async def get_options_schema(entry: dict | None = None) -> dict:
         ),
         vol.Optional(
             CONF_DELAY_TIME,
-            default=entry.get(CONF_DELAY_TIME, DELAY_TIME_DEF),
+            default=api_options.get(CONF_DELAY_TIME, DELAY_TIME_DEF),
         ): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=_DELAY_TIME_MIN,
@@ -440,7 +478,7 @@ async def get_options_schema(entry: dict | None = None) -> dict:
         ),
         vol.Optional(
             CONF_TIMEOUT,
-            default=entry.get(CONF_TIMEOUT, TIMEOUT_DEF),
+            default=api_options.get(CONF_TIMEOUT, TIMEOUT_DEF),
         ): vol.All(
             cv.positive_int,
             selector.NumberSelector(
@@ -455,7 +493,7 @@ async def get_options_schema(entry: dict | None = None) -> dict:
         ),
         vol.Optional(
             CONF_ENDPOINT_LIMIT,
-            default=entry.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF),
+            default=api_options.get(CONF_ENDPOINT_LIMIT, ENDPOINT_LIMIT_DEF),
         ): vol.All(
             cv.positive_int,
             selector.NumberSelector(
@@ -470,8 +508,46 @@ async def get_options_schema(entry: dict | None = None) -> dict:
         ),
         vol.Optional(
             CONF_SKIP_INVALID,
-            default=entry.get(CONF_SKIP_INVALID, _SKIP_INVALID),
+            default=api_options.get(CONF_SKIP_INVALID, SKIP_INVALID_DEF),
         ): selector.BooleanSelector(),
+    }
+    mqtt_options = entry.get(CONF_MQTT_OPTIONS, {})
+    mqtt_options_schema = {
+        vol.Optional(
+            CONF_MQTT_USAGE,
+            default=mqtt_options.get(CONF_MQTT_USAGE, MQTT_USAGE_DEF),
+        ): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_TRIGGER_TIMEOUT,
+            default=mqtt_options.get(
+                CONF_TRIGGER_TIMEOUT,
+                TRIGGER_TIMEOUT_DEF,
+            ),
+        ): vol.All(
+            cv.positive_int,
+            selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_TRIGGER_TIMEOUT_MIN,
+                    max=_TRIGGER_TIMEOUT_MAX,
+                    step=_TRIGGER_TIMEOUT_STEP,
+                    unit_of_measurement="sec",
+                    mode=selector.NumberSelectorMode.SLIDER,
+                ),
+            ),
+        ),
+    }
+
+    schema = {
+        # Items grouped for Api options
+        vol.Required(CONF_API_OPTIONS): section(
+            vol.Schema(api_options_schema),
+            {"collapsed": True},
+        ),
+        # Items grouped for MQTT options
+        vol.Required(CONF_MQTT_OPTIONS): section(
+            vol.Schema(mqtt_options_schema),
+            {"collapsed": True},
+        ),
         vol.Optional(
             CONF_EXCLUDE,
             default=entry.get(
@@ -494,21 +570,41 @@ async def get_options_schema(entry: dict | None = None) -> dict:
             # Add empty element to ensure proper list validation
             jsonfolders = [""]
         jsonfolders.sort()
+        test_options = entry.get(CONF_TEST_OPTIONS, {})
+        test_options_schema = {
+            vol.Optional(
+                TESTMODE,
+                default=test_options.get(TESTMODE, False),
+            ): selector.BooleanSelector(),
+            vol.Optional(
+                TESTFOLDER,
+                description={
+                    "suggested_value": test_options.get(
+                        TESTFOLDER, next(iter(jsonfolders), "")
+                    )
+                },
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=jsonfolders, mode="dropdown")
+            ),
+            vol.Optional(
+                CONF_MQTT_TEST_SPEED,
+                default=test_options.get(CONF_MQTT_TEST_SPEED, _MQTT_POLLER_SPEED_DEF),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=_MQTT_POLLER_SPEED_MIN,
+                    max=_MQTT_POLLER_SPEED_MAX,
+                    step=_MQTT_POLLER_SPEED_MIN,
+                    unit_of_measurement="",
+                    mode=selector.NumberSelectorMode.SLIDER,
+                ),
+            ),
+        }
         schema.update(
             {
-                vol.Optional(
-                    TESTMODE,
-                    default=entry.get(TESTMODE, False),
-                ): selector.BooleanSelector(),
-                vol.Optional(
-                    TESTFOLDER,
-                    description={
-                        "suggested_value": entry.get(
-                            TESTFOLDER, next(iter(jsonfolders), "")
-                        )
-                    },
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(options=jsonfolders, mode="dropdown")
+                # Items grouped for Test options
+                vol.Required(CONF_TEST_OPTIONS): section(
+                    vol.Schema(test_options_schema),
+                    {"collapsed": False},
                 ),
             }
         )
@@ -517,7 +613,7 @@ async def get_options_schema(entry: dict | None = None) -> dict:
 
 async def async_check_and_remove_devices(
     hass: HomeAssistant,
-    user_input: dict,
+    user_input: dict[str, Any],
     apidata: dict,
     excluded: set | None = None,
     configured_user: str | None = None,
@@ -534,6 +630,7 @@ async def async_check_and_remove_devices(
         if {
             SolixDeviceType.VEHICLE.value,
             ApiCategories.account_info,
+            ApiCategories.mqtt_devices,
         } & excluded:
             excluded = excluded | {SolixDeviceType.ACCOUNT.value}
         # Subcategories for System devices
@@ -549,6 +646,7 @@ async def async_check_and_remove_devices(
             SolixDeviceType.HES.value,
             SolixDeviceType.EV_CHARGER.value,
             SolixDeviceType.CHARGER.value,
+            SolixDeviceType.COMBINER_BOX.value,
             ApiCategories.solarbank_energy,
             ApiCategories.smartmeter_energy,
             ApiCategories.smartplug_energy,
@@ -562,6 +660,7 @@ async def async_check_and_remove_devices(
             ApiCategories.solarbank_cutoff,
             ApiCategories.solarbank_fittings,
             ApiCategories.solarbank_solar_info,
+            ApiCategories.solarbank_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SOLARBANK.value}
         # Subcategories for Smart Plugs only
@@ -569,20 +668,28 @@ async def async_check_and_remove_devices(
             ApiCategories.smartplug_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SMARTPLUG.value}
+        # Subcategories for Smart Meter only
+        if {
+            ApiCategories.smartmeter_energy,
+        } & excluded:
+            excluded = excluded | {SolixDeviceType.SMARTMETER.value}
         # Subcategories for Power Panels only
         if {
             ApiCategories.powerpanel_avg_power,
+            ApiCategories.powerpanel_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.POWERPANEL.value}
         # Subcategories for HES only
         if {
             ApiCategories.hes_avg_power,
+            ApiCategories.hes_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.HES.value}
         # Subcategories for all managed Devices
         if {
             ApiCategories.device_auto_upgrade,
             ApiCategories.device_tag,
+            ApiCategories.mqtt_devices,
         } & excluded:
             excluded = excluded | {
                 SolixDeviceType.SOLARBANK.value,
@@ -594,6 +701,10 @@ async def async_check_and_remove_devices(
                 SolixDeviceType.SMARTPLUG.value,
                 SolixDeviceType.HES.value,
                 SolixDeviceType.EV_CHARGER.value,
+                SolixDeviceType.CHARGER.value,
+                SolixDeviceType.COMBINER_BOX.value,
+                SolixDeviceType.POWERBANK.value,
+                SolixDeviceType.POWERCOOLER.value,
             }
 
     # get all device entries for a domain
@@ -602,14 +713,15 @@ async def async_check_and_remove_devices(
         device_entries = dr.async_entries_for_config_entry(
             dr.async_get(hass), cfg_entry.entry_id
         )
+        cfg_username = cfg_entry.data.get(CONF_USERNAME)
         for dev_entry in device_entries:
             if (
-                username := str(user_input.get(CONF_USERNAME) or "").lower()
-            ) and username != cfg_entry.unique_id:
+                username := str(user_input.get(CONF_USERNAME) or "")
+            ) and username != cfg_username:
                 # config entry of another account
                 if (
                     dev_entry.serial_number in apidata
-                    and configured_user != cfg_entry.unique_id
+                    and configured_user != cfg_username
                 ):
                     return cfg_entry
             # device is registered for same account, check if still used in coordinator data or excluded and add to obsolete list for removal

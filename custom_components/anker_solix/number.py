@@ -33,7 +33,14 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .config_flow import _SCAN_INTERVAL_MIN
-from .const import ALLOW_TESTMODE, ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
+from .const import (
+    ALLOW_TESTMODE,
+    ATTRIBUTION,
+    CREATE_ALL_ENTITIES,
+    DOMAIN,
+    LOGGER,
+    MQTT_OVERLAY,
+)
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -45,6 +52,7 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.helpers import round_by_factor
 
 
 @dataclass(frozen=True)
@@ -53,13 +61,14 @@ class AnkerSolixNumberDescription(
 ):
     """Number entity description with optional keys."""
 
+    restore: bool = False
+    mqtt: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
     attrib_fn: Callable[[dict, str], dict | None] = lambda d, ctx: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
     force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
-    restore: bool = False
 
 
 DEVICE_NUMBERS = [
@@ -133,10 +142,12 @@ DEVICE_NUMBERS = [
             "expansions": d.get("sub_package_num"),
             "calculated": d.get("battery_capacity"),
         }
-        | {"customized": c}
-        if (c := (d.get("customized") or {}).get("battery_capacity"))
-        else {},
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        | (
+            {"customized": c}
+            if (c := (d.get("customized") or {}).get("battery_capacity"))
+            else {}
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
         restore=True,
     ),
 ]
@@ -152,7 +163,7 @@ SITE_NUMBERS = [
         value_fn=lambda d, jk: (d.get("site_details") or {}).get(jk),
         native_min_value=0,
         native_max_value=1000,
-        native_step=0.01,
+        native_step=0.00001,
         mode=NumberMode.BOX,
         exclude_fn=lambda s, _: not ({ApiCategories.site_price} - s),
     ),
@@ -254,13 +265,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up number platform."""
 
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
 
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
+            mdev = None
+            mdata = {}
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
@@ -277,6 +290,11 @@ async def async_setup_entry(
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_NUMBERS
+                # get MQTT device combined values for creation of entities
+                if mdev := coordinator.client.get_mqtt_device(sn=context):
+                    mdata = mdev.get_combined_cache(
+                        fromFile=coordinator.client.testmode()
+                    )
 
             for description in (
                 desc
@@ -286,7 +304,17 @@ async def async_setup_entry(
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
                         desc.force_creation_fn(data, desc.json_key)
-                        or desc.value_fn(data, desc.json_key) is not None
+                        # filter MQTT entities and provide combined or only api cache
+                        # Entities that should not be created without MQTT data need to use exclude option
+                        or (
+                            desc.mqtt
+                            and desc.value_fn(mdata or data, desc.json_key) is not None
+                        )
+                        # filter API only entities
+                        or (
+                            not desc.mqtt
+                            and desc.value_fn(data, desc.json_key) is not None
+                        )
                     )
                 )
             ):
@@ -310,7 +338,6 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixNumberDescription
     _attr_has_entity_name = True
-    _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset(
         {
             "expansions",
@@ -331,6 +358,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator, context)
 
         self._attribute_name = description.key
+        self._attr_attribution = f"{ATTRIBUTION}{' + MQTT' if description.mqtt else ''}"
         self._attr_unique_id = (f"{context}_{description.key}").lower()
         self.entity_description = description
         self.entity_type = entity_type
@@ -393,7 +421,18 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             and (hasattr(self.coordinator, "data"))
             and self.coordinator_context in self.coordinator.data
         ):
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             with suppress(ValueError, TypeError):
                 self._attr_extra_state_attributes = self.entity_description.attrib_fn(
                     data, self.coordinator_context
@@ -403,7 +442,18 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
     def update_state_value(self):
         """Update the state value of the number based on the coordinator data."""
         if self.coordinator and self.coordinator_context in self.coordinator.data:
+            # Api device data
             data = self.coordinator.data.get(self.coordinator_context)
+            if self.entity_description.mqtt and (
+                mdev := self.coordinator.client.get_mqtt_device(
+                    self.coordinator_context
+                )
+            ):
+                # Combined MQTT device data, overlay prio depends on customized setting
+                data = mdev.get_combined_cache(
+                    api_prio=not mdev.device.get(MQTT_OVERLAY),
+                    fromFile=self.coordinator.client.testmode(),
+                )
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
                 self._native_value = self.entity_description.value_fn(data, key)
@@ -504,10 +554,9 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             if self.min_value <= value <= self.max_value:
                 # round the number to the defined steps if set via service call
                 if self.step:
-                    step_s = str(self.step)
-                    value = round(
+                    value = round_by_factor(
                         self.step * round(value / self.step),
-                        len(step_s) - step_s.index(".") - 1 if "." in step_s else 0,
+                        self.step,
                     )
                 # Skip Api calls if value does not change
                 if str(self._native_value).replace(".", "", 1).isdigit() and float(
@@ -684,14 +733,14 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         # change standalone inverter price of virtual system
                         resp = await self.coordinator.client.api.set_device_pv_price(
                             deviceSn=str(self.coordinator_context).split("-")[1],
-                            price=round(float(value), 2),
+                            price=round(float(value), 5),
                             toFile=self.coordinator.client.testmode(),
                         )
                     else:
                         # change real system price
                         resp = await self.coordinator.client.api.set_site_price(
                             siteId=self.coordinator_context,
-                            price=round(float(value), 2),
+                            price=round(float(value), 5),
                             toFile=self.coordinator.client.testmode(),
                         )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:

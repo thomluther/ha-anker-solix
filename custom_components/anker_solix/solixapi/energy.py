@@ -1,8 +1,11 @@
 """Anker Power/Solix Cloud API class energy related methods."""
 
+from __future__ import annotations
+
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from statistics import mean
+from typing import TYPE_CHECKING
 
 from .apitypes import (
     API_ENDPOINTS,
@@ -11,9 +14,12 @@ from .apitypes import (
     SolixDeviceType,
 )
 
+if TYPE_CHECKING:
+    from .api import AnkerSolixApi
+
 
 async def energy_daily(  # noqa: C901
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
     startDay: datetime = datetime.today(),
@@ -536,7 +542,7 @@ async def energy_daily(  # noqa: C901
 
 
 async def energy_analysis(
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
     rangeType: str | None = None,
@@ -592,7 +598,9 @@ async def energy_analysis(
     return resp.get("data") or {}
 
 
-async def home_load_chart(self, siteId: str, deviceSn: str | None = None) -> dict:
+async def home_load_chart(
+    self: AnkerSolixApi, siteId: str, deviceSn: str | None = None
+) -> dict:
     """Get home load chart data.
 
     Example data:
@@ -608,7 +616,7 @@ async def home_load_chart(self, siteId: str, deviceSn: str | None = None) -> dic
 
 
 async def refresh_pv_forecast(
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     fromFile: bool = False,
 ) -> None:
@@ -906,7 +914,7 @@ async def refresh_pv_forecast(
 
 
 async def device_pv_energy_daily(
-    self,
+    self: AnkerSolixApi,
     deviceSn: str,
     startDay: datetime = datetime.today(),
     numDays: int = 1,
@@ -965,7 +973,7 @@ async def device_pv_energy_daily(
 
 
 async def get_device_pv_statistics(
-    self,
+    self: AnkerSolixApi,
     deviceSn: str,
     rangeType: str | None = None,
     startDay: datetime | None = None,
@@ -1022,7 +1030,7 @@ async def get_device_pv_statistics(
 
 
 async def get_device_charge_order_stats(
-    self,
+    self: AnkerSolixApi,
     deviceSn: str,
     rangeType: str | None = None,
     startDay: datetime | None = None,

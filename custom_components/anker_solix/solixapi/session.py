@@ -14,6 +14,7 @@ from pathlib import Path
 from random import randbytes, randrange
 import tempfile
 from types import SimpleNamespace
+from typing import Any
 
 import aiofiles
 import aiofiles.os
@@ -156,7 +157,7 @@ class AnkerSolixClientSession:
 
     def testDir(self, subfolder: str | None = None) -> str:
         """Get or set the subfolder for local API test files."""
-        if not subfolder or subfolder == self._testdir:
+        if not subfolder or str(subfolder) == self._testdir:
             return self._testdir
         if not Path(subfolder).is_dir():
             self._logger.error(
@@ -165,8 +166,10 @@ class AnkerSolixClientSession:
                 subfolder,
             )
         else:
-            self._testdir = subfolder
-            self._logger.info("Set api %s test folder to: %s", self.nickname, subfolder)
+            self._testdir = str(subfolder)
+            self._logger.info(
+                "Set api %s test folder to: %s", self.nickname, self._testdir
+            )
         return self._testdir
 
     def logLevel(self, level: int | None = None) -> int:
@@ -568,7 +571,10 @@ class AnkerSolixClientSession:
                 )
                 # request handler has auto-decompression enabled
                 self._logger.debug(
-                    "Api %s response received for request: %s %s", self.nickname, method, url
+                    "Api %s response received for request: %s %s",
+                    self.nickname,
+                    method,
+                    url,
                 )
                 # print response headers
                 self._logger.debug("Response Headers: %s", resp.headers)
@@ -586,7 +592,9 @@ class AnkerSolixClientSession:
                         url,
                         body_text,
                     )
-                    raise ClientError(f"Api {self.nickname} no data response for request: {method.upper()} {url}")  # noqa: TRY301
+                    raise ClientError(  # noqa: TRY301
+                        f"Api {self.nickname} no data response for request: {method.upper()} {url}"
+                    )
                 if endpoint == API_LOGIN:
                     self._logger.debug(
                         "Response Data: %s",
@@ -684,7 +692,8 @@ class AnkerSolixClientSession:
                     body_text,
                 )
                 errors.raise_error(
-                    data, prefix=f"Api {self.nickname} Too Many Requests: {self.request_count}"
+                    data,
+                    prefix=f"Api {self.nickname} Too Many Requests: {self.request_count}",
                 )
             elif resp.status in [502, 504, 522]:
                 # Server may be temporarily overloaded and does not respond
@@ -830,9 +839,8 @@ class AnkerSolixClientSession:
                     return data
         except OSError as err:
             self._logger.error(
-                "ERROR: Failed to load JSON from file %s", masked_filename
+                "ERROR: Failed to load JSON from file %s\n%s", masked_filename, err
             )
-            self._logger.error(err)
         return {}
 
     async def saveToFile(self, filename: str | Path, data: dict | None = None) -> bool:
@@ -852,8 +860,9 @@ class AnkerSolixClientSession:
                 self._logger.debug("Saved JSON to file %s:", masked_filename)
                 return True
         except OSError as err:
-            self._logger.error("ERROR: Failed to save JSON to file %s", masked_filename)
-            self._logger.error(err)
+            self._logger.error(
+                "ERROR: Failed to save JSON to file %s\n%s", masked_filename, err
+            )
             return False
 
     async def deleteModifiedFile(self, filename: str | Path) -> bool:
@@ -872,9 +881,10 @@ class AnkerSolixClientSession:
             self._logger.debug("Remove modified JSON file %s:", masked_filename)
         except OSError as err:
             self._logger.error(
-                "ERROR: Failed to remove modified JSON file %s", masked_filename
+                "ERROR: Failed to remove modified JSON file %s\n%s",
+                masked_filename,
+                err,
             )
-            self._logger.error(err)
             return False
         return True
 
@@ -891,6 +901,10 @@ class AnkerSolixClientSession:
         return (await self.request("post", API_ENDPOINTS["get_mqtt_info"])).get(
             "data"
         ) or {}
+
+    def get_login_info(self, key: str) -> Any | None:
+        """Get a certain key from authenticated client login info."""
+        return self._login_response.get(key)
 
 
 class AnkerEncryptionHandler:

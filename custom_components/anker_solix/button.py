@@ -30,6 +30,7 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import SolixDeviceType, SolixVehicle
+from .solixapi.mqtt_device import SolixMqttDevice
 
 
 @dataclass(frozen=True)
@@ -40,9 +41,9 @@ class AnkerSolixButtonDescription(
 
     force_creation: bool = False
     picture_path: str = None
+    mqtt: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
-    attrib_fn: Callable[[dict], dict | None] = lambda d: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
@@ -54,6 +55,15 @@ DEVICE_BUTTONS = [
         force_creation=True,
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixButtonDescription(
+        key="mqtt_realtime_trigger",
+        translation_key="mqtt_realtime_trigger",
+        json_key="",
+        value_fn=lambda d, jk: True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
+        mqtt=True,
     ),
 ]
 
@@ -92,12 +102,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up button platform."""
 
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
+    mdev: SolixMqttDevice | None = None
     if coordinator and hasattr(coordinator, "data") and coordinator.data:
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         for context, data in coordinator.data.items():
+            mdev = None
+            mdata = {}
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
@@ -114,6 +127,11 @@ async def async_setup_entry(
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_BUTTONS
+                # get MQTT device combined values for creation of entities
+                if mdev := coordinator.client.get_mqtt_device(sn=context):
+                    mdata = mdev.get_combined_cache(
+                        fromFile=coordinator.client.testmode()
+                    )
 
             for description in (
                 desc
@@ -123,7 +141,17 @@ async def async_setup_entry(
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
                         desc.force_creation
-                        or desc.value_fn(data, desc.json_key) is not None
+                        # filter MQTT entities and provide combined or only api cache
+                        # Entities that should not be created without MQTT data need to use exclude option
+                        or (
+                            desc.mqtt
+                            and desc.value_fn(mdata or data, desc.json_key) is not None
+                        )
+                        # filter API only entities
+                        or (
+                            not desc.mqtt
+                            and desc.value_fn(data, desc.json_key) is not None
+                        )
                     )
                 )
             ):
@@ -142,7 +170,6 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixButtonDescription
     _attr_has_entity_name = True
-    _attr_attribution = ATTRIBUTION
     _unrecorded_attributes = frozenset({})
 
     def __init__(
@@ -156,6 +183,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
         super().__init__(coordinator, context)
 
         self._attribute_name = description.key
+        self._attr_attribution = f"{ATTRIBUTION}{' + MQTT' if description.mqtt else ''}"
         self._attr_unique_id = (f"{context}_{description.key}").lower()
         wwwroot = str(Path(self.coordinator.hass.config.config_dir) / "www")
         if (
@@ -249,6 +277,37 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 self.entity_id,
             )
             await self.coordinator.async_execute_command(self.entity_description.key)
+        elif self._attribute_name == "mqtt_realtime_trigger":
+            if not (
+                (
+                    mdev := self.coordinator.client.get_mqtt_device(
+                        self.coordinator_context
+                    )
+                )
+                and mdev.realtime_trigger(
+                    timeout=self.coordinator.client.trigger_timeout(),
+                    toFile=self.coordinator.client.testmode(),
+                )
+            ):
+                dev = self.coordinator.data.get(self.coordinator_context) or {}
+                alias = dev.get("alias") or ""
+                raise ServiceValidationError(
+                    f"'{self._attribute_name}' for {self.coordinator.client.api.apisession.nickname} device "
+                    f"{alias} ({self.coordinator_context}) failed",
+                    translation_domain=DOMAIN,
+                    translation_key="mqtt_command_failed",
+                    translation_placeholders={
+                        "command": self._attribute_name,
+                        "coordinator": self.coordinator.client.api.apisession.nickname,
+                        "device_alias": alias,
+                        "device_sn": self.coordinator_context,
+                    },
+                )
+            LOGGER.info(
+                "'%s' triggered mqtt real time data refresh for device, timeout %s seconds",
+                self.entity_id,
+                self.coordinator.client.trigger_timeout(),
+            )
         elif self._attribute_name == "refresh_vehicles":
             if (
                 self.coordinator.client.active_device_refresh

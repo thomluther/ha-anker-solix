@@ -8,7 +8,9 @@ Furthermore the API class can use the json files for debugging and testing of va
 """
 
 import asyncio
+from base64 import b64encode
 from collections.abc import Callable
+import contextlib
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
@@ -37,9 +39,11 @@ from .apitypes import (
     SolixPriceProvider,
     SolixVehicle,
 )
+from .mqtt import AnkerSolixMqttSession
+from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.3.0.1"
+VERSION: str = "3.4.0.0"
 
 
 class AnkerSolixApiExport:
@@ -52,21 +56,29 @@ class AnkerSolixApiExport:
     ) -> None:
         """Initialize."""
 
-        # get the api client session from passed object
+        # get the api client and optional mqtt session from passed object
         if isinstance(client, api.AnkerSolixApi):
             self.client = client.apisession
+            mqttsession = client.mqttsession
         else:
             self.client = client
+            mqttsession = None
         # create new api instance with client session
         self.api_power = api.AnkerSolixApi(apisession=self.client)
+        # Add existing mqtt session to new api instance
+        self.api_power.mqttsession = mqttsession
         self.export_path: str | None = None
         self.export_folder: str | None = None
         self.export_services: set | None = None
         self.randomized: bool = True
+        self.mqttdata: bool = False
         self.zipped: bool = True
         self.zipfilename: str | None = None
         self.request_delay: float | None = None
         self._randomdata: dict = {}
+        self._loop: asyncio.AbstractEventLoop
+        self._mqtt_msg_types: set = set()
+        self._old_callback: Callable | None = None
 
         # initialize logger for object
         if logger:
@@ -75,13 +87,14 @@ class AnkerSolixApiExport:
             self._logger = _LOGGER
             self._logger.setLevel(logging.DEBUG)
 
-    async def export_data(
+    async def export_data(  # noqa: C901
         self,
         export_path: Path | str | None = None,
         export_folder: Path | str | None = None,
         export_services: set | None = None,
         request_delay: float | None = None,
         randomized: bool = True,
+        mqttdata: bool = False,
         zipped: bool = True,
         toggle_cache: Callable | None = None,
     ) -> bool:
@@ -113,9 +126,11 @@ class AnkerSolixApiExport:
             else self.client.requestDelay()
         )
         self.randomized = randomized if isinstance(randomized, bool) else True
+        self.mqttdata = mqttdata if isinstance(mqttdata, bool) else False
         self.zipped = zipped if isinstance(randomized, bool) else True
         toggle_cache = toggle_cache if callable(toggle_cache) else None
         self._randomdata = {}
+        self._loop = asyncio.get_running_loop()
 
         # ensure nickname is set for api client
         await self.client.async_authenticate()
@@ -129,8 +144,7 @@ class AnkerSolixApiExport:
         try:
             # clear export folder if it exists already
             if self.export_path.exists():
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, shutil.rmtree, self.export_path)
+                await self._loop.run_in_executor(None, shutil.rmtree, self.export_path)
             Path(self.export_path).mkdir(parents=True, exist_ok=True)
         except OSError as err:
             self._logger.error(
@@ -143,6 +157,7 @@ class AnkerSolixApiExport:
             self.client.nickname,
         )
         try:
+            mqtttask: asyncio.Task | None = None
             # create a queue for async file logging
             que = queue.Queue()
             # add a handler that uses the logs to queue at DEBUG level, independent of other logger handler setting
@@ -157,8 +172,7 @@ class AnkerSolixApiExport:
             # add queue handler to logger
             self._logger.addHandler(qh)
             # create file handler for async file logging from the queue
-            loop = asyncio.get_running_loop()
-            fh = await loop.run_in_executor(
+            fh = await self._loop.run_in_executor(
                 None,
                 partial(
                     logging.FileHandler,
@@ -171,13 +185,13 @@ class AnkerSolixApiExport:
             listener.start()
 
             self._logger.info(
-                "Using AnkerSolixApiExport Version: %s, Date: %s, Export Services: %s",
+                "Using AnkerSolixApiExport Version: %s, Date: %s, Export Services: %s, MQTT Messages: %s",
                 VERSION,
                 datetime.now().strftime("%Y-%m-%d"),
                 str(self.export_services),
+                str(self.mqttdata),
             )
-
-            # save existing api delay and adjust request delay for export
+            # save existing api client delay and adjust request delay for export
             if (old_delay := self.client.requestDelay()) != self.request_delay:
                 self.client.requestDelay(self.request_delay)
                 self._logger.debug(
@@ -186,7 +200,11 @@ class AnkerSolixApiExport:
                     old_delay,
                     self.request_delay,
                 )
-
+            # Query common data for all service types to get sites and devices for account
+            if await self.query_common_data():
+                # start MQTT session if MQTT data requested and eligible devices exist
+                if self.mqttdata:
+                    mqtttask = self._loop.create_task(self.export_mqtt_data())
             # Export common data for all service types and skip rest on error
             if await self.export_common_data():
                 # Export power_service endpoint data
@@ -194,19 +212,19 @@ class AnkerSolixApiExport:
                     ApiEndpointServices.power
                 } & self.export_services or not self.export_services:
                     await self.export_power_service_data()
-
                 # Export charging_energy_service endpoint data
                 if {
                     ApiEndpointServices.charging
                 } & self.export_services or not self.export_services:
                     await self.export_charging_energy_service_data()
-
                 # Export charging_hes_svc endpoint data
                 if {
                     ApiEndpointServices.hes_svc
                 } & self.export_services or not self.export_services:
                     await self.export_charging_hes_svc_data()
-
+                # Wait until optional MQTT task is finished
+                if self.mqttdata and mqtttask:
+                    await mqtttask
                 # update api dictionaries from exported files to use randomized input data
                 # this is more efficient and allows validation of randomized data in export files
                 # save real api cache data first
@@ -226,9 +244,8 @@ class AnkerSolixApiExport:
                 await self.api_power.update_device_details(fromFile=True)
                 await self.api_power.update_site_details(fromFile=True)
                 await self.api_power.update_device_energy(fromFile=True)
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting api %s sites cache from files...",
+                    "\nExporting api %s sites cache from files...",
                     self.client.nickname,
                 )
                 self._logger.debug(
@@ -258,9 +275,8 @@ class AnkerSolixApiExport:
                     skip_randomize=True,
                 )
                 # Always export account dictionary
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting api %s account cache...",
+                    "\nExporting api %s account cache...",
                     self.client.nickname,
                 )
                 self._logger.debug(
@@ -269,7 +285,7 @@ class AnkerSolixApiExport:
                     filename := f"{API_FILEPREFIXES['api_account']}.json",
                 )
                 # update account dictionary with number of requests during export and randomized email
-                self.api_power._update_account( # noqa: SLF001
+                self.api_power._update_account(  # noqa: SLF001
                     {"email": self._randomize(self.api_power.apisession.email, "email")}
                 )
                 # Skip randomizing dictionary for account data to prevent double randomizaiton of other account fields
@@ -310,9 +326,8 @@ class AnkerSolixApiExport:
 
                 # remove queue file handler again before zipping folder
                 self._logger.removeHandler(qh)
-                self._logger.info("")
                 self._logger.info(
-                    "Completed export of Anker Solix systems data for api %s",
+                    "\nCompleted export of Anker Solix systems data for api %s",
                     self.client.nickname,
                 )
                 if self.randomized:
@@ -335,13 +350,10 @@ class AnkerSolixApiExport:
                         ]
                     )
                     self.zipfilename = zipname + ".zip"
-                    self._logger.info("")
-                    self._logger.info("Zipping output folder to %s", self.zipfilename)
-                    loop = asyncio.get_running_loop()
-
+                    self._logger.info("\nZipping output folder to %s", self.zipfilename)
                     self._logger.info(
                         "Zipfile created: %s",
-                        await loop.run_in_executor(
+                        await self._loop.run_in_executor(
                             None,
                             partial(
                                 shutil.make_archive,
@@ -357,20 +369,24 @@ class AnkerSolixApiExport:
 
         except errors.AnkerSolixError as err:
             self._logger.error("%s: %s", type(err), err)
-            # ensure the listener is closed
-            listener.stop()
             return False
         else:
+            return True
+        finally:
             # ensure the listener is closed
             listener.stop()
-            return True
+            # ensure optional MQTT task is closed
+            if mqtttask:
+                mqtttask.cancel()
+                # Wait for the tasks to finish cancellation
+                with contextlib.suppress(asyncio.CancelledError):
+                    await mqtttask
 
-    async def export_common_data(self) -> bool:
-        """Run functions to export common data."""
+    async def query_common_data(self) -> bool:
+        """Run functions to query sites and devices."""
 
-        self._logger.info("")
-        self._logger.info("Querying common endpoint data...")
-        # first update Api caches if still empty
+        self._logger.info("\nQuerying common endpoint data...")
+        # update Api caches if still empty
         if not self.api_power.sites | self.api_power.devices:
             self._logger.info("Querying site information...")
             await self.api_power.update_sites()
@@ -389,9 +405,13 @@ class AnkerSolixApiExport:
             len(self.api_power.sites),
             len(self.api_power.devices),
         )
+        return bool(self.api_power.sites or self.api_power.devices)
 
-        # Query API using direct endpoints to save full response of each query in json files
+    async def export_common_data(self) -> bool:
+        """Run functions to export common data."""
+
         try:
+            # Query API using direct endpoints to save full response of each query in json files
             self._logger.info("Exporting site list...")
             await self.query(
                 endpoint=API_ENDPOINTS["site_list"],
@@ -620,12 +640,10 @@ class AnkerSolixApiExport:
     async def export_power_service_data(self) -> bool:
         """Run functions to export power_service endpoint data."""
 
-        self._logger.info("")
-        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.power)
+        self._logger.info("\nQuerying %s endpoint data...", ApiEndpointServices.power)
         # Query API using direct endpoints to save full response of each query in json files
         try:
-            self._logger.info("")
-            self._logger.info("Exporting homepage...")
+            self._logger.info("\nExporting homepage...")
             await self.query(
                 endpoint=API_ENDPOINTS["homepage"],
                 filename=f"{API_FILEPREFIXES['homepage']}.json",
@@ -671,9 +689,8 @@ class AnkerSolixApiExport:
 
             # loop through all found sites
             for siteId, site in self.api_power.sites.items():
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting site specific data for site %s...",
+                    "\nExporting site specific data for site %s...",
                     self._randomize(siteId, "site_id"),
                 )
                 admin = site.get("site_admin")
@@ -717,7 +734,7 @@ class AnkerSolixApiExport:
                 await self.query(
                     endpoint=API_ENDPOINTS["get_site_price"],
                     filename=f"{API_FILEPREFIXES['get_site_price']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"site_id": siteId},
+                    payload={"site_id": siteId, "accuracy": 5},
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
@@ -842,9 +859,8 @@ class AnkerSolixApiExport:
 
             # loop through all devices for other queries
             for sn, device in self.api_power.devices.items():
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting device specific data for device %s SN %s...",
+                    "\nExporting device specific data for device %s SN %s...",
                     device.get("name", ""),
                     self._randomize(sn, "_sn"),
                 )
@@ -1126,8 +1142,9 @@ class AnkerSolixApiExport:
     async def export_charging_energy_service_data(self) -> bool:
         """Run functions to export charging_energy_service endpoint data."""
 
-        self._logger.info("")
-        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.charging)
+        self._logger.info(
+            "\nQuerying %s endpoint data...", ApiEndpointServices.charging
+        )
         # Query API using direct endpoints to save full response of each query in json files
         try:
             # Use simple first query without parms to check if service endpoints usable
@@ -1142,9 +1159,8 @@ class AnkerSolixApiExport:
             # loop through all found sites
             for siteId, site in self.api_power.sites.items():
                 admin = site.get("site_admin")
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting Charging specific data for site %s...",
+                    "\nExporting Charging specific data for site %s...",
                     self._randomize(siteId, "site_id"),
                 )
 
@@ -1235,9 +1251,8 @@ class AnkerSolixApiExport:
 
             # loop through all devices
             for sn, device in self.api_power.devices.items():
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting Charging specific data for device %s SN %s...",
+                    "\nExporting Charging specific data for device %s SN %s...",
                     device.get("name", ""),
                     self._randomize(sn, "_sn"),
                 )
@@ -1337,8 +1352,7 @@ class AnkerSolixApiExport:
     async def export_charging_hes_svc_data(self) -> bool:
         """Run functions to export charging_hes_svc endpoint data."""
 
-        self._logger.info("")
-        self._logger.info("Querying %s endpoint data...", ApiEndpointServices.hes_svc)
+        self._logger.info("\nQuerying %s endpoint data...", ApiEndpointServices.hes_svc)
         # Query API using direct endpoints to save full response of each query in json files
         try:
             # Use simple first query without parms to check if service endpoints usable
@@ -1353,9 +1367,8 @@ class AnkerSolixApiExport:
             has_hes = False
             for siteId, site in self.api_power.sites.items():
                 admin = site.get("site_admin")
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting HES specific data for site %s...",
+                    "\nExporting HES specific data for site %s...",
                     self._randomize(siteId, "site_id"),
                 )
 
@@ -1538,9 +1551,8 @@ class AnkerSolixApiExport:
 
             # loop through all devices
             for sn, device in self.api_power.devices.items():
-                self._logger.info("")
                 self._logger.info(
-                    "Exporting HES specific data for device %s SN %s...",
+                    "\nExporting HES specific data for device %s SN %s...",
                     device.get("name", ""),
                     self._randomize(sn, "_sn"),
                 )
@@ -1819,3 +1831,220 @@ class AnkerSolixApiExport:
             else:
                 raise
         return response
+
+    async def export_mqtt_data(self) -> None:
+        """Start MQTT session and dump received messages."""
+
+        mqttsession = None
+        try:
+            # get all owned devices that may support MQTT messages
+            if mqttdevices := [
+                dev
+                for dev in self.api_power.devices.values()
+                if dev.get("is_admin") and not dev.get("is_passive")
+            ]:
+                # reuse existing MQTT client or start new one
+                if mqttsession := self.api_power.mqttsession:
+                    self._logger.info(
+                        "Using existing MQTT session and intercepting message callback for export..."
+                    )
+                    self._old_callback = mqttsession.message_callback()
+                    mqttsession.message_callback(func=self.dump_device_mqtt)
+                else:
+                    self._logger.info("Starting MQTT session...")
+                    mqttsession = await self.api_power.startMqttSession(
+                        message_callback=self.dump_device_mqtt
+                    )
+                if mqttsession and mqttsession.is_connected():
+                    self._logger.info(
+                        "MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages..."
+                    )
+                    for dev in mqttdevices:
+                        sn = dev.get("device_sn", "")
+                        topic = f"{self.api_power.mqttsession.get_topic_prefix(deviceDict=dev)}#"
+                        resp = self.api_power.mqttsession.subscribe(topic)
+                        if resp and resp.is_failure:
+                            self._logger.warning(
+                                "Failed subscription for topic: %s",
+                                topic.replace(sn, self._randomize(sn, "device_sn")),
+                            )
+                        else:
+                            self._logger.info(
+                                "Subscribed to MQTT topic: %s",
+                                topic.replace(sn, self._randomize(sn, "device_sn")),
+                            )
+                    # wait at least first minute for messages without trigger
+                    await asyncio.sleep(70)
+                    # Ensure MQTT client is still connected
+                    if not mqttsession.is_connected():
+                        self._logger.info(
+                            "MQTT session not connected, trying reconnection..."
+                        )
+                        mqttsession = await self.api_power.startMqttSession(
+                            message_callback=self.dump_device_mqtt
+                        )
+                    # Cycle through devices and publish trigger for each applicable device
+                    if mqttsession.is_connected():
+                        self._logger.info(
+                            "Triggering MQTT Real Time data for 60 seconds and waiting for messages..."
+                        )
+                        for dev in mqttdevices:
+                            resp = mqttsession.realtime_trigger(
+                                deviceDict=dev,
+                                timeout=60,
+                            )
+                            with contextlib.suppress(ValueError, RuntimeError):
+                                resp.wait_for_publish(timeout=2)
+                            sn = dev.get("device_sn")
+                            if resp.is_published():
+                                self._logger.info(
+                                    "Published MQTT Real Time trigger message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.add(sn)
+                            else:
+                                self._logger.warning(
+                                    "Failed to publish Real Time trigger message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.discard(sn)
+                    # wait for the RT trigger to timeout
+                    await asyncio.sleep(60)
+                    mqttsession.triggered_devices.clear()
+                    # wait another 3 minutes to get all standard messages in 5 minute interval
+                    for _ in range(3):
+                        self._logger.info(
+                            "Waiting 60 more seconds for additional standard MQTT messages..."
+                        )
+                        await asyncio.sleep(60)
+                else:
+                    self._logger.warning(
+                        "MQTT session start or connection failed, skipping MQTT data export"
+                    )
+            else:
+                self._logger.warning(
+                    "No owned devices found, skipping MQTT data export"
+                )
+        except (
+            asyncio.CancelledError,
+            ClientError,
+            errors.AnkerSolixError,
+        ) as err:
+            if isinstance(err, ClientError | errors.AnkerSolixError):
+                self._logger.warning(
+                    "Aborting MQTT session due to unexpected error %s: %s",
+                    type(err),
+                    err,
+                )
+            else:
+                self._logger.warning("MQTT session was cancelled.")
+        finally:
+            if mqttsession and self._old_callback:
+                self._logger.info("MQTT message export fininished.")
+                mqttsession.message_callback(func=self._old_callback)
+                self._logger.info(
+                    "Switched MQTT session message callback back to original."
+                )
+            else:
+                self._logger.info("Stopping MQTT connection...")
+                self.api_power.stopMqttSession()
+                self._logger.info("MQTT message export fininished.")
+
+    def dump_device_mqtt(
+        self,
+        session: AnkerSolixMqttSession,
+        topic: str,
+        message: Any,
+        data: bytes,
+        model: str,
+        device_sn: str,
+        *args,
+        **kwargs,
+    ) -> None:
+        """Randomized known message content and save the messages to files."""
+
+        # forward message to original message callback if existing
+        if callable(self._old_callback):
+            self._old_callback(
+                session, topic, message, data, model, device_sn, *args, **kwargs
+            )
+        if isinstance(message, dict) and model and device_sn:
+            # extract message type from hex data for message grouping per file
+            msgtype = "other"
+            randsn = self._randomize(device_sn, "device_sn")
+            datastr = None
+            if payload := message.get("payload"):
+                payload = json.loads(payload)
+            if isinstance(data, bytes):
+                # structure hex data
+                if not (
+                    msgtype := DeviceHexData(hexbytes=data).msg_header.msgtype.hex()
+                ):
+                    msgtype = "other"
+                # randomize potential hex serials of system device serials in hex data
+                if self.randomized:
+                    if siteId := (self.api_power.devices.get(device_sn) or {}).get(
+                        "site_id"
+                    ):
+                        serials = {
+                            sn
+                            for sn, dev in self.api_power.devices.items()
+                            if siteId == dev.get("site_id")
+                        }
+                    else:
+                        serials = {device_sn}
+                    datastr = bytes(data).hex()
+                    for sn in serials:
+                        snhex = sn.encode().hex()
+                        randsnhex = self._randomize(sn, "device_sn").encode().hex()
+                        datastr = datastr.replace(snhex, randsnhex)
+            if isinstance(payload, dict):
+                if datastr:
+                    # replace based64 encoded string in data field of message payload
+                    payload["data"] = b64encode(bytes.fromhex(datastr)).decode()
+                # replace other sensitive values in payload
+                payload = self._check_keys(payload)
+                message["payload"] = json.dumps(payload)
+            # randomize sensitive json key values in message fields
+            if self.randomized:
+                message = self._check_keys(message)
+            # replace randomized device serial in message keys or unknown fields
+            message["topic"] = topic
+            msgstr = json.dumps(message).replace(device_sn, randsn)
+            # save the message
+            filename = f"{API_FILEPREFIXES['mqtt_message']}_{randsn}_{msgtype}.json"
+            # print info for first message type per device
+            if filename not in self._mqtt_msg_types:
+                self._mqtt_msg_types.add(filename)
+                self._logger.info(
+                    "Received new MQTT message type '%s' from device %s",
+                    msgtype,
+                    self._randomize(device_sn, "device_sn"),
+                )
+            # wait for the save and protect from task cancelation
+            savetask = asyncio.run_coroutine_threadsafe(
+                coro=self.api_power.mqttsession.saveToFile(
+                    filename=Path(self.export_path) / filename, data=json.loads(msgstr)
+                ),
+                loop=self._loop,
+            )
+            if savetask.result():
+                self._logger.debug(
+                    "Saved MQTT message type '%s' from device %s --> %s",
+                    msgtype,
+                    self._randomize(device_sn, "device_sn"),
+                    filename,
+                )
+            else:
+                self._logger.warning(
+                    "Failed to save MQTT message type '%s' from device %s to file %s",
+                    msgtype,
+                    self._randomize(device_sn, "device_sn"),
+                    filename,
+                )
+        else:
+            self._logger.debug(
+                "Received unknown MQTT message type %s from device %s",
+                type(message),
+                self._randomize(device_sn, "device_sn") if device_sn else "Unknown",
+            )

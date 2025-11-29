@@ -1,4 +1,26 @@
 {
+    "config": {
+        "step": {
+            "user_options": {
+                "sections": {
+                    "api_options": "mdi:api",
+                    "mqtt_options": "mdi:source-branch-sync",
+                    "test_options": "mdi:hammer-wrench"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "sections": {
+                    "api_options": "mdi:api",
+                    "mqtt_options": "mdi:source-branch-sync",
+                    "test_options": "mdi:hammer-wrench"
+                }
+            }
+        }
+    },
     "entity": {
         "button": {
             "refresh_device": {
@@ -9,6 +31,9 @@
             },
             "restore_attributes": {
                 "default": "mdi:car-cog"
+            },
+            "mqtt_realtime_trigger": {
+                "default": "mdi:arrow-decision"
             }
         },
         "binary_sensor": {
@@ -24,6 +49,13 @@
                 "state": {
                     "on": "mdi:ethernet-cable",
                     "off": "mdi:ethernet-cable-off"
+                }
+            },
+            "mqtt_connection": {
+                "default": "mdi:weather-cloudy-alert",
+                "state": {
+                    "on": "mdi:cloud-refresh-variant",
+                    "off": "mdi:cloud-remove-outline"
                 }
             },
             "ota_update": {
@@ -218,10 +250,22 @@
                     "unknown": "mdi:help-network-outline"
                 }
             },
-            "charging_power": {
+            "state_of_health": {
+                "default": "mdi:battery-heart-variant"
+            },
+            "battery_power_signed": {
                 "default": "mdi:battery-charging"
             },
-            "output_power": {
+            "dc_output_power": {
+                "default": "mdi:home-battery-outline"
+            },
+            "dc_output_power_total": {
+                "default": "mdi:home-battery-outline"
+            },
+            "ac_output_power": {
+                "default": "mdi:home-battery-outline"
+            },
+            "ac_output_power_total": {
                 "default": "mdi:home-battery-outline"
             },
             "ac_to_home_load": {
@@ -247,6 +291,18 @@
             },
             "solar_power_4": {
                 "default": "mdi:solar-panel"
+            },
+            "dc_input_power": {
+                "default": "mdi:lightning-bolt-circle"
+            },
+            "dc_input_power_total": {
+                "default": "mdi:lightning-bolt-circle"
+            },
+            "ac_input_power": {
+                "default": "mdi:power-plug-battery-outline"
+            },
+            "ac_input_power_total": {
+                "default": "mdi:power-plug-battery-outline"
             },
             "ac_socket": {
                 "default": "mdi:power-plug-battery"
@@ -303,6 +359,24 @@
             },
             "solar_forecast_this_hour": {
                 "default": "mdi:sun-compass"
+            },
+            "discharged_energy": {
+                "default": "mdi:battery-minus-variant"
+            },
+            "charged_energy": {
+                "default": "mdi:battery-plus-variant"
+            },
+            "output_energy": {
+                "default": "mdi:home-battery"
+            },
+            "solar_energy": {
+                "default": "mdi:solar-power-variant"
+            },
+            "device_efficiency": {
+                "default": "mdi:percent-box"
+            },
+            "battery_efficiency": {
+                "default": "mdi:percent-box-outline"
             },
             "daily_discharge_energy": {
                 "default": "mdi:battery-minus-variant"
@@ -467,7 +541,13 @@
             "photovoltaic_to_grid_power": {
                 "default": "mdi:transmission-tower-import"
             },
+            "grid_power_signed": {
+                "default": "mdi:transmission-tower"
+            },
             "data_timestamp": {
+                "default": "mdi:weather-cloudy-clock"
+            },
+            "mqtt_timestamp": {
                 "default": "mdi:weather-cloudy-clock"
             },
             "charge_power": {
@@ -487,6 +567,30 @@
             },
             "update_timestamp": {
                 "default": "mdi:weather-cloudy-clock"
+            },
+            "mqtt_statistic": {
+                "default": "mdi:chart-bar-stacked"
+            },
+            "usbc_1_power": {
+                "default": "mdi:usb-c-port"
+            },
+            "usbc_2_power": {
+                "default": "mdi:usb-c-port"
+            },
+            "usbc_3_power": {
+                "default": "mdi:usb-c-port"
+            },
+            "usbc_4_power": {
+                "default": "mdi:usb-c-port"
+            },
+            "usba_1_power": {
+                "default": "mdi:usb-port"
+            },
+            "usba_2_power": {
+                "default": "mdi:usb-port"
+            },
+            "remaining_time_hours": {
+                "default": "mdi:timelapse"
             }
         },
         "switch": {
@@ -525,11 +629,18 @@
                     "off": "mdi:transmission-tower-off"
                 }
             },
+            "mqtt_overlay": {
+                "default": "mdi:sync-alert",
+                "state": {
+                    "on": "mdi:download",
+                    "off": "mdi:download-off"
+                }
+            },
             "allow_refresh": {
                 "default": "mdi:sync-alert",
                 "state": {
-                    "on": "mdi:sync",
-                    "off": "mdi:sync-off"
+                    "on": "mdi:api",
+                    "off": "mdi:api-off"
                 }
             },
             "default_vehicle": {
