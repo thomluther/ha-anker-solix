@@ -64,6 +64,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
 
         Example:
             await mydevice.set_temp_unit(fahrenheit=False)  # Celsius
+
         """
         # response
         resp = {}
@@ -112,6 +113,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
 
         Example:
             await mydevice.set_temp_unit(fahrenheit=False)  # Celsius
+
         """
         # response
         resp = {}

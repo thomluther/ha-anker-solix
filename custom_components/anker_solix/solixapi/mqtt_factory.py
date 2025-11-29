@@ -24,6 +24,7 @@ class SolixMqttDeviceFactory:
         Args:
             api_instance: The API instance
             device_sn: The device serial number
+
         """
         self.api = api_instance
         self.device_sn = device_sn
@@ -34,6 +35,7 @@ class SolixMqttDeviceFactory:
 
         Returns:
             Appropriate MQTT device instance or None if device not found
+
         """
         if self.device_data and (category := self.device_data.get("type") or ""):
             pn = self.device_data.get("device_pn") or ""

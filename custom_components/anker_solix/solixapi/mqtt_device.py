@@ -127,6 +127,7 @@ class SolixMqttDevice:
 
         Returns:
             str | bool: String with hex command if sent, False otherwise
+
         """
         # Generate command hex data
         if not (hexdata := generate_mqtt_command(command, parameters)):
@@ -190,6 +191,7 @@ class SolixMqttDevice:
 
         Example:
             await mydevice.realtime_trigger(timeout=300)
+
         """
         # Validate command value
         if not self.validate_command_value(SolixMqttCommands.realtime_trigger, timeout):
@@ -241,6 +243,7 @@ class SolixMqttDevice:
 
         Example:
             mqtt_unique = mydevice.get_combined_cache(mqtt_unique=True)
+
         """
         mqttdata = self.mqttdata | (self._filedata if fromFile else {})
         if mqtt_unique:
@@ -272,6 +275,7 @@ class SolixMqttDevice:
             status = mydevice.get_status()
             print(f"AC Output: {status.get('switch_ac_output_power')}")
             print(f"Battery SOC: {status.get('battery_soc')}%")
+
         """
         # Return copy of accumulated MQTT data cache, handle test mode
         return self.mqttdata | (self._filedata if fromFile else {})
@@ -291,6 +295,7 @@ class SolixMqttDevice:
 
         Example:
             mydevice.print_status()
+
         """
         # Return accumulated MQTT data cache, handle test mode
         data = self.get_status(fromFile=fromFile)
