@@ -15,7 +15,6 @@ from .mqttcmdmap import (
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
     CMD_LIGHT_MODE,
-    CMD_LIGHT_SWITCH,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
     CMD_SB_INVERTER_TYPE,
@@ -129,8 +128,10 @@ A1728_0405 = {
     "be": {
         "name": "usba_2_status"
     },  # USB-A right status: Inactive (0), Discharging (1), Charging (2)
-    "bf": {"name": "light_switch"}, # Off (0), On (1)
-    "c4": {"name": "dc_output_timeout_seconds?"}, # Timeout seconds, custom range: 0-10800???
+    "bf": {"name": "light_switch"},  # Off (0), On (1)
+    "c4": {
+        "name": "dc_output_timeout_seconds?"
+    },  # Timeout seconds, custom range: 0-10800???
     "c5": {
         "name": "display_timeout_seconds?"
     },  # Display timeout: 20, 30, 60, 300, 1800 seconds???

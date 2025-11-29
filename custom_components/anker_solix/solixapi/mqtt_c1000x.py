@@ -92,6 +92,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             await mydevice.set_ac_output(enabled=True)
             await mydevice.set_ac_output(mode=1)  # Normal
             await mydevice.set_ac_output(mode="smart")
+
         """
         # response
         resp = {}
@@ -169,6 +170,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             await mydevice.set_dc_output(enabled=True)
             await mydevice.set_dc_output(mode=2)  # Smart
             await mydevice.set_dc_output(mode="normal")
+
         """
         # response
         resp = {}
@@ -249,6 +251,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             await mydevice.set_display(mode=2)  # Medium
             await mydevice.set_display(mode="high")
             await mydevice.set_display(timeout_seconds=20) # 20 seconds timeout
+
         """
         # response
         resp = {}
@@ -341,6 +344,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
 
         Example:
             await mydevice.set_temp_unit(fahrenheit=False)  # Celsius
+
         """
         # response
         resp = {}
@@ -386,6 +390,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         Example:
             await mydevice.set_light_mode(mode=3)  # High
             await mydevice.set_light_mode(mode="blinking")
+
         """
         # response
         resp = {}
@@ -441,6 +446,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         Example:
             # Set 8 hour timeout
             result = await device.set_device_timeout(timeout_minutes=480)
+
         """
         resp = {}
         if timeout_minutes is not None and not self.validate_command_value(
@@ -482,6 +488,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         Example:
             # Set 800W max load
             result = await device.set_max_load(max_watts=800)
+
         """
         resp = {}
         if max_watts is not None and not self.validate_command_value(
@@ -523,6 +530,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         Example:
             # Enable UltraFast charging (1300W max)
             result = await device.set_ultrafast_charging(enabled=True)
+
         """
         resp = {}
         if enabled is not None and not self.validate_command_value(
