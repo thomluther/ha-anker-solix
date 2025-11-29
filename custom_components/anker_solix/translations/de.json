@@ -1960,7 +1960,7 @@
             "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}"
         },
         "mqtt_command_failed": {
-            "message": "Der MQTT Befehl '{command}' von {coordinator} für Gerät {device_alias} ({device_sn}) ist fehlgeschlagen"
+            "message": "Der MQTT Befehl {command} von {coordinator} für Gerät {device_alias} ({device_sn}) ist fehlgeschlagen"
         },
         "action_blocked": {
             "message": "Die Aktion {service} kann nicht erneut ausgeführt werden solange sie noch aktiv ist oder der Startvorgang läuft (Abgelaufen um {timeout})"

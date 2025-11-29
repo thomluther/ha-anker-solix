@@ -1960,7 +1960,7 @@
             "message": "L'action {service} ne peut pas être exécuté: {error}"
         },
         "mqtt_command_failed": {
-            "message": "La commande MQTT '{command}' de {coordinator} pour le périphérique  {device_alias} ({device_sn}) a échoué"
+            "message": "La commande MQTT {command} de {coordinator} pour le périphérique  {device_alias} ({device_sn}) a échoué"
         },
         "action_blocked": {
             "message": "L'action {service} ne peut pas être exécutée à nouveau alors qu'elle est encore en cours d'exécution ou démarrage en cours (temps mort à {timeout})"
