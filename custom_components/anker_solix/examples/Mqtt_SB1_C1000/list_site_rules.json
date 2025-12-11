@@ -1,0 +1,375 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "rule_list": [
+      {
+        "power_site_type": 1,
+        "main_device_models": [
+          "A5143"
+        ],
+        "device_models": [
+          "A5143",
+          "A1771"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A1771": 1,
+          "A5143": 1
+        },
+        "quantity_max_limit_map": {
+          "A1771": 2,
+          "A5143": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 2,
+        "main_device_models": [
+          "A17C0"
+        ],
+        "device_models": [
+          "A17C0",
+          "A5143",
+          "A1771"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A17C0": 1
+        },
+        "quantity_max_limit_map": {
+          "A1771": 2,
+          "A17C0": 2,
+          "A5143": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 4,
+        "main_device_models": [
+          "A17B1"
+        ],
+        "device_models": [
+          "A17B1"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17B1": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 5,
+        "main_device_models": [
+          "A17C1"
+        ],
+        "device_models": [
+          "A17C1",
+          "A17X7",
+          "SHEM3",
+          "SHEMP3",
+          "A17X8",
+          "A17C0"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17C0": 2,
+          "A17C1": 1,
+          "A17X7": 1,
+          "A17X8": 6,
+          "SHEM3": 1,
+          "SHEMP3": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 6,
+        "main_device_models": [
+          "A5341"
+        ],
+        "device_models": [
+          "A5341",
+          "A5101",
+          "A5220"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5341": 1
+        },
+        "quantity_max_limit_map": {
+          "A5341": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 7,
+        "main_device_models": [
+          "A5101"
+        ],
+        "device_models": [
+          "A5101",
+          "A5220"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5101": 1
+        },
+        "quantity_max_limit_map": {
+          "A5101": 6
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 8,
+        "main_device_models": [
+          "A5102"
+        ],
+        "device_models": [
+          "A5102",
+          "A5220",
+          "A5191"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5102": 1
+        },
+        "quantity_max_limit_map": {
+          "A5102": 6
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 9,
+        "main_device_models": [
+          "A5103"
+        ],
+        "device_models": [
+          "A5103",
+          "A5220",
+          "A5191"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5103": 1
+        },
+        "quantity_max_limit_map": {
+          "A5103": 6
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 10,
+        "main_device_models": [
+          "A17C3"
+        ],
+        "device_models": [
+          "A17C3",
+          "A17X7",
+          "SHEM3",
+          "SHEMP3",
+          "A17X8",
+          "A17C0"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17C0": 2,
+          "A17C3": 1,
+          "A17X7": 1,
+          "A17X8": 6,
+          "SHEM3": 1,
+          "SHEMP3": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 11,
+        "main_device_models": [
+          "A17C2"
+        ],
+        "device_models": [
+          "A17C2",
+          "A17X7",
+          "A17X8",
+          "SHEM3",
+          "SHEMP3",
+          "AE1R0"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17C2": 1,
+          "A17X7": 1,
+          "A17X8": 6,
+          "AE1R0": 1,
+          "SHEM3": 1,
+          "SHEMP3": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 12,
+        "main_device_models": [
+          "A17C5"
+        ],
+        "device_models": [
+          "A17C5",
+          "A17X7",
+          "SHEM3",
+          "SHEMP3",
+          "A17X8",
+          "SHPPS",
+          "AE1R0"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17C5": 3,
+          "A17X7": 1,
+          "A17X8": 6,
+          "AE1R0": 1,
+          "SHEM3": 1,
+          "SHEMP3": 1,
+          "SHPPS": 6
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 13,
+        "main_device_models": [
+          "A1782"
+        ],
+        "device_models": [
+          "A1782",
+          "A17X7US"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": {
+          "A1782": 1,
+          "A17X7US": 1
+        },
+        "quantity_max_limit_map": {
+          "A1782": 2,
+          "A17X7US": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 14,
+        "main_device_models": [
+          "A5191"
+        ],
+        "device_models": [
+          "A5191",
+          "A17X7",
+          "SHEM3",
+          "SHEMP3"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A5191": 1
+        },
+        "quantity_max_limit_map": {
+          "A17X7": 1,
+          "A5191": 1,
+          "SHEM3": 1,
+          "SHEMP3": 1
+        },
+        "is_group": true
+      },
+      {
+        "power_site_type": 17,
+        "main_device_models": [
+          "AX170"
+        ],
+        "device_models": [
+          "AX170"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "AX170": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 15,
+        "main_device_models": [
+          "A17E1"
+        ],
+        "device_models": [
+          "A17E1",
+          "A17X7US"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17E1": 1,
+          "A17X7US": 1
+        },
+        "is_group": false
+      },
+      {
+        "power_site_type": 16,
+        "main_device_models": [
+          "A1903"
+        ],
+        "device_models": [
+          "A1903",
+          "A110A",
+          "A110B",
+          "A110G",
+          "A1341"
+        ],
+        "can_empty_site": false,
+        "quantity_min_limit_map": {
+          "A1903": 1
+        },
+        "quantity_max_limit_map": {
+          "A110A": 4,
+          "A110B": 4,
+          "A110G": 4,
+          "A1341": 4,
+          "A1903": 1
+        },
+        "is_group": true
+      },
+      {
+        "power_site_type": 18,
+        "main_device_models": [
+          "AE100"
+        ],
+        "device_models": [
+          "AE100",
+          "A17C1",
+          "A17C3",
+          "A17C5",
+          "A17X7",
+          "SHEM3",
+          "SHEMP3",
+          "A17X8",
+          "SHPPS",
+          "A5191"
+        ],
+        "can_empty_site": true,
+        "quantity_min_limit_map": null,
+        "quantity_max_limit_map": {
+          "A17C1": 4,
+          "A17C3": 4,
+          "A17C5": 4,
+          "A17X7": 1,
+          "A17X8": 6,
+          "A5191": 1,
+          "AE100": 1,
+          "SHEM3": 1,
+          "SHEMP3": 1,
+          "SHPPS": 6
+        },
+        "is_group": false
+      }
+    ]
+  },
+  "trace_id": "9b6df816b84ffaeff4e5cdc8bd51466f"
+}

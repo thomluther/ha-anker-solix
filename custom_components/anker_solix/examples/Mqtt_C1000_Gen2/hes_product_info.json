@@ -1,0 +1,79 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "productsInfo": [
+      {
+        "category": "Residential Storage System",
+        "code": "A5101",
+        "name": "X1-P6K-US/S",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/KEwdxNejZq2tDXCX/picl_A5101_normal.png",
+        "bleImgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/28/iot-admin/de3OmI2qScCvbbWa/EU5101MIMA.png",
+        "connConfirmModel": 2,
+        "connConfirmImg": "",
+        "connConfirmTips": ""
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5341",
+        "name": "Backup Controller",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/09/24/iot-admin/ANJzf3AX8isPzNMI/picl_A5341_normal.png",
+        "bleImgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/12/13/iot-admin/ATbwqBN96K6EEA9d/2.png",
+        "connConfirmModel": 2,
+        "connConfirmImg": "",
+        "connConfirmTips": ""
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5150",
+        "name": "Microinverter",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/29/iot-admin/1VUzMEfFhzv4gopz/%E5%BE%AE%E9%80%86.png",
+        "bleImgUrl": "",
+        "connConfirmModel": 0,
+        "connConfirmImg": "",
+        "connConfirmTips": ""
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5102",
+        "name": "X1-H(3.68~6)K-S\t",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/BT8pMS9hrhg8IEob/picl_A5101_normal.png",
+        "bleImgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/28/iot-admin/ykqNDsmZ2uJoisp6/EU5102MIMA.png",
+        "connConfirmModel": 2,
+        "connConfirmImg": "",
+        "connConfirmTips": ""
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5450",
+        "name": "Zigbee Dongle",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/07/29/iot-admin/mp7s3FzbBXjRqIxV/ECU.png",
+        "bleImgUrl": "",
+        "connConfirmModel": 0,
+        "connConfirmImg": "",
+        "connConfirmTips": ""
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5103",
+        "name": "X1-H (5~12)K-T",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/NLxTngSOzIY49fX2/picl_A5101_normal.png",
+        "bleImgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/28/iot-admin/4SJg99zLwDkbLmfq/EU5103MIMA.png",
+        "connConfirmModel": 2,
+        "connConfirmImg": "",
+        "connConfirmTips": ""
+      },
+      {
+        "category": "Residential Storage System",
+        "code": "A5220",
+        "name": "Battery Module",
+        "imgUrl": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/03/27/iot-admin/QgLuazcQypTsCzvv/picl_A5220_normal.png",
+        "bleImgUrl": "",
+        "connConfirmModel": 0,
+        "connConfirmImg": "",
+        "connConfirmTips": ""
+      }
+    ]
+  },
+  "trace_id": "2dcdae2d7cacb06cdc2ba68be4eaccdf"
+}

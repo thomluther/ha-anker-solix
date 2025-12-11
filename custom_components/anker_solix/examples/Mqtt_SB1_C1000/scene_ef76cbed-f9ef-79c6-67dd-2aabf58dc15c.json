@@ -1,0 +1,152 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "1457.71",
+        "unit": "kwh"
+      },
+      {
+        "type": "2",
+        "total": "1366.45",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "422.73",
+        "unit": "\u20ac"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [
+        {
+          "device_pn": "A17C0",
+          "device_sn": "CUTUTT17MUSXAJ4R",
+          "device_name": "Solarbank E1600",
+          "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+          "battery_power": "69",
+          "bind_site_status": "",
+          "charging_power": "0",
+          "power_unit": "W",
+          "charging_status": "0",
+          "status": "1",
+          "wireless_type": "1",
+          "main_version": "",
+          "photovoltaic_power": "0",
+          "output_power": "0",
+          "create_time": 1703755291,
+          "set_load_power": "",
+          "sub_package_num": 0,
+          "output_cutoff_data": 10,
+          "is_display": true,
+          "bat_charge_power": "0",
+          "pv_name": {
+            "micro_inverter_name": "",
+            "pv1_name": "PV1",
+            "pv2_name": "PV2",
+            "pv3_name": "PV3",
+            "pv4_name": "PV4"
+          },
+          "pv_power": null,
+          "feature_switch": null,
+          "heating_power": "0",
+          "bat_discharge_power": "0",
+          "err_code": 0
+        }
+      ],
+      "total_charging_power": "0",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.69",
+      "updated_time": "2025-10-17 16:23:30",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "0.00",
+      "display_set_power": false,
+      "battery_discharge_power": "0",
+      "ac_power": "0",
+      "to_home_load": "0",
+      "is_display_data": true,
+      "solar_power_1": "0",
+      "solar_power_2": "0",
+      "solar_power_3": "0",
+      "solar_power_4": "0",
+      "other_input_power": "0",
+      "micro_inverter_power": "0",
+      "micro_inverter_power_limit": "0",
+      "micro_inverter_low_power_limit": "0",
+      "grid_to_battery_power": "0",
+      "pei_heating_power": "0",
+      "backup_info": {
+        "start_time": 0,
+        "end_time": 0,
+        "full_time": 0
+      },
+      "use_time_excute_info": {
+        "current_band": "0"
+      }
+    },
+    "retain_load": "0W",
+    "scene_mode": 0,
+    "home_load_power": "0",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 2,
+    "site_id": "ef76cbed-f9ef-79c6-67dd-2aabf58dc15c",
+    "powerpanel_list": [],
+    "grid_info": null,
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "show_third_party_pv_panel": false
+    },
+    "other_loads_power": "0",
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "priority_discharge_upgrade_devices": "",
+    "style_id": 0,
+    "is_show_priority_discharge": 1,
+    "solarbank_pps_info": {
+      "pps_list": null,
+      "total_charging_power": "",
+      "total_output_power": "",
+      "total_battery_power": "",
+      "total_pv_input_power": "",
+      "total_home_load_power": "",
+      "total_grid_to_battery": "",
+      "home": null,
+      "grid": null,
+      "system": null
+    },
+    "user_scene_mode": 0,
+    "is_dynamic_price_down_grade": false,
+    "aiems_profit": null,
+    "switch_0w": 0,
+    "err_msg": "",
+    "third_party_pv": "0",
+    "combiner_box_info": {
+      "combiner_box_list": []
+    },
+    "charging_pile_info": {
+      "charging_pile_list": []
+    }
+  },
+  "trace_id": "16a0e0baea7fff51430eebdbea65bbf1"
+}

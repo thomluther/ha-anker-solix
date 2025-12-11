@@ -1,0 +1,330 @@
+14:23:07,524 ExportSystem INFO Using AnkerSolixApiExport Version: 3.4.0.0, Date: 2025-10-17, Export Services: {'mqtt_only'}
+14:23:07,525 ExportSystem INFO 
+Querying common endpoint data...
+14:23:07,526 ExportSystem INFO Querying site information...
+14:23:08,397 ExportSystem INFO Querying bind devices information...
+14:23:08,684 ExportSystem INFO Found 1 accessible systems (sites) and 2 devices.
+14:23:08,685 ExportSystem INFO Exporting site list...
+14:23:08,686 ExportSystem DEBUG post power_service/v1/site/get_site_list --> site_list.json
+14:23:08,689 ExportSystem INFO Starting MQTT session...
+14:23:09,48 ExportSystem INFO MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages...
+14:23:09,50 ExportSystem INFO Subscribed to MQTT topic: dt/anker_power/A17C0/CUTUTT17MUSXAJ4R/#
+14:23:09,51 ExportSystem INFO Subscribed to MQTT topic: dt/anker_power/A1761/4EJYH8ASEV3SGLA4/#
+14:23:09,104 ExportSystem INFO Saved JSON to file khfiebig/site_list.json
+14:23:09,107 ExportSystem INFO Exporting bind devices...
+14:23:09,108 ExportSystem DEBUG post power_service/v1/app/get_relate_and_bind_devices --> bind_devices.json
+14:23:09,455 ExportSystem INFO Saved JSON to file khfiebig/bind_devices.json
+14:23:09,457 ExportSystem INFO Exporting OTA batch info for all devices...
+14:23:09,458 ExportSystem DEBUG post app/ota/batch/check_update --> ota_batch.json
+14:23:09,813 ExportSystem INFO Saved JSON to file khfiebig/ota_batch.json
+14:23:09,816 ExportSystem INFO Exporting message unread status...
+14:23:09,817 ExportSystem DEBUG get power_service/v1/get_message_unread --> message_unread.json
+14:23:29,146 ExportSystem DEBUG Saved MQTT message type '040d' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_040d.json
+14:23:29,281 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:23:29,441 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:30,277 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:23:30,408 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:30,496 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:30,993 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:23:31,198 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:23:31,336 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:31,523 ExportSystem DEBUG Saved MQTT message type '0407' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0407.json
+14:23:31,786 ExportSystem ERROR Api: khfiebig, Method: GET, Endpoint: power_service/v1/get_message_unread, Payload: {}
+<class 'aiohttp.client_exceptions.ClientError'>: Api khfiebig Request Error: Timeout, response=Timeout Error
+14:23:31,787 ExportSystem INFO Exporting currency list...
+14:23:31,788 ExportSystem DEBUG post power_service/v1/currency/get_list --> currency_list.json
+14:23:31,893 ExportSystem INFO Saved JSON to file khfiebig/currency_list.json
+14:23:31,896 ExportSystem INFO Exporting supported sites, devices and accessories...
+14:23:31,897 ExportSystem DEBUG post power_service/v1/site/get_site_rules --> list_site_rules.json
+14:23:31,957 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:32,156 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:32,225 ExportSystem INFO Saved JSON to file khfiebig/list_site_rules.json
+14:23:32,228 ExportSystem DEBUG get power_service/v1/product_categories --> list_products.json
+14:23:32,328 ExportSystem DEBUG Saved MQTT message type '0408' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0408.json
+14:23:32,531 ExportSystem DEBUG Saved MQTT message type '0856' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0856.json
+14:23:32,548 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:32,650 ExportSystem INFO Saved JSON to file khfiebig/list_products.json
+14:23:32,653 ExportSystem DEBUG get power_service/v1/product_accessories --> list_accessories.json
+14:23:33,565 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:23:34,700 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:23:35,733 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:36,656 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:37,549 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:23:38,672 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:23:38,683 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:23:38,807 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:38,992 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:39,700 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:23:40,737 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:40,744 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:23:41,890 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:42,776 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:23:43,927 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:44,832 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:45,852 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:23:46,873 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:47,905 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:49,239 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:51,640 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:54,789 ExportSystem ERROR Api: khfiebig, Method: GET, Endpoint: power_service/v1/product_accessories, Payload: {}
+<class 'aiohttp.client_exceptions.ClientError'>: Api khfiebig Request Error: Timeout, response=Timeout Error
+14:23:54,790 ExportSystem DEBUG post power_service/v1/app/third/platform/list --> list_third_platforms.json
+14:23:54,849 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:54,885 ExportSystem INFO Saved JSON to file khfiebig/list_third_platforms.json
+14:23:54,887 ExportSystem INFO Get dynamic price sites for user account...
+14:23:54,888 ExportSystem DEBUG post power_service/v1/dynamic_price/check_available --> dynamic_price_sites.json
+14:23:55,207 ExportSystem INFO Saved JSON to file khfiebig/dynamic_price_sites.json
+14:23:55,209 ExportSystem INFO Get user vehicle list...
+14:23:55,210 ExportSystem DEBUG post power_service/v1/app/vehicle/get_vehicle_list --> user_vehicles.json
+14:23:55,530 ExportSystem INFO Saved JSON to file khfiebig/user_vehicles.json
+14:23:55,533 ExportSystem INFO Get details for vehicle IDs...
+14:23:55,534 ExportSystem INFO Get EV brands and attributes of vehicle model(s)...
+14:23:55,535 ExportSystem DEBUG post power_service/v1/app/get_brand_list --> vehicle_brands.json
+14:23:55,855 ExportSystem INFO Saved JSON to file khfiebig/vehicle_brands.json
+14:23:55,858 ExportSystem DEBUG post power_service/v1/app/get_models --> vehicle_brand_models_Citroen.json
+14:23:56,181 ExportSystem INFO Saved JSON to file khfiebig/vehicle_brand_models_Citroen.json
+14:23:56,184 ExportSystem DEBUG post power_service/v1/app/get_model_years --> vehicle_model_years_Citroen_e-C4_X.json
+14:23:56,505 ExportSystem INFO Saved JSON to file khfiebig/vehicle_model_years_Citroen_e-C4_X.json
+14:23:56,508 ExportSystem DEBUG post power_service/v1/app/get_model_list --> vehicle_year_attributes_Citroen_e-C4_X_2025.json
+14:23:56,829 ExportSystem INFO Saved JSON to file khfiebig/vehicle_year_attributes_Citroen_e-C4_X_2025.json
+14:23:56,832 ExportSystem INFO Exporting OCPP endpoints...
+14:23:56,833 ExportSystem DEBUG post power_service/v1/app/get_ocpp_endpoint_list --> ocpp_endpoint_list.json
+14:23:57,157 ExportSystem INFO Saved JSON to file khfiebig/ocpp_endpoint_list.json
+14:23:57,160 ExportSystem INFO Exporting scene info...
+14:23:57,161 ExportSystem DEBUG post power_service/v1/site/get_scen_info --> scene_ef76cbed-f9ef-79c6-67dd-2aabf58dc15c.json
+14:23:57,540 ExportSystem INFO Saved JSON to file khfiebig/scene_ef76cbed-f9ef-79c6-67dd-2aabf58dc15c.json
+14:23:57,544 ExportSystem INFO Exporting CO2 ranking...
+14:23:57,545 ExportSystem DEBUG post power_service/v1/site/co2_ranking --> co2_ranking_ef76cbed-f9ef-79c6-67dd-2aabf58dc15c.json
+14:23:57,862 ExportSystem INFO Saved JSON to file khfiebig/co2_ranking_ef76cbed-f9ef-79c6-67dd-2aabf58dc15c.json
+14:23:58,41 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:23:59,685 ExportSystem DEBUG Saved MQTT message type '0408' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0408.json
+14:24:00,122 ExportSystem DEBUG Saved MQTT message type '0856' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0856.json
+14:24:00,349 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:01,240 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:03,644 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:07,218 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:09,653 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:10,43 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:13,239 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:15,647 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:18,840 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:19,53 ExportSystem INFO Triggering MQTT real time data for 60 seconds and waiting for messages...
+14:24:19,57 ExportSystem INFO Published MQTT real rime trigger message for device CUTUTT17MUSXAJ4R
+14:24:19,61 ExportSystem INFO Published MQTT real rime trigger message for device 4EJYH8ASEV3SGLA4
+14:24:19,229 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:24:22,40 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:25,241 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:25,747 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:24:26,638 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:26,774 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:27,641 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:27,855 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:29,902 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:31,52 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:31,937 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:33,208 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:33,225 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:34,553 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:36,941 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:39,632 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:39,828 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:24:40,142 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:40,731 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:40,885 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:41,71 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:24:41,156 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:41,962 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:42,168 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:43,212 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:43,219 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:44,346 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:45,277 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:46,394 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:46,629 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:46,647 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:47,180 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:24:47,325 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:24:48,259 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:48,449 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:49,350 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:50,493 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:51,401 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:51,630 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:24:52,823 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:53,442 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:24:54,595 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:56,8 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:56,725 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:57,627 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:24:59,141 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:24:59,211 ExportSystem DEBUG Saved MQTT message type '0408' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0408.json
+14:24:59,491 ExportSystem DEBUG Saved MQTT message type '0856' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0856.json
+14:25:02,340 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:04,741 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:07,942 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:11,143 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:14,339 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:16,738 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:19,65 ExportSystem INFO Waiting 60 more seconds for additional standard MQTT messages...
+14:25:19,942 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:22,431 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:25:22,619 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:23,143 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:23,214 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:23,347 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:24,163 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:25:24,213 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:24,342 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:25:25,211 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:26,218 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:26,225 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:25:27,353 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:28,273 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:29,541 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:32,742 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:35,141 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:38,341 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:40,677 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:25:41,571 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:25:41,916 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:43,628 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:43,642 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:25:44,765 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:45,673 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:45,681 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:25:46,813 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:47,721 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:48,848 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:50,961 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:53,452 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:54,157 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:54,204 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:25:56,557 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:25:57,686 ExportSystem DEBUG Saved MQTT message type '0408' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0408.json
+14:25:57,972 ExportSystem DEBUG Saved MQTT message type '0856' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0856.json
+14:25:59,757 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:02,962 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:06,149 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:08,197 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:09,218 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:11,256 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:11,695 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:14,457 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:17,658 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:17,864 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:18,603 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:18,894 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:19,66 ExportSystem INFO Waiting 60 more seconds for additional standard MQTT messages...
+14:26:19,795 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:20,476 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:26:21,624 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:22,530 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:22,665 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:23,792 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:23,979 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:24,119 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:24,305 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:24,580 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:24,587 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:26:24,692 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:25,718 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:26,77 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:26,626 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:26,868 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:27,351 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:27,991 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:28,668 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:26:29,814 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:29,991 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:30,727 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:31,224 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:32,765 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:26:33,909 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:35,457 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:37,858 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:41,62 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:44,258 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:46,659 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:47,604 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:26:47,812 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:49,858 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:53,60 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:53,478 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:54,78 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:26:56,259 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:26:57,69 ExportSystem DEBUG Saved MQTT message type '0408' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0408.json
+14:26:57,360 ExportSystem DEBUG Saved MQTT message type '0856' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0856.json
+14:26:58,662 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:01,173 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:01,858 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:05,61 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:08,258 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:08,545 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:27:09,669 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:09,800 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:27:09,956 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:10,656 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:27:10,867 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:12,701 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:27:13,847 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:14,749 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:27:15,902 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:16,124 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:16,803 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:17,827 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:19,69 ExportSystem INFO Waiting 60 more seconds for additional standard MQTT messages...
+14:27:20,570 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:23,463 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:23,760 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:24,60 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:26,157 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:29,372 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:32,569 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:35,813 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:38,161 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:40,859 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:41,358 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:44,560 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:44,948 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:27:45,460 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:27:46,79 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:46,698 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:46,897 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:47,516 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:27:48,667 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:49,570 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:50,958 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:52,129 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:27:53,349 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:53,670 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:54,270 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:27:54,692 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:27:55,437 ExportSystem DEBUG Saved MQTT message type '0408' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0408.json
+14:27:55,833 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:55,920 ExportSystem DEBUG Saved MQTT message type '0856' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0856.json
+14:27:57,268 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:27:59,558 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:02,759 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:04,163 ExportSystem DEBUG Saved MQTT message type '0857' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0857.json
+14:28:05,344 ExportSystem DEBUG Saved MQTT message type '0405' from device CUTUTT17MUSXAJ4R --> mqtt_msg_CUTUTT17MUSXAJ4R_0405.json
+14:28:05,965 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:06,974 ExportSystem DEBUG Saved MQTT message type '0830' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0830.json
+14:28:08,121 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:09,30 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:11,859 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:15,62 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:18,259 ExportSystem DEBUG Saved MQTT message type '0405' from device 4EJYH8ASEV3SGLA4 --> mqtt_msg_4EJYH8ASEV3SGLA4_0405.json
+14:28:19,72 ExportSystem INFO Stopping MQTT session...
+14:28:19,82 ExportSystem DEBUG Saved api khfiebig original testfolder
+14:28:19,130 ExportSystem INFO 
+Exporting api khfiebig sites cache from files...
+14:28:19,131 ExportSystem DEBUG Api khfiebig sites cache --> api_sites.json
+14:28:19,138 ExportSystem INFO Saved JSON to file khfiebig/api_sites.json
+14:28:19,140 ExportSystem INFO Exporting api khfiebig devices cache from files...
+14:28:19,141 ExportSystem DEBUG Api khfiebig devices cache --> api_devices.json
+14:28:19,146 ExportSystem INFO Saved JSON to file khfiebig/api_devices.json
+14:28:19,149 ExportSystem INFO 
+Exporting api khfiebig account cache...
+14:28:19,150 ExportSystem DEBUG Api khfiebig account cache --> api_account.json
+14:28:19,157 ExportSystem INFO Saved JSON to file khfiebig/api_account.json
+14:28:19,159 ExportSystem INFO Api khfiebig request stats: 30 last hour, 7 last minute

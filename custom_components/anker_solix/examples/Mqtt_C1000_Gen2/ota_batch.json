@@ -1,0 +1,32 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "6WPYSCSCKOX3F770I",
+        "need_update": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v1.1.2.6",
+        "children": null,
+        "upgrade_level": 0
+      }
+    ],
+    "popup_info": {
+      "need_update": false,
+      "sub_need_update": false,
+      "upgrade_level": 0
+    }
+  },
+  "trace_id": "941e2799d7e81beebb474a5b7c4dc5fd"
+}

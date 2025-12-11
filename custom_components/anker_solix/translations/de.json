@@ -273,6 +273,9 @@
             },
             "mqtt_realtime_trigger": {
                 "name": "MQTT Echtzeitdaten"
+            },
+            "mqtt_status_request": {
+                "name": "MQTT Statusabfrage"
             }
         },
         "binary_sensor": {
@@ -1559,11 +1562,22 @@
             "remaining_time_hours": {
                 "name": "Verbleibende Zeit"
             },
+            "main_battery_soc": {
+                "name": "Hauptakku Ladestand",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Seriennummer"
+                    },
+                    "state_of_health": {
+                        "name": "Gesundheit %"
+                    }
+                }
+            },
             "exp_1_soc": {
                 "name": "Erw. 1 Ladestand",
                 "state_attributes": {
                     "serialnumber": {
-                        "name": "Seriennumber"
+                        "name": "Seriennummer"
                     },
                     "state_of_health": {
                         "name": "Gesundheit %"
@@ -1577,10 +1591,10 @@
                 "name": "Erw. 1 Temperatur"
             },
             "exp_2_soc": {
-                "name": "Erw. 1 Ladestand",
+                "name": "Erw. 2 Ladestand",
                 "state_attributes": {
                     "serialnumber": {
-                        "name": "Seriennumber"
+                        "name": "Seriennummer"
                     },
                     "state_of_health": {
                         "name": "Gesundheit %"
@@ -1594,10 +1608,10 @@
                 "name": "Erw. 2 Temperatur"
             },
             "exp_3_soc": {
-                "name": "Erw. 2 Ladestand",
+                "name": "Erw. 3 Ladestand",
                 "state_attributes": {
                     "serialnumber": {
-                        "name": "Seriennumber"
+                        "name": "Seriennummer"
                     },
                     "state_of_health": {
                         "name": "Gesundheit %"
@@ -1611,10 +1625,10 @@
                 "name": "Erw. 3 Temperatur"
             },
             "exp_4_soc": {
-                "name": "Erw. 3 Ladestand",
+                "name": "Erw. 4 Ladestand",
                 "state_attributes": {
                     "serialnumber": {
-                        "name": "Seriennumber"
+                        "name": "Seriennummer"
                     },
                     "state_of_health": {
                         "name": "Gesundheit %"
@@ -1628,10 +1642,10 @@
                 "name": "Erw. 4 Temperatur"
             },
             "exp_5_soc": {
-                "name": "Erw. 4 Ladestand",
+                "name": "Erw. 5 Ladestand",
                 "state_attributes": {
                     "serialnumber": {
-                        "name": "Seriennumber"
+                        "name": "Seriennummer"
                     },
                     "state_of_health": {
                         "name": "Gesundheit %"
@@ -1706,8 +1720,18 @@
             "description": "Die aktuelle Systeminformation wird als Antwort auf diese Aktion geschickt",
             "fields": {
                 "include_cache": {
-                    "name": "Inkludiere Cache",
-                    "description": "Inkludiere Cache um die existierenden System Daten aus dem Api Cache mit den neuen Daten der scene_info Abfrage zu verknüpfen"
+                    "name": "Cache einbeziehen",
+                    "description": "Cache Daten einbeziehen, um die existierenden System Daten aus dem Api Cache mit den neuen Daten der scene_info Abfrage zu verknüpfen"
+                }
+            }
+        },
+        "get_device_info": {
+            "name": "Abfrage der zwischengespeicherten Geräteinformationen",
+            "description": "Die zwischengespeicherten Geräteinformationen werden als Antwort auf diese Aktion bereitgestellt. Sie enthalten die konsolidierten Details aus API- und MQTT-Daten.",
+            "fields": {
+                "include_mqtt_cache": {
+                    "name": "MQTT Cache einbeziehen",
+                    "description": "MQTT Cache Daten mit einbeziehen, wie sie aufgrund der Beschreibungen der Gerätenachrichten für die Modell Nummer extrahiert werden"
                 }
             }
         },

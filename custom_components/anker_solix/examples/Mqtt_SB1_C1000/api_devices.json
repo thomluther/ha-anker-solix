@@ -1,0 +1,129 @@
+{
+  "CUTUTT17MUSXAJ4R": {
+    "device_sn": "CUTUTT17MUSXAJ4R",
+    "type": "solarbank",
+    "site_id": "ef76cbed-f9ef-79c6-67dd-2aabf58dc15c",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "mqtt_supported": true,
+    "battery_capacity": "1600",
+    "generation": 1,
+    "battery_energy": "1104",
+    "battery_soc": "69",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "0",
+    "charging_status_desc": "detection",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "input_power": "0",
+    "output_power": "0",
+    "output_cutoff_data": 10,
+    "bat_charge_power": "0",
+    "pv_name": {
+      "micro_inverter_name": "",
+      "pv1_name": "PV1",
+      "pv2_name": "PV2",
+      "pv3_name": "PV3",
+      "pv4_name": "PV4"
+    },
+    "pv_power": null,
+    "feature_switch": null,
+    "bat_discharge_power": "0",
+    "err_code": 0,
+    "alias": "Solarbank E1600",
+    "name": "Solarbank E1600",
+    "set_output_power": "200",
+    "set_system_output_power": "200",
+    "data_valid": true,
+    "solarbank_count": 1,
+    "bt_ble_mac": "540ADFCEBDAF",
+    "wifi_online": true,
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v2.1.5",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "",
+    "intgr_device": null,
+    "wifi_mac": "2CC4EB36B084",
+    "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+    "group_info": null,
+    "is_ota_update": false,
+    "ota_version": "v2.1.5",
+    "ota_children": [
+      {
+        "device_type": "A17C0_mcu",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v2.1.5"
+      },
+      {
+        "device_type": "A17C0_esp32",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.1.0.4"
+      }
+    ],
+    "schedule": {},
+    "preset_system_output_power": 200,
+    "preset_allow_export": true,
+    "preset_discharge_priority": 0,
+    "preset_charge_priority": 80,
+    "fittings": {}
+  },
+  "4EJYH8ASEV3SGLA4": {
+    "device_sn": "4EJYH8ASEV3SGLA4",
+    "is_admin": true,
+    "device_pn": "A1761",
+    "mqtt_supported": true,
+    "battery_capacity": "1056",
+    "type": "pps",
+    "bt_ble_mac": "17EBA3AC2B87",
+    "name": "SOLIX C1000(X)",
+    "alias": "SOLIX C1000(X)",
+    "wifi_online": true,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.5.9",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-54",
+    "intgr_device": null,
+    "wifi_mac": "272F2C51ABB1",
+    "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+    "group_info": null,
+    "is_ota_update": false,
+    "ota_version": "v1.5.9",
+    "ota_children": [
+      {
+        "device_type": "A1761_mcu_high",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.5.9"
+      },
+      {
+        "device_type": "A1761_30Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v1.1.4"
+      },
+      {
+        "device_type": "A1761_esp32_high",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.2.3.1"
+      }
+    ]
+  }
+}

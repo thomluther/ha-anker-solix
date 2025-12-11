@@ -1,0 +1,36 @@
+{
+  "6WPYSCSCKOX3F770I": {
+    "device_sn": "6WPYSCSCKOX3F770I",
+    "is_admin": true,
+    "device_pn": "A1763",
+    "mqtt_supported": true,
+    "mqtt_overlay": false,
+    "mqtt_status_request": false,
+    "type": "pps",
+    "bt_ble_mac": "AAD797C1C3AC",
+    "name": "SOLIX C1000 Gen 2",
+    "alias": "SOLIX C1000 Gen 2",
+    "wifi_online": true,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.1.2.6",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-57",
+    "wifi_signal": "80",
+    "intgr_device": null,
+    "wifi_mac": "CBABCDDEF560",
+    "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+    "group_info": null,
+    "battery_size": 1024,
+    "expansion_packs": 0,
+    "battery_capacity": "1024",
+    "is_ota_update": false,
+    "ota_version": "v1.1.2.6"
+  }
+}

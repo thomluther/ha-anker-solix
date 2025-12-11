@@ -1,0 +1,27 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "car_model_list": [
+      {
+        "id": 101625,
+        "brand_name": "Citroen",
+        "model_name": "e-C4 X",
+        "productive_year": 2025,
+        "battery_capacity": 46.3,
+        "ac_max_power": 7.4,
+        "hundred_fuel_consumption": 16
+      },
+      {
+        "id": 100809,
+        "brand_name": "Citroen",
+        "model_name": "e-C4 X",
+        "productive_year": 2025,
+        "battery_capacity": 46.3,
+        "ac_max_power": 7.4,
+        "hundred_fuel_consumption": 16.2
+      }
+    ]
+  },
+  "trace_id": "8a2663ac921e7fe98a9e0ebbf49c6db2"
+}

@@ -1,0 +1,122 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "CUTUTT17MUSXAJ4R",
+        "need_update": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A17C0",
+          "product_component": "A17C0",
+          "version": "v2.1.5",
+          "is_forced": false,
+          "md5": "d41d8cd98f00b204e9800998ecf8427e",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/29/iot-admin/fq8xCAp4vzLj05y2/A17C0_EUOTA_V2.1.5_20250613%28main%29.bin",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v2.1.5",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A17C0_mcu",
+            "rom_version_name": "v2.1.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/29/iot-admin/p4xczR1Zi8lisz7J/A17C0_EUOTA_V2.1.5_20250613.bin",
+              "file_size": 274500,
+              "file_md5": "255b37b3e8f6b4925d08c6c5aebc2403"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A17C0_esp32",
+            "rom_version_name": "v0.1.0.4",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/29/iot-admin/L8gN4Gdc3eVErmja/A17C0_OTAWIFI_V0.1.0.4_20250718.bin",
+              "file_size": 1118208,
+              "file_md5": "b50a9b8106ddeaaaf5566d127f96a9dc"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 1
+      },
+      {
+        "device_sn": "4EJYH8ASEV3SGLA4",
+        "need_update": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A1761",
+          "product_component": "A1761_high",
+          "version": "v1.5.9",
+          "is_forced": false,
+          "md5": "ce53b545926bf5ce88e886e5da1b12dc",
+          "url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/22/iot-admin/NMvH3hGsgGHRWgg5/A1761_AllPackets_V1.5.9_20250617_HighVoltage.bin",
+          "size": 417860
+        },
+        "change_log": "",
+        "current_version": "v1.5.9",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A1761_mcu_high",
+            "rom_version_name": "v1.5.9",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/22/iot-admin/NMvH3hGsgGHRWgg5/A1761_AllPackets_V1.5.9_20250617_HighVoltage.bin",
+              "file_size": 417860,
+              "file_md5": "ce53b545926bf5ce88e886e5da1b12dc"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1761_30Ah",
+            "rom_version_name": "v1.1.4",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/22/iot-admin/uFoYXrDnhUhTtXLN/A1761_AllPackets_V1.1.4_20250617_LowVoltage.bin",
+              "file_size": 417860,
+              "file_md5": "bc0bc44fc69b3cbdb085caa158214a0e"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1761_esp32_high",
+            "rom_version_name": "v0.2.3.1",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2025/07/16/iot-admin/eeeaJL2QOlgZ0gpI/A1761_module_v0.2.3.1.bin",
+              "file_size": 1380352,
+              "file_md5": "0011c3ea8d699553d92345a92a0647df"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 0
+      }
+    ],
+    "popup_info": {
+      "need_update": false,
+      "sub_need_update": false,
+      "upgrade_level": 0
+    }
+  },
+  "trace_id": "9afdb2cab4e81019a1a54bee5fffd2cc"
+}

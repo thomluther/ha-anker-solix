@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "solarbank_pps_list": [],
+    "combiner_box_list": [],
+    "charging_pile_list": []
+  },
+  "trace_id": "bd7711f6abba744483a7daf8aedaaaca"
+}

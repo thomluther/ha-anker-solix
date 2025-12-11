@@ -273,6 +273,9 @@
             },
             "mqtt_realtime_trigger": {
                 "name": "MQTT realtime trigger"
+            },
+            "mqtt_status_request": {
+                "name": "MQTT status request"
             }
         },
         "binary_sensor": {
@@ -1559,6 +1562,17 @@
             "remaining_time_hours": {
                 "name": "Remaining time"
             },
+            "main_battery_soc": {
+                "name": "Main battery SoC",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_health": {
+                        "name": "Health %"
+                    }
+                }
+            },
             "exp_1_soc": {
                 "name": "Exp. 1 SoC",
                 "state_attributes": {
@@ -1708,6 +1722,16 @@
                 "include_cache": {
                     "name": "Include cache",
                     "description": "Include cache to merge existing system data from Api cache and new data from the scene_info query"
+                }
+            }
+        },
+        "get_device_info": {
+            "name": "Get cached device information",
+            "description": "The cached device information will be provided as response to this action. It provides the consolidated details from Api and MQTT data.",
+            "fields": {
+                "include_mqtt_cache": {
+                    "name": "Include MQTT cache",
+                    "description": "Include MQTT cache data that is extracted from device messages based on mapping descriptions for the model PN"
                 }
             }
         },

@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "6WPYSCSCKOX3F770I",
+    "attributes": {
+      "legal_power_limit": 0,
+      "power_limit_option": [
+        350,
+        600,
+        800
+      ],
+      "power_limit_option_real": [
+        350,
+        600,
+        800
+      ],
+      "pv_power_limit": 3600,
+      "rssi": "-57",
+      "switch_0w": 1
+    }
+  },
+  "trace_id": "bcab8f536274bd57e8d9ffea36f0fb8c"
+}

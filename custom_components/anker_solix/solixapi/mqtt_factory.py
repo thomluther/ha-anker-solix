@@ -54,5 +54,4 @@ class SolixMqttDeviceFactory:
 
             # return default MQTT device supporting only the realtime trigger control
             return SolixMqttDevice(self.api, self.device_sn)
-
         return None

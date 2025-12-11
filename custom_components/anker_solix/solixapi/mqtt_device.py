@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt import generate_mqtt_command
-from .mqttcmdmap import SolixMqttCommands
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 
 if TYPE_CHECKING:
@@ -60,7 +60,15 @@ class SolixMqttDevice:
             if not pns or self.pn in pns:
                 # get defined message type for command
                 msg, fields = (
-                    [(k, v) for k, v in pn_map.items() if v.get("cmd_name") == cmd][:1]
+                    [
+                        (k, v)
+                        for k, v in pn_map.items()
+                        if cmd
+                        in [
+                            v.get(COMMAND_NAME),
+                            *v.get(COMMAND_LIST, []),
+                        ]
+                    ][:1]
                     or [("", {})]
                 )[0]
                 # use default message type for update trigger command if not specified
@@ -114,7 +122,11 @@ class SolixMqttDevice:
         return rule(value) if rule else True
 
     async def _send_mqtt_command(
-        self, command: str, parameters: dict, description: str, toFile: bool = False
+        self,
+        command: str,
+        parameters: dict | None = None,
+        description: str = "",
+        toFile: bool = False,
     ) -> str | bool:
         """Send MQTT command to device.
 
@@ -158,7 +170,7 @@ class SolixMqttDevice:
                     mqtt_info.wait_for_publish(timeout=5)
                 if not mqtt_info.is_published():
                     self._logger.error(
-                        "Failed to publish MQTT command for device %s (%s) %s",
+                        "Failed to publish MQTT command for device %s (%s): %s",
                         self.sn,
                         self.pn,
                         description,
@@ -175,11 +187,11 @@ class SolixMqttDevice:
         self._logger.info("MQTT device %s (%s) %s", self.sn, self.pn, description)
         return True
 
-    def realtime_trigger(
+    async def realtime_trigger(
         self,
         timeout: int = SolixDefaults.TRIGGER_TIMEOUT_DEF,
         toFile: bool = False,
-    ) -> bool:
+    ) -> bool | dict:
         """Trigger device realtime data publish.
 
         Args:
@@ -202,28 +214,34 @@ class SolixMqttDevice:
                 timeout,
             )
             return False
-        if not toFile:
-            # Validate MQTT connection prior trigger
-            if not self.is_connected():
-                self._logger.error(
-                    "MQTT device %s (%s) control error - No active MQTT connection",
-                    self.sn,
-                    self.pn,
-                )
-                return False
-            msginfo = self.api.mqttsession.realtime_trigger(
-                self.device, timeout=timeout
-            )
-            with contextlib.suppress(ValueError, RuntimeError):
-                msginfo.wait_for_publish(timeout=2)
-            if not msginfo.is_published():
-                self._logger.error(
-                    "Error sending MQTT realtime trigger to device %s (%s)",
-                    self.sn,
-                    self.pn,
-                )
-                return False
-        return True
+        return await self._send_mqtt_command(
+            command=SolixMqttCommands.realtime_trigger,
+            parameters={"timeout": timeout},
+            description=f"Real time trigger enabled with timeout of {timeout} seconds",
+            toFile=toFile,
+        )
+
+    async def status_request(
+        self,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Send device status_request.
+
+        Args:
+            toFile: If True, return mock response (for testing compatibility)
+
+        Returns:
+            bool: True if message was published, false otherwise
+
+        Example:
+            await mydevice.status_request()
+
+        """
+        return await self._send_mqtt_command(
+            command=SolixMqttCommands.status_request,
+            description="status request sent",
+            toFile=toFile,
+        )
 
     def get_combined_cache(
         self,

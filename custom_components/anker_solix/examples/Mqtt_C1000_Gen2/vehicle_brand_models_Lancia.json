@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "model_list": [
+      "Ypsilon"
+    ]
+  },
+  "trace_id": "f0640eabcda4bfc70ea9c0a586dab3af"
+}

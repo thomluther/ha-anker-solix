@@ -19,7 +19,8 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .mqttcmdmap import SolixMqttCommands
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
     DeviceHexDataField,
@@ -584,16 +585,37 @@ class AnkerSolixMqttSession:
         self,
         deviceDict: dict,
         timeout: int = SolixDefaults.TRIGGER_TIMEOUT_DEF,
+        wait_for_publish: int = 0,
     ) -> mqtt.MQTTMessageInfo:
         """Trigger MQTT real time data for Anker Solix device via MQTT message."""
 
-        return self.publish(
+        resp = self.publish(
             deviceDict=deviceDict,
             hexbytes=self.get_command_data(
                 command=SolixMqttCommands.realtime_trigger,
                 parameters={"timeout": timeout},
             ),
         )[1]
+        with contextlib.suppress(ValueError, RuntimeError):
+            resp.wait_for_publish(timeout=wait_for_publish)
+        return resp
+
+    def status_request(
+        self,
+        deviceDict: dict,
+        wait_for_publish: int = 0,
+    ) -> mqtt.MQTTMessageInfo:
+        """Request status from Anker Solix device via MQTT message."""
+
+        resp = self.publish(
+            deviceDict=deviceDict,
+            hexbytes=self.get_command_data(
+                command=SolixMqttCommands.status_request,
+            ),
+        )[1]
+        with contextlib.suppress(ValueError, RuntimeError):
+            resp.wait_for_publish(timeout=wait_for_publish)
+        return resp
 
     async def message_poller(
         self,
@@ -607,7 +629,7 @@ class AnkerSolixMqttSession:
         topics must be a shared mutable object containing the topics be subscribed for MQTT message updates.
         real_time_devices must be a shared mutable object containing the device serials which should trigger real time updates.
         The update trigger will be refreshed automatically while poller is running.
-        msg_callback is the function that will be called back upon received mqtt data with following parms:
+        msg_callback is the function that will be called back upon received mqtt data with following parameters:
         Optional timeout specifies how long devices should publish real time updates before trigger must be resent.
         topic: str, message: Any, data: bytes, model: str
         """
@@ -639,6 +661,7 @@ class AnkerSolixMqttSession:
             )
             subscribed_topics = set()
             subscribed_devices = set()
+            request_devices = set()
             triggered_devices = set()
             # register devices to be triggered for real time data
             self.triggered_devices = trigger_devices
@@ -647,6 +670,7 @@ class AnkerSolixMqttSession:
                 # Update subscribed topics
                 if topics != subscribed_topics:
                     subscribed_devices = set()
+                    request_devices = set()
                     # unsubscribe removed topics
                     for topic in subscribed_topics - topics:
                         self.unsubscribe(topic)
@@ -662,18 +686,33 @@ class AnkerSolixMqttSession:
                             else:
                                 # add successfully subscribed device
                                 subscribed_devices.add((sn, pn))
+                                # mark devices that need status requests
+                                if [
+                                    msg
+                                    for msg in SOLIXMQTTMAP.get(pn, {}).values()
+                                    if SolixMqttCommands.status_request
+                                    in [
+                                        msg.get(COMMAND_NAME),
+                                        *msg.get(COMMAND_LIST, []),
+                                    ]
+                                ]:
+                                    request_devices.add(sn)
                     subscribed_topics = topics.copy()
                 # check if updates must be retriggered, also upon changes in trigger devices
                 if (
                     restart := int((datetime.now() - start).total_seconds()) + 5
                     >= timeout
-                ) or trigger_devices - triggered_devices:
-                    # republish update trigger to subscribed and yet untriggered devices
+                ) or (trigger_devices - triggered_devices):
+                    # republish update trigger or status request to subscribed and yet untriggered devices
                     for sn, pn in subscribed_devices:
-                        if sn in (
-                            trigger_devices
-                            if restart
-                            else trigger_devices - triggered_devices
+                        if (
+                            sn
+                            in (
+                                trigger_devices
+                                if restart
+                                else trigger_devices - triggered_devices
+                            )
+                            - request_devices
                         ):
                             message, response = self.publish(
                                 deviceDict={
@@ -691,7 +730,24 @@ class AnkerSolixMqttSession:
                                 response,
                                 message,
                             )
-                    triggered_devices = trigger_devices.copy()
+                        if sn in trigger_devices & request_devices:
+                            # Use permanent status request for devices that do not support real time triggers
+                            message, response = self.publish(
+                                deviceDict={
+                                    "device_sn": sn,
+                                    "device_pn": pn,
+                                },
+                                hexbytes=self.get_command_data(
+                                    command=SolixMqttCommands.status_request,
+                                ),
+                            )
+                            self._logger.info(
+                                "Api %s MQTT session published message: %s\n%s",
+                                self.apisession.nickname,
+                                response,
+                                message,
+                            )
+                    triggered_devices = trigger_devices - request_devices
                     # restart timeout interval
                     if restart:
                         start = datetime.now()
@@ -954,6 +1010,10 @@ def generate_mqtt_command(  # noqa: C901
                 ),
             )
         )
+        hexdata.add_timestamp_field()
+    elif command == SolixMqttCommands.status_request:
+        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0040"))
+        hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
         hexdata.add_timestamp_field()
     elif command == SolixMqttCommands.temp_unit_switch:
         # Temperature unit: Value 0/1 (0=Celsius, 1=Fahrenheit) (VALIDATED SB1 ✅)

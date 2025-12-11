@@ -36,6 +36,8 @@ from .apitypes import (
 )
 from .helpers import get_enum_name
 from .hesapi import AnkerSolixHesApi
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .poller import (
     poll_device_details,
     poll_device_energy,
@@ -147,6 +149,21 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
                             )
+                            # check once if device supports status requests from description
+                            if "mqtt_status_request" not in device:
+                                device["mqtt_status_request"] = bool(
+                                    [
+                                        cmd
+                                        for cmd in SOLIXMQTTMAP.get(
+                                            str(value), {}
+                                        ).values()
+                                        if SolixMqttCommands.status_request
+                                        in [
+                                            cmd.get(COMMAND_NAME),
+                                            *cmd.get(COMMAND_LIST, []),
+                                        ]
+                                    ]
+                                )
                         # check if capacity should be calculated
                         if not device.get("battery_capacity") and hasattr(
                             SolixDeviceCapacity, str(value)
@@ -1038,11 +1055,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # NOTE: Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
                         device["battery_capacity"] = f"{size * (1 + exp):.0f}"
                     cap = device.get("battery_capacity")
-                    # get total SOC, prefer Api value if provided
+                    # get total SOC, prefer value depending on overlay
                     soc = (
-                        device.get("battery_soc", "")
-                        or mqtt.get("battery_soc_total", "")
-                        or mqtt.get("battery_soc", "")
+                        (mqtt.get("battery_soc", "") or device.get("battery_soc", ""))
+                        if device.get("mqtt_overlay")
+                        else (
+                            device.get("battery_soc", "") or mqtt.get("battery_soc", "")
+                        )
                     )
                     # Calculate remaining energy in Wh and add values
                     if cap and soc and str(cap).isdigit() and str(soc).isdigit():

@@ -1,0 +1,45 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "6WPYSCSCKOX3F770I",
+        "product_code": "A1763",
+        "bt_ble_id": "AA:D7:97:C1:C3:AC",
+        "bt_ble_mac": "AAD797C1C3AC",
+        "device_name": "SOLIX C1000 Gen 2",
+        "alias_name": "SOLIX C1000 Gen 2",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/05/07/iot-admin/a1Z9dqBT07gTGgyz/picl_A1763_US_normal.png",
+        "link_time": 1763392818,
+        "wifi_online": true,
+        "wifi_name": "wifi-network-1",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.1.2.6",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-57",
+        "intgr_device": null,
+        "blue_password": "",
+        "wifi_mac": "CBABCDDEF560",
+        "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+        "ms_device_type": 1,
+        "owner_user_id": "1e3ad7c59acc7d8a8ca80a6f0ec1e532384154a3",
+        "group_info": null,
+        "init_status": 0,
+        "ocpp_connect_status": 0,
+        "link_info": null
+      }
+    ]
+  },
+  "trace_id": "cbb3fe5bee5575c19ab552d480daf6bd"
+}

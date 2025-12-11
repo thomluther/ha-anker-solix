@@ -569,17 +569,19 @@ DEVICE_SENSORS = [
         and int(d.get("solarbank_count") or 0) > 1,
     ),
     AnkerSolixSensorDescription(
+        # general device overall state of charge
         key="state_of_charge",
         translation_key="state_of_charge",
         json_key="battery_soc",
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
+        # show some attributes only if no main battery data available, to avoid duplicate attributes
         attrib_fn=lambda d, _: (
             {
                 "state_of_health": v,
             }
-            if (v := d.get("battery_soh"))
+            if (v := d.get("battery_soh")) and "main_battery_soc" not in d
             else {}
         )
         | (
@@ -1042,6 +1044,7 @@ DEVICE_SENSORS = [
         ),
     ),
     AnkerSolixSensorDescription(
+        # Power panel and HES overall SOC
         key="state_of_charge",
         translation_key="state_of_charge",
         json_key="state_of_charge",
@@ -1230,6 +1233,31 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="main_battery_soc",
+        translation_key="main_battery_soc",
+        json_key="main_battery_soc",
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        attrib_fn=lambda d, _: (
+            {
+                "state_of_health": v,
+            }
+            if (v := d.get("battery_soh"))
+            else {}
+        )
+        | (
+            {
+                "serialnumber": v,
+            }
+            if (v := d.get("device_sn"))
+            else {}
+        ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -3198,7 +3226,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
     async def _solix_system_service(
         self, service_name: str, **kwargs: Any
     ) -> dict | None:
-        """Execute the defined solarbank schedule action."""
+        """Execute the defined system action."""
         # Raise alerts to frontend
         if not (self.supported_features & AnkerSolixEntityFeature.SYSTEM_INFO):
             raise ServiceValidationError(

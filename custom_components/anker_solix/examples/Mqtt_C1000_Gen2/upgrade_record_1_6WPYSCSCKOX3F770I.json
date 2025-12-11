@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "6WPYSCSCKOX3F770I",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2025-11-30 18:56:54",
+        "upgrade_version": "v1.1.2.6",
+        "pre_version": "v1.1.1.8",
+        "upgrade_type": "2",
+        "upgrade_desc": "",
+        "device_sn": "6WPYSCSCKOX3F770I",
+        "device_name": "SOLIX C1000 Gen 2",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "d5f0333dff40b0a24af5593fd9fce7c3"
+}

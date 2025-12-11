@@ -29,6 +29,7 @@ class AnkerSolixPicturePath:
     SOLARBANK_PPS: str = str(Path(IMAGEPATH) / "Solarbank_PPS_F3000_A1782.png")
     POWERCOOLER: str = str(Path(IMAGEPATH) / "Everfrost_2_40L_A17A4_pub.png")
     CHARGER: str = str(Path(IMAGEPATH) / "Charger_250W_A2345_pub.png")
+    POWERBANK: str = str(Path(IMAGEPATH) / "Prime_Powerbank_26k_A110A.png")
     EV_CHARGER: str = str(Path(IMAGEPATH) / "EV_Charger_A5191_pub.png")
     VEHICLE: str = str(Path(IMAGEPATH) / "Electric_Vehicle.png")
 
@@ -61,17 +62,22 @@ class AnkerSolixPicturePath:
     A1726: str = str(Path(IMAGEPATH) / "PPS_C300DC_A1726_pub.png")
     A1727: str = str(Path(IMAGEPATH) / "PPS_C200DC_A1727_pub.png")
     A1728: str = str(Path(IMAGEPATH) / "PPS_C300X_A1728_pub.png")
+    A1729: str = str(Path(IMAGEPATH) / "PPS_C200XDC_A1729_pub.png")
     A1753: str = str(Path(IMAGEPATH) / "PPS_C800X_A1755_pub.png")
     A1754: str = str(Path(IMAGEPATH) / "PPS_C800X_A1755_pub.png")
     A1755: str = str(Path(IMAGEPATH) / "PPS_C800X_A1755_pub.png")
     A1761: str = str(Path(IMAGEPATH) / "PPS_C1000X_A1761_pub.png")
     A1762: str = str(Path(IMAGEPATH) / "PPS_1000_A1762_pub.png")
+    A1763: str = str(Path(IMAGEPATH) / "PPS_C1000_gen2_A1763_pub.png")
+    A1765: str = str(Path(IMAGEPATH) / "PPS_C1000X_gen2_A1765_pub.png")
     A1770: str = str(Path(IMAGEPATH) / "PPS_F1200_A1771_pub.png")
     A1771: str = str(Path(IMAGEPATH) / "PPS_F1200_A1771_pub.png")
     A1772: str = str(Path(IMAGEPATH) / "PPS_F1500_A1772_pub.png")
     A1780: str = str(Path(IMAGEPATH) / "PPS_F2000_A1780_pub.png")
+    A1780P: str = str(Path(IMAGEPATH) / "PPS_F2000_A1780_pub.png")
     A1781: str = str(Path(IMAGEPATH) / "PPS_F2600_A1781_pub.png")
     A1782: str = str(Path(IMAGEPATH) / "Solarbank_PPS_F3000_A1782.png")
+    A1783: str = str(Path(IMAGEPATH) / "PPS_C2000_gen2_A1783_pub.png")
     A1790: str = str(Path(IMAGEPATH) / "PPS_F3800_A1790_pub.png")
     A1790P: str = str(Path(IMAGEPATH) / "PPS_F3800_A1790P_pub.png")
     A17B2: str = str(Path(IMAGEPATH) / "Fitting_A17B2_pub.png")
@@ -95,8 +101,14 @@ class AnkerSolixPicturePath:
 
     A5191: str = str(Path(IMAGEPATH) / "EV_Charger_A5191_pub.png")
 
+    A1903: str = str(Path(IMAGEPATH) / "Charging_base_150W_A1903.png")
     A2345: str = str(Path(IMAGEPATH) / "Charger_250W_A2345_pub.png")
+    A25X7: str = str(Path(IMAGEPATH) / "Charger_wireless_A25X7_pub.png")
+    A2687: str = str(Path(IMAGEPATH) / "Charger_160W_A2687.png")
     A91B2: str = str(Path(IMAGEPATH) / "Charger_240W_A91B2_pub.png")
+
+    A110A: str = str(Path(IMAGEPATH) / "Prime_Powerbank_26k_A110A.png")
+    A110B: str = str(Path(IMAGEPATH) / "Prime_Powerbank_20k_A110B.png")
 
 
 @dataclass(frozen=True)

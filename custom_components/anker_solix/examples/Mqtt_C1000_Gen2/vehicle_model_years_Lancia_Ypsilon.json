@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "year_list": [
+      2024,
+      2025
+    ]
+  },
+  "trace_id": "a1ffd92b55c68910c0cec68ee5b547cd"
+}

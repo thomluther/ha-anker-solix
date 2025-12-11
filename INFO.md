@@ -43,6 +43,7 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Common MQTT options](#common-mqtt-options)
     * [Device specific MQTT options](#device-specific-mqtt-options)
     * [Device real time triggers](#device-real-time-triggers)
+    * [Device status requests](#device-status-requests)
 1. **[Switching between different Anker Power accounts](#switching-between-different-anker-power-accounts)**
 1. **[How to create a second Anker Power account](#how-to-create-a-second-anker-power-account)**
 1. **[Automation to send and clear sticky, actionable notifications to your smart phone based on Api switch setting](#automation-to-send-and-clear-sticky-actionable-notifications-to-your-smart-phone-based-on-api-switch-setting)**
@@ -91,8 +92,9 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Script code to adjust Solarbank AC backup charge](#script-code-to-adjust-solarbank-ac-backup-charge)
     * [Script code to adjust Solarbank AC Time of Use plan](#script-code-to-adjust-solarbank-ac-time-of-use-plan)
 1. **[Other integration actions](#other-integration-actions)**
-    * [Get system info action](#get-system-info-action)
     * [Export systems action](#export-systems-action)
+    * [Get system info action](#get-system-info-action)
+    * [Get device info action](#get-device-info-action)
     * [Api request action](#api-request-action)
         - [Hints and tips when using Api requests](#hints-and-tips-when-using-api-requests)
         - [Format of the payload](#format-of-the-payload)
@@ -290,9 +292,8 @@ In order to recognize which entities may provide additional MQTT data, their att
 
 ![Entity attributes][entity-attributes-img]
 
-
 > [!TIP]
-> If you don't find any useful new data for your owned devices although you enabled the MQTT connection, your device model still has to be decoded and described. You can contribute by starting with the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) from the [Api library](https://github.com/thomluther/anker-solix-api) and follow the [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222).
+> If you don't find any useful new data for your owned devices although you enabled the MQTT connection, your device model still has to be decoded and described. You can contribute by starting with the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) from the [Api library](https://github.com/thomluther/anker-solix-api) and follow the [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222). In order to decode MQTT commands of your device, please follow this [MQTT command and state analysis and description](https://github.com/thomluther/anker-solix-api/discussions/222#discussioncomment-14660599).
 
 ### Common MQTT options
 
@@ -308,20 +309,23 @@ For more details on message types and their content per device model, you have t
 
 ### Device specific MQTT options
 
-Once you enable the MQTT option in the hub configuration, you will get a diagnostic [Real Time trigger](#device-real-time-triggers) button for each device supporting MQTT. With this button you can trigger the device for real time data publish. The button can be used on demand or via an action in your HA automation.
-Once first MQTT data has been received and extracted for your device, you will also get another diagnostic switch entity that allows you to configure how MQTT data should be merged with existing Api data for your device. The default setting is that Api data will be used for states and attributes that have data in the Api and MQTT cache. If you prefer to overlay Api data with MQTT data, you can enable the MQTT overlay switch. The switch is a customized entity and the state is stored in the integration Api cache. Since the switch is declared as restore entity, the overlay setting per device should remain persistent across hub option changes or HA restarts and the last state should be restored once the switch is re-created.
-The default MQTT overlay setting is Off, to prioritize display of Api values if a corresponding value may be provided in MQTT data (classical behavior).
+Once you enable the MQTT option in the hub configuration, you will get a diagnostic [Real Time trigger](#device-real-time-triggers) button as well as a [Status Request](#device-status-requests) button for each device supporting MQTT. With those buttons you can control how the device publishes its status messages. The buttons can be used on demand or via an action in your HA automation.
+Once first MQTT data has been received and extracted for your device, you will also get another diagnostic switch entity that allows you to configure how MQTT data should be merged with existing Api data for your device. The default setting is that Api data will be used preferably for any state or attribute data that exists in both, the Api and MQTT cache. If you prefer to overlay Api data with MQTT data, you can enable the MQTT overlay switch. The switch is a customized entity and the state is stored in the integration Api cache. Since the switch is declared as restore entity, the overlay setting per device should remain persistent across hub option changes or HA restarts which trigger a reload of the caches, and the last switch state should be restored once the switch is re-created.
+The default MQTT overlay setting is Off, to prioritize display of Api values if a corresponding value may be provided also in the MQTT data (classical behavior).
 
 > [!NOTE]
 > The MQTT overlay setting has no effect on data that is being provided only via Api or MQTT messages. It just defines how you want to merge data that is being provided by both interfaces at different points in time.
 
-While MQTT overlay may have the benefit of providing most current data for your device, it may scramble the holistic data view for your device (or system), since only a subset of entities or attributes are really refreshed at a given point in time. Some data may even be generated or calculated only by the cloud and cannot be updated at all with MQTT data updates. Another disadvantage is that wrong decoding descriptions or data merge definitions could scramble valid Api data of the entity. You can see the immediate overlay effect by toggling the switch while you verify your device entity states during toggling.
+While an MQTT overlay may have the benefit of providing most current data for your device, it may scramble the holistic data view for your device (or system), since only a subset of entities or attributes are really refreshed at a given point in time. Some data may even be generated or calculated only by the cloud and cannot be updated at all with MQTT data updates. Another disadvantage is that wrong decoding descriptions for your device type or wrong data merge definitions could scramble valid Api data of the entity. You can see the overlay effect immediately by toggling the switch while you verify your device entity states during toggling.
 
-If you want to maintain a holistic data view, the MQTT overlay should remain disabled. Also with Api data preference you can benefit from real time data triggers, since the cloud servers receive the same device messages for their recording backend, and the regular Api data polls may then receive more frequent holistic data updates during the Api refresh cycles.
+If you want to maintain a holistic data view, the MQTT overlay should remain disabled. Also with Api data preference you can benefit from real time data triggers or status requests, since the cloud servers receive the same device messages for their recording backend, and the regular Api data polls may then receive more frequent holistic data updates during the normal Api refresh cycles.
 
-At the end, you have to test the best overlay setting per device according to your preferences. Therefore the MQTT overlay is customizable on device level. However, be aware that future integration or Api library updates may change how individual entity values appear or are merged with an active MQTT overlay. So the data appearance behavior for your specific device may change with new versions.
+> [!IMPORTANT]
+> The Api refresh cycle can be configured in the hub options, the minimum however remains at 30 seconds. Upon reduction of your default Api refresh interval, you should consider increasing the details refresh multiplier accordingly, since that is just a multiplier for the refresh interval and drives lots of Api queries that provide data which are not changed frequently. See [API data refresh configuration options](#data-refresh-configuration-options) for more details.
 
-Once MQTT data is available for a device, there will also be a diagnostic sensor that shows the timestamp of last MQTT data reception. It does not mean that all MQTT based data has been updated at that point in time. Rather it means that any of the device data may have received an updated value, which depends on the received message type. However, you can use the timestamp as indicator when the **last** MQTT data was received for your device. Furthermore, frequent timestamp updates in 3-5 second intervals will indicate that the device is sending real time messages which are being received.
+At the end, you have to test the best overlay setting for each of your Anker Solix devices according to your preferences. Therefore the MQTT overlay is customizable per device. However, be aware that future integration or Api library updates may change how individual entity values appear or are merged with an active MQTT overlay. So the data appearance behavior for your specific device may change with new integration versions.
+
+Once MQTT data is available for a device, there will also be a diagnostic sensor that shows the timestamp of last MQTT data reception. It does not mean that all MQTT based data has been updated at that point in time. Rather it means that any of the device data has an extracted value from last message, which however depends on the received message type. Nevertheless, you can use the timestamp as indicator when the **last** MQTT data was extracted for your device. Furthermore, frequent timestamp updates in 3-5 second intervals will indicate that the device is sending real time messages which are being received. Optionally you can use it to verify if the device sends an immediate status once you press the status request button.
 
 Following is an example of the diagnostic device entities available once MQTT data has been received:
 
@@ -329,7 +333,7 @@ Following is an example of the diagnostic device entities available once MQTT da
 
 ### Device real time triggers
 
-The integration also supports a diagnostic button per MQTT managed device that can be used to trigger real time data of the device with a common timeout that can be configured in the MQTT options of your hub. If the device will receive other triggers from the mobile App, the timeout used in the last trigger command will be applied by the device. The app typically uses timeouts of 300 seconds, which is also the default timeout in the [MQTT options of the hub configuration](#default-options-as-of-version-340).
+The integration supports a diagnostic button per MQTT managed device that can be used to trigger real time data status messages of the device. The timeout used for the real time publish duration can be configured in the MQTT options of your hub. If the device will receive other realtime triggers from the mobile App, the timeout used in the last trigger command will be applied by the device. The app typically uses timeouts of 300 seconds, which is also the default timeout in the [MQTT options of the hub configuration](#default-options-as-of-version-340).
 
 Depending on how devices publish their data in regular messages, you may need the real time trigger only to get more frequent data updates. However, data which is only available in real time messages will get stale, if the real time data publish period will timeout. The integration provides the trigger button for each eligible device and you can control it according to your customized needs via an automation that will press the button at regular intervals or only under certain conditions, which you can define in your automation.
 
@@ -339,6 +343,19 @@ Depending on how devices publish their data in regular messages, you may need th
 > - The Anker cloud infrastructure may not be scalable enough to maintain such 24x7 real time traffic for growing number of devices, since that is no use case with normal mobile App usage
 > - The devices may be kept awake and never go to sleep mode, therefore using more power than necessary
 > For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data.
+
+> [!NOTE]
+> Anker has various implementations of the real time trigger capability depending on the device type. While newer devices seem to repeat the message publish cycles by themselves, older device types like the Solarbank 1 seem to get triggered by the cloud with regular status requests to the device. That means the cloud may driving the realtime trigger functionality for the timeout duration. However, it was also identified, that the cloud driven realtime trigger depends on the actual device state. So there is no guarantee, that you get regular realtime data from such devices upon a realtime trigger command. However, those devices may fully support the [MQTT status request](#device-status-requests) command, which should be automated preferably at your customized automation trigger interval.
+
+
+### Device status requests
+
+Integration version 3.4.1 added another diagnostic button for a single MQTT status request of the device. If fully supported by the device, it will publish one set of status message(s) that are otherwise only sent if the realtime trigger is active. However, devices may also send only the main status message without optional extra status messages, which may be provided only if the realtime trigger is active.
+
+> [!NOTE]
+> Anker has no consistent implementation across their Solix devices whether they publish all status messages upon a single status request. Especially Solarbank 2 and later, as well as Multisystem constellations have many extra status messages that are only published while the **realtime trigger** is active. These are messages with expansion battery details, or messages that consolidate actual states from all coupled devices with the overall data values.
+
+Depending on which message(s) the various devices publish upon a status request, you may see that some of your MQTT based entity states will not refresh. However, if all relevant entities are being refreshed with a status request, that should be the preferred button for any of your customized automation, since you have more control about the extra MQTT data traffic. For example, if you need to get state updates only every 30 or 15 seconds, you can control that with the status request button and the frequency when and how often your automation triggers. The realtime trigger button instead does not allow to control the message traffic or frequency.
 
 
 ## Switching between different Anker Power accounts
@@ -1721,14 +1738,6 @@ sequence:
 
 Anker Solix actions can be used in any automation, script or via the HA UI developer tool panel.
 
-### Get system info action
-
-Starting with version 2.0.0, a new action was added for the system total yield entity in order to query the overall system information from the cloud Api, which contains the data that is presented on the Anker App home page screen. This data is used by the integration to represent most but not all of the entities. It may be helpful to debug what values are actually available on the Api cloud at the time requesting them. Following is an example screenshot showing only the top of the response:
-
-![Get system info service][get-system-info-service-img]
-
-Version 2.3.0 added an option to include cached data in the presented response, so additional fields as cached or merged by the Api library may be shown.
-
 ### Export systems action
 
 Starting with version 2.1.2, a new action was added to simplify an anonymized export of known Api information available for the configured account. Version 3.4.0 added the option to include MQTT messages in the export, which is enabled per default. The Api responses will be saved in JSON files and the folder will be zipped in your Home Assistant configuration folder (where your `configuration.yaml` is located, e.g. `/homeassistant`), under `www/community/anker_solix/exports`. The `www` folder in your configuration folder is the local file folder for the HA dashboard to access files directly via the browser. It is also used by custom dashboard cards. Home Assistant automatically maps the `www` folder to `/local` in the URL path if the folder exists at HA startup. The action response field `export_filename` will provide the zipped filename url path as response to the action. This allows easy download from your HA instance through your browser when navigating to that url path. Optionally you can download the zip file via Add Ons that provide file system access.
@@ -1740,11 +1749,25 @@ Starting with version 2.1.2, a new action was added to simplify an anonymized ex
 
 **Notes:**
 
-- This action will execute a couple of Api queries and run about 10 or more seconds. **If Api throttling is active, it may even run 1-3 minutes.**
+- This action will execute a couple of Api queries and run about 10 or more seconds. **If Api throttling must be used, it may even run 1-3 minutes.**
+- If **MQTT messages are included**, the runtime will be **at least 5 minutes** to allow gathering of standard message types as well as including a 60 second interval of real time messages
 - **The UI button will only show green once the action is finished.** An error will be raised if the action is retriggered while there is still a previous action active, or while the configuration startup is not completed yet.
-- If the MQTT messages are included, the runtime will be at least 5 minutes to allow gathering of standard message types as well as including a 60 second interval of real time messages
 - There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
 - The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file (the `www` filesystem folder is accessible as `/local` in the url navigation path as given in the response).
+
+### Get system info action
+
+Starting with version 2.0.0, a new action was added for the system total yield entity in order to query the overall system information from the cloud Api, which contains the data that is presented on the Anker App home page screen. This data is used by the integration to represent most but not all of the entities. It may be helpful to debug what values are actually available on the Api cloud at the time requesting them. Following is an example screenshot showing only the top of the response:
+
+![Get system info service][get-system-info-service-img]
+
+Version 2.3.0 added an option to include cached data in the presented response, so additional fields as cached or merged by the Api library may be shown.
+
+### Get device info action
+
+Starting with version 3.4.1, a new action was added for the device refresh details button entity in order to obtain all cached information about the device. This data is used by the integration to represent all device entities, whether they are provided through the Api or the MQTT connection. Optionally you can include the MQTT cache data, which will also include the raw data fields as extracted from the received MQTT messages, based on the mapping descriptions for the device model number. It may be helpful to debug device values, and compare which device Api and MQTT data may be merged. Following is an example screenshot showing only the top of the response:
+
+![Get device info service][get-device-info-service-img]
 
 ### Api request action
 
@@ -1899,6 +1922,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [solarbank-2-pro-diag-img]: doc/Solarbank-2-pro-diag.png
 [smart-meter-device-img]: doc/Smart-Meter-device.png
 [get-system-info-service-img]: doc/get-system-info-service.png
+[get-device-info-service-img]: doc/get-device-info-service.png
 [export-systems-service-img]: doc/export-systems-service.png
 [api-refresh-sensors-img]: doc/api-refresh-sensors.png
 [api-refresh-history-img]: doc/api-refresh-history.png

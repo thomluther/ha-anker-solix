@@ -40,10 +40,12 @@ from .apitypes import (
     SolixVehicle,
 )
 from .mqtt import AnkerSolixMqttSession
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.4.0.0"
+VERSION: str = "3.4.1.0"
 
 
 class AnkerSolixApiExport:
@@ -1859,8 +1861,10 @@ class AnkerSolixApiExport:
                     self._logger.info(
                         "MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages..."
                     )
+                    request_devices = set()
                     for dev in mqttdevices:
                         sn = dev.get("device_sn", "")
+                        pn = dev.get("device_pn", "") or dev.get("product_code", "")
                         topic = f"{self.api_power.mqttsession.get_topic_prefix(deviceDict=dev)}#"
                         resp = self.api_power.mqttsession.subscribe(topic)
                         if resp and resp.is_failure:
@@ -1873,6 +1877,17 @@ class AnkerSolixApiExport:
                                 "Subscribed to MQTT topic: %s",
                                 topic.replace(sn, self._randomize(sn, "device_sn")),
                             )
+                            # mark devices that need status requests
+                            if [
+                                msg
+                                for msg in SOLIXMQTTMAP.get(pn, {}).values()
+                                if SolixMqttCommands.status_request
+                                in [
+                                    msg.get(COMMAND_NAME),
+                                    *msg.get(COMMAND_LIST, []),
+                                ]
+                            ]:
+                                request_devices.add(sn)
                     # wait at least first minute for messages without trigger
                     await asyncio.sleep(70)
                     # Ensure MQTT client is still connected
@@ -1886,35 +1901,52 @@ class AnkerSolixApiExport:
                     # Cycle through devices and publish trigger for each applicable device
                     if mqttsession.is_connected():
                         self._logger.info(
-                            "Triggering MQTT Real Time data for 60 seconds and waiting for messages..."
+                            "Triggering MQTT Real Time data or Status Requests for 60 seconds and waiting for messages..."
                         )
                         for dev in mqttdevices:
-                            resp = mqttsession.realtime_trigger(
-                                deviceDict=dev,
-                                timeout=60,
-                            )
-                            with contextlib.suppress(ValueError, RuntimeError):
-                                resp.wait_for_publish(timeout=2)
                             sn = dev.get("device_sn")
+                            if sn not in request_devices:
+                                resp = mqttsession.realtime_trigger(
+                                    deviceDict=dev,
+                                    timeout=60,
+                                    wait_for_publish=2,
+                                )
+                                if resp.is_published():
+                                    self._logger.info(
+                                        "Published MQTT Real Time trigger message for device %s",
+                                        self._randomize(sn, "device_sn"),
+                                    )
+                                    mqttsession.triggered_devices.add(sn)
+                                else:
+                                    self._logger.warning(
+                                        "Failed to publish Real Time trigger message for device %s",
+                                        self._randomize(sn, "device_sn"),
+                                    )
+                                    mqttsession.triggered_devices.discard(sn)
+                    # wait for the RT trigger to timeout and publish requests for required devices
+                    for _ in range(12):
+                        for sn in request_devices:
+                            resp = mqttsession.status_request(
+                                deviceDict=self.api_power.devices.get(sn, {}),
+                                wait_for_publish=2,
+                            )
                             if resp.is_published():
                                 self._logger.info(
-                                    "Published MQTT Real Time trigger message for device %s",
+                                    "Published MQTT Status Request message for device %s",
                                     self._randomize(sn, "device_sn"),
                                 )
-                                mqttsession.triggered_devices.add(sn)
                             else:
                                 self._logger.warning(
-                                    "Failed to publish Real Time trigger message for device %s",
+                                    "Failed to publish MQTT Status Request message for device %s",
                                     self._randomize(sn, "device_sn"),
                                 )
-                                mqttsession.triggered_devices.discard(sn)
-                    # wait for the RT trigger to timeout
-                    await asyncio.sleep(60)
+                        await asyncio.sleep(5)
                     mqttsession.triggered_devices.clear()
                     # wait another 3 minutes to get all standard messages in 5 minute interval
-                    for _ in range(3):
+                    for i in range(3, 0, -1):
                         self._logger.info(
-                            "Waiting 60 more seconds for additional standard MQTT messages..."
+                            "Waiting %s more seconds for additional standard MQTT messages...",
+                            i * 60,
                         )
                         await asyncio.sleep(60)
                 else:

@@ -62,6 +62,7 @@ from .const import (
     SERVICE_CLEAR_SOLARBANK_SCHEDULE,
     SERVICE_EXPORT_SYSTEMS,
     SERVICE_GET_SOLARBANK_SCHEDULE,
+    SERVICE_GET_DEVICE_INFO,
     SERVICE_GET_SYSTEM_INFO,
     SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
     SERVICE_MODIFY_SOLIX_USE_TIME,
@@ -271,15 +272,19 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not other_entries:
         # The last config entry is being unloaded, release shared resources, unregister services etc.
         # unregister services if no config remains
-        hass.services.async_remove(DOMAIN, SERVICE_GET_SYSTEM_INFO)
-        hass.services.async_remove(DOMAIN, SERVICE_EXPORT_SYSTEMS)
-        hass.services.async_remove(DOMAIN, SERVICE_GET_SOLARBANK_SCHEDULE)
-        hass.services.async_remove(DOMAIN, SERVICE_CLEAR_SOLARBANK_SCHEDULE)
-        hass.services.async_remove(DOMAIN, SERVICE_SET_SOLARBANK_SCHEDULE)
-        hass.services.async_remove(DOMAIN, SERVICE_UPDATE_SOLARBANK_SCHEDULE)
-        hass.services.async_remove(DOMAIN, SERVICE_MODIFY_SOLIX_BACKUP_CHARGE)
-        hass.services.async_remove(DOMAIN, SERVICE_MODIFY_SOLIX_USE_TIME)
-        hass.services.async_remove(DOMAIN, SERVICE_API_REQUEST)
+        for action in [
+            SERVICE_GET_SYSTEM_INFO,
+            SERVICE_GET_DEVICE_INFO,
+            SERVICE_EXPORT_SYSTEMS,
+            SERVICE_GET_SOLARBANK_SCHEDULE,
+            SERVICE_CLEAR_SOLARBANK_SCHEDULE,
+            SERVICE_SET_SOLARBANK_SCHEDULE,
+            SERVICE_UPDATE_SOLARBANK_SCHEDULE,
+            SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
+            SERVICE_MODIFY_SOLIX_USE_TIME,
+            SERVICE_API_REQUEST,
+        ]:
+            hass.services.async_remove(DOMAIN, action)
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded

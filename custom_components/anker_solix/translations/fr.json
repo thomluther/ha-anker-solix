@@ -273,6 +273,9 @@
             },
             "mqtt_realtime_trigger": {
                 "name": "Déclencheur en temps réel MQTT"
+            },
+            "mqtt_status_request": {
+                "name": "Demande d'état MQTT"
             }
         },
         "binary_sensor": {
@@ -1559,6 +1562,17 @@
              "remaining_time_hours": {
                 "name": "Temps restant"
             },
+            "main_battery_soc": {
+                "name": "Principal état de charge",
+                "state_attributes": {
+                    "serialnumber": {
+                        "name": "Numéro de série"
+                    },
+                    "state_of_health": {
+                        "name": "Santé %"
+                    }
+                }
+            },
             "exp_1_soc": {
                 "name": "Exp. 1 état de charge",
                 "state_attributes": {
@@ -1708,6 +1722,16 @@
                 "include_cache": {
                     "name": "Inclure le cache",
                     "description": "Inclure le cache pour fusionner les données existantes du système provenant du cache Api et les nouvelles données provenant de la requête scene_info"
+                }
+            }
+        },
+        "get_device_info": {
+            "name": "Obtenir les informations mises en cache sur l'appareil",
+            "description": "Les informations mises en cache sur l'appareil seront fournies en réponse à cette action. Elles fournissent les détails consolidés provenant des données API et MQTT.",
+            "fields": {
+                "include_mqtt_cache": {
+                    "name": "Inclure le cache MQTT",
+                    "description": "Inclure les données du cache MQTT telles qu'elles sont extraites à partir des descriptions des messages de l'appareil pour le numéro de modèle"
                 }
             }
         },

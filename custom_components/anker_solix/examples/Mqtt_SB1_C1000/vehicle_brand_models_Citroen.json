@@ -1,0 +1,29 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "model_list": [
+      "C-Zero",
+      "e-Berlingo M 50 kWh",
+      "E-Berlingo Multispace",
+      "e-Berlingo XL 50 kWh",
+      "e-C3",
+      "e-C3 Aircross",
+      "e-C4",
+      "e-C4 54 kWh",
+      "e-C4 X",
+      "e-C4 X 54 kWh",
+      "e-Jumpy Combi M 50 kWh",
+      "e-Jumpy Combi M 75 kWh",
+      "e-Jumpy Combi XL 50 kWh",
+      "e-Jumpy Combi XL 75 kWh",
+      "e-Jumpy Combi XS 50 kWh",
+      "e-SpaceTourer M 50 kWh",
+      "e-SpaceTourer M 75 kWh",
+      "e-SpaceTourer XL 50 kWh",
+      "e-SpaceTourer XL 75 kWh",
+      "e-SpaceTourer XS 50 kWh"
+    ]
+  },
+  "trace_id": "fe6c807bbf9b2df3dadf111cbb5b185c"
+}

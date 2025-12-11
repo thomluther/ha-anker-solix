@@ -1,0 +1,41 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "ef76cbed-f9ef-79c6-67dd-2aabf58dc15c",
+        "site_name": "BKWJR14",
+        "site_img": "",
+        "device_type_list": [
+          3
+        ],
+        "ms_type": 1,
+        "power_site_type": 2,
+        "is_allow_delete": true,
+        "support_device_models": [
+          "A17C0",
+          "A5143",
+          "A1771"
+        ],
+        "current_site_device_models": [
+          "A17C0"
+        ],
+        "init_status": 1,
+        "site_device_list": [
+          {
+            "device_model": "A17C0",
+            "device_sn": "CUTUTT17MUSXAJ4R",
+            "device_name": "Solarbank E1600",
+            "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+            "device_type": 3,
+            "status": 1,
+            "create_time": 0,
+            "update_time": 0
+          }
+        ]
+      }
+    ]
+  },
+  "trace_id": "49f8de71c0dbd775729e9cb6f01f0a6b"
+}

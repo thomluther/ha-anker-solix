@@ -11,15 +11,16 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
-from .mqttcmdmap import CMD_NAME, STATE_NAME, SolixMqttCommands
+from .mqttcmdmap import COMMAND_NAME, STATE_NAME, SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
 # Define supported Models for this class
-MODELS = {"A17C0"}
+MODELS = {"A17C0", "A17C1", "A17C2", "A17C3", "A17C5"}
 # Define supported and validated controls per Model
 FEATURES = {
+    SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
     SolixMqttCommands.temp_unit_switch: MODELS,
     SolixMqttCommands.sb_power_cutoff_select: MODELS,
@@ -39,6 +40,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         """Validate command value ranges for controls."""
         # TODO: Enhance validation rules to extract options or ranges from command description per model
         validation_rules = {
+            SolixMqttCommands.status_request: lambda v: True,
             SolixMqttCommands.realtime_trigger: lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
             <= v
             <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
@@ -69,7 +71,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.temp_unit_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
         if fahrenheit is not None and not self.validate_command_value(cmd1, fahrenheit):
@@ -118,7 +120,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.sb_power_cutoff_select) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         limit = (
             int(limit)

@@ -71,6 +71,7 @@ CREATE_ALL_ENTITIES: bool = False
 DEFAULT_MQTT_USAGE: bool = False
 
 SERVICE_GET_SYSTEM_INFO = "get_system_info"
+SERVICE_GET_DEVICE_INFO = "get_device_info"
 SERVICE_EXPORT_SYSTEMS = "export_systems"
 SERVICE_GET_SOLARBANK_SCHEDULE = "get_solarbank_schedule"
 SERVICE_CLEAR_SOLARBANK_SCHEDULE = "clear_solarbank_schedule"
@@ -91,6 +92,7 @@ CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
 ALLOW_EXPORT = "allow_export"
 DISCHARGE_PRIORITY = "discharge_priority"
 INCLUDE_CACHE = "include_cache"
+INCLUDE_MQTT_CACHE = "include_mqtt_cache"
 INCLUDE_MQTT = "include_mqtt"
 BACKUP_START = "backup_start"
 BACKUP_END = "backup_end"
@@ -264,6 +266,9 @@ SOLIX_ENTITY_SCHEMA: vol.Schema = vol.All(
             **cv.TARGET_SERVICE_FIELDS,
             vol.Optional(
                 INCLUDE_CACHE,
+            ): VALID_SWITCH,
+            vol.Optional(
+                INCLUDE_MQTT_CACHE,
             ): VALID_SWITCH,
         }
     ),

@@ -1,0 +1,139 @@
+{
+  "type": "account",
+  "email": "anonymous-1@domain.com",
+  "nickname": "khfiebig",
+  "country": "DE",
+  "server": "https://ankerpower-api-eu.anker.com",
+  "currency_list": [
+    {
+      "symbol": "$",
+      "name": "AUD, CAD, USD"
+    },
+    {
+      "symbol": "\u043b\u0432",
+      "name": "BGN"
+    },
+    {
+      "symbol": "CHF",
+      "name": "CHF"
+    },
+    {
+      "symbol": "K\u010d",
+      "name": "CZK"
+    },
+    {
+      "symbol": "\u20ac",
+      "name": "EUR"
+    },
+    {
+      "symbol": "\u00a3",
+      "name": "GBP"
+    },
+    {
+      "symbol": "Ft",
+      "name": "HUF"
+    },
+    {
+      "symbol": "kr",
+      "name": "ISK, NOK, SEK"
+    },
+    {
+      "symbol": "\u00a5",
+      "name": "JPY"
+    },
+    {
+      "symbol": "z\u0142",
+      "name": "PLN"
+    },
+    {
+      "symbol": "Lei",
+      "name": "RON"
+    }
+  ],
+  "default_currency": {
+    "symbol": "\u20ac",
+    "name": "EUR"
+  },
+  "requests_last_min": 7,
+  "requests_last_hour": 30,
+  "use_files": true,
+  "sites_poll_time": "2025-10-17 14:28:19",
+  "sites_poll_seconds": 0.012,
+  "vehicle_brands": {
+    "Abarth": {},
+    "Aiways": {},
+    "Alfa Romeo": {},
+    "Alpine": {},
+    "Audi": {},
+    "BMW": {},
+    "BYD": {},
+    "Cadillac": {},
+    "Citroen": {},
+    "CUPRA": {},
+    "Dacia": {},
+    "Dongfeng": {},
+    "DS": {},
+    "e.Go": {},
+    "Elaris": {},
+    "Fiat": {},
+    "Firefly": {},
+    "Fisker": {},
+    "Ford": {},
+    "Genesis": {},
+    "GWM": {},
+    "Honda": {},
+    "Hongqi": {},
+    "Hyundai": {},
+    "JAC": {},
+    "Jaguar": {},
+    "Jeep": {},
+    "KGM": {},
+    "Kia": {},
+    "Lancia": {},
+    "Leapmotor": {},
+    "Lexus": {},
+    "Lightyear": {},
+    "Lotus": {},
+    "Lucid": {},
+    "Lynk&Co": {},
+    "Maserati": {},
+    "Maxus": {},
+    "Mazda": {},
+    "Mercedes-Benz": {},
+    "MG": {},
+    "Mini": {},
+    "Mitsubishi": {},
+    "NIO": {},
+    "Nissan": {},
+    "Omoda": {},
+    "Opel": {},
+    "Ora": {},
+    "Peugeot": {},
+    "Polestar": {},
+    "Porsche": {},
+    "Renault": {},
+    "Rolls-Royce": {},
+    "SEAT": {},
+    "Seres": {},
+    "Skoda": {},
+    "Skywell": {},
+    "Smart": {},
+    "Sono": {},
+    "Subaru": {},
+    "Tesla": {},
+    "Toyota": {},
+    "VinFast": {},
+    "Volkswagen": {},
+    "Volvo": {},
+    "Voyah": {},
+    "XPENG": {},
+    "Zeekr": {},
+    "cached": true
+  },
+  "vehicles_registered": [],
+  "vehicles": {},
+  "details_poll_time": "2025-10-17 14:28:19",
+  "details_poll_seconds": 0.027,
+  "energy_poll_time": "2025-10-17 14:28:19",
+  "energy_poll_seconds": 0.002
+}

@@ -8,18 +8,30 @@ from datetime import datetime
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EXCLUDE, EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ALLOW_TESTMODE, ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, LOGGER
+from .const import (
+    ALLOW_TESTMODE,
+    ATTRIBUTION,
+    CREATE_ALL_ENTITIES,
+    DOMAIN,
+    INCLUDE_MQTT_CACHE,
+    LOGGER,
+    SERVICE_GET_DEVICE_INFO,
+    SOLIX_ENTITY_SCHEMA,
+)
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
+    AnkerSolixEntityFeature,
     AnkerSolixEntityRequiredKeyMixin,
     AnkerSolixEntityType,
     AnkerSolixPicturePath,
@@ -41,6 +53,7 @@ class AnkerSolixButtonDescription(
 
     force_creation: bool = False
     picture_path: str = None
+    feature: AnkerSolixEntityFeature | None = None
     mqtt: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
@@ -53,6 +66,7 @@ DEVICE_BUTTONS = [
         translation_key="refresh_device",
         json_key="",
         force_creation=True,
+        feature=AnkerSolixEntityFeature.SYSTEM_INFO,
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
@@ -61,6 +75,16 @@ DEVICE_BUTTONS = [
         translation_key="mqtt_realtime_trigger",
         json_key="",
         value_fn=lambda d, jk: True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
+        mqtt=True,
+    ),
+    AnkerSolixButtonDescription(
+        # Status request button should only be created if no realtime triggers are supported
+        key="mqtt_status_request",
+        translation_key="mqtt_status_request",
+        json_key="mqtt_status_request",
+        value_fn=lambda d, jk: True,  # Ignore whether commnd is described / supported
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
         mqtt=True,
@@ -163,6 +187,16 @@ async def async_setup_entry(
     # create the buttons from the list
     async_add_entities(entities)
 
+    # register the entity services
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        name=SERVICE_GET_DEVICE_INFO,
+        schema=SOLIX_ENTITY_SCHEMA,
+        func=SERVICE_GET_DEVICE_INFO,
+        required_features=[AnkerSolixEntityFeature.SYSTEM_INFO],
+        supports_response=SupportsResponse.ONLY,
+    )
+
 
 class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
     """anker_solix button class."""
@@ -209,6 +243,10 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 self._attr_device_info = get_AnkerSolixDeviceInfo(
                     data, context, coordinator.client.api.apisession.email
                 )
+                # add service attribute for device entities
+                self._attr_supported_features: AnkerSolixEntityFeature = (
+                    description.feature
+                )
             if self._attribute_name in ["refresh_device"]:
                 # set the correct device type picture for the device refresh entity, which is available for any device and account type
                 if (pn := str(data.get("device_pn") or "").upper()) and hasattr(
@@ -235,6 +273,11 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
             self._attr_device_info = get_AnkerSolixSystemInfo(
                 data, context, coordinator.client.api.apisession.email
             )
+
+    @property
+    def supported_features(self) -> AnkerSolixEntityFeature:
+        """Flag supported features."""
+        return self._attr_supported_features
 
     async def async_press(self) -> None:
         """Handle the button press."""
@@ -284,7 +327,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                         self.coordinator_context
                     )
                 )
-                and mdev.realtime_trigger(
+                and await mdev.realtime_trigger(
                     timeout=self.coordinator.client.trigger_timeout(),
                     toFile=self.coordinator.client.testmode(),
                 )
@@ -307,6 +350,35 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 "'%s' triggered mqtt real time data refresh for device, timeout %s seconds",
                 self.entity_id,
                 self.coordinator.client.trigger_timeout(),
+            )
+        elif self._attribute_name == "mqtt_status_request":
+            if not (
+                (
+                    mdev := self.coordinator.client.get_mqtt_device(
+                        self.coordinator_context
+                    )
+                )
+                and await mdev.status_request(
+                    toFile=self.coordinator.client.testmode(),
+                )
+            ):
+                dev = self.coordinator.data.get(self.coordinator_context) or {}
+                alias = dev.get("alias") or ""
+                raise ServiceValidationError(
+                    f"'{self._attribute_name}' for {self.coordinator.client.api.apisession.nickname} device "
+                    f"{alias} ({self.coordinator_context}) failed",
+                    translation_domain=DOMAIN,
+                    translation_key="mqtt_command_failed",
+                    translation_placeholders={
+                        "command": self._attribute_name,
+                        "coordinator": self.coordinator.client.api.apisession.nickname,
+                        "device_alias": alias,
+                        "device_sn": self.coordinator_context,
+                    },
+                )
+            LOGGER.info(
+                "'%s' triggered an mqtt status request for device",
+                self.entity_id,
             )
         elif self._attribute_name == "refresh_vehicles":
             if (
@@ -369,3 +441,80 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                     self.entity_id,
                     str(vehicle),
                 )
+
+    async def get_device_info(self, **kwargs: Any) -> dict | None:
+        """Get the actual device info from the cache."""
+        return await self._solix_device_service(
+            service_name=SERVICE_GET_DEVICE_INFO, **kwargs
+        )
+
+    async def _solix_device_service(
+        self, service_name: str, **kwargs: Any
+    ) -> dict | None:
+        """Execute the defined device action."""
+        # Raise alerts to frontend
+        if not (self.supported_features & AnkerSolixEntityFeature.SYSTEM_INFO):
+            raise ServiceValidationError(
+                f"The entity {self.entity_id} does not support the action {service_name}",
+                translation_domain=DOMAIN,
+                translation_key="service_not_supported",
+                translation_placeholders={
+                    "entity": self.entity_id,
+                    "service": service_name,
+                },
+            )
+        # When running in Test mode do not run services that are not supporting a testmode
+        if self.coordinator.client.testmode() and service_name not in [
+            SERVICE_GET_DEVICE_INFO
+        ]:
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be used while configuration is running in testmode",
+                translation_domain=DOMAIN,
+                translation_key="active_testmode",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                },
+            )
+        # When Api refresh is deactivated, do not run action to avoid kicking off other client Api token
+        if not self.coordinator.client.allow_refresh():
+            raise ServiceValidationError(
+                f"{self.entity_id} cannot be used for requested action {service_name} while Api usage is deactivated",
+                translation_domain=DOMAIN,
+                translation_key="apiusage_deactivated",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                    "action_name": service_name,
+                },
+            )
+        if (
+            self.coordinator
+            and hasattr(self.coordinator, "data")
+            and self.coordinator_context in self.coordinator.data
+        ):
+            if service_name in [SERVICE_GET_DEVICE_INFO]:
+                LOGGER.debug("%s action will be applied", service_name)
+                # Wait until client cache is valid
+                await self.coordinator.client.validate_cache()
+                result = {"device_info": self.coordinator.data.get(self.coordinator_context, {})}
+                if kwargs.get(INCLUDE_MQTT_CACHE):
+                    result.update(
+                        {
+                            "mqtt_cache": self.coordinator.client.api.mqttsession.mqtt_data.get(
+                                self.coordinator_context, {}
+                            )
+                            if self.coordinator.client.api.mqttsession
+                            else {}
+                        }
+                    )
+                return result
+
+            raise ServiceValidationError(
+                f"The entity {self.entity_id} does not support the action {service_name}",
+                translation_domain=DOMAIN,
+                translation_key="service_not_supported",
+                translation_placeholders={
+                    "entity": self.entity_id,
+                    "service": service_name,
+                },
+            )
+        return None

@@ -18,6 +18,24 @@ get_system_info:
       selector:
         boolean:
 
+# Service to get cached device info
+get_device_info:
+  target:
+    entity:
+      integration: anker_solix
+      domain: button
+      # anker_solix.AnkerSolixEntityFeature.SYSTEM_INFO is not resolved by HA core when frontend is loaded and does not work as filter
+      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      supported_features:
+        - calendar.CalendarEntityFeature.UPDATE_EVENT
+  fields:
+    include_mqtt_cache:
+      required: true
+      example: true
+      default: false
+      selector:
+        boolean:
+
 # Service to export all systems data from account
 export_systems:
   target:

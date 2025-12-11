@@ -1,0 +1,340 @@
+09:51:19,482 ExportSystem INFO Using AnkerSolixApiExport Version: 3.4.1.0, Date: 2025-12-02, Export Services: {'charging_energy_service', 'power_service', 'charging_hes_svc'}, MQTT Messages: True
+09:51:19,483 ExportSystem INFO 
+Querying common endpoint data...
+09:51:19,484 ExportSystem INFO Querying site information...
+09:51:19,644 ExportSystem INFO Querying bind devices information...
+09:51:19,983 ExportSystem INFO Found 0 accessible systems (sites) and 1 devices.
+09:51:19,985 ExportSystem INFO Exporting site list...
+09:51:19,986 ExportSystem DEBUG post power_service/v1/site/get_site_list --> site_list.json
+09:51:19,988 ExportSystem INFO Starting MQTT session...
+09:51:20,444 ExportSystem INFO Saved JSON to file c1000gen2/site_list.json
+09:51:20,446 ExportSystem INFO Exporting bind devices...
+09:51:20,447 ExportSystem DEBUG post power_service/v1/app/get_relate_and_bind_devices --> bind_devices.json
+09:51:20,553 ExportSystem INFO MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages...
+09:51:20,555 ExportSystem INFO Subscribed to MQTT topic: dt/anker_power/A1763/6WPYSCSCKOX3F770I/#
+09:51:20,790 ExportSystem INFO Saved JSON to file c1000gen2/bind_devices.json
+09:51:20,793 ExportSystem INFO Exporting OTA batch info for all devices...
+09:51:20,794 ExportSystem DEBUG post app/ota/batch/check_update --> ota_batch.json
+09:51:21,146 ExportSystem INFO Saved JSON to file c1000gen2/ota_batch.json
+09:51:21,149 ExportSystem INFO Exporting message unread status...
+09:51:21,149 ExportSystem DEBUG get power_service/v1/get_message_unread --> message_unread.json
+09:51:36,340 ExportSystem INFO Received new MQTT message type '0900' from device 6WPYSCSCKOX3F770I
+09:51:36,348 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:51:36,407 ExportSystem INFO Received new MQTT message type '0889' from device 6WPYSCSCKOX3F770I
+09:51:36,414 ExportSystem DEBUG Saved MQTT message type '0889' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0889.json
+09:51:36,817 ExportSystem INFO Received new MQTT message type '0857' from device 6WPYSCSCKOX3F770I
+09:51:36,823 ExportSystem DEBUG Saved MQTT message type '0857' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0857.json
+09:51:36,967 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:51:37,410 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:51:37,499 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:51:37,773 ExportSystem INFO Received new MQTT message type '0421' from device 6WPYSCSCKOX3F770I
+09:51:37,780 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:41,556 ExportSystem INFO Received new MQTT message type '0901' from device 6WPYSCSCKOX3F770I
+09:51:41,573 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:51:41,641 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:42,449 ExportSystem INFO Received new MQTT message type '0902' from device 6WPYSCSCKOX3F770I
+09:51:42,455 ExportSystem DEBUG Saved MQTT message type '0902' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0902.json
+09:51:42,543 ExportSystem ERROR Api: Andreas Margreiter, Method: GET, Endpoint: power_service/v1/get_message_unread, Payload: {}
+<class 'aiohttp.client_exceptions.ClientError'>: Api Andreas Margreiter Request Error: Timeout, response=Timeout Error
+09:51:42,544 ExportSystem INFO Exporting currency list...
+09:51:42,545 ExportSystem DEBUG post power_service/v1/currency/get_list --> currency_list.json
+09:51:42,591 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:42,659 ExportSystem INFO Saved JSON to file c1000gen2/currency_list.json
+09:51:42,662 ExportSystem INFO Exporting supported sites, devices and accessories...
+09:51:42,662 ExportSystem DEBUG post power_service/v1/site/get_site_rules --> list_site_rules.json
+09:51:42,806 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:42,997 ExportSystem INFO Saved JSON to file c1000gen2/list_site_rules.json
+09:51:43,0 ExportSystem DEBUG get power_service/v1/product_categories --> list_products.json
+09:51:43,826 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:44,844 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:46,780 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:47,797 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:50,882 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:53,782 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:55,99 ExportSystem DEBUG Saved MQTT message type '0902' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0902.json
+09:51:55,236 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:55,782 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:56,794 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:51:56,931 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:57,779 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:58,489 ExportSystem INFO Received new MQTT message type '0903' from device 6WPYSCSCKOX3F770I
+09:51:58,496 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:51:58,630 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:51:59,785 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:02,785 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:03,199 ExportSystem INFO Received new MQTT message type '0892' from device 6WPYSCSCKOX3F770I
+09:52:03,206 ExportSystem DEBUG Saved MQTT message type '0892' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0892.json
+09:52:04,543 ExportSystem ERROR Api: Andreas Margreiter, Method: GET, Endpoint: power_service/v1/product_categories, Payload: {}
+<class 'aiohttp.client_exceptions.ClientError'>: Api Andreas Margreiter Request Error: Timeout, response=Timeout Error
+09:52:04,544 ExportSystem DEBUG get power_service/v1/product_accessories --> list_accessories.json
+09:52:05,863 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:06,878 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:07,16 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:10,354 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:10,419 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:11,825 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:11,959 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:13,379 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:13,515 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:14,953 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:15,91 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:15,544 ExportSystem ERROR Api: Andreas Margreiter, Method: GET, Endpoint: power_service/v1/product_accessories, Payload: {}
+<class 'aiohttp.client_exceptions.ClientError'>: Api Andreas Margreiter Request Error: Timeout, response=Timeout Error
+09:52:15,545 ExportSystem DEBUG post power_service/v1/app/third/platform/list --> list_third_platforms.json
+09:52:15,650 ExportSystem INFO Saved JSON to file c1000gen2/list_third_platforms.json
+09:52:15,652 ExportSystem INFO Get dynamic price sites for user account...
+09:52:15,653 ExportSystem DEBUG post power_service/v1/dynamic_price/check_available --> dynamic_price_sites.json
+09:52:16,1 ExportSystem INFO Saved JSON to file c1000gen2/dynamic_price_sites.json
+09:52:16,3 ExportSystem INFO Get user vehicle list...
+09:52:16,4 ExportSystem DEBUG post power_service/v1/app/vehicle/get_vehicle_list --> user_vehicles.json
+09:52:16,327 ExportSystem INFO Saved JSON to file c1000gen2/user_vehicles.json
+09:52:16,329 ExportSystem INFO Get details for vehicle IDs...
+09:52:16,330 ExportSystem INFO Get EV brands and attributes of vehicle model(s)...
+09:52:16,332 ExportSystem DEBUG post power_service/v1/app/get_brand_list --> vehicle_brands.json
+09:52:16,653 ExportSystem INFO Saved JSON to file c1000gen2/vehicle_brands.json
+09:52:16,657 ExportSystem DEBUG post power_service/v1/app/get_models --> vehicle_brand_models_Lancia.json
+09:52:16,706 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:16,847 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:16,979 ExportSystem INFO Saved JSON to file c1000gen2/vehicle_brand_models_Lancia.json
+09:52:16,982 ExportSystem DEBUG post power_service/v1/app/get_model_years --> vehicle_model_years_Lancia_Ypsilon.json
+09:52:17,310 ExportSystem INFO Saved JSON to file c1000gen2/vehicle_model_years_Lancia_Ypsilon.json
+09:52:17,313 ExportSystem DEBUG post power_service/v1/app/get_model_list --> vehicle_year_attributes_Lancia_Ypsilon_2025.json
+09:52:17,638 ExportSystem INFO Saved JSON to file c1000gen2/vehicle_year_attributes_Lancia_Ypsilon_2025.json
+09:52:17,641 ExportSystem INFO Exporting OCPP endpoints...
+09:52:17,642 ExportSystem DEBUG post power_service/v1/app/get_ocpp_endpoint_list --> ocpp_endpoint_list.json
+09:52:17,969 ExportSystem INFO Saved JSON to file c1000gen2/ocpp_endpoint_list.json
+09:52:17,972 ExportSystem INFO 
+Querying power_service endpoint data...
+09:52:17,973 ExportSystem INFO 
+Exporting homepage...
+09:52:17,975 ExportSystem DEBUG post power_service/v1/site/get_site_homepage --> homepage.json
+09:52:18,258 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:18,308 ExportSystem INFO Saved JSON to file c1000gen2/homepage.json
+09:52:18,311 ExportSystem INFO Exporting user devices...
+09:52:18,312 ExportSystem DEBUG post power_service/v1/site/list_user_devices --> user_devices.json
+09:52:18,397 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:18,665 ExportSystem INFO Saved JSON to file c1000gen2/user_devices.json
+09:52:18,668 ExportSystem INFO Exporting charging devices...
+09:52:18,668 ExportSystem DEBUG post power_service/v1/site/get_charging_device --> charging_devices.json
+09:52:18,992 ExportSystem INFO Saved JSON to file c1000gen2/charging_devices.json
+09:52:18,995 ExportSystem INFO Exporting auto upgrade settings...
+09:52:18,996 ExportSystem DEBUG post power_service/v1/app/get_auto_upgrade --> auto_upgrade.json
+09:52:19,328 ExportSystem INFO Saved JSON to file c1000gen2/auto_upgrade.json
+09:52:19,331 ExportSystem INFO Exporting config...
+09:52:19,332 ExportSystem DEBUG post power_service/v1/app/get_config --> config.json
+09:52:19,510 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:19,657 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:19,656 ExportSystem INFO Saved JSON to file c1000gen2/config.json
+09:52:19,660 ExportSystem INFO Get token for user account...
+09:52:19,661 ExportSystem DEBUG post power_service/v1/app/get_token_by_userid --> get_token.json
+09:52:19,981 ExportSystem INFO Saved JSON to file c1000gen2/get_token.json
+09:52:19,983 ExportSystem INFO Get Shelly status with token...
+09:52:19,984 ExportSystem DEBUG post power_service/v1/app/get_user_op_shelly_status --> shelly_status.json
+09:52:20,308 ExportSystem INFO Saved JSON to file c1000gen2/shelly_status.json
+09:52:20,310 ExportSystem INFO 
+Exporting device specific data for device SOLIX C1000 Gen 2 SN 6WPYSCSCKOX3F770I...
+09:52:20,311 ExportSystem INFO Exporting power cutoff settings...
+09:52:20,313 ExportSystem DEBUG post power_service/v1/app/compatible/get_power_cutoff --> power_cutoff_6WPYSCSCKOX3F770I.json
+09:52:20,646 ExportSystem INFO Saved JSON to file c1000gen2/power_cutoff_6WPYSCSCKOX3F770I.json
+09:52:20,649 ExportSystem INFO Exporting fittings...
+09:52:20,650 ExportSystem DEBUG post power_service/v1/app/get_relate_device_fittings --> device_fittings_6WPYSCSCKOX3F770I.json
+09:52:20,977 ExportSystem INFO Saved JSON to file c1000gen2/device_fittings_6WPYSCSCKOX3F770I.json
+09:52:20,979 ExportSystem INFO Exporting load...
+09:52:20,980 ExportSystem DEBUG post power_service/v1/app/device/get_device_home_load --> device_load_6WPYSCSCKOX3F770I.json
+09:52:21,63 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:21,199 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:21,328 ExportSystem INFO Saved JSON to file c1000gen2/device_load_6WPYSCSCKOX3F770I.json
+09:52:21,331 ExportSystem INFO Exporting upgrade record for device...
+09:52:21,332 ExportSystem DEBUG post power_service/v1/app/get_upgrade_record --> upgrade_record_1_6WPYSCSCKOX3F770I.json
+09:52:21,664 ExportSystem INFO Saved JSON to file c1000gen2/upgrade_record_1_6WPYSCSCKOX3F770I.json
+09:52:21,667 ExportSystem INFO Exporting device attributes...
+09:52:21,668 ExportSystem DEBUG post power_service/v1/app/device/get_device_attrs --> device_attrs_6WPYSCSCKOX3F770I.json
+09:52:22,28 ExportSystem INFO Saved JSON to file c1000gen2/device_attrs_6WPYSCSCKOX3F770I.json
+09:52:22,35 ExportSystem INFO Exporting device tamper records...
+09:52:22,36 ExportSystem DEBUG post power_service/v1/device/get_tamper_records --> tamper_records_6WPYSCSCKOX3F770I.json
+09:52:22,365 ExportSystem INFO Saved JSON to file c1000gen2/tamper_records_6WPYSCSCKOX3F770I.json
+09:52:22,368 ExportSystem INFO Exporting device group...
+09:52:22,369 ExportSystem DEBUG post power_service/v1/app/group/get_group_devices --> device_group_6WPYSCSCKOX3F770I.json
+09:52:22,693 ExportSystem INFO Saved JSON to file c1000gen2/device_group_6WPYSCSCKOX3F770I.json
+09:52:22,696 ExportSystem INFO 
+Querying charging_energy_service endpoint data...
+09:52:22,697 ExportSystem INFO Exporting Charging error info...
+09:52:22,699 ExportSystem DEBUG post charging_energy_service/get_error_infos --> charging_error_info.json
+09:52:23,16 ExportSystem WARNING charging_energy_service endpoint data queries may not be supported on used server: Api Andreas Margreiter Request Error: 503, message='Service Temporarily Unavailable', url='https://ankerpower-api-eu.anker.com/charging_energy_service/get_error_infos', response=<html>
+<head><title>503 Service Temporarily Unavailable</title></head>
+<body>
+<center><h1>503 Service Temporarily Unavailable</h1></center>
+<hr><center>openresty</center>
+<p><em>Powered by <a href="https://apisix.apache.org/">APISIX</a>.</em></p></body>
+</html>
+
+09:52:23,17 ExportSystem WARNING Skipping remaining charging_energy_service endpoint data queries.
+09:52:23,18 ExportSystem INFO 
+Querying charging_hes_svc endpoint data...
+09:52:23,19 ExportSystem INFO Exporting HES product info...
+09:52:23,19 ExportSystem DEBUG post charging_hes_svc/get_device_product_info --> hes_product_info.json
+09:52:23,219 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:23,367 ExportSystem INFO Saved JSON to file c1000gen2/hes_product_info.json
+09:52:23,370 ExportSystem INFO Exporting HES heat pump plan...
+09:52:23,371 ExportSystem DEBUG post charging_hes_svc/get_heat_pump_plan_json --> hes_heat_pump_plan.json
+09:52:23,374 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:23,687 ExportSystem INFO Saved JSON to file c1000gen2/hes_heat_pump_plan.json
+09:52:23,689 ExportSystem INFO Exporting HES electric utility and plan list (exemplary for country 'de' and state 'nw')...
+09:52:23,690 ExportSystem DEBUG post charging_hes_svc/get_electric_utility_and_electric_plan_list --> hes_electric_plan_de_nw.json
+09:52:24,16 ExportSystem INFO Saved JSON to file c1000gen2/hes_electric_plan_de_nw.json
+09:52:24,19 ExportSystem INFO 
+Exporting HES specific data for device SOLIX C1000 Gen 2 SN 6WPYSCSCKOX3F770I...
+09:52:24,774 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:24,912 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:26,331 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:26,466 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:30,99 ExportSystem DEBUG Saved MQTT message type '0902' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0902.json
+09:52:30,131 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:30,557 ExportSystem INFO Triggering MQTT Real Time data or Status Requests for 60 seconds and waiting for messages...
+09:52:30,562 ExportSystem INFO Published MQTT Real Time trigger message for device 6WPYSCSCKOX3F770I
+09:52:30,643 ExportSystem DEBUG Saved MQTT message type '0857' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0857.json
+09:52:35,892 ExportSystem DEBUG Saved MQTT message type '0902' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0902.json
+09:52:36,29 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:37,446 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:37,582 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:43,2 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:52:43,50 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:45,670 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:45,806 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:47,827 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:47,963 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:49,681 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:49,816 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:51,234 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:51,370 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:53,88 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:53,223 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:54,641 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:54,777 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:56,194 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:56,330 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:52:57,751 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:52:57,888 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:00,313 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:00,344 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:00,878 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:01,14 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:01,828 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:01,964 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:02,498 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:02,636 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:03,49 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:03,184 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:03,408 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:03,544 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:07,988 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:08,111 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:10,558 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:10,584 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:15,53 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:15,139 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:16,556 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:16,692 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:19,660 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:19,750 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:21,168 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:21,303 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:23,649 ExportSystem INFO Received new MQTT message type '0891' from device 6WPYSCSCKOX3F770I
+09:53:23,656 ExportSystem DEBUG Saved MQTT message type '0891' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0891.json
+09:53:23,782 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:25,700 ExportSystem DEBUG Saved MQTT message type '0891' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0891.json
+09:53:25,835 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:27,757 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:27,874 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:30,588 ExportSystem INFO Waiting 180 more seconds for additional standard MQTT messages...
+09:53:30,697 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:30,835 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:31,652 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:31,780 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:33,96 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:33,230 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:34,350 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:34,780 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:35,793 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:35,930 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:36,454 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:36,861 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:37,878 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:38,13 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:38,832 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:39,851 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:40,266 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:40,412 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:40,918 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:41,783 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:42,495 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:42,630 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:43,348 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:43,778 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:44,493 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:44,629 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:45,751 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:45,866 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:47,188 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:47,329 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:48,146 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:53:48,864 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:51,716 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:51,820 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:54,479 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:54,576 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:53:56,595 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:53:56,745 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:54:25,917 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:54:27,781 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:54:29,793 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:54:30,591 ExportSystem INFO Waiting 120 more seconds for additional standard MQTT messages...
+09:54:51,412 ExportSystem DEBUG Saved MQTT message type '0857' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0857.json
+09:54:51,422 ExportSystem DEBUG Saved MQTT message type '0900' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0900.json
+09:54:52,323 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:54:54,320 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:54:57,371 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:05,341 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:06,339 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:09,335 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:12,406 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:18,347 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:21,369 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:30,602 ExportSystem INFO Waiting 60 more seconds for additional standard MQTT messages...
+09:55:36,181 ExportSystem DEBUG Saved MQTT message type '0902' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0902.json
+09:55:36,319 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:37,433 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:55:37,568 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:38,393 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:40,323 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:41,36 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:55:41,173 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:42,322 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:44,263 ExportSystem DEBUG Saved MQTT message type '0902' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0902.json
+09:55:44,401 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:45,416 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:49,780 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:55:49,888 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:52,348 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:53,37 ExportSystem DEBUG Saved MQTT message type '0901' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0901.json
+09:55:53,175 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:53,390 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:54,419 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:55:55,426 ExportSystem DEBUG Saved MQTT message type '0903' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0903.json
+09:55:55,564 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:56:12,413 ExportSystem DEBUG Saved MQTT message type '0421' from device 6WPYSCSCKOX3F770I --> mqtt_msg_6WPYSCSCKOX3F770I_0421.json
+09:56:30,622 ExportSystem INFO Stopping MQTT connection...
+09:56:31,463 ExportSystem INFO MQTT message export fininished.
+09:56:31,465 ExportSystem DEBUG Saved api Andreas Margreiter original testfolder
+09:56:31,498 ExportSystem INFO 
+Exporting api Andreas Margreiter sites cache from files...
+09:56:31,500 ExportSystem DEBUG Api Andreas Margreiter sites cache --> api_sites.json
+09:56:31,500 ExportSystem WARNING WARNING: File c1000gen2/api_sites.json not saved because JSON is empty
+09:56:31,502 ExportSystem INFO Exporting api Andreas Margreiter devices cache from files...
+09:56:31,502 ExportSystem DEBUG Api Andreas Margreiter devices cache --> api_devices.json
+09:56:31,507 ExportSystem INFO Saved JSON to file c1000gen2/api_devices.json
+09:56:31,509 ExportSystem INFO 
+Exporting api Andreas Margreiter account cache...
+09:56:31,510 ExportSystem DEBUG Api Andreas Margreiter account cache --> api_account.json
+09:56:31,515 ExportSystem INFO Saved JSON to file c1000gen2/api_account.json
+09:56:31,517 ExportSystem INFO Api Andreas Margreiter request stats: 43 last hour, 6 last minute

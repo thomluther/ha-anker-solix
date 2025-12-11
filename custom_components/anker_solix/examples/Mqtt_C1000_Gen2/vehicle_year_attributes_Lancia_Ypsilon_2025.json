@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "car_model_list": [
+      {
+        "id": 100571,
+        "brand_name": "Lancia",
+        "model_name": "Ypsilon",
+        "productive_year": 2025,
+        "battery_capacity": 48.1,
+        "ac_max_power": 11,
+        "hundred_fuel_consumption": 15.5
+      }
+    ]
+  },
+  "trace_id": "fbe9b89e666bfcc04d9ba7a919f60b5b"
+}

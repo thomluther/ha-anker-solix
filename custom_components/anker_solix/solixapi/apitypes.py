@@ -47,6 +47,7 @@ API_COUNTRIES = {
         "TW",
         "US",
         "CA",
+        "RO",
     ],
     "eu": [
         "DE",
@@ -57,7 +58,6 @@ API_COUNTRIES = {
         "BG",
         "ES",
         "LU",
-        "RO",
         "CZ",
         "FR",
         "HU",
@@ -230,7 +230,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 63 + 72 used => 135
+""" Other endpoints neither implemented nor explored: 83 + 72 used => 155
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message', # payload format unknown
@@ -255,6 +255,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/site/shift_power_site_type', # maybe to convert to different system type, {"site_id": siteId, "power_site_type": 11}
     'power_service/v1/site/local_net',
     'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]}) May be used for automatic control of plugs in smart mode?
+    'power_service/v1/site/site_data_check' # works for member, {"site_id": siteId, "current_time": "2025-12-10"}, check if site has data
     'power_service/v1/app/compatible/check_third_sn',
     'power_service/v1/app/compatible/confirm_permissions_settings',
     'power_service/v1/app/compatible/get_confirm_permissions', # works as member, {"device_model": "A17C0"} => "data": {"is_confirm": 1,"confirm_type": "APs"}
@@ -265,7 +266,10 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/app/device/remove_param_config_key'
+    2*'power_service/v1/app/device/get_device_attrs'
+    2*'power_service/v1/app/device/set_device_attrs'
     'power_service/v1/app/group/replace_group_devices',
+    2*'power_service/v1/app/group/get_group_devices'
     'power_service/v1/app/group/save_group_devices',
     'power_service/v1/app/group/force_save_group_devices',
     'power_service/v1/app/group/delete_group_devices',
@@ -296,6 +300,21 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/mothly_report_list',  # This is no typo in the endpoint! List existing monthly reports {"site_id": siteId}
     'power_service/v1/app/get_monthly_report_configs', # get the monthly report messages {"site_id": siteId}
     'power_service/v1/app/set_monthly_report_configs', # configure the monthly report messages
+    'power_service/v1/app/get_device_last_exercise_log' # {"device_sn": deviceSn, "exercise_type": 3}
+    'power_service/v1/app/get_device_exercise_log' # {"device_sn": deviceSn, "exercise_type": 3, "page": 3, "page_size": 80}
+    'power_service/v1/app/get_parts_maintenance_logs'
+    'power_service/v1/app/get_parts_maintenance_plan'
+    'power_service/v1/app/get_oil_consumption_reminder_plan_details' # {"device_sn": deviceSn}
+    'power_service/v1/app/get_device_exercise_details' # {"device_sn": deviceSn}
+    'power_service/v1/app/batch_maintain_oil_engine_parts'
+    'power_service/v1/app/set_maintain_parts_notice_switch'
+    'power_service/v1/app/set_parts_maintenance_plan'
+    'power_service/v1/app/set_oil_machine_exercise_plan'
+    'power_service/v1/app/start_oil_machine_exercise'
+    'power_service/v1/app/switch_exercise_mode'
+    'power_service/v1/app/set_oil_consumption_reminder_switch'
+    'power_service/v1/app/set_oil_consumption_reminder_plan'
+    'power_service/v1/app/set_maintain_parts_ignore_reminders'
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -411,12 +430,13 @@ Home Energy System related (X1): 44 + 20 used => 64 total
     "charging_hes_svc/share_device/invite_installer_member",
     "charging_hes_svc/share_device/get_installer_invited_list",
 
-Home Energy System related (X1): 5 + 0 used => 5 total
+Home Energy System related (X1): 7 + 0 used => 7 total
     "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
     "charging_hes_dynamic_price_svc/get_price_company", # needs owner
     "charging_hes_dynamic_price_svc/get_price", # needs owner
     "charging_hes_dynamic_price_svc/save_time_of_use", # needs owner
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
+    "charging_hes_dynamic_price_svc/get_third_jump_url"
 
 related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_site_device_disaster', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
@@ -427,7 +447,7 @@ related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/disaster_detail',
 
-related to Prime charger models: 7 + 9 used => 16 total
+related to Prime charger models: 8 + 9 used => 17 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
@@ -439,6 +459,7 @@ related to Prime charger models: 7 + 9 used => 16 total
     'mini_power/v1/app/style/add_manual_clock_screensavers',
     'mini_power/v1/app/style/delete_manual_clock_screensavers',
     'mini_power/v1/app/style/get_url',
+    'mini_power/v1/app/style/set_manual_clock_screensaver_name',
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -588,6 +609,7 @@ API_FILEPREFIXES = {
 Model  Name                                     Platform
 ----------------------------------------------------------------------------------------------------
 A110A  26K Prime Power Bank                     Power Bank
+A110B  20K Prime Power Bank                     Power Bank
 A1722  SOLIX C300                               Portable Power Station
 A1723  SOLIX C300X                              Portable Power Station
 A1725  SOLIX C200(X)                            Portable Power Station
@@ -600,12 +622,16 @@ A1754  SOLIX C800 Plus                          Portable Power Station
 A1755  SOLIX C800X                              Portable Power Station
 A1761  SOLIX C1000(X)                           Portable Power Station
 A1762  Portable Power Station 1000              Portable Power Station
+A1763  SOLIX C1000 Gen 2                        Portable Power Station
+A1765  SOLIX C1000X Gen 2                       Portable Power Station
 A1770  F1200 (Bluetooth)                        Portable Power Station
 A1771  F1200 (Bluetooth and WLAN)               Portable Power Station
 A1772  SOLIX F1500                              Portable Power Station
 A1780  767 PowerHouse (SOLIX F2000)             Portable Power Station
 A1780P 767 Power House (SOLIX F2000) with WLAN  Portable Power Station
 A1781  SOLIX F2600                              Portable Power Station
+A1782  SOLIX F3000                              Portable Power Station
+A1783  SOLIX C2000 Gen 2                        Portable Power Station
 A1790  SOLIX F3800                              Portable Power Station
 A1790P SOLIX F3800 Plus                         Portable Power Station
 A17A0  Powered Cooler 30                        Powered Cooler
@@ -614,6 +640,7 @@ A17A2  Powered Cooler 50                        Powered Cooler
 A17A3  SOLIX Everfrost 2 23L                    Powered Cooler
 A17A4  SOLIX Everfrost 2 40L                    Powered Cooler
 A17A5  SOLIX Everfrost 2 58L                    Powered Cooler
+A17B1  SOLIX Home Power Panel                   Power Solution
 A17C0  Solarbank E1600                          Balcony Solar Power System
 A17C1  Solarbank 2 E1600 Pro                    Balcony Solar Power System
 A17C2  Solarbank 2 E1600 AC                     Balcony Solar Power System
@@ -621,8 +648,10 @@ A17C3  Solarbank 2 E1600 Plus                   Balcony Solar Power System
 A17C5  Solarbank 3 E2700 Pro                    Balcony Solar Power System
 A17X7  Smart Meter                              Accessory
 A17X8  Smart Plug                               Accessory
+A1903  150W Charging Base                       Charger
 A2345  250W Prime Charger                       Charger
 A25X7  Prime Wireless Charger                   Charger
+A2687  160W Prime Charger                       Charger
 A5101  X1-P6K-US/S                              Residential Storage System
 A5102  X1-H(3.68~6)K-S                          Residential Storage System
 A5103  X1-H (5~12)K-T                           Residential Storage System
@@ -637,15 +666,6 @@ A91B2  240W Charging Station                    Charger
 AE100  SOLIX Power Dock                         Balcony Solar Power System
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 ----------------------------------------------------------------------------------------------------
-Summary: 49 Models
- 1 Power Bank
-20 Portable Power Station
- 6 Powered Cooler
- 8 Balcony Solar Power System
- 3 Accessory
- 3 Charger
- 7 Residential Storage System
- 1 Smart EV Charger
 """
 
 LOGIN_RESPONSE: dict = {
@@ -855,6 +875,8 @@ class SolixDeviceNames:
 class SolixDeviceCapacity:
     """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
 
+    A110A: int = 100  # Anker Prime Power Bank 300 W, 25Ah, 99,75 Wh
+    A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
     A17C0: int = 1600  # SOLIX Solarbank E1600
     A17C1: int = 1600  # SOLIX Solarbank 2 E1600 Pro
     A17C2: int = 1600  # SOLIX Solarbank 2 E1600 AC
@@ -862,11 +884,12 @@ class SolixDeviceCapacity:
     A17C5: int = 2688  # SOLIX Solarbank 3 E2700 Pro
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
-    A1723: int = 230  # SOLIX C200 Portable Power Station
-    A1725: int = 230  # SOLIX C200 Portable Power Station
+    A1723: int = 288  # SOLIX C300X Portable Power Station
+    A1725: int = 230  # SOLIX C200(X) Portable Power Station
     A1726: int = 288  # SOLIX C300 DC Portable Power Station
-    A1727: int = 230  # SOLIX C200 DC Portable Power Station
-    A1728: int = 288  # SOLIX C300 X Portable Power Station
+    A1727: int = 192  # SOLIX C200 DC Portable Power Station
+    A1728: int = 288  # SOLIX C300X DC  Portable Power Station
+    A1729: int = 230  # SOLIX C200X DC Portable Power Station
     A1751: int = 512  # Anker PowerHouse 535 Portable Power Station
     A1753: int = 768  # SOLIX C800 Portable Power Station
     A1754: int = 768  # SOLIX C800 Plus Portable Power Station
@@ -874,6 +897,8 @@ class SolixDeviceCapacity:
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
     A1762: int = 1056  # SOLIX Portable Power Station 1000
+    A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
+    A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -884,6 +909,9 @@ class SolixDeviceCapacity:
     )
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1782: int = 3072  # SOLIX F3000 Portable Power Station with Smart Meter support
+    A1783: int = (
+        2048  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    )
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
@@ -912,7 +940,7 @@ class SolixSiteType:
     t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782 SOLIX F3000 Portable Power Station (Solarbank PPS) with Smart Meter support for US market
     t_14 = SolixDeviceType.EV_CHARGER.value  # Main A5191 Smart EV Charger
     # t_15 = ???  # Main A17E1 & A17X7US Smart Meter for US market
-    # t_16 = ???  # Main A1903 & 4 each A110A, A110B, A110G, A1341
+    # t_16 = ???  # Main A1903 Charging base & 4 each A110A, A110B, A110G, A1341
     # t_17 = ??? # Only AX170
     t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, SHEM3, SHEMP3, A17X8, SHPPS, A5191
 
@@ -956,11 +984,12 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 521 Portable Power Station
     A1722: str = SolixDeviceType.PPS.value  # SOLIX C300 Portable Power Station
-    A1723: str = SolixDeviceType.PPS.value  # SOLIX C200 Portable Power Station
-    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200 Portable Power Station
+    A1723: str = SolixDeviceType.PPS.value  # SOLIX C300X Portable Power Station
+    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200(X) Portable Power Station
     A1726: str = SolixDeviceType.PPS.value  # SOLIX C300 DC Portable Power Station
     A1727: str = SolixDeviceType.PPS.value  # SOLIX C200 DC Portable Power Station
-    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X Portable Power Station
+    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X DC Portable Power Station
+    A1729: str = SolixDeviceType.PPS.value  # SOLIX C200X DC Portable Power Station
     A1751: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 535 Portable Power Station
@@ -972,6 +1001,8 @@ class SolixDeviceCategory:
     )  # Anker PowerHouse 555 Portable Power Station
     A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) Portable Power Station
     A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
+    A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 Portable Power Station
+    A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 Portable Power Station
     A1770: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 757 Portable Power Station
@@ -987,6 +1018,9 @@ class SolixDeviceCategory:
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX F3000 Portable Power Station with SM support (US Market)
+    A1783: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
     A17E1: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX Solarbank Prime E10 Power Module (US Market)
@@ -1013,11 +1047,18 @@ class SolixDeviceCategory:
     A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
     # Charging Stations
+    A1903: str = SolixDeviceType.CHARGER.value  # Anker 150W Prime Charger
     A2345: str = SolixDeviceType.CHARGER.value  # Anker 250W Prime Charger
+    A2687: str = SolixDeviceType.CHARGER.value  # Anker 160W Prime Charger
     A25X7: str = SolixDeviceType.CHARGER.value  # Prime Wireless Charger
     A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
     # Power Bank
-    A110A: str = SolixDeviceType.POWERBANK.value  # Anker Prime Power Bank 300 W, 250mAh
+    A110A: str = (
+        SolixDeviceType.POWERBANK.value
+    )  # Anker Prime Power Bank 300 W, 25Ah, 92 Wh
+    A110B: str = (
+        SolixDeviceType.POWERBANK.value
+    )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
 
@@ -1302,6 +1343,14 @@ class SolixPpsOutputMode(StrEnum):
     unknown = "unknown"
 
 
+class SolixPpsOutputModeV2(StrEnum):
+    """Str Enumeration for Anker Solix PPS output modes."""
+
+    normal = "0"
+    smart = "1"
+    unknown = "unknown"
+
+
 class SolixPpsChargingStatus(StrEnum):
     """Str Enumeration for Anker Solix PPS charging status."""
 
@@ -1540,7 +1589,9 @@ class DeviceHexDataTypes(Enum):
     bin = bytes.fromhex("04")
     sfle = bytes.fromhex("05")  # 4 bytes, signed float LE (Base type)
     # 06 can be many bytes, mix of Str and Byte values
-    # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
-    # The "length" with int for byte count can be specified (default is 1 Byte), where Length of 0 indicates that first byte contains variable field length
+    # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type",
+    # with a DeviceHexDataTypes base type for value conversion (ui=1, sile=2, sfle=4 bytes).
+    # The optional "length" with int for byte count can be specified (default is 0 if no base type used),
+    # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
     strb = bytes.fromhex("06")
     unk = bytes.fromhex("FF")  # unkonwn marker

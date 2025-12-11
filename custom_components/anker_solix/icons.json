@@ -34,6 +34,9 @@
             },
             "mqtt_realtime_trigger": {
                 "default": "mdi:arrow-decision"
+            },
+            "mqtt_status_request": {
+                "default": "mdi:arrow-decision"
             }
         },
         "binary_sensor": {
@@ -654,6 +657,7 @@
     },
     "services": {
         "get_system_info": {"service": "mdi:text-box-search-outline"},
+        "get_device_info": {"service": "mdi:text-box-search"},
         "export_systems": {"service": "mdi:cloud-print-outline"},
         "get_solarbank_schedule": {"service": "mdi:sun-clock"},
         "clear_solarbank_schedule": {

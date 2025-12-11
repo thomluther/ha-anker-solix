@@ -7,6 +7,7 @@ from typing import Any
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
 from .helpers import round_by_factor
+from .mqttcmdmap import COMMAND_LIST
 from .mqttmap import SOLIXMQTTMAP
 
 
@@ -16,7 +17,7 @@ class DeviceHexDataHeader:
 
     Message header structure (9-10 Bytes):
     FF 09    | 2 Bytes fixed message prefix for Anker Solix message
-    XX XX    | 2 Bytes message length (including prefix), little endian format
+    XX XX    | 2 Bytes message length (including prefix), little endian format. Note: Length contains the XOR checksum byte at the end
     XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
     XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 08` for others, depends on device model, to be figured out
     XX       | 1 optional Byte, seems increment for certain messages, fix for others or not used
@@ -48,10 +49,9 @@ class DeviceHexDataHeader:
                 self.msglength = int.from_bytes(hexbytes[2:4], byteorder="little")
                 self.pattern = hexbytes[4:7]
                 self.msgtype = hexbytes[7:9]
-            if len(hexbytes) >= 10 and hexbytes[9:10] not in [
-                bytearray.fromhex("a0"),
-                bytearray.fromhex("a1"),
-            ]:
+            if len(hexbytes) >= 10 and hexbytes[9:10] not in bytearray.fromhex(
+                "a0a1a2a3a4a5a6a7a8a9"
+            ):
                 self.increment = hexbytes[9:10]
             else:
                 self.increment = b""
@@ -281,11 +281,18 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, string (Base type), use only printable part
                 if "name" in fieldmap:
-                    values[fieldmap.get("name")] = "".join(
-                        c
-                        for c in hexdata.decode(errors="ignore").strip()
-                        if c.isprintable()
-                    )
+                    if "timestamp" in fieldmap.get("name"):
+                        # convert ms string into timestamp value of seconds
+                        values[fieldmap.get("name")] = convert_timestamp(
+                            hexdata, ms=True
+                        )
+                    else:
+                        # convert bytes to string
+                        values[fieldmap.get("name")] = "".join(
+                            c
+                            for c in hexdata.decode(errors="ignore").strip()
+                            if c.isprintable()
+                        )
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
                 if "name" in fieldmap:
@@ -383,18 +390,28 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 if len(hexdata) == 4 and (name := fieldmap.get("name", "")):
-                    values[name] = struct.unpack("<f", self.f_value)[0] * float(
+                    values[name] = struct.unpack("<f", hexdata)[0] * float(
                         fieldmap.get("factor", 1)
                     )
             case DeviceHexDataTypes.strb.value:
                 # 06 can be many bytes, mix of Str and Byte values
-                # mapping must specify start byte position string ("0"-"len-1") for fields
-                # field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
-                # The "length" with int for byte count can be specified (default is 1 Byte),
-                # where Length of 0 indicates that first byte contains variable field length
+                # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type",
+                # with a DeviceHexDataTypes base type for value conversion (ui=1, sile=2, sfle=4 bytes).
+                # The optional "length" with int for byte count can be specified (default is 0 if no base type used),
+                # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
+                # "factor" can be specified optionally for value conversion
                 for key, bytemap in (fieldmap.get("bytes", {}) or fieldmap).items():
                     pos = int(key)
-                    if (length := bytemap.get("length", 1)) == 0:
+                    ftype = bytemap.get("type", DeviceHexDataTypes.unk.value)
+                    length = bytemap.get("length", 0)
+                    # set default length based on fixed types
+                    if ftype == DeviceHexDataTypes.ui.value:
+                        length = 1
+                    elif ftype == DeviceHexDataTypes.sile.value:
+                        length = 2
+                    elif ftype == DeviceHexDataTypes.sfle.value:
+                        length = 4
+                    if length == 0:
                         # first byte is length of bytes following for field
                         length = int.from_bytes(self.f_value[pos : pos + 1])
                         values.update(
@@ -451,6 +468,7 @@ class DeviceHexData:
         XX     | 1 Byte data length (bytes following until end of field)
         XX ... | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
     e.g. ff09 3b00 03010f 0407 | a1 01 32 | a2 11 00 415a5636....
+    Last byte is XOR checksum across the full message. Checksum byte is included in header message length
     """
 
     hexbytes: bytearray = field(default_factory=bytearray)
@@ -458,6 +476,7 @@ class DeviceHexData:
     length: int = 0
     msg_header: DeviceHexDataHeader = field(default_factory=DeviceHexDataHeader)
     msg_fields: dict[str, DeviceHexDataField] = field(default_factory=dict)
+    checksum: bytearray = field(default_factory=bytearray)
 
     def __post_init__(self) -> None:
         """Post init the dataclass to decode the bytes into fields."""
@@ -468,6 +487,7 @@ class DeviceHexData:
             self.hexbytes = bytearray(self.hexbytes)
         if self.hexbytes:
             self.length = len(self.hexbytes)
+            self.checksum = self.hexbytes[-1:]
             self.msg_header = DeviceHexDataHeader(hexbytes=self.hexbytes[0:idx])
             self.msg_fields = {}
             idx = len(self.msg_header)
@@ -486,7 +506,16 @@ class DeviceHexData:
 
     def __str__(self) -> str:
         """Print the fields and hex bytes with separator."""
-        return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}"
+        return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}, checksum:{self.checksum.hex()}"
+
+    def _get_xor_checksum(self, hexbytes: bytearray | None = None) -> bytearray:
+        """Generate the XOR checksum byte across provided bytearray or actual hexdata."""
+        if not (hexbytes or self.hexbytes):
+            return bytearray()
+        checksum = 0
+        for b in hexbytes or self.hexbytes:
+            checksum ^= b
+        return bytearray(checksum.to_bytes())
 
     def _update_hexbytes(self) -> None:
         # init length and hexbytes
@@ -495,11 +524,16 @@ class DeviceHexData:
         for f in (self.msg_fields or {}).values():
             self.length += len(f)
             self.hexbytes += bytes.fromhex(f.hex())
+        # update message length in header including checksum byte
         if self.length:
-            # update message length in header
+            # Add checksum byte to length
+            self.length += 1
             self.msg_header.msglength = self.length
-        # generate hexbytes
+        # generate complete hexbytes for checksum calculation
         self.hexbytes = bytearray(bytes.fromhex(self.msg_header.hex()) + self.hexbytes)
+        # generate XOR checksum byte and append to hexbytes
+        self.checksum = self._get_xor_checksum()
+        self.hexbytes += self.checksum
 
     def hex(self, sep: str = "") -> str:
         """Print the hex bytes with optional separator."""
@@ -517,7 +551,13 @@ class DeviceHexData:
                 if self.model
                 else ""
             )
-            s = f"{pn + ' Header ':-^98}\n{self.msg_header.decode()}\n{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
+            checksum = self._get_xor_checksum().hex()
+            s = (
+                f"{pn + ' Header ':-^98}\n{self.msg_header.decode()}\n"
+                f"-> {Color.CYAN + self.checksum.hex() + Color.OFF} <-: XOR Checksum Byte (last message byte), Crosscheck: "
+                f"{checksum} => {(Color.GREEN + 'OK') if checksum == '00' else (Color.RED + 'FAILURE')}{Color.OFF}\n"
+                f"{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
+            )
             if self.msg_fields:
                 s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
                 fieldmap = (
@@ -525,6 +565,14 @@ class DeviceHexData:
                     if self.model in SOLIXMQTTMAP
                     else {}
                 )
+                if cmd_list := fieldmap.get(COMMAND_LIST):
+                    # extract the maps from all nested commands, they should not have duplicate field names
+                    fieldmap = {
+                        k: v
+                        for key, value in fieldmap.items()
+                        if key in cmd_list
+                        for k, v in value.items()
+                    }
                 for f in self.msg_fields.values():
                     name = (
                         (fld := fieldmap.get(f.f_name.hex()) or {}).get("name")
@@ -532,12 +580,8 @@ class DeviceHexData:
                         or ""
                     )
                     factor = fld.get("factor") or None
-                    if (
-                        f.f_length == 5
-                        and isinstance(name, str)
-                        and "timestamp" in str(name)
-                    ):
-                        name = f"{name} ({datetime.fromtimestamp(int.from_bytes(f.f_value, byteorder='little', signed=True)).strftime('%Y-%m-%d %H:%M:%S')})"
+                    if isinstance(name, str) and "timestamp" in str(name):
+                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}{(Color.CYAN + ' --> ' + str(name) + ('' if factor is None else ' (factor ' + str(factor) + ')') + Color.OFF) if name else ''}"
                 s += f"\n{80 * '-'}"
         else:
@@ -551,9 +595,17 @@ class DeviceHexData:
     def values(self) -> dict:
         """Return a dictionary with extracted values based on defined field mappings."""
         values = {}
-        fieldmap = (SOLIXMQTTMAP.get(self.model) or {}).get(
-            self.msg_header.msgtype.hex()
-        ) or {}
+        fieldmap = SOLIXMQTTMAP.get(self.model, {}).get(
+            self.msg_header.msgtype.hex(), {}
+        )
+        if cmd_list := fieldmap.get(COMMAND_LIST):
+            # extract the maps from all nested commands, they should not have duplicate field names
+            fieldmap = {
+                k: v
+                for key, value in fieldmap.items()
+                if key in cmd_list
+                for k, v in value.items()
+            }
         for key, item in fieldmap.items():
             if key in self.msg_fields:
                 values.update(self.msg_fields[key].values(fieldmap=item))
@@ -577,13 +629,24 @@ class DeviceHexData:
             self._update_hexbytes()
 
     def add_timestamp_field(self, fieldname: str | bytes = "fe") -> None:
-        """Add or update a timestamp field as maybe required to publish command data."""
+        """Add or update a timestamp field in seconds as maybe required to publish command data."""
         if isinstance(fieldname, str):
             fieldname = bytes.fromhex(fieldname)
         datafield = DeviceHexDataField(
             f_name=fieldname,
             f_type=DeviceHexDataTypes.var.value,
-            f_value=int(datetime.now().timestamp()).to_bytes(4, byteorder="little"),
+            f_value=convert_timestamp(datetime.now().timestamp()),
+        )
+        self.update_field(datafield=datafield)
+
+    def add_timestamp_ms_field(self, fieldname: str | bytes = "fd") -> None:
+        """Add or update a timestamp field as ms string as maybe required to publish command data."""
+        if isinstance(fieldname, str):
+            fieldname = bytes.fromhex(fieldname)
+        datafield = DeviceHexDataField(
+            f_name=fieldname,
+            f_type=DeviceHexDataTypes.str.value,
+            f_value=convert_timestamp(datetime.now().timestamp(), ms=True),
         )
         self.update_field(datafield=datafield)
 
@@ -740,3 +803,29 @@ class MqttCmdValidator:
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
         return asdict(self)
+
+
+def convert_timestamp(
+    value: float | bytes | bytearray, ms: bool = False
+) -> float | bytes | None:
+    """Convert the input value between bytes and float value according to the formats used in MQTT messages."""
+    # traditional timestamp format with field type var with 4 bytes little endian representing the timestamp in seconds
+    # new format is timestamp in milliseconds as string formatted field
+    if isinstance(value, float | int):
+        # convert to bytes
+        if ms:
+            # convert timestamp to ms and strin prior encoding
+            return str(int(value * 1000)).encode()
+        # encode timestamp as little endian integer
+        return int(value).to_bytes(4, byteorder="little")
+    if isinstance(value, bytes | bytearray):
+        # convert to float timestamp in seconds
+        if ms or len(value) > 4:
+            msec = "".join(
+                c for c in value.decode(errors="ignore").strip() if c.isprintable()
+            )
+            if msec.replace(".", "", 1).isdigit():
+                return float(msec) / 1000
+        else:
+            return float(int.from_bytes(value, byteorder="little", signed=True))
+    return None

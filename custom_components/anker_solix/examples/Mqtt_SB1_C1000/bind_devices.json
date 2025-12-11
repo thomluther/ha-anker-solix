@@ -1,0 +1,79 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "4EJYH8ASEV3SGLA4",
+        "product_code": "A1761",
+        "bt_ble_id": "17:EB:A3:AC:2B:87",
+        "bt_ble_mac": "17EBA3AC2B87",
+        "device_name": "SOLIX C1000(X)",
+        "alias_name": "SOLIX C1000(X)",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/01/17/iot-admin/b4VVnVyVA7KkQTQR/picl_A1761_normal.png",
+        "link_time": 1751309009,
+        "wifi_online": true,
+        "wifi_name": "wifi-network-1",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.5.9",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "-54",
+        "intgr_device": null,
+        "blue_password": "",
+        "wifi_mac": "272F2C51ABB1",
+        "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+        "ms_device_type": 1,
+        "owner_user_id": "bfd0290e6c960ddcb2bef95544c288011ddbef52",
+        "group_info": null,
+        "init_status": 0,
+        "ocpp_connect_status": 0
+      },
+      {
+        "device_sn": "CUTUTT17MUSXAJ4R",
+        "product_code": "A17C0",
+        "bt_ble_id": "54:0A:DF:CE:BD:AF",
+        "bt_ble_mac": "540ADFCEBDAF",
+        "device_name": "Solarbank E1600",
+        "alias_name": "Solarbank E1600",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/10/iot-admin/FycLLqjHpYf0Bdab/20230719-144818.png",
+        "link_time": 1703755152,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v2.1.5",
+        "has_manual": true,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "",
+        "intgr_device": null,
+        "blue_password": "",
+        "wifi_mac": "2CC4EB36B084",
+        "time_zone": "CET-1CEST,M3.5.0,M10.5.0/3",
+        "ms_device_type": 1,
+        "owner_user_id": "bfd0290e6c960ddcb2bef95544c288011ddbef52",
+        "group_info": null,
+        "init_status": 0,
+        "ocpp_connect_status": 0
+      }
+    ]
+  },
+  "trace_id": "b9b3fab7bd25b90c756df6040550959c"
+}

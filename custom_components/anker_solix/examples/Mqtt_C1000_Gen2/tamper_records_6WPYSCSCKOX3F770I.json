@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "records": [],
+    "total": 0,
+    "page_num": 0,
+    "page_size": 10
+  },
+  "trace_id": "1c2ceca2ff2b190c45beac595afcfb6d"
+}
