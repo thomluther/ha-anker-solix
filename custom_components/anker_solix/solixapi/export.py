@@ -45,7 +45,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.4.1.0"
+VERSION: str = "3.4.2.0"
 
 
 class AnkerSolixApiExport:
