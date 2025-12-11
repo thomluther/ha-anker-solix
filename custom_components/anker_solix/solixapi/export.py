@@ -2044,7 +2044,7 @@ class AnkerSolixApiExport:
             message["topic"] = topic
             msgstr = json.dumps(message).replace(device_sn, randsn)
             # save the message
-            filename = f"{API_FILEPREFIXES['mqtt_message']}_{randsn}_{msgtype}.json"
+            filename = f"{API_FILEPREFIXES['mqtt_message']}_{randsn}_{msgtype}.ndjson"
             # print info for first message type per device
             if filename not in self._mqtt_msg_types:
                 self._mqtt_msg_types.add(filename)

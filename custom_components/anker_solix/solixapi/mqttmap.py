@@ -1233,7 +1233,7 @@ _DOCK_0500 = {
 
 
 # Following is the consolidated mapping for all device types and messages
-SOLIXMQTTMAP = {
+SOLIXMQTTMAP: Final = {
     # Power Charger C300 AC
     "A1722": {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
