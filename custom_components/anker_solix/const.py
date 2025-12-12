@@ -28,7 +28,7 @@ ACCEPT_TERMS: str = "accept_terms"
 TERMS_LINK: str = "terms_link"
 MQTT_LINK: str = "mqtt_link"
 TC_LINK: str = "https://github.com/thomluther/ha-anker-solix/blob/main/README.md"
-MQ_LINK: str = "https://github.com/thomluther/ha-anker-solix#mqtt-data-from-devices"
+MQ_LINK: str = "https://github.com/thomluther/ha-anker-solix#mqtt-managed-devices"
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
