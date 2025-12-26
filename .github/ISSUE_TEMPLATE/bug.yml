@@ -24,6 +24,8 @@ body:
     options:
       - label: I have enabled debug logging for my installation.
         required: true
+      - label: I have created an anonymized [system export zip file](https://github.com/thomluther/ha-anker-solix/blob/main/INFO.md#export-systems-action) (including MQTT data) at the time the missing or questionable data is being shown.
+        required: true
       - label: I have filled out the issue template to the best of my ability.
         required: true
       - label: This issue only contains 1 issue (if you have multiple issues, open one issue for each issue).
@@ -57,5 +59,5 @@ body:
 
 - type: textarea
   attributes:
-    label: "Diagnostics dump"
-    description: "Drag the diagnostics dump file here. (see https://www.home-assistant.io/integrations/diagnostics/ for info)"
+    label: "System export zip file or Diagnostics dump"
+    description: "Drag your Anker account [system export zip](https://github.com/thomluther/ha-anker-solix/blob/main/INFO.md#export-systems-action) file or [Integration diagnostics dump](https://www.home-assistant.io/integrations/diagnostics/) file here."
