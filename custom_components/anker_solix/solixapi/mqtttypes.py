@@ -3,11 +3,26 @@
 from dataclasses import InitVar, asdict, dataclass, field
 from datetime import datetime
 import struct
-from typing import Any
+from typing import Any, Self
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
 from .helpers import round_by_factor
-from .mqttcmdmap import COMMAND_LIST
+from .mqttcmdmap import (
+    BYTES,
+    COMMAND_LIST,
+    FACTOR,
+    LENGTH,
+    NAME,
+    SIGNED,
+    TYPE,
+    VALUE_DEFAULT,
+    VALUE_DIVIDER,
+    VALUE_MAX,
+    VALUE_MIN,
+    VALUE_OPTIONS,
+    VALUE_STATE,
+    VALUE_STEP,
+)
 from .mqttmap import SOLIXMQTTMAP
 
 
@@ -280,65 +295,89 @@ class DeviceHexDataField:
         match fieldtype:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, string (Base type), use only printable part
-                if "name" in fieldmap:
-                    if "timestamp" in fieldmap.get("name"):
+                if NAME in fieldmap:
+                    if "timestamp" in fieldmap.get(NAME):
                         # convert ms string into timestamp value of seconds
-                        values[fieldmap.get("name")] = convert_timestamp(
-                            hexdata, ms=True
-                        )
+                        values[fieldmap.get(NAME)] = convert_timestamp(hexdata, ms=True)
                     else:
                         # convert bytes to string
-                        values[fieldmap.get("name")] = "".join(
+                        values[fieldmap.get(NAME)] = "".join(
                             c
                             for c in hexdata.decode(errors="ignore").strip()
                             if c.isprintable()
                         )
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
-                if "name" in fieldmap:
-                    factor = fieldmap.get("factor", 1)
-                    values[fieldmap.get("name")] = round_by_factor(
-                        int.from_bytes(hexdata) * factor, factor
+                if NAME in fieldmap:
+                    factor = fieldmap.get(FACTOR, 1)
+                    values[fieldmap.get(NAME)] = round_by_factor(
+                        int.from_bytes(
+                            hexdata,
+                            signed=fieldmap.get(SIGNED) is True,
+                        )
+                        * factor,
+                        factor,
                     )
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
-                if name := fieldmap.get("name", ""):
+                if name := fieldmap.get(NAME, ""):
                     value = int(
-                        int.from_bytes(hexdata, byteorder="little", signed=True)
+                        int.from_bytes(
+                            hexdata,
+                            byteorder="little",
+                            signed=fieldmap.get(SIGNED) is not False,
+                        )
                     )
                     # check if value stands for software version and convert to version number
                     if "version" in name or "sw_" in name:
                         # convert int to string for version numbering
                         value = ".".join(str(value))
                     else:
-                        factor = fieldmap.get("factor", 1)
+                        factor = fieldmap.get(FACTOR, 1)
                         value = round_by_factor(value * factor, factor)
                     values[name] = value
             case DeviceHexDataTypes.var.value:
                 # var is always 4 bytes, but could be 1-4 * int, 1-2 * signed int LE or 4 Byte signed int LE
                 # mapping must specify "values" to indicate number of values in bytes from beginning. Default is 0 for 1 value in 4 bytes
                 # If a float factor is specified, value will be rounded to factor digits
-                if name := fieldmap.get("name", ""):
-                    factor = fieldmap.get("factor", 1)
+                if name := fieldmap.get(NAME, ""):
+                    factor = fieldmap.get(FACTOR, 1)
                     if (count := int(fieldmap.get("values", 0))) == 1:
                         value = round_by_factor(
-                            int.from_bytes(hexdata[0:1]) * factor, factor
+                            int.from_bytes(
+                                hexdata[0:1], signed=fieldmap.get(SIGNED) is True
+                            )
+                            * factor,
+                            factor,
                         )
                     elif count == 2:
                         value = round_by_factor(
                             int.from_bytes(
-                                hexdata[0:2], byteorder="little", signed=True
+                                hexdata[0:2],
+                                byteorder="little",
+                                signed=fieldmap.get(SIGNED) is not False,
                             )
                             * factor,
                             factor,
                         )
                     elif count == 4:
                         value = [
-                            round_by_factor(int(b) * factor, factor) for b in hexdata
+                            round_by_factor(
+                                int.from_bytes(
+                                    bytes([b]), signed=fieldmap.get(SIGNED) is True
+                                )
+                                * factor,
+                                factor,
+                            )
+                            for b in hexdata
                         ]
                     else:
                         value = round_by_factor(
-                            int.from_bytes(hexdata, byteorder="little", signed=True)
+                            int.from_bytes(
+                                hexdata,
+                                byteorder="little",
+                                signed=fieldmap.get(SIGNED) is not False,
+                            )
                             * factor,
                             factor,
                         )
@@ -350,7 +389,7 @@ class DeviceHexDataField:
                             value = ".".join(str(value))
                     values[name] = value
                 # var can also be bitmask for settings, byte fields must be specified with description list for bit masks to use
-                elif fieldmap.get("bytes", {}):
+                elif fieldmap.get(BYTES, {}):
                     # extract found bytes description like DeviceHexDataTypes.bin
                     values.update(
                         self.extract_value(
@@ -365,12 +404,12 @@ class DeviceHexDataField:
                 # A single bitmap field can be used for various named settings, therefore it should be a list for differentiation
                 # Each named bitmap setting must describe a "mask" integer to indicate which bit(s) are relevant for the named setting, e.g. mask 0x64 => 0100 0000
                 # The masked value will be shifted so that mask LSB is rightmost bit (1), therefore value of 1 is typically on, 0 is off.
-                for key, bitlist in fieldmap.get("bytes", {}).items():
+                for key, bitlist in fieldmap.get(BYTES, {}).items():
                     pos = int(key)
                     if isinstance(bitlist, list):
                         for bitmap in bitlist:
                             if (mask := bitmap.get("mask", 0)) and (
-                                name := bitmap.get("name", "")
+                                name := bitmap.get(NAME, "")
                             ):
                                 value = self.f_value[pos]
                                 # shift mask and value right until LSB of mask is one, then get bit value according to mask
@@ -389,21 +428,21 @@ class DeviceHexDataField:
                         )
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
-                if len(hexdata) == 4 and (name := fieldmap.get("name", "")):
+                if len(hexdata) == 4 and (name := fieldmap.get(NAME, "")):
                     values[name] = struct.unpack("<f", hexdata)[0] * float(
-                        fieldmap.get("factor", 1)
+                        fieldmap.get(FACTOR, 1)
                     )
             case DeviceHexDataTypes.strb.value:
                 # 06 can be many bytes, mix of Str and Byte values
-                # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type",
+                # mapping must specify start byte string ("00"-"len-1") for fields, field description needs TYPE,
                 # with a DeviceHexDataTypes base type for value conversion (ui=1, sile=2, sfle=4 bytes).
-                # The optional "length" with int for byte count can be specified (default is 0 if no base type used),
+                # The optional LENGTH with int for byte count can be specified (default is 0 if no base type used),
                 # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
-                # "factor" can be specified optionally for value conversion
-                for key, bytemap in (fieldmap.get("bytes", {}) or fieldmap).items():
+                # FACTOR can be specified optionally for value conversion
+                for key, bytemap in (fieldmap.get(BYTES, {}) or fieldmap).items():
                     pos = int(key)
-                    ftype = bytemap.get("type", DeviceHexDataTypes.unk.value)
-                    length = bytemap.get("length", 0)
+                    ftype = bytemap.get(TYPE, DeviceHexDataTypes.unk.value)
+                    length = bytemap.get(LENGTH, 0)
                     # set default length based on fixed types
                     if ftype == DeviceHexDataTypes.ui.value:
                         length = 1
@@ -418,7 +457,7 @@ class DeviceHexDataField:
                             self.extract_value(
                                 hexdata=self.f_value[pos + 1 : pos + length + 1],
                                 fieldtype=bytemap.get(
-                                    "type", DeviceHexDataTypes.unk.value
+                                    TYPE, DeviceHexDataTypes.unk.value
                                 ),
                                 fieldmap=bytemap,
                             )
@@ -428,7 +467,7 @@ class DeviceHexDataField:
                             self.extract_value(
                                 hexdata=self.f_value[pos : pos + length],
                                 fieldtype=bytemap.get(
-                                    "type", DeviceHexDataTypes.unk.value
+                                    TYPE, DeviceHexDataTypes.unk.value
                                 ),
                                 fieldmap=bytemap,
                             )
@@ -436,7 +475,7 @@ class DeviceHexDataField:
             case _:
                 # check if type provided in mapping and convert value accordingly
                 if (
-                    (ftype := fieldmap.get("type"))
+                    (ftype := fieldmap.get(TYPE))
                     and bytes(ftype) in DeviceHexDataTypes
                     and bytes(ftype) != DeviceHexDataTypes.unk.value
                 ):
@@ -449,6 +488,126 @@ class DeviceHexDataField:
                         )
                     )
         return values
+
+    def update(
+        self,
+        value: float | str | None = None,
+        name: str | bytearray | bytes | None = None,
+        fieldtype: bytearray | bytes | None = None,
+        desc: dict | None = None,
+    ) -> Self:
+        """Return the updated class instance, exception is raised if value encoding was not successfull."""
+        if isinstance(name, str):
+            name = bytearray(bytes.fromhex(f"{name:>02}"))
+        if isinstance(name, bytearray | bytes) and len(name) >= 1:
+            self.f_name = name[0:1]
+        if isinstance(fieldtype, bytearray | bytes):
+            self.f_type = bytearray(fieldtype)
+        if not self.f_name:
+            raise TypeError(
+                "Error updating DeviceHexDataField: Missing field identifier"
+            )
+        try:
+            self.f_value = self.encode_value(
+                value=value, fieldtype=fieldtype, desc=desc
+            )
+            # Update data length
+            self.f_length = len(self.f_type) + len(self.f_value)
+        except (ValueError, TypeError) as err:
+            raise type(err)(
+                f"Error updating DeviceHexDataField {self.f_name.hex()}: {err!s}"
+            ) from err
+        else:
+            return self
+
+    def encode_value(
+        self,
+        value: float | str,
+        fieldtype: bytearray | bytes | None = None,
+        desc: dict | None = None,
+    ) -> bytearray | None:
+        """Return the encoded hex value according to existing or provided base type and field description."""
+        if not isinstance(fieldtype, bytearray | bytes):
+            fieldtype = self.f_type
+        if not isinstance(desc, dict):
+            desc = {}
+        options = desc.get(VALUE_OPTIONS, {})
+        if isinstance(value, str | int | float):
+            # for provided default or state values without value validation descriptions, use value as is
+            if not (options or VALUE_MIN in desc or VALUE_MAX in desc):
+                options = (
+                    [value]
+                    if VALUE_STATE in desc
+                    else [desc.get(VALUE_DEFAULT)]
+                    if VALUE_DEFAULT in desc
+                    else options
+                )
+            # get a validated value for encoding, will raise value or Type Error for invalid value or definitions
+            fieldvalue = MqttCmdValidator(
+                min=desc.get(VALUE_MIN),
+                max=desc.get(VALUE_MAX),
+                step=desc.get(VALUE_STEP),
+                options=options,
+            ).check(value)
+        # use default value if defined in fieldmap
+        elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
+            raise ValueError(
+                f"Expected (default) value for encoding, parameter '{desc.get('name', '')}' value was {type(value)}: {value!s}, with value options: {options!s}"
+            )
+        # set parameters for value conversion and encoding
+        signed = desc.get(SIGNED) is not False
+        divider = desc.get(VALUE_DIVIDER, 1)
+        hexvalue = None
+        match fieldtype:
+            case DeviceHexDataTypes.str.value:
+                # various number of bytes, encode provided string for base type
+                hexvalue = bytearray(str(fieldvalue).encode())
+                if length := int(desc.get(LENGTH, 0)):
+                    # fill length with \x00
+                    hexvalue += bytearray(
+                        max(0, length - len(hexvalue)) * bytes.fromhex("00")
+                    )
+            case DeviceHexDataTypes.ui.value:
+                # 1 byte fix, unsigned int (Base type)
+                if isinstance(fieldvalue, int | float):
+                    hexvalue = bytearray(
+                        int(fieldvalue / divider).to_bytes(
+                            length=1,
+                            byteorder="little",
+                            signed=desc.get(SIGNED) is True,
+                        )
+                    )
+            case DeviceHexDataTypes.sile.value:
+                # 2 bytes fix, signed int LE (Base type)
+                if isinstance(fieldvalue, int | float):
+                    hexvalue = bytearray(
+                        int(fieldvalue / divider).to_bytes(
+                            length=2, byteorder="little", signed=signed
+                        )
+                    )
+            case DeviceHexDataTypes.var.value:
+                # var is always 4 bytes, assuming provided value is int
+                # If a divider is specified, value will be devided prior encoding
+                if isinstance(fieldvalue, int | float):
+                    hexvalue = bytearray(
+                        int(fieldvalue / divider).to_bytes(
+                            length=4, byteorder="little", signed=signed
+                        )
+                    )
+            case DeviceHexDataTypes.sfle.value:
+                # 4 bytes, signed float LE (Base type)
+                # '<f' little-endian 32-bit float (4 Bytes, single)
+                if isinstance(fieldvalue, int | float):
+                    hexvalue = bytearray(struct.pack("<f", fieldvalue / divider))
+            case _:
+                raise TypeError(
+                    f"Field type not supported for encoding, got {fieldtype!s}"
+                )
+        if not hexvalue:
+            raise TypeError(
+                f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter '{desc.get('name', '')}' was {type(value)}: {value!s}, with value options: {options!s}"
+            )
+        return hexvalue
 
 
 @dataclass(order=True, kw_only=True)
@@ -575,14 +734,22 @@ class DeviceHexData:
                     }
                 for f in self.msg_fields.values():
                     name = (
-                        (fld := fieldmap.get(f.f_name.hex()) or {}).get("name")
-                        or (fld.get("bytes") or {})
+                        (fld := fieldmap.get(f.f_name.hex()) or {}).get(NAME)
+                        or (fld.get(BYTES) or {})
                         or ""
                     )
-                    factor = fld.get("factor") or None
+                    factor = fld.get(FACTOR) or None
+                    divider = fld.get(VALUE_DIVIDER) or None
+                    signed = fld.get(SIGNED)
                     if isinstance(name, str) and "timestamp" in str(name):
                         name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
-                    s += f"\n{f.decode().rstrip()}{(Color.CYAN + ' --> ' + str(name) + ('' if factor is None else ' (factor ' + str(factor) + ')') + Color.OFF) if name else ''}"
+                    s += f"\n{f.decode().rstrip()}"
+                    if name:
+                        s += (
+                            f"{Color.CYAN} --> {name}{('' if factor is None else ' (' + FACTOR + ' ' + str(factor) + ')')}"
+                            f"{('' if divider is None else ' (' + VALUE_DIVIDER + ' ' + str(divider) + ')')}"
+                            f"{('' if signed is None else ' (' + SIGNED + ' ' + str(signed) + ')')}{Color.OFF}"
+                        )
                 s += f"\n{80 * '-'}"
         else:
             s = ""
@@ -734,15 +901,25 @@ class MqttDataStats:
 
 @dataclass(kw_only=True)
 class MqttCmdValidator:
-    """Dataclass to specify and validate MQTT command options or values."""
+    """Dataclass to specify and validate MQTT command parameter values."""
 
     min: float | int = 0
     max: float | int = 0
     step: float | int = 0
-    options: set[str, float, int] = field(default_factory=set)
+    options: dict[str | int, str | float | int] | list[int | float] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
         """Validate init parms."""
+        if not self.min:
+            self.min = 0
+        if not self.max:
+            self.max = 0
+        if not self.step:
+            self.step = 0
+        if not self.options:
+            self.options = {}
         if not isinstance(self.min, float | int):
             raise TypeError(
                 f"Expected type float|int for min, got {type(self.min)}: {self.min!s}"
@@ -755,12 +932,12 @@ class MqttCmdValidator:
             raise TypeError(
                 f"Expected type float|int for step, got {type(self.step)}: {self.step!s}"
             )
-        if self.options and isinstance(self.options, set):
+        if self.options and isinstance(self.options, dict | list):
             # ignore step if options are provided
             self.step = 0
         elif self.options:
             raise TypeError(
-                f"Expected type set() for options, got {type(self.options)}: {self.options!s}"
+                f"Expected type list() or dict() for options, got {type(self.options)}: {self.options!s}"
             )
         if self.min > self.max:
             raise ValueError(
@@ -770,6 +947,8 @@ class MqttCmdValidator:
             raise ValueError(
                 f"Expected step to be smaller or equal to delta max/min, got step: {self.step!s}"
             )
+        if self.min == 0 == self.max and not self.options:
+            raise TypeError("Expected range or options definition!")
 
     def __str__(self) -> str:
         """Print the class fields."""
@@ -781,24 +960,47 @@ class MqttCmdValidator:
             raise TypeError(
                 f"Expected type float|int|str for value, got {type(value)}: {value!s}"
             )
-        if self.options and value not in self.options:
-            raise ValueError(
-                f"Provided value is no valid option {self.options!s}, got: {value!s}"
-            )
-        if not isinstance(value, str):
-            # check numbers
-            if self.min < self.max and not self.min <= value <= self.max:
+        if self.options:
+            if isinstance(self.options, list) and value not in self.options:
+                s = "'" if isinstance(value, str) else ""
                 raise ValueError(
-                    f"Provided value is out of range ({self.min!s}-{self.max!s}), got: {value!s}"
+                    f"Provided value is no valid option {self.options!s}, got: {s}{value!s}{s}"
+                )
+            if isinstance(self.options, dict):
+                # check if value is found in dict or list and get corresponding parameter value
+                if value in self.options:
+                    parmvalue = self.options.get(value)
+                elif isinstance(value, str) and value.lower() in self.options:
+                    parmvalue = self.options.get(value.lower())
+                elif found := [v for v in self.options.values() if v == value]:
+                    parmvalue = found[0]
+                else:
+                    s = "'" if isinstance(value, str) else ""
+                    raise ValueError(
+                        f"Provided value is no valid option {self.options!s}, got: {s}{value!s}{s}"
+                    )
+            else:
+                parmvalue = value
+        else:
+            parmvalue = value
+        if not isinstance(parmvalue, str):
+            # check numbers
+            if self.min < self.max and not self.min <= parmvalue <= self.max:
+                raise ValueError(
+                    f"Provided value is out of range ({self.min!s}-{self.max!s}{', step ' + str(self.step) if self.step not in [0, 1] else ''}), got: {parmvalue!s}"
                 )
             # round value to step with same decimals
             if self.step:
-                value = round_by_factor(
-                    self.step * round(value / self.step),
+                parmvalue = round_by_factor(
+                    self.step * round(parmvalue / self.step),
                     self.step,
                 )
-
-        return value
+        elif self.min or self.max:
+            # String value for expected number value
+            raise TypeError(
+                f"Provided value is no number in range ({self.min!s}-{self.max!s}{', step ' + str(self.step) if self.step not in [0, 1] else ''}), got: '{parmvalue!s}'"
+            )
+        return parmvalue
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""

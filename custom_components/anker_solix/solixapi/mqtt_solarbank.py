@@ -7,23 +7,41 @@ Solarbanks can also be controlled via Api, these methods cover settings only con
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
-from .mqttcmdmap import COMMAND_NAME, STATE_NAME, SolixMqttCommands
+from .mqttcmdmap import SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
 # Define supported Models for this class
-MODELS = {"A17C0", "A17C1", "A17C2", "A17C3", "A17C5"}
-# Define supported and validated controls per Model
+MODELS = {
+    "A17C0",  # Solarbank 1 E1600
+    "A17C1",  # Solarbank 2 E1600 Pro
+    "A17C2",  # Solarbank 2 E1600 AC
+    "A17C3",  # Solarbank 2 E1600 Plus
+    "A17C5",  # Solarbank 3 E2700 Pro
+}
+# Define possible controls per Model
+# Those commands are only supported once also described for a message type in the model mapping (except realtime trigger)
+# Models can be removed from a feature to block command usage even if message type is described in the mapping
 FEATURES = {
     SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
     SolixMqttCommands.temp_unit_switch: MODELS,
-    SolixMqttCommands.sb_power_cutoff_select: MODELS,
+    # Min SOC different since SB3
+    SolixMqttCommands.sb_power_cutoff_select: {"A17C0", "A17C1", "A17C2", "A17C3"},
+    SolixMqttCommands.sb_min_soc_select: {"A17C5"},
+    # Commands since SB2
+    SolixMqttCommands.sb_light_switch: MODELS,
+    SolixMqttCommands.sb_light_mode_select: MODELS,
+    SolixMqttCommands.sb_max_load: MODELS,
+    # commands since SB2 AC / SB3
+    SolixMqttCommands.sb_disable_grid_export_switch: MODELS,
+    SolixMqttCommands.sb_device_timeout: MODELS,
+    SolixMqttCommands.sb_ac_input_limit: MODELS,
+    SolixMqttCommands.sb_pv_limit_select: MODELS,
 }
 
 
@@ -36,122 +54,58 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         self.features = FEATURES
         super().__init__(api_instance=api_instance, device_sn=device_sn)
 
-    def validate_command_value(self, command_id: str, value: Any) -> bool:
-        """Validate command value ranges for controls."""
-        # TODO: Enhance validation rules to extract options or ranges from command description per model
-        validation_rules = {
-            SolixMqttCommands.status_request: lambda v: True,
-            SolixMqttCommands.realtime_trigger: lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
-            <= v
-            <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
-            SolixMqttCommands.temp_unit_switch: lambda v: v in [0, 1],
-            SolixMqttCommands.sb_power_cutoff_select: lambda v: v in [5, 10],
-        }
-        rule = validation_rules.get(command_id)
-        return rule(value) if rule else True
-
     async def set_temp_unit(
         self,
-        fahrenheit: bool,
+        unit: str,
         toFile: bool = False,
-    ) -> bool | dict:
+    ) -> dict | None:
         """Set temperature unit via MQTT.
 
         Args:
-            fahrenheit: True for Fahrenheit, False for Celsius
-            toFile: If True, return mock response (for testing compatibility)
+            unit: "fahrenheit" | "celsius"
+            toFile: If True, save mock response (for testing compatibility)
 
         Returns:
-            dict: Mock response if successful, False otherwise
+            dict: Mocked state if successful, False otherwise
 
         Example:
-            await mydevice.set_temp_unit(fahrenheit=False)  # Celsius
+            await mydevice.set_temp_unit(unit="celsius")  # Celsius
 
         """
-        # response
-        resp = {}
-        ctrl1 = self.controls.get(SolixMqttCommands.temp_unit_switch) or {}
-        cmd1 = ctrl1.get(COMMAND_NAME, "")
-        # Validate command value
-        fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
-        if fahrenheit is not None and not self.validate_command_value(cmd1, fahrenheit):
-            self._logger.error(
-                "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
-                self.pn,
-                self.sn,
-                fahrenheit,
-            )
-            return False
-        # Send MQTT commands
-        if (
-            fahrenheit is not None
-            and cmd1
-            and await self._send_mqtt_command(
-                command=cmd1,
-                parameters={"fahrenheit": fahrenheit},
-                description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
-                toFile=toFile,
-            )
-        ):
-            if state_name := ctrl1.get(STATE_NAME):
-                resp[state_name] = fahrenheit
-        if toFile:
-            self._filedata.update(resp)
-        return resp or False
+        # Validate command value and publish command
+        return await self.run_command(
+            cmd=SolixMqttCommands.temp_unit_switch,
+            value=unit,
+            toFile=toFile,
+        )
 
-    async def set_power_cutoff(
+    async def set_min_soc(
         self,
         limit: int | str,
         toFile: bool = False,
     ) -> bool | dict:
-        """Set temperature unit via MQTT.
+        """Set Solarbank SOC reserve via MQTT.
+
+        NOTE: This may be insufficient for SOC reserve setting since that is controlled via Cloud Api
 
         Args:
-            limit: True for Fahrenheit, False for Celsius
-            toFile: If True, return mock response (for testing compatibility)
+            limit: SOC reserve in %
+            toFile: If True, save mock response (for testing compatibility)
 
         Returns:
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_temp_unit(fahrenheit=False)  # Celsius
+            await mydevice.set_power_cutoff(limit=10)  # 10 %
 
         """
-        # response
-        resp = {}
-        ctrl1 = self.controls.get(SolixMqttCommands.sb_power_cutoff_select) or {}
-        cmd1 = ctrl1.get(COMMAND_NAME, "")
-        # Validate command value
-        limit = (
-            int(limit)
-            if str(limit).replace("-", "", 1).replace(".", "", 1).isdigit()
-            else 10
+        # Validate parameters and publish command
+        # Use correct command depending on which is supported by device
+        # Valid option 5 or 10 in % (VALIDATED SB1 ⚠️ Changed on device, but not in App! App needs additional change via Api)
+        return await self.run_command(
+            cmd=SolixMqttCommands.sb_power_cutoff_select
+            if SolixMqttCommands.sb_power_cutoff_select in self.controls
+            else SolixMqttCommands.sb_min_soc_select,
+            value=limit,
+            toFile=toFile,
         )
-        if limit is not None and not self.validate_command_value(cmd1, limit):
-            self._logger.error(
-                "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
-                self.pn,
-                self.sn,
-                limit,
-            )
-            return False
-        # Send MQTT commands
-        if (
-            limit is not None
-            and cmd1
-            and await self._send_mqtt_command(
-                command=cmd1,
-                parameters={"limit": limit},
-                description=f"Power cutoff set to {limit!s} %",
-                toFile=toFile,
-            )
-        ):
-            if state_name := ctrl1.get(STATE_NAME):
-                resp[state_name] = limit
-            else:
-                resp["output_cutoff_data"] = limit
-                resp["lowpower_input_data"] = 4 if limit == 5 else 5
-                resp["input_cutoff_data"] = limit
-        if toFile:
-            self._filedata.update(resp)
-        return resp or False

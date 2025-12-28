@@ -301,6 +301,7 @@ Depending on how devices publish their data in regular, status request or realti
 > - There will be larger amounts of traffic to your HA server but also between the devices and the Anker MQTT and Cloud servers
 > - The Anker cloud infrastructure may not be scalable enough to maintain such 24x7 real time traffic for growing number of devices, since that is no use case with normal mobile App usage
 > - The devices may be kept awake and never go to sleep mode, therefore using more power than necessary
+>
 > For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data.
 
 For more details on MQTT usage and hybrid integration, please refer to [MQTT connection and integration](INFO.md#mqtt-connection-and-integration).

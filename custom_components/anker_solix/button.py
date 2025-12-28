@@ -331,6 +331,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                     timeout=self.coordinator.client.trigger_timeout(),
                     toFile=self.coordinator.client.testmode(),
                 )
+                is not None
             ):
                 dev = self.coordinator.data.get(self.coordinator_context) or {}
                 alias = dev.get("alias") or ""
@@ -361,6 +362,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 and await mdev.status_request(
                     toFile=self.coordinator.client.testmode(),
                 )
+                is not None
             ):
                 dev = self.coordinator.data.get(self.coordinator_context) or {}
                 alias = dev.get("alias") or ""
@@ -495,7 +497,11 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
-                result = {"device_info": self.coordinator.data.get(self.coordinator_context, {})}
+                result = {
+                    "device_info": self.coordinator.data.get(
+                        self.coordinator_context, {}
+                    )
+                }
                 if kwargs.get(INCLUDE_MQTT_CACHE):
                     result.update(
                         {

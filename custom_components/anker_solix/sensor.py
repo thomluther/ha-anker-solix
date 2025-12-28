@@ -347,6 +347,19 @@ DEVICE_SENSORS = [
     AnkerSolixSensorDescription(
         key="dc_output_power_total",
         translation_key="dc_output_power_total",
+        json_key="dc_output_power_total",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        check_invalid=True,
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        # can be combined AC/DC output power
+        key="output_power_total",
+        translation_key="output_power_total",
         json_key="output_power_total",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,

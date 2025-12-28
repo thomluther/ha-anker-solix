@@ -458,7 +458,7 @@ class AnkerSolixBaseApi:
             if new_values and callable(self._mqtt_update_callback):
                 self._mqtt_update_callback(deviceSn)
 
-    def update_device_mqtt(
+    def update_device_mqtt(  # noqa: C901
         self,
         deviceSn: str | None = None,
     ) -> bool:
@@ -534,26 +534,16 @@ class AnkerSolixBaseApi:
                                 "battery_soc",
                                 "battery_soc_total",
                                 "main_battery_soc",
-                                "exp_1_soc",
-                                "exp_2_soc",
-                                "exp_3_soc",
-                                "exp_4_soc",
-                                "exp_5_soc",
                                 "max_soc",
                                 "solarbank_1_soc",
                                 "solarbank_2_soc",
                                 "solarbank_3_soc",
                                 "solarbank_4_soc",
-                                "solarbank_1_battery_power_signed",
-                                "solarbank_2_battery_power_signed",
-                                "solarbank_3_battery_power_signed",
-                                "solarbank_4_battery_power_signed",
+                                "solarbank_1_ac_output_power_signed",
+                                "solarbank_2_ac_output_power_signed",
+                                "solarbank_3_ac_output_power_signed",
+                                "solarbank_4_ac_output_power_signed",
                                 "temperature",
-                                "exp_1_temperature",
-                                "exp_2_temperature",
-                                "exp_3_temperature",
-                                "exp_4_temperature",
-                                "exp_5_temperature",
                                 "photovoltaic_power",
                                 "pv_1_power",
                                 "pv_2_power",
@@ -563,6 +553,7 @@ class AnkerSolixBaseApi:
                                 "pv_power_total",
                                 "dc_input_power",
                                 "dc_input_power_total",
+                                "dc_output_power_total",
                                 "output_power",
                                 "output_power_total",
                                 "output_power_signed_total",
@@ -610,9 +601,7 @@ class AnkerSolixBaseApi:
                         ):
                             device_mqtt[key] = f"{float(value):.0f}"
                             # trigger device capacity calculation with SOC updates
-                            if "battery_soc" in key or (
-                                str(key).startswith("exp") and str(key).endswith("soc")
-                            ):
+                            if key in ["battery_soc", "main_battery_soc"]:
                                 calc_capacity = True
                         elif (
                             key
@@ -620,11 +609,6 @@ class AnkerSolixBaseApi:
                                 # keys with value that should be saved as rounded as 3 decimal float string
                                 "pv_yield",
                                 "battery_soh",
-                                "exp_1_soh",
-                                "exp_2_soh",
-                                "exp_3_soh",
-                                "exp_4_soh",
-                                "exp_5_soh",
                                 "charged_energy",
                                 "discharged_energy",
                                 "output_energy",
@@ -709,6 +693,78 @@ class AnkerSolixBaseApi:
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
                             )
+                        # use expansion values only if installed
+                        elif (
+                            (
+                                key
+                                in [
+                                    "exp_1_soc",
+                                    "exp_1_temperature",
+                                    "exp_1_soh",
+                                ]
+                                and (
+                                    float(mqtt.get("expansion_packs", 0)) >= 1
+                                    or float(mqtt.get("exp_1_soc", 0)) > 0
+                                )
+                            )
+                            or (
+                                key
+                                in [
+                                    "exp_2_soc",
+                                    "exp_2_temperature",
+                                    "exp_2_soh",
+                                ]
+                                and (
+                                    float(mqtt.get("expansion_packs", 0)) >= 2
+                                    or float(mqtt.get("exp_2_soc", 0)) > 0
+                                )
+                            )
+                            or (
+                                key
+                                in [
+                                    "exp_3_soc",
+                                    "exp_3_temperature",
+                                    "exp_3_soh",
+                                ]
+                                and (
+                                    float(mqtt.get("expansion_packs", 0)) >= 3
+                                    or float(mqtt.get("exp_3_soc", 0)) > 0
+                                )
+                            )
+                            or (
+                                key
+                                in [
+                                    "exp_4_soc",
+                                    "exp_4_temperature",
+                                    "exp_4_soh",
+                                ]
+                                and (
+                                    float(mqtt.get("expansion_packs", 0)) >= 4
+                                    or float(mqtt.get("exp_4_soc", 0)) > 0
+                                )
+                            )
+                            or (
+                                key
+                                in [
+                                    "exp_5_soc",
+                                    "exp_5_temperature",
+                                    "exp_5_soh",
+                                ]
+                                and (
+                                    float(mqtt.get("expansion_packs", 0)) >= 5
+                                    or float(mqtt.get("exp_5_soc", 0)) > 0
+                                )
+                            )
+                        ) and str(value).replace("-", "", 1).replace(
+                            ".", "", 1
+                        ).isdigit():
+                            if str(key).endswith("_soh"):
+                                device_mqtt[key] = f"{float(value):.3f}"
+                            else:
+                                device_mqtt[key] = f"{float(value):.0f}"
+                                # trigger capacity calculation if any soc provided
+                                if "_soc" in key:
+                                    calc_capacity = True
                         elif key in ["output_cutoff_data", "min_soc"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in ["last_message"]:
@@ -719,28 +775,41 @@ class AnkerSolixBaseApi:
                         updated = updated or value_updated
                     # calculate extra fields if required values were updated
                     if calc_efficiency:
-                        if (pv := device_mqtt.get("pv_yield")) and (
-                            out := device_mqtt.get("output_energy")
+                        if (
+                            (pv := device_mqtt.get("pv_yield"))
+                            and (out := device_mqtt.get("output_energy"))
+                            and float(pv) > 0
                         ):
                             device_mqtt["device_efficiency"] = (
-                                f"{(float(out) / float(pv) * 100):.3f}"
+                                f"{min(100, float(out) / float(pv) * 100):.3f}"
                             )
-                        if (charge := device_mqtt.get("charged_energy")) and (
-                            discharge := device_mqtt.get("discharged_energy")
+                        if (
+                            (charge := device_mqtt.get("charged_energy"))
+                            and (discharge := device_mqtt.get("discharged_energy"))
+                            and float(charge) > 0
                         ):
                             device_mqtt["battery_efficiency"] = (
-                                f"{(float(discharge) / float(charge) * 100):.3f}"
+                                f"{min(100, float(discharge) / float(charge) * 100):.3f}"
                             )
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if calc_capacity and (cap := device.get("battery_capacity")):
                         # calculate total expansions if expansions are available and no number in mqtt cache
-                        if not mqtt.get("expansion_packs"):
+                        if mqtt.get("expansion_packs") is None:
+                            # deterministic code assumes expansion if soc or soh > 0
                             device_mqtt["expansion_packs"] = len(
                                 [
                                     k
                                     for k in [f"exp_{i!s}_soc" for i in range(1, 6)]
-                                    if device_mqtt.get(k)
+                                    if (
+                                        float(device_mqtt.get(k, 0)) > 0
+                                        or float(
+                                            device_mqtt.get(
+                                                k.replace("_soc", "_soh"), 0
+                                            )
+                                        )
+                                        > 0
+                                    )
                                 ]
                             )
                         # calculate device overall soc if expansions are available and no overall soc in mqtt cache

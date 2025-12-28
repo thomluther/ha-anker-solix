@@ -128,10 +128,10 @@
                 "title": "Anker Solix Optionen",
                 "description": "Ändere die Nutzung der Hub Konfiguration",
                 "data": {
-                    "exclude": "Ausgeschlossene Entitäts-Kategorien"
+                    "exclude": "Ausschliesbare Entitäts-Kategorien"
                 },
                 "data_description": {
-                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)"
+                    "exclude": "Abhängig von den oben angezeigten ausgeschlossenen Kategorien kann die Anzahl der Entitäten und Api Anfragen reduziert werden (besonders für Energie Kategorien)"
                 },
                 "sections": {
                     "api_options": {
@@ -776,6 +776,9 @@
             "dc_output_power_total": {
                 "name": "DC Ausgangsleistung gesamt"
             },
+            "output_power_total": {
+                "name": "Ausgangsleistung gesamt"
+            },
             "ac_output_power": {
                 "name": "AC Ausgangsleistung"
             },
@@ -891,7 +894,7 @@
                 "name": "Firmware"
             },
             "sub_package_num": {
-                "name": "Erweiterungsakku"
+                "name": "Erweiterungsakkus"
             },
             "battery_count": {
                 "name": "Batteriemodule"

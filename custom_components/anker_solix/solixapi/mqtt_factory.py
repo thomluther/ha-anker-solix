@@ -1,3 +1,4 @@
+
 """Device factory for creating appropriate Anker Solix MQTT device control instances."""
 
 from __future__ import annotations
@@ -5,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .apitypes import SolixDeviceType
-from .mqtt_c1000x import MODELS as C1000_MODELS, SolixMqttDeviceC1000x
+from .mqtt_charger import MODELS as CHARGER_MODELS, SolixMqttDeviceCharger
 from .mqtt_device import SolixMqttDevice
 from .mqtt_pps import MODELS as PPS_MODELS, SolixMqttDevicePps
 from .mqtt_solarbank import MODELS as SB_MODELS, SolixMqttDeviceSolarbank
@@ -39,19 +40,14 @@ class SolixMqttDeviceFactory:
         """
         if self.device_data and (category := self.device_data.get("type") or ""):
             pn = self.device_data.get("device_pn") or ""
-
             # TODO: Update factory when new device categories and criteria are implemented
             if pn in SOLIXMQTTMAP:
-                if category in [SolixDeviceType.PPS.value]:
-                    if pn in C1000_MODELS:
-                        return SolixMqttDeviceC1000x(self.api, self.device_sn)
-                    # Other PPS devices
-                    if pn in PPS_MODELS:
-                        return SolixMqttDevicePps(self.api, self.device_sn)
-
+                if category in [SolixDeviceType.PPS.value] and pn in PPS_MODELS:
+                    return SolixMqttDevicePps(self.api, self.device_sn)
                 if category in [SolixDeviceType.SOLARBANK.value] and pn in SB_MODELS:
                     return SolixMqttDeviceSolarbank(self.api, self.device_sn)
-
+                if category in [SolixDeviceType.CHARGER.value] and pn in CHARGER_MODELS:
+                    return SolixMqttDeviceCharger(self.api, self.device_sn)
             # return default MQTT device supporting only the realtime trigger control
             return SolixMqttDevice(self.api, self.device_sn)
         return None

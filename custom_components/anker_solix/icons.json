@@ -265,6 +265,9 @@
             "dc_output_power_total": {
                 "default": "mdi:home-battery-outline"
             },
+            "output_power_total": {
+                "default": "mdi:home-battery-outline"
+            },
             "ac_output_power": {
                 "default": "mdi:home-battery-outline"
             },

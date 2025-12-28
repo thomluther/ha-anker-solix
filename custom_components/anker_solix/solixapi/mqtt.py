@@ -19,7 +19,14 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttcmdmap import (
+    COMMAND_LIST,
+    COMMAND_NAME,
+    NAME,
+    TYPE,
+    VALUE_FOLLOWS,
+    SolixMqttCommands,
+)
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
@@ -292,12 +299,14 @@ class AnkerSolixMqttSession:
         self,
         command: str = SolixMqttCommands.realtime_trigger,
         parameters: dict | None = None,
+        model: str | None = None,
     ) -> str | None:
         """Compose the hex data for MQTT publish payload to Anker Solix devices."""
-        if hexdata := generate_mqtt_command(command=command, parameters=parameters):
+        if hexdata := generate_mqtt_command(command, parameters, model):
             self._logger.debug(
-                "Api %s MQTT session generated hexdata for device mqtt command '%s':\n%s",
+                "Api %s MQTT session generated hexdata for device%s command %s:\n%s",
                 self.apisession.nickname,
+                " " + str(model) if model else "",
                 command,
                 hexdata.hex(":"),
             )
@@ -563,8 +572,8 @@ class AnkerSolixMqttSession:
     def cleanup(self):
         """Clean up client connections and delete certificate files."""
         if self.is_connected():
-            self.client.loop_stop()
             self.client.disconnect()
+            self.client.loop_stop()
         self.client = None
         self.subscriptions = set()
         self.triggered_devices = set()
@@ -594,6 +603,7 @@ class AnkerSolixMqttSession:
             hexbytes=self.get_command_data(
                 command=SolixMqttCommands.realtime_trigger,
                 parameters={"timeout": timeout},
+                model=deviceDict.get("device_pn"),
             ),
         )[1]
         with contextlib.suppress(ValueError, RuntimeError):
@@ -611,6 +621,7 @@ class AnkerSolixMqttSession:
             deviceDict=deviceDict,
             hexbytes=self.get_command_data(
                 command=SolixMqttCommands.status_request,
+                model=deviceDict.get("device_pn"),
             ),
         )[1]
         with contextlib.suppress(ValueError, RuntimeError):
@@ -722,6 +733,7 @@ class AnkerSolixMqttSession:
                                 hexbytes=self.get_command_data(
                                     command=SolixMqttCommands.realtime_trigger,
                                     parameters={"timeout": timeout},
+                                    model=pn,
                                 ),
                             )
                             self._logger.debug(
@@ -738,7 +750,7 @@ class AnkerSolixMqttSession:
                                     "device_pn": pn,
                                 },
                                 hexbytes=self.get_command_data(
-                                    command=SolixMqttCommands.status_request,
+                                    command=SolixMqttCommands.status_request, model=pn
                                 ),
                             )
                             self._logger.info(
@@ -967,8 +979,10 @@ class AnkerSolixMqttSession:
             return False
 
 
-def generate_mqtt_command(  # noqa: C901
-    command: str = SolixMqttCommands.realtime_trigger, parameters: dict | None = None
+def generate_mqtt_command(
+    command: str = SolixMqttCommands.realtime_trigger,
+    parameters: dict | None = None,
+    model: str | None = None,
 ) -> DeviceHexData | None:
     r"""Compose the hex data for MQTT publish payload to Anker Solix devices.
 
@@ -992,351 +1006,76 @@ def generate_mqtt_command(  # noqa: C901
     """
 
     hexdata = None
+    msgtype = ""
+    fields = {}
     if not isinstance(parameters, dict):
         parameters = {}
-
-    # TODO: Add method to build command based on MQTT Map description
-
-    if command == SolixMqttCommands.realtime_trigger:
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0057"))
+    # get defined message type and description for command if model provided
+    if isinstance(model, str) and (pn_map := SOLIXMQTTMAP.get(model)):
+        msgtype, fields = (
+            [
+                (k, v)
+                for k, v in pn_map.items()
+                if command
+                in [
+                    v.get(COMMAND_NAME),
+                    *v.get(COMMAND_LIST, []),
+                ]
+            ][:1]
+            or [("", {})]
+        )[0]
+    if fields:
+        # generic build of command based on MQTT Map description if available
+        # extract nested command descriptions
+        fields = fields.get(str(command), fields)
+        # consider only byte field descriptions
+        if bytefields := {k: desc for k, desc in fields.items() if len(k) <= 2}:
+            hexdata = DeviceHexData(
+                model=model, msg_header=DeviceHexDataHeader(cmd_msg=msgtype)
+            )
+            for field, desc in bytefields.items():
+                field = f"{field.lower():>02}"
+                if (name := desc.get(NAME)) == "pattern_22":
+                    hexdata.update_field(DeviceHexDataField(hexbytes=f"{field}0122"))
+                elif name == "msg_timestamp":
+                    # select proper timestamp format depending on field name
+                    if field == "fd":
+                        hexdata.add_timestamp_ms_field()
+                    else:
+                        hexdata.add_timestamp_field()
+                else:
+                    # compose command field based on description
+                    value = parameters.get(desc.get(VALUE_FOLLOWS) or name)
+                    hexdata.update_field(
+                        DeviceHexDataField().update(
+                            value=value,
+                            name=field,
+                            fieldtype=desc.get(TYPE),
+                            desc=desc,
+                        )
+                    )
+    elif command == SolixMqttCommands.realtime_trigger:
+        hexdata = DeviceHexData(
+            msg_header=DeviceHexDataHeader(cmd_msg=msgtype or "0057")
+        )
         hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
         hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
         hexdata.update_field(
             DeviceHexDataField(
                 f_name=bytes.fromhex("a3"),
                 f_type=DeviceHexDataTypes.var.value,
-                f_value=int(parameters.get("timeout") or 60).to_bytes(
-                    length=4, byteorder="little"
-                ),
+                f_value=int(
+                    parameters.get("timeout")
+                    or parameters.get("trigger_timeout_sec")
+                    or 60
+                ).to_bytes(length=4, byteorder="little", signed=False),
             )
         )
         hexdata.add_timestamp_field()
     elif command == SolixMqttCommands.status_request:
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0040"))
+        hexdata = DeviceHexData(
+            msg_header=DeviceHexDataHeader(cmd_msg=msgtype or "0040")
+        )
         hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
         hexdata.add_timestamp_field()
-    elif command == SolixMqttCommands.temp_unit_switch:
-        # Temperature unit: Value 0/1 (0=Celsius, 1=Fahrenheit) (VALIDATED SB1 ✅)
-        value = 1 if parameters.get("fahrenheit") else 0
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0050"))
-        hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-        hexdata.update_field(
-            DeviceHexDataField(
-                f_name=bytes.fromhex("a2"),
-                f_type=DeviceHexDataTypes.ui.value,
-                f_value=value.to_bytes(length=1, byteorder="little"),
-            )
-        )
-        hexdata.add_timestamp_field()
-    elif command == SolixMqttCommands.sb_power_cutoff_select:
-        # Valid option 5 or 10 in % (VALIDATED SB1 ⚠️ Changed on device, but not in App! App needs additional change via Api)
-        value = 5 if str(parameters.get("limit")) == "5" else 10
-        lowpower = 4 if value == 5 else 5
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0067"))
-        hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-        # output_cutoff_data
-        hexdata.update_field(
-            DeviceHexDataField(
-                f_name=bytes.fromhex("a2"),
-                f_type=DeviceHexDataTypes.ui.value,
-                f_value=value.to_bytes(length=1, byteorder="little"),
-            )
-        )
-        # lowpower_input_data
-        hexdata.update_field(
-            DeviceHexDataField(
-                f_name=bytes.fromhex("a3"),
-                f_type=DeviceHexDataTypes.ui.value,
-                f_value=lowpower.to_bytes(length=1, byteorder="little"),
-            )
-        )
-        # input_cutoff_data
-        hexdata.update_field(
-            DeviceHexDataField(
-                f_name=bytes.fromhex("a4"),
-                f_type=DeviceHexDataTypes.ui.value,
-                f_value=value.to_bytes(length=1, byteorder="little"),
-            )
-        )
-        hexdata.add_timestamp_field()
-    elif command.startswith("c1000x_"):
-        # C1000X control commands using mobile app protocol patterns
-        # These patterns were captured from actual mobile app MQTT traffic and validated
-
-        if command == "c1000x_ac_output":
-            # AC output control: Message type 004a (VALIDATED ✅)
-            value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004a")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))
-        elif command == "c1000x_dc_output":
-            # DC output control: Message type 004b (VALIDATED ✅)
-            value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004b")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))
-        elif command == "c1000x_light_mode":
-            # Light mode control: Message type 004f (VALIDATED ✅)
-            mode = int(parameters.get("mode", 0))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004f")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            mode_hex_map = {
-                0: "a2020100",
-                1: "a2020101",
-                2: "a2020102",
-                3: "a2020103",
-                4: "a2020104",
-            }
-            mode_hex = mode_hex_map.get(mode, "a2020100")
-            hexdata.update_field(DeviceHexDataField(hexbytes=mode_hex))
-        elif command == "c1000x_display":
-            # Display control: Message type 0052
-            value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0052")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))
-        elif command == "c1000x_display_mode":
-            # Display mode: Message type 004c (VALIDATED ✅)
-            value = int(parameters.get("mode", 0))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004c")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            mode_hex_map = {0: "a2020100", 1: "a2020101", 2: "a2020102", 3: "a2020103"}
-            mode_hex = mode_hex_map.get(value, "a2020100")
-            hexdata.update_field(DeviceHexDataField(hexbytes=mode_hex))
-        elif command == "c1000x_temp_unit":
-            # Temperature unit: Message type 0050
-            value = 1 if parameters.get("fahrenheit", False) else 0
-            hexdata = DeviceHexData(
-                model="A1761",
-                msg_header=DeviceHexDataHeader(
-                    cmd_msg="0050"
-                ),  # TODO: Update message type
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.ui.value,
-                    f_value=value.to_bytes(length=1, byteorder="little"),
-                )
-            )
-        elif command == "c1000x_dc_output_mode":
-            # DC output mode: Message type 0076 (VALIDATED ✅)
-            value = int(parameters.get("mode", 1))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0076")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # Normal
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # Smart
-        elif command == "c1000x_ac_output_mode":
-            # AC output mode: Message type 0077 (VALIDATED ✅)
-            value = int(parameters.get("mode", 1))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0077")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # Normal
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # Smart
-        elif command == "c1000x_max_load":
-            # Max load: Message type 0044
-            max_watts = int(parameters.get("max_watts", 1000))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0044")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.sile.value,
-                    f_value=max_watts.to_bytes(length=2, byteorder="little"),
-                )
-            )
-        elif command == "c1000x_device_timeout":
-            # Device timeout in minutes: Message type 0045
-            timeout = int(parameters.get("timeout", 720))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0045")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.sile.value,
-                    f_value=timeout.to_bytes(length=2, byteorder="little"),
-                )
-            )
-        elif command == "c1000x_display_timeout":
-            # Device timeout in seconds: Message type 0046
-            timeout = int(parameters.get("timeout", 20))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0046")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.sile.value,
-                    f_value=timeout.to_bytes(length=2, byteorder="little"),
-                )
-            )
-        elif command == "c1000x_ultrafast_toggle":
-            # UltraFast charging toggle: Message type 005e (CAPTURED FROM MOBILE APP)
-            enabled = parameters.get("enabled", False)
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="005e")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            # ON/OFF toggle pattern from mobile app capture
-            if enabled:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # ON
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # OFF
-        # Add timestamp field for all C1000X commands
-        if hexdata:
-            hexdata.add_timestamp_field()
-
-    elif command.startswith("f3800_"):
-        # F3800 control commands (A1790P/A1790) - mimic C1000X logic, update model and message types if needed
-        # For now, use same message types as C1000X (unless future changes are needed)
-        if command == "f3800_ac_output":
-            value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="004a")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))
-        elif command == "f3800_dc_output":
-            value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="004b")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))
-        elif command == "f3800_light_mode":
-            mode = int(parameters.get("mode", 0))
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="004f")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            mode_hex_map = {
-                0: "a2020100",
-                1: "a2020101",
-                2: "a2020102",
-                3: "a2020103",
-            }
-            mode_hex = mode_hex_map.get(mode, "a2020100")
-            hexdata.update_field(DeviceHexDataField(hexbytes=mode_hex))
-        elif command == "f3800_display":
-            value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="0052")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))
-        elif command == "f3800_display_mode":
-            value = int(parameters.get("mode", 0))
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="004c")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            mode_hex_map = {0: "a2020100", 1: "a2020101", 2: "a2020102", 3: "a2020103"}
-            mode_hex = mode_hex_map.get(value, "a2020100")
-            hexdata.update_field(DeviceHexDataField(hexbytes=mode_hex))
-        elif command == "f3800_temp_unit":
-            value = 1 if parameters.get("fahrenheit", False) else 0
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="0050")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(DeviceHexDataField(hexbytes=f"a20201{value:02x}"))
-        elif command == "f3800_dc_output_mode":
-            value = int(parameters.get("mode", 1))
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="0076")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # Normal
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # Off
-        elif command == "f3800_ac_output_mode":
-            value = int(parameters.get("mode", 1))
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="0077")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # Normal
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # Off
-        elif command == "f3800_device_timeout":
-            timeout_minutes = int(parameters.get("timeout_minutes", 720))
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="0045")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.sile.value,
-                    f_value=timeout_minutes.to_bytes(length=2, byteorder="little"),
-                )
-            )
-        elif command == "f3800_max_load":
-            max_watts = int(parameters.get("max_watts", 1800))
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="0044")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.sile.value,
-                    f_value=max_watts.to_bytes(length=2, byteorder="little"),
-                )
-            )
-        elif command == "f3800_port_memory":
-            value = 1 if parameters.get("enabled", True) else 0
-            hexdata = DeviceHexData(
-                model="A1790P", msg_header=DeviceHexDataHeader(cmd_msg="0079")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(DeviceHexDataField(hexbytes=f"a20201{value:02x}"))
-        # Add timestamp field for all F3800 commands
-        if hexdata:
-            hexdata.add_timestamp_field()
-
     return hexdata
