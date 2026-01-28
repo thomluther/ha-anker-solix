@@ -62,6 +62,7 @@ FEATURES = {
     SolixMqttCommands.display_switch: MODELS,
     SolixMqttCommands.display_mode_select: MODELS,
     SolixMqttCommands.display_timeout_seconds: MODELS,
+    SolixMqttCommands.light_switch: MODELS,
     SolixMqttCommands.light_mode_select: MODELS,
     SolixMqttCommands.port_memory_switch: MODELS,
     SolixMqttCommands.soc_limits: MODELS,

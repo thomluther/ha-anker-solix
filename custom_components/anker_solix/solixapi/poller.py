@@ -303,14 +303,14 @@ async def poll_sites(  # noqa: C901
                     )
                     sb_total_soc_calc = float(sb_total_soc or 0)
 
+                total_preset = str(mysite.get("retain_load", "")).replace("W", "")
                 for index, solarbank in enumerate(sb_list):
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    solarbank = dict(solarbank).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in solarbank:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        solarbank = dict(solarbank).copy()
                         solarbank.update({"alias_name": solarbank.pop("device_name")})
                     # work around for system and device output presets in dual solarbank 1 setups, which are not set correctly and cannot be queried with load schedule for shared accounts
-                    total_preset = str(mysite.get("retain_load", "")).replace("W", "")
                     # get count of same solarbank types in site
                     sb_count = max(
                         1,
@@ -577,10 +577,10 @@ async def poll_sites(  # noqa: C901
 
                 grid_info = mysite.get("grid_info") or {}
                 for grid in grid_info.get("grid_list") or []:
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    grid = dict(grid).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in grid:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        grid = dict(grid).copy()
                         grid.update({"alias_name": grid.pop("device_name")})
                     if sn := api._update_dev(
                         grid
@@ -615,10 +615,10 @@ async def poll_sites(  # noqa: C901
                         api._site_devices.add(sn)
                 pps_info = mysite.get("pps_info") or {}
                 for pps in pps_info.get("pps_list") or []:
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    pps = dict(pps).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in pps:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        pps = dict(pps).copy()
                         pps.update({"alias_name": pps.pop("device_name")})
                     if sn := api._update_dev(
                         pps,
@@ -629,10 +629,10 @@ async def poll_sites(  # noqa: C901
                         api._site_devices.add(sn)
                 sb_pps_info = mysite.get("solarbank_pps_info") or {}
                 for sbpps in sb_pps_info.get("pps_list") or []:
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    sbpps = dict(sbpps).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in sbpps:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        sbpps = dict(sbpps).copy()
                         sbpps.update({"alias_name": sbpps.pop("device_name")})
                     if sn := api._update_dev(
                         sbpps,
@@ -641,13 +641,28 @@ async def poll_sites(  # noqa: C901
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
-                cb_info = mysite.get("combiner_box_info") or {}
+                if not (cb_info := mysite.get("combiner_box_info") or {}) and (
+                    station_sn := mysite.get("station_sn")
+                ):
+                    # handle updates for old scene info without combiner box info
+                    cb_info = {"combiner_box_list": [{"device_sn": station_sn}]}
                 for cb in cb_info.get("combiner_box_list") or []:
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    cb = dict(cb).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in cb:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        cb = dict(cb).copy()
                         cb.update({"alias_name": cb.pop("device_name")})
+                    cb.update({"set_load_power": total_preset})
+                    # as time progressed, update actual schedule slot presets from a cached schedule if available
+                    if schedule := (api.devices.get(cb.get("device_sn", ""), {})).get(
+                        "schedule"
+                    ):
+                        cb.update(
+                            {
+                                "schedule": schedule,
+                                "retain_load": total_preset,  # only a flag to indicate the actual schedule preset updates don't need to update site appliance load
+                            }
+                        )
                     if sn := api._update_dev(
                         cb,
                         devType=SolixDeviceType.COMBINER_BOX.value,
@@ -657,10 +672,10 @@ async def poll_sites(  # noqa: C901
                         api._site_devices.add(sn)
                 cp_info = mysite.get("charging_pile_info") or {}
                 for cp in cp_info.get("charging_pile_list") or []:
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    cp = dict(cp).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in cp:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        cp = dict(cp).copy()
                         cp.update({"alias_name": cp.pop("device_name")})
                     if sn := api._update_dev(
                         cp,
@@ -670,10 +685,10 @@ async def poll_sites(  # noqa: C901
                     ):
                         api._site_devices.add(sn)
                 for solar in mysite.get("solar_list") or []:
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    solar = dict(solar).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in solar:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        solar = dict(solar).copy()
                         solar.update({"alias_name": solar.pop("device_name")})
                     if sn := api._update_dev(
                         solar,
@@ -683,10 +698,10 @@ async def poll_sites(  # noqa: C901
                     ):
                         api._site_devices.add(sn)
                 for powerpanel in mysite.get("powerpanel_list") or []:
+                    # modify only a copy of the device dict to prevent changing the scene info dict
+                    powerpanel = dict(powerpanel).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in powerpanel:
-                        # modify only a copy of the device dict to prevent changing the scene info dict
-                        powerpanel = dict(powerpanel).copy()
                         powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                     if sn := api._update_dev(
                         powerpanel,

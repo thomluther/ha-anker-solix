@@ -45,7 +45,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.4.2.0"
+VERSION: str = "3.5.1.0"
 
 
 class AnkerSolixApiExport:
@@ -779,6 +779,8 @@ class AnkerSolixApiExport:
                     "16",
                     "18",
                     "20",
+                    "23",
+                    "26",
                 ]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
@@ -948,7 +950,6 @@ class AnkerSolixApiExport:
                         "attributes": [
                             "rssi",
                             "pv_power_limit",
-                            "temperature",
                             "legal_power_limit",
                             "power_limit_option",
                             "power_limit_option_real",

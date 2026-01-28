@@ -3,7 +3,7 @@
 from dataclasses import fields
 from datetime import datetime
 from logging import Logger, getLogger
-from typing import Any
+from typing import Any, Final
 import urllib.parse
 
 import voluptuous as vol
@@ -20,15 +20,17 @@ from .solixapi.apitypes import (
 
 LOGGER: Logger = getLogger(__package__)
 
-NAME: str = "Anker Solix"
-DOMAIN: str = "anker_solix"
-MANUFACTURER: str = "Anker"
-ATTRIBUTION: str = "Data provided by Anker Solix Api"
-ACCEPT_TERMS: str = "accept_terms"
-TERMS_LINK: str = "terms_link"
-MQTT_LINK: str = "mqtt_link"
-TC_LINK: str = "https://github.com/thomluther/ha-anker-solix/blob/main/README.md"
-MQ_LINK: str = "https://github.com/thomluther/ha-anker-solix#mqtt-managed-devices"
+NAME: Final[str] = "Anker Solix"
+DOMAIN: Final[str] = "anker_solix"
+MANUFACTURER: Final[str] = "Anker"
+ATTRIBUTION: Final[str] = "Data provided by Anker Solix Api"
+ACCEPT_TERMS: Final[str] = "accept_terms"
+TERMS_LINK: Final[str] = "terms_link"
+MQTT_LINK: Final[str] = "mqtt_link"
+TC_LINK: Final[str] = "https://github.com/thomluther/ha-anker-solix/blob/main/README.md"
+MQ_LINK: Final[str] = (
+    "https://github.com/thomluther/ha-anker-solix#mqtt-managed-devices"
+)
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
@@ -38,75 +40,75 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SWITCH,
 ]
-TESTMODE: str = "testmode"
-TESTFOLDER: str = "testfolder"
-CONF_MQTT_TEST_SPEED: str = "mqtt_test_speed"
-INTERVALMULT: str = "dev_interval_mult"
-UPDT_INTV_MIN: str = "updt_interval_min"
-UPDT_INTV_MAX: str = "updt_interval_max"
-CONF_SKIP_INVALID: str = "skip_invalid"
-CONF_ENDPOINT_LIMIT: str = "endpoint_limit"
-CONF_API_OPTIONS: str = "api_options"
-CONF_MQTT_OPTIONS: str = "mqtt_options"
-CONF_TEST_OPTIONS: str = "test_options"
-CONF_MQTT_USAGE: str = "mqtt_usage"
-CONF_TRIGGER_TIMEOUT: str = "trigger_timeout"
-EXAMPLESFOLDER: str = "examples"
-REGISTERED_EXCLUDES: str = "registered_excludes"
-ERROR_DETAIL: str = "error_detail"
-LAST_PERIOD: str = "last_period"
-LAST_RESET: str = "last_reset"
-SHARED_ACCOUNT: str = "shared_account"
-IMAGEFOLDER: str = "images"
-EXPORTFOLDER: str = "exports"
-MQTT_OVERLAY: str = "mqtt_overlay"
+TESTMODE: Final[str] = "testmode"
+TESTFOLDER: Final[str] = "testfolder"
+CONF_MQTT_TEST_SPEED: Final[str] = "mqtt_test_speed"
+INTERVALMULT: Final[str] = "dev_interval_mult"
+UPDT_INTV_MIN: Final[str] = "updt_interval_min"
+UPDT_INTV_MAX: Final[str] = "updt_interval_max"
+CONF_SKIP_INVALID: Final[str] = "skip_invalid"
+CONF_ENDPOINT_LIMIT: Final[str] = "endpoint_limit"
+CONF_API_OPTIONS: Final[str] = "api_options"
+CONF_MQTT_OPTIONS: Final[str] = "mqtt_options"
+CONF_TEST_OPTIONS: Final[str] = "test_options"
+CONF_MQTT_USAGE: Final[str] = "mqtt_usage"
+CONF_TRIGGER_TIMEOUT: Final[str] = "trigger_timeout"
+EXAMPLESFOLDER: Final[str] = "examples"
+REGISTERED_EXCLUDES: Final[str] = "registered_excludes"
+ERROR_DETAIL: Final[str] = "error_detail"
+LAST_PERIOD: Final[str] = "last_period"
+LAST_RESET: Final[str] = "last_reset"
+SHARED_ACCOUNT: Final[str] = "shared_account"
+IMAGEFOLDER: Final[str] = "images"
+EXPORTFOLDER: Final[str] = "exports"
+MQTT_OVERLAY: Final[str] = "mqtt_overlay"
 
 # True will enable configuration options for testmode and testfolder
-ALLOW_TESTMODE: bool = False
+ALLOW_TESTMODE: Final[bool] = False
 # True will enable variance for some measurement numbers when running in testmode from static files (numbers have no logical meaning)
-TEST_NUMBERVARIANCE: bool = False
+TEST_NUMBERVARIANCE: Final[bool] = False
 # True will create all entities per device type for testing even if no values available
-CREATE_ALL_ENTITIES: bool = False
+CREATE_ALL_ENTITIES: Final[bool] = False
 # True will enable MQTT usage per default
-DEFAULT_MQTT_USAGE: bool = False
+DEFAULT_MQTT_USAGE: Final[bool] = False
 
-SERVICE_GET_SYSTEM_INFO = "get_system_info"
-SERVICE_GET_DEVICE_INFO = "get_device_info"
-SERVICE_EXPORT_SYSTEMS = "export_systems"
-SERVICE_GET_SOLARBANK_SCHEDULE = "get_solarbank_schedule"
-SERVICE_CLEAR_SOLARBANK_SCHEDULE = "clear_solarbank_schedule"
-SERVICE_SET_SOLARBANK_SCHEDULE = "set_solarbank_schedule"
-SERVICE_UPDATE_SOLARBANK_SCHEDULE = "update_solarbank_schedule"
-SERVICE_MODIFY_SOLIX_BACKUP_CHARGE = "modify_solix_backup_charge"
-SERVICE_MODIFY_SOLIX_USE_TIME = "modify_solix_use_time"
-SERVICE_API_REQUEST = "api_request"
+SERVICE_GET_SYSTEM_INFO: Final[str] = "get_system_info"
+SERVICE_GET_DEVICE_INFO: Final[str] = "get_device_info"
+SERVICE_EXPORT_SYSTEMS: Final[str] = "export_systems"
+SERVICE_GET_SOLARBANK_SCHEDULE: Final[str] = "get_solarbank_schedule"
+SERVICE_CLEAR_SOLARBANK_SCHEDULE: Final[str] = "clear_solarbank_schedule"
+SERVICE_SET_SOLARBANK_SCHEDULE: Final[str] = "set_solarbank_schedule"
+SERVICE_UPDATE_SOLARBANK_SCHEDULE: Final[str] = "update_solarbank_schedule"
+SERVICE_MODIFY_SOLIX_BACKUP_CHARGE: Final[str] = "modify_solix_backup_charge"
+SERVICE_MODIFY_SOLIX_USE_TIME: Final[str] = "modify_solix_use_time"
+SERVICE_API_REQUEST: Final[str] = "api_request"
 
 
-START_TIME = "start_time"
-END_TIME = "end_time"
-PLAN = "plan"
-WEEK_DAYS = "week_days"
-APPLIANCE_LOAD = "appliance_load"
-DEVICE_LOAD = "device_load"
-CHARGE_PRIORITY_LIMIT = "charge_priority_limit"
-ALLOW_EXPORT = "allow_export"
-DISCHARGE_PRIORITY = "discharge_priority"
-INCLUDE_CACHE = "include_cache"
-INCLUDE_MQTT_CACHE = "include_mqtt_cache"
-INCLUDE_MQTT = "include_mqtt"
-BACKUP_START = "backup_start"
-BACKUP_END = "backup_end"
-BACKUP_DURATION = "backup_duration"
-ENABLE_BACKUP = "enable_backup"
-START_MONTH = "start_month"
-END_MONTH = "end_month"
-DAY_TYPE = "day_type"
-START_HOUR = "start_hour"
-END_HOUR = "end_hour"
-TARIFF = "tariff"
-TARIFF_PRICE = "tariff_price"
-DELETE = "delete"
-ENDPOINT = "endpoint"
+START_TIME: Final[str] = "start_time"
+END_TIME: Final[str] = "end_time"
+PLAN: Final[str] = "plan"
+WEEK_DAYS: Final[str] = "week_days"
+APPLIANCE_LOAD: Final[str] = "appliance_load"
+DEVICE_LOAD: Final[str] = "device_load"
+CHARGE_PRIORITY_LIMIT: Final[str] = "charge_priority_limit"
+ALLOW_EXPORT: Final[str] = "allow_export"
+DISCHARGE_PRIORITY: Final[str] = "discharge_priority"
+INCLUDE_CACHE: Final[str] = "include_cache"
+INCLUDE_MQTT_CACHE: Final[str] = "include_mqtt_cache"
+INCLUDE_MQTT: Final[str] = "include_mqtt"
+BACKUP_START: Final[str] = "backup_start"
+BACKUP_END: Final[str] = "backup_end"
+BACKUP_DURATION: Final[str] = "backup_duration"
+ENABLE_BACKUP: Final[str] = "enable_backup"
+START_MONTH: Final[str] = "start_month"
+END_MONTH: Final[str] = "end_month"
+DAY_TYPE: Final[str] = "day_type"
+START_HOUR: Final[str] = "start_hour"
+END_HOUR: Final[str] = "end_hour"
+TARIFF: Final[str] = "tariff"
+TARIFF_PRICE: Final[str] = "tariff_price"
+DELETE: Final[str] = "delete"
+ENDPOINT: Final[str] = "endpoint"
 
 
 def extractNone(value: Any) -> None:
@@ -175,7 +177,7 @@ VALID_PLAN = vol.All(
 )
 EXTRA_PLAN_AC = vol.In([SolarbankRatePlan.backup, SolarbankRatePlan.use_time])
 EXTRA_PLAN_SB3 = vol.In([SolarbankRatePlan.time_slot])
-MONTHS: list = [
+MONTHS: Final[list] = [
     "jan",
     "feb",
     "mar",

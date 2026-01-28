@@ -521,6 +521,18 @@
                         "name": "Angepasst"
                     }
                 }
+            },
+            "preset_ac_input_limit": {
+                "name": "AC Eingangslimit"
+            },
+            "grid_export_limit": {
+                "name": "Netz Einspeiselimit"
+            },
+            "ac_output_timeout": {
+                "name": "Zeitüberschreitung AC"
+            },
+            "dc_output_timeout": {
+                "name": "Zeitüberschreitung DC"
             }
         },
         "select": {
@@ -600,11 +612,71 @@
             "preset_inverter_limit": {
                 "name": "MWR Limit"
             },
+            "max_load": {
+                "name": "Abgabelimit"
+            },
+            "max_load_total": {
+                "name": "Abgabelimit"
+            },
             "preset_ac_input_limit": {
                 "name": "AC Eingangslimit"
             },
             "preset_pv_input_limit": {
                 "name": "PV Eingangslimit"
+            },
+            "device_timeout": {
+                "name": "Gerätezeitüberschreitung"
+            },
+            "min_soc": {
+                "name": "SOC Minimum"
+            },
+            "max_soc": {
+                "name": "SOC Maximum"
+            },
+            "temp_unit": {
+                "name": "Temperatureinheit",
+                "state": {
+                    "celsius": "Celsius",
+                    "fahrenheit": "Fahrenheit"
+                }
+            },
+            "light_mode": {
+                "name": "Licht Modus",
+                "state": {
+                    "normal": "Normal",
+                    "mood": "Stimmungslicht",
+                    "off": "Aus",
+                    "low": "Dunkel",
+                    "medium": "Mittel",
+                    "high": "Hell",
+                    "blinking": "Blinkend"
+                }
+            },
+            "display_timeout": {
+                "name": "Display Zeitüberschreitung"
+            },
+            "display_mode": {
+                "name": "Display Modus",
+                "state": {
+                    "off": "Aus",
+                    "low": "Dunkel",
+                    "medium": "Mittel",
+                    "high": "Hell"
+                }
+            },
+            "ac_output_mode": {
+                "name": "AC Ausgansmodus",
+                "state": {
+                    "normal": "Normal",
+                    "smart": "Smart"
+                }
+            },
+            "dc_12v_output_mode": {
+                "name": "DC 12V Ausgansmodus",
+                "state": {
+                    "normal": "Normal",
+                    "smart": "Smart"
+                }
             },
             "vehicle_brand": {
                 "name": "1. Marke"
@@ -785,6 +857,56 @@
             "ac_output_power_total": {
                 "name": "AC Ausgangsleistung gesamt"
             },
+            "ac_output_power_signed_total": {
+                "name": "AC Ausgangsleistung gesamt"
+            },
+            "solarbank_ac_output_power_signed_total": {
+                "name": "SB Ausgangsleistung gesamt"
+            },
+            "solarbank_1_ac_output_power_signed": {
+                "name": "SB 1 AC Leistung",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
+            "solarbank_2_ac_output_power_signed": {
+                "name": "SB 2 AC Leistung",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
+            "solarbank_3_ac_output_power_signed": {
+                "name": "SB 3 AC Leistung",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
+            "solarbank_4_ac_output_power_signed": {
+                "name": "SB 4 AC Leistung",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
             "ac_socket": {
                 "name": "AC Steckdose"
             },
@@ -811,9 +933,6 @@
             },
             "all_ac_input_limit": {
                 "name": "AC Eingangslimit gesamt"
-            },
-            "power_limit_option": {
-                "name": "Leistungslimit Option"
             },
             "set_output_power": {
                 "name": "Einspeisevorgabe",
@@ -866,6 +985,9 @@
             },
             "solar_energy": {
                 "name": "Energie produziert"
+            },
+            "consumed_energy": {
+                "name": "Energie verbraucht"
             },
             "device_efficiency": {
                 "name": "Geräteeffizienz"
@@ -948,6 +1070,12 @@
             },
             "smartplug_list": {
                 "name": "Smarte Steckdosen"
+            },
+            "combiner_box_list": {
+                "name": "Anschlussboxen"
+            },
+            "charging_pile_list": {
+                "name": "EV Ladestationen"
             },
             "hes_list": {
                 "name": "Heim Energie Systeme"
@@ -1482,12 +1610,18 @@
                 "name": "USB-C Port 1",
                 "state_attributes": {
                     "port_status": {
-                        "name": "Port status",
+                        "name": "Port Status",
                         "state": {
                             "inactive": "Inaktiv",
                             "charging": "Lädt",
                             "discharging": "Entlädt"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1495,12 +1629,18 @@
                 "name": "USB-C Port 2",
                 "state_attributes": {
                     "port_status": {
-                        "name": "Port status",
+                        "name": "Port Status",
                         "state": {
                             "inactive": "Inaktiv",
                             "charging": "Lädt",
                             "discharging": "Entlädt"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1508,12 +1648,18 @@
                 "name": "USB-C Port 3",
                 "state_attributes": {
                     "port_status": {
-                        "name": "Port status",
+                        "name": "Port Status",
                         "state": {
                             "inactive": "Inaktiv",
                             "charging": "Lädt",
                             "discharging": "Entlädt"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1521,12 +1667,18 @@
                 "name": "USB-C Port 4",
                 "state_attributes": {
                     "port_status": {
-                        "name": "Port status",
+                        "name": "Port Status",
                         "state": {
                             "inactive": "Inaktiv",
                             "charging": "Lädt",
                             "discharging": "Entlädt"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1534,12 +1686,18 @@
                 "name": "USB-A Port 1",
                 "state_attributes": {
                     "port_status": {
-                        "name": "Port status",
+                        "name": "Port Status",
                         "state": {
                             "inactive": "Inaktiv",
                             "charging": "Lädt",
                             "discharging": "Entlädt"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1547,20 +1705,58 @@
                 "name": "USB-A Port 2",
                 "state_attributes": {
                     "port_status": {
-                        "name": "Port status",
+                        "name": "Port Status",
                         "state": {
                             "inactive": "Inaktiv",
                             "charging": "Lädt",
                             "discharging": "Entlädt"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
             "dc_12v_1_power": {
-                "name": "DC 12V Port 1"
+                "name": "DC 12V Port 1",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port Status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
             },
             "dc_12v_2_power": {
-                "name": "DC 12V Port 2"
+                "name": "DC 12V Port 2",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port Status",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Lädt",
+                            "discharging": "Entlädt"
+                        }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
             },
             "remaining_time_hours": {
                 "name": "Verbleibende Zeit"
@@ -1685,6 +1881,30 @@
                         "name": "Angepasst"
                     }
                 }
+            },
+            "ac_socket_switch": {
+                "name": "AC Steckdose"
+            },
+            "light_switch": {
+                "name": "LED Light"
+            },
+            "ac_output_power_switch": {
+                "name": "AC Ausgang"
+            },
+            "dc_output_power_switch": {
+                "name": "DC Ausgang"
+            },
+            "ac_fast_charge_switch": {
+                "name": "Schnellladung"
+            },
+            "ac_charge_switch": {
+                "name": "AC Ladung"
+            },
+            "display_switch": {
+                "name": "Display"
+            },
+            "port_memory_switch": {
+                "name": "Ausgangsanschlussspeicher"
             },
             "allow_refresh": {
                 "name": "Api Nutzung",
@@ -1982,6 +2202,9 @@
         },
         "service_not_supported": {
             "message": "Die Entität {entity} unterstützt die Aktion {service} nicht"
+        },
+        "service_error": {
+            "message": "Die Aktion {service} ist fehlgeschlagen, überprüfe die Logs für Fehlerinformationen"
         },
         "slot_time_error": {
             "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}"

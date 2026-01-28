@@ -554,8 +554,8 @@ async def energy_analysis(
 
     siteId: site ID of device
     deviceSn: Device to fetch data # This does not really matter since system level data provided, but field is mandatory
-    rangeType: "day" | "week" | "year"
-    startTime: optional start Date and time
+    rangeType: "day" | "week" | "month | "year"
+    startTime: optional start Date and time, day | week (YYYY-MM-DD), month (YYYY-MM) or year (YYYY)
     endTime: optional end Date and time
     devType: "solar_production" | "solar_production_[pv1-pv4|microinverter]" | "solarbank" | "home_usage" | "grid"
     Example Data for solar_production:
@@ -577,20 +577,34 @@ async def energy_analysis(
     Responses for grid:
     Daily: solar_to_grid, grid_to_home, Extra Totals: grid_to_battery, grid_imported, third_party_pv_to_grid
     """
+    if not isinstance(startDay, datetime):
+        startDay = datetime.today()
     data = {
         "site_id": siteId,
         "device_sn": deviceSn,
-        "type": rangeType if rangeType in ["day", "week", "year"] else "day",
-        "start_time": startDay.strftime("%Y-%m-%d")
-        if isinstance(startDay, datetime)
-        else datetime.today().strftime("%Y-%m-%d"),
         "device_type": devType
         if (
             devType in ["solar_production", "solarbank", "home_usage", "grid"]
             or "solar_production_" in devType
         )
         else "solar_production",
-        "end_time": endDay.strftime("%Y-%m-%d") if isinstance(endDay, datetime) else "",
+        "type": rangeType if rangeType in ["week", "month", "year"] else "day",
+        "start_time": startDay.strftime(
+            "%Y-%m"
+            if rangeType in ["month"]
+            else "%Y"
+            if rangeType in ["year"]
+            else "%Y-%m-%d"
+        ),
+        "end_time": ""
+        if not isinstance(endDay, datetime)
+        else endDay.strftime(
+            "%Y-%m"
+            if rangeType in ["month"]
+            else "%Y"
+            if rangeType in ["year"]
+            else "%Y-%m-%d"
+        ),
     }
     resp = await self.apisession.request(
         "post", API_ENDPOINTS["energy_analysis"], json=data

@@ -709,6 +709,27 @@ class AnkerSolixApiClient:
         """Get the MQTT device instance for given SN."""
         return (isinstance(sn, str) and self.mqtt_devices.get(sn)) or None
 
+    def get_mqtt_devices(
+        self,
+        siteId: str | None = None,
+        stationSn: str | None = None,
+        extraDeviceSn: str | None = None,
+        mqttControl: str | None = None,
+    ) -> list[SolixMqttDevice]:
+        """Get the MQTT devices that match the siteId and/or stationSn, or the extraDeviceSn parameters and the optional mqttControl."""
+        return [
+            md
+            for md in self.mqtt_devices.values()
+            if (not mqttControl or mqttControl in md.controls)
+            and (
+                md.sn == extraDeviceSn
+                or (
+                    (siteId is None or md.device.get("site_id") == siteId)
+                    and (stationSn is None or md.device.get("station_sn") == stationSn)
+                )
+            )
+        ]
+
     def get_mqtt_valuecount(self, sn: str | None = None) -> int:
         """Get the MQTT value count for all or the provided device serial."""
         count = 0

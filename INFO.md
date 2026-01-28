@@ -38,7 +38,7 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Previous work around to overcome parallel usage restriction](#previous-work-around-to-overcome-parallel-usage-restriction-of-owner-account-no-longer-required-since-august-2025)
 1. **[Data refresh configuration options](#data-refresh-configuration-options)**
     * [Option considerations for Solarbank 2 systems](#option-considerations-for-solarbank-2-systems)
-    * [Default options as of version 3.4.0](#default-options-as-of-version-340)
+    * [Default hub configuration options](#default-hub-configuration-options)
 1. **[MQTT connection and integration](#mqtt-connection-and-integration)**
     * [Common MQTT options](#common-mqtt-options)
     * [Device specific MQTT options](#device-specific-mqtt-options)
@@ -77,7 +77,7 @@ This integration utilizes an unofficial Python library to communicate with the A
         - [Usage of dynamic tariffs with the Time Slot mode](#usage-of-dynamic-tariffs-with-the-time-slot-mode)
 1. **[Toggling system price type or currency settings](#toggling-system-price-type-or-currency-settings)**
     * [Dynamic utility rate plans options](#dynamic-utility-rate-plans-options)
-        - [Dynamic price provider](#dynamic-price-provider)
+        - [Dynamic price provider selection](#dynamic-price-provider-selection)
         - [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
         - [Export tariff options](#export-tariff-options)
 1. **[Solar forecast data](#solar-forecast-data)**
@@ -168,6 +168,9 @@ Screenshots from other device types when using the system main account:
 > [!NOTE]
 > When using a shared system account for the integration, device detail information is limited and changes are not permitted. Therefore shared system account users may get presented no control entities and only a subset of entities by the integration.
 
+> [!TIP]
+> Using the main account and enabling the [optional MQTT server connection]((#mqtt-connection-and-integration)), you may get additional devices, entities and device controls which are only available through the MQTT server connection.
+
 
 ## Anker account limitation and usage recommendations
 
@@ -241,7 +244,6 @@ Those entities however are disabled by default and must be enabled if you want m
 
 The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after successful account authorization and before the first data collection is done. Excluded device types, details categories or energy statistics can be reviewed and changed as needed prior the initial data poll. Device types of no interest can be excluded completely. Exclusion of energy categories and specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
 
-
 ### Option considerations for Solarbank 2 systems
 
 Anker changed the device data publish intervals with Solarbank 2 power systems. While Solarbank 1 devices publish their MQTT data every 60 seconds to the Api cloud, Solarbank 2 systems seem to use different intervals for MQTT data publishing:
@@ -253,16 +255,17 @@ In consequence, before the cloud change in July 2024, the HA integration typical
 > [!NOTE]
 > The cloud change in July 2024 did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
 
-### Default options as of version 3.4.0
+### Default hub configuration options
 
 Starting with version 3.4.0 and introduction of new MQTT options, the hub options have been restructured and previous configurations have been migrated to the new structure. The default option view presents collapsed sections for Api and MQTT options and only the Exclusion categories are visible in the main option section. Per default, all energy categories are excluded since they may drive lots of additional Api queries during the less frequent device details poll and run into Api throttling for the energy statistics endpoint. You need to remove them from the exclusion if you want to see daily energies in your system for related device types.
 
 ![Options][options-img]
 
-> [!NOTE]
-> Prior version 1.2.0, once you added categories to the exclusion list, the affected entities were removed from the HA registry during integration reload but they still showed up in the UI as entities no longer provided by the integration. You had to remove those UI entities manually from the entity details dialog.
+> [!IMPORTANT]
+> The listed categories in the options panel are **EXCLUDED**. Categories in the 'Excludable dropdown list' are **INCLUDED**. The display of the excluded categories above the dropdown may be misleading, but that is managed by HA core and cannot be changed by the integration.
 
-Starting with version 1.2.0, a change in the exclusion list that added more exclusions will completely remove the affected devices and re-register them with remaining entities as necessary. This avoids manual cleanup of excluded entities. It has the disadvantage however, that manual entity deactivation or activation maybe needs to be re-applied because re-registration will typically create the entities with their integration defined default activation setting.
+> [!NOTE]
+> A change in the hub options that added more exclusions or disables the MQTT connection will completely remove the affected devices and re-register them with remaining entities as necessary. This avoids manual cleanup in HA of entities no longer provided by the integration. It has the disadvantage however, that customized entity deactivation or activation maybe has to be re-applied because re-registration will typically create the entities with their integration defined default activation setting.
 
 The Api options as explained in [Data refresh configuration options](#data-refresh-configuration-options) come with following default settings:
 
@@ -275,15 +278,15 @@ The MQTT options as explained in [MQTT connection and integration](#mqtt-connect
 
 ## MQTT connection and integration
 
-Since version 3.4.0, the integration implemented hybrid support of MQTT data beside cloud Api data. The MQTT server connection is optional and can be enabled in your hub configuration options. With usage of the MQTT server connection, all eligible and owned devices of your Anker account are subscribed for MQTT messages from the Anker cloud MQTT server. That means, the integration can receive any MQTT message published from those devices to the MQTT server. But the connection can also be used to publish MQTT commands from the integration to the MQTT cloud server, which are subscribed by your devices to allow their remote control. The cloud MQTT server connection gives the integration the same capabilities that the Anker mobile app provides to monitor and manage devices remotely via the MQTT connection.
+Since version 3.4.0, the integration implemented hybrid support of MQTT data beside cloud Api data. Version 3.5.0 added support for MQTT based device control entities. The MQTT server connection is optional and can be enabled in your hub configuration options. With usage of the MQTT server connection, all eligible and owned devices of your Anker account are subscribed for MQTT messages from the Anker cloud MQTT server. That means, the integration can receive any MQTT message published from those devices to the MQTT server. But the connection can also be used to publish MQTT commands from the integration to the MQTT cloud server, which are subscribed by your devices to allow their remote control. The cloud MQTT server connection gives the integration the same capabilities that the Anker mobile app provides to monitor and manage devices remotely via the MQTT connection.
 
 However, since MQTT messages and commands are encoded and may differ for each device model, they have to be decoded and described first before your specific device model can be supported. For already described device models and message types, you may see additional device entities being created by the integration, or existing entities may get additional attributes. While additional attributes will immediately appear during a state update, additional entities are only created during the Api update interval in case new devices or entities are being discovered. So you have to expect that MQTT entities will be created with a delay of at least 1 minute.
 Devices also publish different types of MQTT messages at different intervals and the MQTT data delivery has a 'Push' characteristic compared to the 'Pull' characteristic of cloud Api data. MQTT based entities and attributes are updated immediately as published device MQTT messages with corresponding data are received by the integration. Since many MQTT messages can be published in a short amount of time by multiple devices in your account, the integration delays the centralized states update by 2 seconds. This allows data consolidation of multiple messages in short time frames and limits the HA workload for processing state updates of all hub entities. That means in case of real time messages published by an active device real time data trigger, you can follow the updates in HA immediately with a maximum delay of 2 seconds.
 
 > [!NOTE]
-> MQTT based entities or attributes may appear only after a certain delay of one or more minutes after the MQTT server connection was started or the integration hub configuration was (re-) loaded. If the entities were existing previously, they may appear 'unavailable' until their MQTT data has been published and received again. Specific MQTT data may even require to activate the device real time data trigger, and affected entities may remain 'unavailable' or become stale if no real time trigger is active for the device.
+> MQTT based entities or attributes may appear only after a certain delay of one or more minutes after the MQTT server connection was started or the integration hub configuration was (re-) loaded. If the entities were existing previously, they may appear 'unavailable' until their MQTT data has been published and received again. Specific MQTT data may even require to activate the device real time data trigger, and affected entities may remain 'unavailable' or become stale if no real time trigger is active for the device. This heavily depends on which regular messages are sent by the device and whether they have a regular message publish interval at all. Some devices may send MQTT messages only once requested per command or real time trigger.
 
-There are different type of MQTT messages, reported at different intervals and with different content. Not every created entity will be updated with each message. Furthermore, there are also special messages that are only sent if the device is triggered to publish real time data. These are typically sent in 3-5 second intervals, but only while the real time trigger is active for the device. If the device provides standard MQTT messages without trigger, they are typically sent in 60-300 seconds intervals, but some types are also sent irregularly upon changes, like network signal messages if provided by the device. Standard messages may contain the same, different or a subset of data contained in realtime data messages. This varies per device model. Be aware that data delivery to the integration heavily depends on the state and accuracy of the MQTT message decoding and description in the [Api library](https://github.com/thomluther/anker-solix-api). If there is an incorrect value description, the value representation in the integration may be wrong! But this problem cannot be fixed by the integration or library maintainer. For problem analysis, you need to make familiar with the Api library and the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to verify live messages sent by your owned device and see how the value decoding is actually described and how it must be changed or fixed to utilize the correct message fields or value conversions for your device model.
+There are different types of MQTT messages, reported at different intervals and with different content. Not every created entity will be updated with each message. Furthermore, there are also special messages which are only sent if the device is triggered to publish real time data. These are typically sent in 3-5 second intervals, but only while the real time trigger is active for the device. If the device provides standard MQTT messages without trigger, they are typically sent in 60-300 seconds intervals, but some types are also sent irregularly upon changes, like network signal messages if provided by the device. Standard messages may contain the same, different or a subset of data contained in real time data messages. This varies per device model. Be aware that data delivery to the integration heavily depends on the state and accuracy of the MQTT message decoding and description in the [Api library](https://github.com/thomluther/anker-solix-api). If there is an incorrect value description, the value representation in the integration may be wrong! But this problem cannot be fixed by the integration or library maintainer. For problem analysis, you need to make familiar with the Api library and the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to verify live messages sent by your owned device and see how the value decoding is actually described and how it must be changed or fixed to utilize the correct message fields or value conversions for your device model.
 
 > [!IMPORTANT]
 > MQTT data is supported only for devices owned by the used Anker account. If you are using a shared account without owned devices in the integration, you will have NO benefit from enabling the MQTT connection.
@@ -297,11 +300,11 @@ In order to recognize which entities may provide additional MQTT data, their att
 
 ### Common MQTT options
 
-Once you enable the MQTT server option in the hub configuration, you can find a new MQTT connection entity under your account device, which shows you the actual state of the MQTT server connection. Once the MQTT server is (re-) connected, all eligible MQTT devices are automatically subscribed and the integration can receive all MQTT messages which they publish to the serverSOLIXMQTTMAP.
+Once you enable the MQTT server option in the hub configuration, you can find a new MQTT connection entity under your account device, which shows you the actual state of the MQTT server connection. Once the MQTT server is (re-) connected, all eligible MQTT devices are automatically subscribed and the integration can receive all MQTT messages which they publish to the server.
 
 ![Account MQTT entities][account-mqtt-entities-img]
 
-Once devices are triggered for real time data, they can publish lots of messages and data, especially if you trigger them continuously. In order to keep track about the MQTT message traffic, an MQTT statistics entity is being provided, but that entity is disabled by default like other Api statistic entities. If you want to keep track and more insight on the produced and additional MQTT traffic, you can enable this entity in your account device. It will show you the average MQTT data rate per hour, but also some other metrics like the MQTT session start time and a breakdown of which message types have been received per device model.
+Once devices are triggered for real time data, they can publish lots of messages and data, especially if you trigger them continuously. In order to keep track about the MQTT message traffic, an MQTT statistics entity is being provided, but that entity is disabled by default like other Api statistic entities. If you want to keep track and have more insight on the additionally produced MQTT traffic, you can enable this entity in your account device. It will show you the average MQTT data rate per hour, but also some other metrics like the MQTT session start time and a breakdown of which message types have been received per device model.
 
 ![MQTT statistics][mqtt-statistics-img]
 
@@ -309,7 +312,7 @@ For more details on message types and their content per device model, you have t
 
 ### Device specific MQTT options
 
-Once you enable the MQTT option in the hub configuration, you will get a diagnostic [Real Time trigger](#device-real-time-triggers) button as well as a [Status Request](#device-status-requests) button for each device supporting MQTT. With those buttons you can control how the device publishes its status messages. The buttons can be used on demand or via an action in your HA automation.
+Once you enable the MQTT server connection in the hub configuration, you will get a diagnostic [Real Time trigger](#device-real-time-triggers) button and a [Status Request](#device-status-requests) button for each device supporting MQTT. With those buttons you can control how the device publishes its status messages. The buttons can be used on demand or via an action in your HA automation.
 Once first MQTT data has been received and extracted for your device, you will also get another diagnostic switch entity that allows you to configure how MQTT data should be merged with existing Api data for your device. The default setting is that Api data will be used preferably for any state or attribute data that exists in both, the Api and MQTT cache. If you prefer to overlay Api data with MQTT data, you can enable the MQTT overlay switch. The switch is a customized entity and the state is stored in the integration Api cache. Since the switch is declared as restore entity, the overlay setting per device should remain persistent across hub option changes or HA restarts which trigger a reload of the caches, and the last switch state should be restored once the switch is re-created.
 The default MQTT overlay setting is Off, to prioritize display of Api values if a corresponding value may be provided also in the MQTT data (classical behavior).
 
@@ -333,7 +336,7 @@ Following is an example of the diagnostic device entities available once MQTT da
 
 ### Device real time triggers
 
-The integration supports a diagnostic button per MQTT managed device that can be used to trigger real time data status messages of the device. The timeout used for the real time publish duration can be configured in the MQTT options of your hub. If the device will receive other realtime triggers from the mobile App, the timeout used in the last trigger command will be applied by the device. The app typically uses timeouts of 300 seconds, which is also the default timeout in the [MQTT options of the hub configuration](#default-options-as-of-version-340).
+The integration supports a diagnostic button per MQTT managed device that can be used to trigger real time data status messages of the device. The timeout used for the real time publish duration can be configured in the MQTT options of your hub. If the device will receive other real time triggers from the mobile App, the timeout used in the last trigger command will be applied by the device. The app typically uses timeouts of 300 seconds, which is also the default timeout in the [MQTT options of the hub configuration](#default-options-as-of-version-340).
 
 Depending on how devices publish their data in regular messages, you may need the real time trigger only to get more frequent data updates. However, data which is only available in real time messages will get stale, if the real time data publish period will timeout. The integration provides the trigger button for each eligible device and you can control it according to your customized needs via an automation that will press the button at regular intervals or only under certain conditions, which you can define in your automation.
 
@@ -345,17 +348,17 @@ Depending on how devices publish their data in regular messages, you may need th
 > For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data.
 
 > [!NOTE]
-> Anker has various implementations of the real time trigger capability depending on the device type. While newer devices seem to repeat the message publish cycles by themselves, older device types like the Solarbank 1 seem to get triggered by the cloud with regular status requests to the device. That means the cloud may driving the realtime trigger functionality for the timeout duration. However, it was also identified, that the cloud driven realtime trigger depends on the actual device state. So there is no guarantee, that you get regular realtime data from such devices upon a realtime trigger command. However, those devices may fully support the [MQTT status request](#device-status-requests) command, which should be automated preferably at your customized automation trigger interval.
+> Anker has various implementations of the real time trigger capability depending on the device type. While newer devices seem to repeat the message publish cycles by themselves, older device types like the Solarbank 1 seem to get triggered by the cloud with regular status requests to the device. That means the cloud may driving the real time trigger functionality for the timeout duration. However, it was also identified, that the cloud driven real time trigger depends on the actual device state. So there is no guarantee, that you get regular real time data from such devices upon a real time trigger command. However, those devices may fully support the [MQTT status request](#device-status-requests) command, which should be automated preferably at your customized automation trigger interval.
 
 
 ### Device status requests
 
-Integration version 3.4.1 added another diagnostic button for a single MQTT status request of the device. If fully supported by the device, it will publish one set of status message(s) that are otherwise only sent if the realtime trigger is active. However, devices may also send only the main status message without optional extra status messages, which may be provided only if the realtime trigger is active.
+Integration version 3.4.1 added another diagnostic button for a single MQTT status request of the device. If fully supported by the device, it will publish one set of status message(s) that are otherwise only sent if the real time trigger is active. However, devices may also send only the main status message without optional extra status messages, which may be provided only if the real time trigger is active.
 
 > [!NOTE]
-> Anker has no consistent implementation across their Solix devices whether they publish all status messages upon a single status request. Especially Solarbank 2 and later, as well as Multisystem constellations have many extra status messages that are only published while the **realtime trigger** is active. These are messages with expansion battery details, or messages that consolidate actual states from all coupled devices with the overall data values.
+> Anker has no consistent implementation across their Solix devices whether they publish all status messages upon a single status request. Especially Solarbank 2 and later, as well as Multisystem constellations have many extra status messages that are only published while the **real time trigger** is active. These are messages with expansion battery details, or messages that consolidate actual states from all coupled devices with the overall data values.
 
-Depending on which message(s) the various devices publish upon a status request, you may see that some of your MQTT based entity states will not refresh. However, if all relevant entities are being refreshed with a status request, that should be the preferred button for any of your customized automation, since you have more control about the extra MQTT data traffic. For example, if you need to get state updates only every 30 or 15 seconds, you can control that with the status request button and the frequency when and how often your automation triggers. The realtime trigger button instead does not allow to control the message traffic or frequency.
+Depending on which message(s) the various devices publish upon a status request, you may see that some of your MQTT based entity states will not refresh. However, if all relevant entities are being refreshed with a status request, that should be the preferred button for any of your customized automation, since you have more control about the extra MQTT data traffic. For example, if you need to get state updates only every 30 or 15 seconds, you can control that with the status request button and the frequency when and how often your automation triggers. The real time trigger button instead does not allow to control the message traffic or frequency.
 
 
 ## Switching between different Anker Power accounts
@@ -515,9 +518,18 @@ The provider is required to query the correct spot prices through the cloud Api.
 > [!NOTE]
 > A different provider can also mean changing only the region of the same provider. The supported provider options depend on the device model type and there are countries where 'Nordpool' is offering various regions.
 
+> [!IMPORTANT]
+> In December 2025, Anker implemented a new method to support additional regional dynamic price providers. This method requires a registration through the Anker App. The price formats and Api queries for registered provides are unknown and **WILL NOT BE SUPPORTED** by the integration. Therefore, any price calculations provided by the integration may be wrong for other providers than Nordpool, since the reported pricing structure varies and is not described.
+
+> [!ATTENTION]
+> With support of registered price providers, the list of standard providers has been enhanced as well. Those new providers however may not show an area code and price details cannot be queried through the Api. Furthermore, price details format is unkonwn and may be different than for Nordpool. Therefore the integration  **WILL NOT SUPPORT** other providers beside Nordpool.
+
+> [!TIP]
+> If there are issues with dynamic price data or related queries, you can exclude the system price category in the hub options. This will remove all price related entities and avoid dynamic price related Api queries.
+
 ### Dynamic price fee and VAT:
 
-Those values can be configured in the App and they are used to calculate the dynamic total price as following:
+Those values can be configured in the App and they are used to calculate the dynamic total price from the Nordpool spot prices as following:
 > `(Spot price[per MWh] / 1000 + fee) * (1 + VAT[in %] / 100)`
 
 Those configurable values for your system have not been found yet in Api queries, but they are essential for proper total price calculation. Since they are pretty static, you can adjust them in the integration whenever you modify them in the mobile app from time to time.
@@ -921,7 +933,10 @@ The Solarbank 3 electricity provider configuration allows definition of various 
 
 #### Dynamic price provider
 
-There may be one or more dynamic price provider options available for your Solarbank 3 system, depending on the country your Anker account is using. Typically this is 'Nordpool' for most countries, but others may be supported in future. A provider is defined via country, company and area. Therefore multiple provider options may be presented already by the integration, if there are multiple regions supported by your country company. Any supported combination of those provider options can be chosen via a select entity. If you modify the provider as an owner account, the provider selection will be applied to your system and the dynamic price type will automatically be enabled, which is required to apply a provider selection. If you modify the provider as a member account, the change is only applied to the Api cache, but not activated on the system since your account has no permission for such a modification. The selected provider however will be used by the integration to poll spot price forecast data via the Anker cloud. The spot price data can be polled independently of your system type or access permission.
+There may be one or more dynamic price provider options available for your Solarbank 3 system, depending on the country your Anker account is using. Typically this is 'Nordpool' for most countries, but others may be supported in future. A provider is defined via country, company and area code. Therefore multiple provider options may be presented already by the integration, if there are multiple regions supported by your country company. Any supported combination of those provider options can be chosen via a select entity. If you modify the provider as an owner account, the provider selection will be applied to your system and the dynamic price type will automatically be enabled, which is required to apply a provider selection. If you modify the provider as a member account, the change is only applied to the Api cache, but not activated on the system since your account has no permission for such a modification. The selected provider however will be used by the integration to poll spot price forecast data via the Anker cloud. The spot price data can be polled independently of your system type or access permission.
+
+> [!ATTENTION]
+> Be aware of the limitations and support for [dynamic price provider selection](#dynamic-price-provider-selection).
 
 #### Dynamic price fees and taxes
 
@@ -1738,6 +1753,9 @@ sequence:
 
 Anker Solix actions can be used in any automation, script or via the HA UI developer tool panel.
 
+> [!NOTE]
+> The Anker Solix actions are registered only in HA after the first hub configuration was loaded. All actions also require specific target entities with selected features to be used with the action. If no eligible entities are provided with the action target selector, the action cannot be utilized either.
+
 ### Export systems action
 
 Starting with version 2.1.2, a new action was added to simplify an anonymized export of known Api information available for the configured account. Version 3.4.0 added the option to include MQTT messages in the export, which is enabled per default. The Api responses will be saved in JSON files and the folder will be zipped in your Home Assistant configuration folder (where your `configuration.yaml` is located, e.g. `/homeassistant`), under `www/community/anker_solix/exports`. The `www` folder in your configuration folder is the local file folder for the HA dashboard to access files directly via the browser. It is also used by custom dashboard cards. Home Assistant automatically maps the `www` folder to `/local` in the URL path if the folder exists at HA startup. The action response field `export_filename` will provide the zipped filename url path as response to the action. This allows easy download from your HA instance through your browser when navigating to that url path. Optionally you can download the zip file via Add Ons that provide file system access.
@@ -1809,7 +1827,7 @@ Example of a valid request but missing system permissions (shared account only):
   - Unfortunately it will be difficult to discover optional parameters and how they may change the response information
 * Standalone device information in the Anker cloud is pretty rare
   - Typically you cannot find (all) device details as they are being presented in the Anker mobile App, for example device temperature
-  - Some are only available via the Anker MQTT cloud server or via Bluetooth interface (neither of them is supported by the integration and there are no plans to do so)
+  - Some are only available via the Anker MQTT cloud server or via Bluetooth interface
 * If you find new requests or useful information in responses that are not available yet via the integration, open an [issue as feature request][issues] and document them there
   - Implementation into the integration can then be considered
   - You will have to provide detailed documentation of required parameters and various responses at different times, especially when it comes to proper interpretation of any status codes or conditions that may exist only temporarily or barely.

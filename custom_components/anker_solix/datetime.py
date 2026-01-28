@@ -63,7 +63,10 @@ DEVICE_DATETIMES = [
         value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk)).astimezone()
         if d.get(jk) is not None
         else None,
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
     ),
     AnkerSolixDateTimeDescription(
         key="preset_manual_backup_end",
@@ -72,7 +75,10 @@ DEVICE_DATETIMES = [
         value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk)).astimezone()
         if d.get(jk) is not None
         else None,
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
     ),
 ]
 
@@ -318,7 +324,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                 ]
                 and isinstance(value, datetime)
                 and self._native_value != value
-                and (data.get("generation") or 0) >= 2
+                and (data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or (data.get("generation") or 0) >= 2)
             ):
                 LOGGER.debug("%s change to %s will be applied", self.entity_id, value)
                 siteId = data.get("site_id") or ""

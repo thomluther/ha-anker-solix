@@ -3,16 +3,16 @@
 from dataclasses import InitVar, asdict, dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 
 # API servers per region. Country assignment not clear, defaulting to EU server
-API_SERVERS = {
+API_SERVERS: Final[dict] = {
     "eu": "https://ankerpower-api-eu.anker.com",
     "com": "https://ankerpower-api.anker.com",
 }
-API_LOGIN = "passport/login"
-API_KEY_EXCHANGE = "openapi/oauth/key/exchange"
-API_HEADERS = {
+API_LOGIN: Final[str] = "passport/login"
+API_KEY_EXCHANGE: Final[str] = "openapi/oauth/key/exchange"
+API_HEADERS: Final[dict] = {
     "content-type": "application/json",
     "model-type": "DESKTOP",
     # "model-type": "PHONE",
@@ -20,7 +20,7 @@ API_HEADERS = {
     "app-name": "anker_power",
     "os-type": "android",
 }
-API_COUNTRIES = {
+API_COUNTRIES: Final[dict] = {
     "com": [
         "DZ",
         "LB",
@@ -99,7 +99,7 @@ API_COUNTRIES = {
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
 """Following are the Anker Power/Solix Cloud API power_service endpoints known so far. Some are common, others are mainly for balcony power systems"""
-API_ENDPOINTS = {
+API_ENDPOINTS: Final[dict] = {
     # Power endpoints */v1/site/*
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
@@ -108,7 +108,7 @@ API_ENDPOINTS = {
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16]
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 26]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
@@ -194,7 +194,7 @@ API_ENDPOINTS = {
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
-API_CHARGING_ENDPOINTS = {
+API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_error_info": "charging_energy_service/get_error_infos",  # No input param needed, show errors for account?
     "get_system_running_info": "charging_energy_service/get_system_running_info",  # Cumulative Home/System Energy Savings since Home creation date
     "energy_statistics": "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel, # source type [solar hes grid home pps diesel]
@@ -210,7 +210,7 @@ API_CHARGING_ENDPOINTS = {
 }
 
 """Following are the Anker Power/Solix Cloud API charging_hes_svc endpoints known so far. They are used for Home Energy Systems like X1."""
-API_HES_SVC_ENDPOINTS = {
+API_HES_SVC_ENDPOINTS: Final[dict] = {
     "get_product_info": "charging_hes_svc/get_device_product_info",  # List of Anker HES devices, works with shared account
     "get_heat_pump_plan": "charging_hes_svc/get_heat_pump_plan_json",  # heat pump plan, works with shared account
     "get_electric_plan_list": "charging_hes_svc/get_electric_utility_and_electric_plan_list",  # Energy plan if available for country & state combination, works with shared account
@@ -474,7 +474,7 @@ the cached JSON file. Other instances should recognize an update of the cached J
 """
 
 # Following are the JSON filename prefixes for exported endpoint names as defined previously
-API_FILEPREFIXES = {
+API_FILEPREFIXES: Final[dict] = {
     # mqtt message prefixes
     "mqtt_message": "mqtt_msg",
     # power_service endpoint file prefixes
@@ -632,6 +632,7 @@ A1780P 767 Power House (SOLIX F2000) with WLAN  Portable Power Station
 A1781  SOLIX F2600                              Portable Power Station
 A1782  SOLIX F3000                              Portable Power Station
 A1783  SOLIX C2000 Gen 2                        Portable Power Station
+A1785  SOLIX C2000X Gen 2                       Portable Power Station
 A1790  SOLIX F3800                              Portable Power Station
 A1790P SOLIX F3800 Plus                         Portable Power Station
 A17A0  Powered Cooler 30                        Powered Cooler
@@ -659,12 +660,14 @@ A5140  MI60 Microinverter                       Balcony Solar Power System
 A5143  MI80 Microinverter(BLE)                  Balcony Solar Power System
 A5150  Microinverter                            Residential Storage System
 A5191  V1 Smart EV Charger                      Smart EV Charger
-A5220  Battery Module                           Residential Storage System
+A5220  X1 Battery Module                        Residential Storage System
 A5341  Backup Controller                        Residential Storage System
 A5450  Zigbee Dongle                            Residential Storage System
 A91B2  240W Charging Station                    Charger
 AE100  SOLIX Power Dock                         Balcony Solar Power System
 AE1R0  Anker SOLIX P1 Meter                     Accessory
+AS100  C1000 Gen 2 LE                           Portable Power Station
+AX1S0  Power Dock Pro                           Residential Storage System
 ----------------------------------------------------------------------------------------------------
 """
 
@@ -727,7 +730,8 @@ class SolixParmType(Enum):
     SOLARBANK_AUTHORIZATIONS = "13"
     SOLARBANK_POWERDOCK = "16"  # get power dock SN
     SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
-    # SOLARBANK_EV_CHARGER = "20" # to be verified
+    # SOLARBANK_EV_CHARGER = "23" # EV Charger switch?
+    SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
 
 
 class SolarbankPowerMode(IntEnum):
@@ -899,6 +903,7 @@ class SolixDeviceCapacity:
     A1762: int = 1056  # SOLIX Portable Power Station 1000
     A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
+    AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -911,6 +916,9 @@ class SolixDeviceCapacity:
     A1782: int = 3072  # SOLIX F3000 Portable Power Station with Smart Meter support
     A1783: int = (
         2048  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    )
+    A1785: int = (
+        2048  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
     )
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
@@ -1003,6 +1011,9 @@ class SolixDeviceCategory:
     A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
     A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 Portable Power Station
+    AS100: str = (
+        SolixDeviceType.PPS.value
+    )  # SOLIX C1000X Gen 2 LE Portable Power Station
     A1770: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 757 Portable Power Station
@@ -1021,6 +1032,9 @@ class SolixDeviceCategory:
     A1783: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    A1785: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
     A17E1: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX Solarbank Prime E10 Power Module (US Market)
@@ -1039,6 +1053,7 @@ class SolixDeviceCategory:
     A5220: str = SolixDeviceType.HES.value  # SOLIX X1 Battery module
     A5341: str = SolixDeviceType.HES.value  # SOLIX X1 Backup Controller
     A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
+    AX1S0: str = SolixDeviceType.HES.value  # SOLIX Power Dock Pro
     # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
@@ -1079,7 +1094,8 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
+        "power_limit",
+        "power_limit_option",
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -1095,7 +1111,8 @@ class SolarbankDeviceMetrics:
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
-        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
+        "power_limit",
+        "power_limit_option",
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -1104,7 +1121,8 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "to_home_load",
         "pei_heating_power",
-        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
+        "power_limit",
+        "power_limit_option",
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
@@ -1117,9 +1135,6 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        # "micro_inverter_power",  # external inverter input not supported by SB3
-        # "micro_inverter_power_limit",  # external inverter input not supported by SB3
-        # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
         "power_limit",
@@ -1264,6 +1279,7 @@ class SolarbankParallelTypes(StrEnum):
     cascaded = "cascaded"  # For SB1 only if SB1 is attached to SB2 in single system
     ae100 = "ae100"  # Solarbank power dock in use
     ae100v2 = "ae100v2"
+    diy = "diy" # Solarbank 3 parallel without power dock
 
 
 class SmartmeterStatus(StrEnum):
@@ -1378,6 +1394,14 @@ class SolixPpsDisplayMode(StrEnum):
     medium = "2"
     high = "3"
     blinking = "4"
+    unknown = "unknown"
+
+
+class SolixChargerPortStatus(StrEnum):
+    """Str Enumeration for Anker Solix Charger port status."""
+
+    inactive = "0"
+    active = "1"
     unknown = "unknown"
 
 

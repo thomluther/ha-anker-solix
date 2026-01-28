@@ -166,7 +166,7 @@ class AnkerSolixMqttSession:
                 valueupdate = True
         elif data:
             # no encoded data in message, print object whatever it is
-            self._logger.info(
+            self._logger.debug(
                 "Api %s MQTT session client received message from device %s (%s) with non-byte data:\n%s",
                 self.apisession.nickname,
                 device_sn,

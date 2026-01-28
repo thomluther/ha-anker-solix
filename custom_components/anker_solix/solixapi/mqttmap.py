@@ -19,12 +19,16 @@ from .mqttcmdmap import (
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
     CMD_LIGHT_MODE,
+    CMD_PLUG_DELAYED_TOGGLE,
+    CMD_PLUG_SCHEDULE,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
+    CMD_SB_3RD_PARTY_PV_SWITCH,
     CMD_SB_AC_INPUT_LIMIT,
     CMD_SB_AC_SOCKET_SWITCH,
     CMD_SB_DEVICE_TIMEOUT,
     CMD_SB_DISABLE_GRID_EXPORT_SWITCH,
+    CMD_SB_EV_CHARGER_SWITCH,
     CMD_SB_INVERTER_TYPE,
     CMD_SB_LIGHT_MODE,
     CMD_SB_LIGHT_SWITCH,
@@ -33,10 +37,13 @@ from .mqttcmdmap import (
     CMD_SB_POWER_CUTOFF,
     CMD_SB_PV_LIMIT,
     CMD_SB_STATUS_CHECK,
+    CMD_SB_USAGE_MODE,
     CMD_SOC_LIMITS_V2,
     CMD_STATUS_REQUEST,
     CMD_TEMP_UNIT,
+    CMD_TIMER_REQUEST,
     COMMAND_LIST,
+    COMMAND_NAME,
     FACTOR,
     LENGTH,
     MASK,
@@ -824,9 +831,9 @@ _A17C1_0405 = {
     "ac": {NAME: "ac_output_power", FACTOR: 0.1},
     "ad": {NAME: "battery_soc"},  # controller + expansions avg
     "b0": {NAME: "bat_charge_power", FACTOR: 0.01},
-    "b1": {NAME: "pv_yield?", FACTOR: 0.0001},
-    "b3": {NAME: "home_consumption?", FACTOR: 0.0001},
-    "b2": {NAME: "charged_energy?", FACTOR: 0.00001},
+    "b1": {NAME: "pv_yield", FACTOR: 0.0001},
+    "b3": {NAME: "output_energy", FACTOR: 0.0001},
+    "b2": {NAME: "charged_energy", FACTOR: 0.00001},
     "b4": {NAME: "output_cutoff_data"},
     "b5": {NAME: "lowpower_input_data"},
     "b6": {NAME: "input_cutoff_data"},
@@ -840,7 +847,7 @@ _A17C1_0405 = {
     "c6": {NAME: "usage_mode"},
     "c7": {NAME: "home_load_preset"},
     "c8": {NAME: "ac_socket_power", FACTOR: 0.1},
-    "c9": {NAME: "ac_input_power?", FACTOR: 0.1},
+    "c9": {NAME: "consumed_energy", FACTOR: 0.001},
     "ca": {NAME: "pv_1_power", FACTOR: 0.1},
     "cb": {NAME: "pv_2_power", FACTOR: 0.1},
     "cc": {NAME: "pv_3_power", FACTOR: 0.1},
@@ -921,8 +928,8 @@ _A17C1_0408 = {
     # "d3": {NAME: "unknown_power_6?"},
     # "d6": {NAME: "timestamp_1?"},
     # "dc": {NAME: "max_load"},
-    # "e0": {NAME: "soc_min?"},
-    # "e1": {NAME: "soc_max?"},
+    # "e0": {NAME: "min_soc?"},
+    # "e1": {NAME: "max_soc?"},
     # "e2": {NAME: "pv_power_3rd_party?"},
     # "e6": {NAME: "pv_limit"},
     # "e7": {NAME: "ac_input_limit"},
@@ -1168,14 +1175,12 @@ _A17C5_0405 = {
     "b0": {NAME: "pv_yield"},
     "b1": {NAME: "charged_energy"},
     "b2": {NAME: "discharged_energy"},
-    "b3": {NAME: "grid_import_energy"},
-    "b4": {NAME: "grid_export_energy"},
-    "b5": {
-        NAME: "soc_min"
-    },  # TODO: Does this toggle with the setting? Could also be station wide SOC
-    "b6": {NAME: "output_cutoff_exp_1?"},  # Could also be min SOC of Main battery?
+    "b3": {NAME: "output_energy"},
+    "b4": {NAME: "consumed_energy"},
+    "b5": {NAME: "min_soc"},
+    "b6": {NAME: "min_soc_exp_1?"},  # Could also be min SOC of Main battery?
     "b7": {
-        NAME: "output_cutoff_exp_2?"
+        NAME: "min_soc_exp_2?"
     },  # Could also be min SOC of first Expansion? But why no other expansion SOC in this message?
     "b8": {NAME: "usage_mode"},
     "b9": {NAME: "home_load_preset"},
@@ -1207,15 +1212,14 @@ _A17C5_0405 = {
     "be": {NAME: "max_load_legal"},
     "bf": {NAME: "timestamp_backup_start"},
     "c0": {NAME: "timestamp_backup_end"},
-    "c2": {NAME: "bat_charge_power?"},
-    "c3": {NAME: "photovoltaic_power?"},
+    "c2": {NAME: "photovoltaic_power?"},
     "c4": {NAME: "grid_power_signed"},
     "c5": {NAME: "home_demand"},
     "c6": {NAME: "pv_1_power"},
     "c7": {NAME: "pv_2_power"},
     "c8": {NAME: "pv_3_power"},
     "c9": {NAME: "pv_4_power"},
-    "cb": {NAME: "expansion_packs?"},
+    "cb": {NAME: "expansion_packs"},
     "d4": {
         NAME: "device_timeout_minutes",
         FACTOR: 30,
@@ -1236,35 +1240,38 @@ _A17C5_0408 = {
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "local_timestamp"},
     "a4": {NAME: "utc_timestamp"},
+    "a5": {NAME: "battery_soc_calc", FACTOR: 0.1},
+    "a6": {NAME: "battery_soh", FACTOR: 0.1},
     "a7": {NAME: "battery_soc"},
     "a9": {NAME: "usage_mode"},
     "a8": {NAME: "charging_status?"},
     "aa": {NAME: "home_load_preset"},
     "ab": {NAME: "photovoltaic_power"},
-    "ac": {NAME: "pv_yield?"},
-    "ad": {NAME: "pv_1_energy?"},
-    "ae": {NAME: "pv_2_energy?"},
-    "af": {NAME: "pv_3_energy?"},
-    "b0": {NAME: "pv_4_energy?"},
-    "b1": {NAME: "home_demand?"},
+    "ac": {NAME: "pv_yield"},
+    # "ad": {NAME: "pv_1_energy?"},
+    # "ae": {NAME: "pv_2_energy?"},
+    # "af": {NAME: "pv_3_energy?"},
+    # "b0": {NAME: "pv_4_energy?"},
+    "b1": {NAME: "home_demand"},
     "b2": {NAME: "home_consumption"},
     "b6": {NAME: "battery_power_signed?"},
-    "b7": {NAME: "charged_energy?"},
-    "b8": {NAME: "discharged_energy?"},
+    "b7": {NAME: "charged_energy"},
+    "b8": {NAME: "discharged_energy"},
     "bd": {NAME: "grid_power_signed?"},
     "be": {NAME: "grid_import_energy"},
-    "bf": {NAME: "grid_export_energy?"},
-    "c7": {NAME: "pv_1_power?"},
-    "c8": {NAME: "pv_2_power?"},
-    "c9": {NAME: "pv_3_power?"},
-    "ca": {NAME: "pv_4_power?"},
-    "d3": {NAME: "ac_output_power?"},
+    "bf": {NAME: "grid_export_energy"},
+    "c7": {NAME: "pv_1_power"},
+    "c8": {NAME: "pv_2_power"},
+    "c9": {NAME: "pv_3_power"},
+    "ca": {NAME: "pv_4_power"},
+    "d3": {NAME: "ac_output_power"},
+    "d5": {NAME: "grid_to_home_power"},
     "d6": {NAME: "timestamp_1?"},
     "dc": {NAME: "max_load"},
     "dd": {NAME: "ac_input_limit"},
-    "e0": {NAME: "soc_min?"},
-    "e1": {NAME: "soc_max?"},
-    "e2": {NAME: "pv_power_3rd_party"},
+    # "de": {NAME: "output_energy"},
+    "e0": {NAME: "min_soc"},
+    "e1": {NAME: "max_soc?"},
     "e6": {NAME: "pv_limit"},
     "e7": {NAME: "ac_input_limit"},
     "cc": {NAME: "temperature", SIGNED: True},
@@ -1282,6 +1289,10 @@ _A2345_0303 = {
     TOPIC: "state_info",
     "a2": {
         BYTES: {
+            "00": {
+                NAME: "usbc_1_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_1_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1301,6 +1312,10 @@ _A2345_0303 = {
     },
     "a3": {
         BYTES: {
+            "00": {
+                NAME: "usbc_2_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_2_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1320,6 +1335,10 @@ _A2345_0303 = {
     },
     "a4": {
         BYTES: {
+            "00": {
+                NAME: "usbc_3_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_3_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1339,6 +1358,10 @@ _A2345_0303 = {
     },
     "a5": {
         BYTES: {
+            "00": {
+                NAME: "usbc_4_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_4_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1358,6 +1381,10 @@ _A2345_0303 = {
     },
     "a6": {
         BYTES: {
+            "00": {
+                NAME: "usba_1_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usba_1_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1377,6 +1404,10 @@ _A2345_0303 = {
     },
     "a7": {
         BYTES: {
+            "00": {
+                NAME: "usba_2_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usba_2_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1397,6 +1428,107 @@ _A2345_0303 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+_PLUG_TIMER_STATUS = {
+    BYTES: {
+        "00": {
+            NAME: "toggle_to_delay_seconds",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "01": {
+            NAME: "toggle_to_delay_minutes?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "02": {
+            NAME: "toggle_to_delay_hours?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "03": {
+            NAME: "toggle_current_setting?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "04": {
+            NAME: "toggle_delay_status?",  # 03 seen while toggle_to delay running, 00 while inactive
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "05": {
+            NAME: "toggle_to_elapsed_seconds",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "06": {
+            NAME: "toggle_to_elapsed_minutes?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "07": {
+            NAME: "toggle_to_elapsed_hours?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+    }
+}
+
+_DOCK_0405 = {
+    # multisystem message
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a3": {NAME: "sw_version", "values": 4},
+    "a5": {NAME: "ac_output_power_total"},
+    "a6": {
+        NAME: "solarbank_ac_output_power_signed_total",
+        FACTOR: -1,
+    },  # All SB outputs (negative is SB output)
+    "b3": {NAME: "utc_timestamp"},
+    "b6": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_1_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_1_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "b7": {NAME: "solarbank_1_ac_output_power_signed", FACTOR: -1},
+    "b8": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_2_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_2_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "b9": {NAME: "solarbank_2_ac_output_power_signed", FACTOR: -1},
+    "ba": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_3_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_3_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "bb": {NAME: "solarbank_3_ac_output_power_signed", FACTOR: -1},
+    "bc": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_4_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_4_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "bd": {NAME: "solarbank_4_ac_output_power_signed", FACTOR: -1},
+}
 
 _DOCK_0420 = {
     # multisystem message
@@ -1408,11 +1540,14 @@ _DOCK_0420 = {
     "a8": {NAME: "0420_unknown_1?"},
     "a9": {NAME: "0420_unknown_2?"},
     "ab": {NAME: "grid_power_signed"},
-    "ac": {NAME: "ac_output_power_signed_total"},  # Total across all devices in system
-    "ae": {NAME: "output_power_signed_total"},  # Total across all devices in system
+    "ac": {NAME: "ac_output_power_signed_total"},  # Combined output power
+    "ae": {NAME: "output_power_signed_total"},  # Combined output power
     "af": {NAME: "home_demand_total"},  # Total across all devices in system
     "b0": {NAME: "pv_power_total"},  # Total across all devices in system
-    "b1": {NAME: "battery_power_signed_total"},  # Total across all devices in system
+    "b1": {
+        NAME: "solarbank_ac_output_power_signed_total",
+        FACTOR: -1,
+    },  # All SB outputs (negative is SB output)
     "b3": {
         BYTES: {
             "00": {
@@ -1478,18 +1613,19 @@ _DOCK_0420 = {
         }
     },
     "c1": {NAME: "main_device_sn?"},
+    "c2": {NAME: "pv_power_3rd_party?"},
+    "c3": {NAME: "0420_timestamp_c3?"},
+    "c4": {NAME: "0420_timestamp_c4?"},
 }
 
 _DOCK_0421 = {
     # multisystem message
     TOPIC: "state_info",
-    "a3": {NAME: "pv_limit_solarbank_4"},
-    "a4": {NAME: "pv_limit_solarbank_3"},
-    "a5": {NAME: "pv_limit_solarbank_2"},
-    "a6": {NAME: "pv_limit_solarbank_1"},
+    "a4": {NAME: "max_load_total"},
+    "a5": {NAME: "ac_input_limit_total"},
+    "a6": {NAME: "max_load_limit_total"},
     "a7": {NAME: "battery_soc_total"},  # Average SOC of all solarbank devices in system
-    "ac": {NAME: "soc_max?"},
-    "ad": {NAME: "max_load"},
+    "ac": {NAME: "max_soc?"},
     "fc": {NAME: "device_sn"},
     "fd": {NAME: "local_timestamp"},
     "fe": {NAME: "utc_timestamp"},
@@ -1502,10 +1638,10 @@ _DOCK_0428 = {
     "a3": {NAME: "local_timestamp"},
     "a4": {NAME: "utc_timestamp"},
     "a5": {NAME: "battery_soc_total"},  # Average SOC of all solarbanks
-    "a6": {NAME: "0428_unknown_1?"},
+    "a6": {NAME: "0428_unknown_a6?"},
     "ac": {NAME: "pv_power_total"},
     "b5": {NAME: "battery_power_signed_total"},
-    "bc": {NAME: "battery_power_signed"},
+    "bc": {NAME: "0428_unknown_bc?"},
     "d9": {
         BYTES: {
             "00": {
@@ -1545,9 +1681,32 @@ _DOCK_0500 = {
     TOPIC: "state_info",
 }
 
+_EV_CHARGER_0405 = {
+    # V1 status message
+    TOPIC: "param_info",
+    "a2": {NAME: "unknown_limit?"},
+    "d0": {NAME: "ip_address"},
+    "d7": {NAME: "device_sn_d7?"},
+    "de": {NAME: "device_sn_de?"},
+    "f1": {NAME: "timestamp_f1?"},
+    "f2": {NAME: "timestamp_f2?"},
+}
+
+_EV_CHARGER_0410 = {
+    # V1 status message
+    TOPIC: "param_info",
+    "a2": {NAME: "voltage_p1?", "factor": 0.1},
+    "a3": {NAME: "voltage_p2?", "factor": 0.1},
+    "a4": {NAME: "voltage_p3?", "factor": 0.1},
+    "a5": {NAME: "power_p1?"},
+    "a6": {NAME: "power_p2?"},
+    "a7": {NAME: "power_p3?"},
+    "ab": {NAME: "timestamp_ab?"},
+}
+
 
 # Following is the consolidated mapping for all device types and messages
-SOLIXMQTTMAP: Final = {
+SOLIXMQTTMAP: Final[dict] = {
     # PPS C300 AC
     "A1722": {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
@@ -1741,11 +1900,11 @@ SOLIXMQTTMAP: Final = {
             },
             SolixMqttCommands.display_timeout_seconds: CMD_COMMON_V2
             | {
-                "a4": {  # TODO: Find our correct field in message group
-                    NAME: "set_display_timeout_sec",  # 0 (Never), 10, 30, 60, 300, 1800
+                "a4": {  # TODO: Find correct status field in message group
+                    NAME: "set_display_timeout_sec",  # 0 (Never), 10, 20, 30, 60, 300, 1800
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "display_timeout_seconds",
-                    VALUE_OPTIONS: [0, 10, 30, 60, 300, 1800],
+                    VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
@@ -1772,20 +1931,18 @@ SOLIXMQTTMAP: Final = {
             # ab = min_soc: 1, 5, 10, 15, 20 %
         },
         # Interval: ~3-5 seconds, but only with realtime trigger
-        "0405": _A1761_0405,
+        "0421": _A1763_0421,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
         # Interval: ~300 seconds
         "0889": {
             "a4": {NAME: "0889_unknown_1?"},
             "a5": {NAME: "0889_unknown_2?"},
             "a6": {NAME: "0889_unknown_3?"},
-            "fd": {NAME: "0880_timestamp?"},
+            "fd": {NAME: "0889_timestamp?"},
         },
-        # Interval: ~3-5 seconds, but only with realtime trigger
-        "0421": _A1763_0421,
         # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
         "0900": _A1763_0421,
-        # Interval: Irregular, triggered on app actions, no fixed interval
-        "0830": _PPS_VERSIONS_0830,
     },
     # PPS F2000
     "A1780": {
@@ -1965,6 +2122,18 @@ SOLIXMQTTMAP: Final = {
     "A17C1": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
         "0068": {
@@ -1980,7 +2149,7 @@ SOLIXMQTTMAP: Final = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
             ],
             SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000 W, may depend on country settings
             | {
@@ -2004,6 +2173,18 @@ SOLIXMQTTMAP: Final = {
     "A17C2": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
         "0068": {
             # solarbank light command group
@@ -2018,7 +2199,8 @@ SOLIXMQTTMAP: Final = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
+                SolixMqttCommands.sb_ac_input_limit,  # field a8
             ],
             SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000,1200 W, may depend on country settings
             | {
@@ -2028,6 +2210,7 @@ SOLIXMQTTMAP: Final = {
                 }
             },
             SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
+            SolixMqttCommands.sb_ac_input_limit: CMD_SB_AC_INPUT_LIMIT,  # 0 - 1200 W, step: 100
         },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": _A17C5_0405,
@@ -2043,6 +2226,18 @@ SOLIXMQTTMAP: Final = {
     "A17C3": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
         "0068": {
             # solarbank light command group
@@ -2057,7 +2252,7 @@ SOLIXMQTTMAP: Final = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
             ],
             SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000 W, may depend on country settings
             | {
@@ -2082,6 +2277,19 @@ SOLIXMQTTMAP: Final = {
     "A17C5": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
+        "005e": CMD_SB_USAGE_MODE,  # NOTE: Cmd not supported directly, but description used for msg decoding
         "0067": CMD_SB_MIN_SOC,  # select SOC reserve
         "0068": {
             # solarbank light command group
@@ -2097,7 +2305,7 @@ SOLIXMQTTMAP: Final = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3, a4
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
                 SolixMqttCommands.sb_pv_limit_select,  # field a7
                 SolixMqttCommands.sb_ac_input_limit,  # field a8
             ],
@@ -2118,6 +2326,7 @@ SOLIXMQTTMAP: Final = {
             SolixMqttCommands.sb_pv_limit_select: CMD_SB_PV_LIMIT,  # 2000 W or 3600 W
             SolixMqttCommands.sb_ac_input_limit: CMD_SB_AC_INPUT_LIMIT,  # 0 - 1200 W, step: 100
         },
+        "0085": CMD_SB_3RD_PARTY_PV_SWITCH,  # 3rd Party support switch, cloud driven
         "009a": CMD_SB_DEVICE_TIMEOUT,  # timeout in 30 min chunks: 0, 30, 60, 120, 240, 360, 720, 1440 minutes
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": _A17C5_0405,
@@ -2168,70 +2377,56 @@ SOLIXMQTTMAP: Final = {
             "fe": {NAME: "msg_timestamp"},
         },
     },
-    # Anker Power Dock
-    "AE100": {
+    # Anker Smartplug
+    "A17X8": {
+        "0040": CMD_STATUS_REQUEST,  # Device status request, more reliable than RT (one time status messages 0405 etc)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "007a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "007c": CMD_PLUG_SCHEDULE,  # Set a plug schedule
+        "007e": CMD_PLUG_DELAYED_TOGGLE,  # Set a delayed toggle
+        "007f": CMD_TIMER_REQUEST,  # Request timer status from device for delayed toggle
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             TOPIC: "param_info",
             "a2": {NAME: "device_sn"},
-            "a3": {NAME: "sw_version", "values": 4},
-            "a5": {NAME: "ac_output_power_total"},
-            "a6": {NAME: "ac_output_power_signed_total"},
-            "b3": {NAME: "utc_timestamp"},
-            "b6": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_1_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                    },
-                    "19": {
-                        NAME: "solarbank_1_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                }
-            },
-            "b7": {NAME: "solarbank_1_ac_output_power_signed"},
-            "b8": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_2_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                        "19": {
-                            NAME: "solarbank_2_soc",
-                            TYPE: DeviceHexDataTypes.ui.value,
-                        },
-                    },
-                }
-            },
-            "b9": {NAME: "solarbank_2_ac_output_power_signed"},
-            "ba": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_3_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                        "19": {
-                            NAME: "solarbank_3_soc",
-                            TYPE: DeviceHexDataTypes.ui.value,
-                        },
-                    },
-                }
-            },
-            "bb": {NAME: "solarbank_3_ac_output_power_signed"},
-            "bc": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_4_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                    },
-                    "19": {
-                        NAME: "solarbank_4_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                }
-            },
-            "bd": {NAME: "solarbank_4_ac_output_power_signed"},
+            "a4": {NAME: "ac_output_power_switch"},  # Off (0), On (1)
+            "a6": {NAME: "sw_version", "values": 4},
+            "a7": {NAME: "sw_controller", "values": 4},
+            "a8": {NAME: "voltage", "factor": 0.1},
+            "a9": {NAME: "current", "factor": 0.01},
+            "aa": {NAME: "power", "factor": 0.1},
+            "ab": {NAME: "output_energy", FACTOR: 0.001},
+            "ad": _PLUG_TIMER_STATUS,
+            "fe": {NAME: "msg_timestamp"},
         },
+        "087f": {
+            # Interval: upon timer request command
+            TOPIC: "param_info",
+            "a2": _PLUG_TIMER_STATUS,
+        },
+    },
+    # Anker Power Dock
+    "AE100": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+                STATE_NAME: "max_load_total",
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
+        "0067": CMD_SB_MIN_SOC,  # select SOC reserve, cloud driven
+        "0080": CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
+        "0084": CMD_SB_EV_CHARGER_SWITCH,  # EV charger support switch, cloud driven
+        "0085": CMD_SB_3RD_PARTY_PV_SWITCH,  # 3rd Party support switch, cloud driven
+        # Interval: ~3-10 seconds, but only with realtime trigger
+        "0405": _DOCK_0405,
         # Interval: varies, probably upon change
         "0407": _0407,
         # multisystem messages
@@ -2246,8 +2441,18 @@ SOLIXMQTTMAP: Final = {
     },
     # Prime Charger 250W
     "A2345": {
-        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        "020b": CMD_STATUS_REQUEST,  # Device status request, more reliable than RT (one time status messages 0405 etc)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0303": _A2345_0303,
+    },
+    # EV Charger V1
+    "A5191": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: Irregular, but only after status request command?
+        "0405": _EV_CHARGER_0405,  # Device status request, more reliable than RT (one time status messages 0405 etc)
+        # Interval: ~3-5 seconds, but only with realtime trigger?
+        "0410": _EV_CHARGER_0410,
+        # Interval: Irregular
+        "0840": _EV_CHARGER_0405,
     },
 }

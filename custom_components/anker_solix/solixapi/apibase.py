@@ -543,6 +543,7 @@ class AnkerSolixBaseApi:
                                 "solarbank_2_ac_output_power_signed",
                                 "solarbank_3_ac_output_power_signed",
                                 "solarbank_4_ac_output_power_signed",
+                                "solarbank_ac_output_power_signed_total",
                                 "temperature",
                                 "photovoltaic_power",
                                 "pv_1_power",
@@ -583,16 +584,11 @@ class AnkerSolixBaseApi:
                                 "min_load",
                                 "max_load",
                                 "max_load_legal",
+                                "max_load_total",
                                 "home_load_preset",
                                 "pv_to_grid_power",
                                 "grid_to_home_power",
                                 "wifi_signal",
-                                "usbc_1_power",
-                                "usbc_2_power",
-                                "usbc_3_power",
-                                "usbc_4_power",
-                                "usba_1_power",
-                                "usba_2_power",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -607,20 +603,33 @@ class AnkerSolixBaseApi:
                             key
                             in [
                                 # keys with value that should be saved as rounded as 3 decimal float string
-                                "pv_yield",
                                 "battery_soh",
-                                "charged_energy",
-                                "discharged_energy",
-                                "output_energy",
-                                "bypass_energy",
-                                "home_consumption",
-                                "grid_import_energy",
-                                "grid_export_energy",
+                                "voltage",
                                 "pv_1_voltage",
                                 "pv_2_voltage",
                                 "pv_3_voltage",
                                 "pv_4_voltage",
                                 "battery_voltage",
+                                "power",
+                                "usbc_1_power",
+                                "usbc_2_power",
+                                "usbc_3_power",
+                                "usbc_4_power",
+                                "usba_1_power",
+                                "usba_2_power",
+                                "usbc_1_voltage",
+                                "usbc_2_voltage",
+                                "usbc_3_voltage",
+                                "usbc_4_voltage",
+                                "usba_1_voltage",
+                                "usba_2_voltage",
+                                "current",
+                                "usbc_1_current",
+                                "usbc_2_current",
+                                "usbc_3_current",
+                                "usbc_4_current",
+                                "usba_1_current",
+                                "usba_2_current",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -628,13 +637,30 @@ class AnkerSolixBaseApi:
                             .isdigit()
                         ):
                             device_mqtt[key] = f"{float(value):.3f}"
-                            if key in [
-                                "output_energy",
-                                "pv_yield",
-                                "charged_energy",
-                                "discharged_energy",
-                            ]:
-                                calc_efficiency = True
+                        elif key in [
+                            # energy keys with value that should be saved as rounded as 3 decimal float string
+                            "pv_yield",
+                            "charged_energy",
+                            "discharged_energy",
+                            "output_energy",
+                            "bypass_energy",
+                            "consumed_energy",
+                            "home_consumption",
+                            "grid_import_energy",
+                            "grid_export_energy",
+                        ]:
+                            # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
+                            # 0 value should be ignored, since that may reset energy counters if 0 values read on startup
+                            if 0 < float(value) > float(device_mqtt.get(key, 0)):
+                                device_mqtt[key] = f"{float(value):.3f}"
+                                if key in [
+                                    "output_energy",
+                                    "pv_yield",
+                                    "charged_energy",
+                                    "discharged_energy",
+                                    "consumed_energy",
+                                ]:
+                                    calc_efficiency = True
                         elif (
                             key
                             in [
@@ -685,6 +711,8 @@ class AnkerSolixBaseApi:
                                 "utc_timestamp",
                                 "timestamp_backup_start",
                                 "timestamp_backup_end",
+                                "toggle_to_delay_seconds",
+                                "toggle_to_elapsed_seconds",
                             ]
                             and value is not None
                         ):
@@ -775,21 +803,39 @@ class AnkerSolixBaseApi:
                         updated = updated or value_updated
                     # calculate extra fields if required values were updated
                     if calc_efficiency:
-                        if (
-                            (pv := device_mqtt.get("pv_yield"))
-                            and (out := device_mqtt.get("output_energy"))
-                            and float(pv) > 0
-                        ):
-                            device_mqtt["device_efficiency"] = (
-                                f"{min(100, float(out) / float(pv) * 100):.3f}"
+                        pv = device_mqtt.get("pv_yield")
+                        out = device_mqtt.get("output_energy")
+                        charge = device_mqtt.get("charged_energy")
+                        if not (discharge := device_mqtt.get("discharged_energy")):
+                            # SB2 does not report discharge, but calculates it as Output + Charged - PV
+                            if pv and out and charge:
+                                discharge = min(
+                                    float(charge),
+                                    max(0, float(out) + float(charge) - float(pv)),
+                                )
+                        # consider consumed energy for efficiency, since that probably reduces the reported pv_yield and charge energy
+                        consumed = device_mqtt.get("consumed_energy") or 0
+                        # First calculate optional AC charge
+                        ac_charge = 0
+                        if pv and out and charge and discharge:
+                            ac_charge = max(
+                                0,
+                                float(out)
+                                - float(pv)
+                                + float(charge)
+                                - float(discharge),
                             )
-                        if (
-                            (charge := device_mqtt.get("charged_energy"))
-                            and (discharge := device_mqtt.get("discharged_energy"))
-                            and float(charge) > 0
-                        ):
+                        if pv and out and float(pv) > 0:
+                            # Solarbank 3 seem to reduce the reported PV energy by consumed energy (Heating, Socket), so it must be added to input
+                            dev_in = float(pv) + float(consumed) + ac_charge
+                            device_mqtt["device_efficiency"] = (
+                                f"{min(100, float(out) / dev_in * 100):.3f}"
+                            )
+                        if charge and discharge and float(charge) > 0:
+                            # Charge should include PV charge and AC charge if supported by device
+                            # Solarbank 3 seems to reduce the reported charge energy by consumed energy
                             device_mqtt["battery_efficiency"] = (
-                                f"{min(100, float(discharge) / float(charge) * 100):.3f}"
+                                f"{min(100, float(discharge) / (float(charge) + float(consumed)) * 100):.3f}"
                             )
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
@@ -1730,13 +1776,16 @@ class AnkerSolixBaseApi:
             {"time":"00:00","price":"111.49"},{"time":"01:00","price":"109.91"},{"time":"02:00","price":"102.02"},...,{"time":"23:00","price":"95.49"}],
         "currency":"EUR","today_avg_price":"87.04","tomorrow_avg_price":"71.69"}
         """
-        # validate provider
+        # validate provider, ensure area is defined since query will fail otherwise
         if not (
-            provider := provider
-            if isinstance(provider, SolixPriceProvider)
-            else SolixPriceProvider(provider=provider)
-            if isinstance(provider, str | dict)
-            else None
+            (
+                provider := provider
+                if isinstance(provider, SolixPriceProvider)
+                else SolixPriceProvider(provider=provider)
+                if isinstance(provider, str | dict)
+                else None
+            )
+            and provider.area
         ):
             return {}
         # validate date
@@ -1902,8 +1951,11 @@ class AnkerSolixBaseApi:
                 date = datetime.fromisoformat(poll_time)
                 trend = []
                 # calculate total dynamic price
+                # TODO: Other providers than Nordpool may send final price for kWh (including fee and VAT?)
+                # There is currently no field to recognize the provided price type or unit
                 for day in range(2):
                     daystring = (date + timedelta(days=day)).strftime("%Y-%m-%d")
+                    # Attention: Newer provider may provide very long lists, limit the list to 24 entries for both days
                     trend.extend(
                         {
                             "timestamp": f"{daystring} {item.get('time')}",
@@ -1917,7 +1969,7 @@ class AnkerSolixBaseApi:
                                 else "tomorrow_price_trend"
                             )
                             or []
-                        )
+                        )[:24]
                         if (
                             (spotprice := item.get("price") or "")
                             .replace("-", "", 1)

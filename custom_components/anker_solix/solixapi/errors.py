@@ -87,6 +87,10 @@ class RetryExceeded(AnkerSolixError):
     """Define an error for exceeded retry attempts. Please try again in 24 hours."""
 
 
+class NoAccessPermission(AnkerSolixError):
+    """The device has no access permission."""
+
+
 ERRORS: dict[int, type[AnkerSolixError]] = {
     401: AuthorizationError,
     403: AuthorizationError,
@@ -115,6 +119,7 @@ ERRORS: dict[int, type[AnkerSolixError]] = {
     31001: ItemExistsError,
     31003: ItemLimitExceededError,
     100053: RetryExceeded,
+    160003: NoAccessPermission,
 }
 
 

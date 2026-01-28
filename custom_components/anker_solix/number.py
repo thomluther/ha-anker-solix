@@ -25,6 +25,7 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfEnergyDistance,
     UnitOfPower,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
@@ -53,6 +54,8 @@ from .entity import (
 )
 from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
 from .solixapi.helpers import round_by_factor
+from .solixapi.mqtt_device import SolixMqttDevice
+from .solixapi.mqttcmdmap import VALUE_MAX, VALUE_MIN, VALUE_STEP, SolixMqttCommands
 
 
 @dataclass(frozen=True)
@@ -63,6 +66,8 @@ class AnkerSolixNumberDescription(
 
     restore: bool = False
     mqtt: bool = False
+    mqtt_cmd: str | None = None
+    mqtt_cmd_parm: str | None = None
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
@@ -83,7 +88,10 @@ DEVICE_NUMBERS = [
         native_step=10,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
         force_creation_fn=lambda d, jk: jk in d,
     ),
     AnkerSolixNumberDescription(
@@ -97,7 +105,10 @@ DEVICE_NUMBERS = [
         native_step=5,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
         force_creation_fn=lambda d, jk: jk in d,
     ),
     AnkerSolixNumberDescription(
@@ -124,7 +135,10 @@ DEVICE_NUMBERS = [
         native_min_value=0,
         native_max_value=1000,
         native_step=0.01,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
     ),
     AnkerSolixNumberDescription(
         # Customizable installed battery capacity
@@ -149,6 +163,50 @@ DEVICE_NUMBERS = [
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         restore=True,
+    ),
+    AnkerSolixNumberDescription(
+        key="ac_output_timeout",
+        translation_key="ac_output_timeout",
+        json_key="ac_output_timeout_seconds",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=NumberDeviceClass.DURATION,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_output_timeout_seconds,
+    ),
+    AnkerSolixNumberDescription(
+        key="dc_output_timeout",
+        translation_key="dc_output_timeout",
+        json_key="dc_output_timeout_seconds",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=NumberDeviceClass.DURATION,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.dc_output_timeout_seconds,
+    ),
+    AnkerSolixNumberDescription(
+        key="preset_ac_input_limit",
+        translation_key="preset_ac_input_limit",
+        json_key="ac_input_limit",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=NumberDeviceClass.POWER,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_charge_limit,
+    ),
+    AnkerSolixNumberDescription(
+        key="grid_export_limit",
+        translation_key="grid_export_limit",
+        json_key="grid_export_limit",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=NumberDeviceClass.POWER,
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_disable_grid_export_switch,
+        mqtt_cmd_parm="set_grid_export_limit",
     ),
 ]
 
@@ -309,6 +367,21 @@ async def async_setup_entry(
                         or (
                             desc.mqtt
                             and desc.value_fn(mdata or data, desc.json_key) is not None
+                            # include command number entities only if more than 20 options
+                            and not (
+                                mdev
+                                and desc.mqtt_cmd
+                                and (
+                                    mdev.get_cmd_parm_option_map(
+                                        cmd=desc.mqtt_cmd,
+                                        parm=desc.mqtt_cmd_parm,
+                                        limit=20,
+                                    )
+                                    or not mdev.cmd_is_number(
+                                        cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                                    )
+                                )
+                            )
                         )
                         # filter API only entities
                         or (
@@ -376,6 +449,46 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 self._attr_device_info = get_AnkerSolixDeviceInfo(
                     data, context, coordinator.client.api.apisession.email
                 )
+            # Setup number ranges for MQTT command numbers
+            if self.entity_description.mqtt_cmd and (
+                mdev := self.coordinator.client.get_mqtt_device(context)
+            ):
+                # first get parameter description
+                if self.entity_description.mqtt_cmd_parm:
+                    desc = mdev.get_cmd_parms(
+                        cmd=self.entity_description.mqtt_cmd, all=True
+                    ).get(self.entity_description.mqtt_cmd_parm, {})
+                else:
+                    desc = next(
+                        iter(
+                            mdev.get_cmd_parms(
+                                cmd=self.entity_description.mqtt_cmd
+                            ).values()
+                        ),
+                        {},
+                    )
+                # define number range from control description
+                if self._attribute_name in ["ac_output_timeout", "dc_output_timeout"]:
+                    # convert seconds to minutes
+                    self.native_min_value = (
+                        round(num / 60)
+                        if isinstance(num := desc.get(VALUE_MIN), float | int)
+                        else None
+                    )
+                    self.native_max_value = (
+                        round(num / 60)
+                        if isinstance(num := desc.get(VALUE_MAX), float | int)
+                        else None
+                    )
+                    self.native_step = (
+                        round(num / 60)
+                        if isinstance(num := desc.get(VALUE_STEP), float | int)
+                        else None
+                    )
+                else:
+                    self.native_min_value = desc.get(VALUE_MIN)
+                    self.native_max_value = desc.get(VALUE_MAX)
+                    self.native_step = desc.get(VALUE_STEP)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -462,7 +575,10 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     self._attr_native_unit_of_measurement = unit
                 # update number limits for presets based on solarbank count in system or active max
                 if self._attribute_name == "preset_system_output_power":
-                    if (data.get("generation") or 0) >= 2:
+                    if (
+                        data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        or (data.get("generation") or 0) >= 2
+                    ):
                         # SB2 has min limit of 0W, they are typically correctly set in the schedule depending on device settings
                         self.native_min_value = (data.get("schedule") or {}).get(
                             "min_load"
@@ -508,13 +624,17 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             / (data.get("solarbank_count") or 1)
                         ),
                     )
+                # convert seconds to minutes
+                elif self._attribute_name in ["ac_output_timeout", "dc_output_timeout"]:
+                    if self._native_value is not None:
+                        self._native_value = round(self._native_value / 60)
         else:
             self._native_value = None
         self._assumed_state = False
         # Mark availability based on value
         self._attr_available = self._native_value is not None
 
-    async def async_set_native_value(self, value: float) -> None:
+    async def async_set_native_value(self, value: float) -> None:  # noqa: C901
         """Set the native value of the number entity.
 
         Args:
@@ -535,10 +655,11 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 "energy_consumption_per_100km",
             ]
             and not self.entity_description.restore
+            and not self.entity_description.mqtt_cmd
         ):
             # Raise alert to frontend
             raise ServiceValidationError(
-                f"{self.entity_id} cannot be used while configuration is running in testmode",
+                f"'{self.entity_id}' cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
                 translation_key="active_testmode",
                 translation_placeholders={
@@ -581,6 +702,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             self.entity_id,
                             value,
                         )
+                mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
                 # Trigger Api calls depending on changed entity
                 if self._attribute_name in [
                     "preset_system_output_power",
@@ -597,10 +719,13 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         > self.last_changed + timedelta(seconds=_SCAN_INTERVAL_MIN)
                     ):
                         LOGGER.debug(
-                            "%s change to %s will be applied", self.entity_id, value
+                            "'%s' change to %s will be applied", self.entity_id, value
                         )
                         siteId = data.get("site_id") or ""
-                        if (data.get("generation") or 0) >= 2:
+                        if (
+                            data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                            or (data.get("generation") or 0) >= 2
+                        ):
                             # SB2 preset change
                             resp = await self.coordinator.client.api.set_sb2_home_load(
                                 siteId=siteId,
@@ -610,7 +735,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             )
                             if isinstance(resp, dict) and ALLOW_TESTMODE:
                                 LOGGER.info(
-                                    "%s: Applied schedule for %s change to %s:\n%s",
+                                    "%s: Applied schedule for '%s' change to %s:\n%s",
                                     "TESTMODE"
                                     if self.coordinator.client.testmode()
                                     else "LIVEMODE",
@@ -638,7 +763,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             )
                             if isinstance(resp, dict) and ALLOW_TESTMODE:
                                 LOGGER.info(
-                                    "%s: Applied schedule for %s change to %s:\n%s",
+                                    "%s: Applied schedule for '%s' change to %s:\n%s",
                                     "TESTMODE"
                                     if self.coordinator.client.testmode()
                                     else "LIVEMODE",
@@ -660,14 +785,14 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         self.last_changed = datetime.now().astimezone()
                     else:
                         LOGGER.debug(
-                            "%s cannot be increased to %s because minimum change delay of %s seconds is not passed",
+                            "'%s' cannot be increased to %s because minimum change delay of %s seconds is not passed",
                             self.entity_id,
                             value,
                             _SCAN_INTERVAL_MIN,
                         )
                         # Raise alert to frontend
                         raise ServiceValidationError(
-                            f"{self.entity_id} cannot be increased to {value} because minimum change delay of {_SCAN_INTERVAL_MIN} seconds is not passed",
+                            f"'{self.entity_id}' cannot be increased to {value} because minimum change delay of {_SCAN_INTERVAL_MIN} seconds is not passed",
                             translation_domain=DOMAIN,
                             translation_key="increase_blocked",
                             translation_placeholders={
@@ -678,7 +803,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                 elif self._attribute_name == "preset_charge_priority":
                     LOGGER.debug(
-                        "%s change to %s will be applied", self.entity_id, value
+                        "'%s' change to %s will be applied", self.entity_id, value
                     )
                     resp = await self.coordinator.client.api.set_home_load(
                         siteId=data.get("site_id") or "",
@@ -688,7 +813,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
-                            "%s: Applied schedule for %s change to %s:\n%s",
+                            "%s: Applied schedule for '%s' change to %s:\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -700,7 +825,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                 elif self._attribute_name == "preset_tariff_price":
                     LOGGER.debug(
-                        "%s change to %s will be applied", self.entity_id, value
+                        "'%s' change to %s will be applied", self.entity_id, value
                     )
                     resp = await self.coordinator.client.api.set_sb2_use_time(
                         siteId=data.get("site_id") or "",
@@ -713,7 +838,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
-                            "%s: Applied schedule for %s change to %s:\n%s",
+                            "%s: Applied schedule for '%s' change to %s:\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -725,7 +850,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                 elif self._attribute_name == "system_price":
                     LOGGER.debug(
-                        "%s change to %s will be applied", self.entity_id, value
+                        "'%s' change to %s will be applied", self.entity_id, value
                     )
                     if str(self.coordinator_context).startswith(
                         SolixDeviceType.VIRTUAL.value
@@ -763,7 +888,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     and data.get("type") == SolixDeviceType.VEHICLE.value
                 ):
                     LOGGER.debug(
-                        "%s change to %s will be applied", self.entity_id, value
+                        "'%s' change to %s will be applied", self.entity_id, value
                     )
                     # change vehicle setting
                     resp = await self.coordinator.client.api.manage_vehicle(
@@ -782,9 +907,76 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
+                elif self._attribute_name == "grid_export_limit":
+                    LOGGER.debug(
+                        "'%s' change to %s will be applied", self.entity_id, value
+                    )
+                    resp = None
+                    if (
+                        data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        or data.get("station_sn") is not None
+                    ):
+                        # control station settings via Api
+                        resp = await self.coordinator.client.api.set_station_parm(
+                            deviceSn=self.coordinator_context,
+                            gridExportLimit=int(value),
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    # Control all solarbank devices via individual MQTT device setting
+                    if siteId := data.get("site_id"):
+                        stationSn = (
+                            self.coordinator_context
+                            if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                            else data.get("station_sn", "")
+                        )
+                        for md in self.coordinator.client.get_mqtt_devices(
+                            siteId=siteId,
+                            stationSn=stationSn,
+                            extraDeviceSn=self.coordinator_context,
+                            mqttControl=self.entity_description.mqtt_cmd,
+                        ):
+                            resp = (resp or {}) | {
+                                f"mqtt_control_{md.sn}": await self._async_mqtt_value(
+                                    mdev=md,
+                                    value=value,
+                                    # use same export switch state for all devices, MQTT state is inverted
+                                    parm_map={
+                                        "set_disable_grid_export_switch": 0
+                                        if mdev.device.get("allow_grid_export", True)
+                                        else 1
+                                    },
+                                )
+                            }
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied settings for '%s' change to %s:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            value,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+                # Trigger MQTT commands depending on changed entity
+                elif self.entity_description.mqtt_cmd and mdev:
+                    LOGGER.debug(
+                        "'%s' change to '%s' will be applied via MQTT command '%s'",
+                        self.entity_id,
+                        value,
+                        self.entity_description.mqtt_cmd,
+                    )
+                    # convert seconds to minutes for dedicated entities
+                    if self._attribute_name in [
+                        "ac_output_timeout",
+                        "dc_output_timeout",
+                    ]:
+                        value = round(value * 60)
+                    await self._async_mqtt_value(mdev=mdev, value=value)
             else:
                 LOGGER.debug(
-                    "%s cannot be set because the value %s is out of range %s-%s",
+                    "'%s' cannot be set because the value %s is out of range %s-%s",
                     self.entity_id,
                     value,
                     self.min_value,
@@ -792,7 +984,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 )
                 # Raise alert to frontend
                 raise ServiceValidationError(
-                    f"{self.entity_id} cannot be set to {value} because it is outside of allowed range {self.min_value}-{self.max_value}",
+                    f"'{self.entity_id}' cannot be set to {value} because it is outside of allowed range {self.min_value}-{self.max_value}",
                     translation_domain=DOMAIN,
                     translation_key="out_of_range",
                     translation_placeholders={
@@ -804,6 +996,58 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 )
             # trigger coordinator update with api dictionary data
             await self.coordinator.async_refresh_data_from_apidict()
+
+    async def _async_mqtt_value(
+        self,
+        mdev: SolixMqttDevice,
+        value: Any,
+        cmd: str | None = None,
+        parm: str | None = None,
+        parm_map: dict | None = None,
+    ) -> dict | None:
+        """Use MQTT device control to modify value setting."""
+        resp = None
+        if not isinstance(cmd, str):
+            cmd = self.entity_description.mqtt_cmd
+        if not isinstance(parm, str):
+            parm = self.entity_description.mqtt_cmd_parm
+        try:
+            resp = await mdev.run_command(
+                cmd=cmd,
+                parm=parm,
+                value=value,
+                parm_map=parm_map,
+                toFile=self.coordinator.client.testmode(),
+            )
+            if isinstance(resp, dict) and ALLOW_TESTMODE:
+                LOGGER.info(
+                    "%s: Applied MQTT command '%s' for '%s' change to '%s':\n%s",
+                    "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
+                    cmd,
+                    self.entity_id,
+                    str(value),
+                    json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
+                )
+                # copy the changed state(s) of the mock response into device cache to avoid flip back of entity until real state is received
+                for key, val in resp.items():
+                    if key in mdev.mqttdata:
+                        mdev.mqttdata[key] = val
+                # trigger status request to get updated MQTT message
+                await mdev.status_request(toFile=self.coordinator.client.testmode())
+            else:
+                LOGGER.error(
+                    "'%s' value could not be changed via MQTT command '%s'",
+                    self.entity_id,
+                    cmd,
+                )
+        except (ValueError, TypeError) as err:
+            LOGGER.error(
+                "'%s' value could not be changed via MQTT command '%s':\n%s",
+                self.entity_id,
+                cmd,
+                str(err),
+            )
+        return resp
 
 
 class AnkerSolixRestoreNumber(AnkerSolixNumber, RestoreNumber):

@@ -521,6 +521,18 @@
                         "name": "Customized"
                     }
                 }
+            },
+            "preset_ac_input_limit": {
+                "name": "AC input limit"
+            },
+            "grid_export_limit": {
+                "name": "Grid export limit"
+            },
+            "ac_output_timeout": {
+                "name": "AC output timeout"
+            },
+            "dc_output_timeout": {
+                "name": "DC output timeout"
             }
         },
         "select": {
@@ -600,11 +612,71 @@
             "preset_inverter_limit": {
                 "name": "Inverter limit"
             },
+            "max_load": {
+                "name": "Output limit"
+            },
+            "max_load_total": {
+                "name": "Output limit"
+            },
             "preset_ac_input_limit": {
                 "name": "AC input limit"
             },
             "preset_pv_input_limit": {
                 "name": "PV input limit"
+            },
+            "device_timeout": {
+                "name": "Device timeout"
+            },
+            "min_soc": {
+                "name": "SOC min"
+            },
+            "max_soc": {
+                "name": "SOC max"
+            },
+            "temp_unit": {
+                "name": "Temperature unit",
+                "state": {
+                    "celsius": "Celsius",
+                    "fahrenheit": "Fahrenheit"
+                }
+            },
+            "light_mode": {
+                "name": "Light mode",
+                "state": {
+                    "normal": "Normal",
+                    "mood": "Mood light",
+                    "off": "Off",
+                    "low": "Low",
+                    "medium": "Medium",
+                    "high": "Bright",
+                    "blinking": "Blinking"
+                }
+            },
+            "display_timeout": {
+                "name": "Display timeout"
+            },
+            "display_mode": {
+                "name": "Display mode",
+                "state": {
+                    "off": "Off",
+                    "low": "Low",
+                    "medium": "Medium",
+                    "high": "Bright"
+                }
+            },
+            "ac_output_mode": {
+                "name": "AC output mode",
+                "state": {
+                    "normal": "Normal",
+                    "smart": "Smart"
+                }
+            },
+            "dc_12v_output_mode": {
+                "name": "DC 12V output mode",
+                "state": {
+                    "normal": "Normal",
+                    "smart": "Smart"
+                }
             },
             "vehicle_brand": {
                 "name": "1. Brand"
@@ -785,6 +857,56 @@
             "ac_output_power_total": {
                 "name": "AC output power total"
             },
+            "ac_output_power_signed_total": {
+                "name": "AC output power total"
+            },
+            "solarbank_ac_output_power_signed_total": {
+                "name": "SB AC power total"
+            },
+            "solarbank_1_ac_output_power_signed": {
+                "name": "SB 1 AC power",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
+            "solarbank_2_ac_output_power_signed": {
+                "name": "SB 2 AC power",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
+            "solarbank_3_ac_output_power_signed": {
+                "name": "SB 3 AC power",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
+            "solarbank_4_ac_output_power_signed": {
+                "name": "SB 4 AC power",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    }
+                }
+            },
             "ac_socket": {
                 "name": "AC socket power"
             },
@@ -811,9 +933,6 @@
             },
             "all_ac_input_limit": {
                 "name": "Total AC Input limit"
-            },
-            "power_limit_option": {
-                "name": "Power limit option"
             },
             "set_output_power": {
                 "name": "Home preset",
@@ -866,6 +985,9 @@
             },
             "solar_energy": {
                 "name": "Energy generated"
+            },
+            "consumed_energy": {
+                "name": "Energy consumed"
             },
             "device_efficiency": {
                 "name": "Device efficiency"
@@ -948,6 +1070,12 @@
             },
             "smartplug_list": {
                 "name": "Smart plugs"
+            },
+            "combiner_box_list": {
+                "name": "Combiner boxes"
+            },
+            "charging_pile_list": {
+                "name": "EV charger"
             },
             "hes_list": {
                 "name": "Home energy systems"
@@ -1488,6 +1616,12 @@
                             "charging": "Charging",
                             "discharging": "Discharging"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1501,6 +1635,12 @@
                             "charging": "Charging",
                             "discharging": "Discharging"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1514,6 +1654,12 @@
                             "charging": "Charging",
                             "discharging": "Discharging"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1527,6 +1673,12 @@
                             "charging": "Charging",
                             "discharging": "Discharging"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1540,6 +1692,12 @@
                             "charging": "Charging",
                             "discharging": "Discharging"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
@@ -1553,14 +1711,52 @@
                             "charging": "Charging",
                             "discharging": "Discharging"
                         }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
                     }
                 }
             },
             "dc_12v_1_power": {
-                "name": "DC 12V port 1"
+                "name": "DC 12V port 1",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
             },
             "dc_12v_2_power": {
-                "name": "DC 12V port 2"
+                "name": "DC 12V port 2",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
             },
             "remaining_time_hours": {
                 "name": "Remaining time"
@@ -1685,6 +1881,30 @@
                         "name": "Customized"
                     }
                 }
+            },
+            "ac_socket_switch": {
+                "name": "AC socket"
+            },
+            "light_switch": {
+                "name": "LED Light"
+            },
+            "ac_output_power_switch": {
+                "name": "AC output"
+            },
+            "dc_output_power_switch": {
+                "name": "DC output"
+            },
+            "ac_fast_charge_switch": {
+                "name": "Fast charge"
+            },
+            "ac_charge_switch": {
+                "name": "AC charge"
+            },
+            "display_switch": {
+                "name": "Display"
+            },
+            "port_memory_switch": {
+                "name": "Port memory"
             },
             "allow_refresh": {
                 "name": "Api Usage",
@@ -1982,6 +2202,9 @@
         },
         "service_not_supported": {
             "message": "The entity {entity} does not support the action {service}"
+        },
+        "service_error": {
+            "message": "The action {service} failed, review log for error details"
         },
         "slot_time_error": {
             "message": "The action {service} cannot be executed: {error}"

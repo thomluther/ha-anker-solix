@@ -116,7 +116,10 @@ DEVICE_SENSORS = [
             ),
         },
         entity_category=EntityCategory.DIAGNOSTIC,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
     ),
     AnkerSolixBinarySensorDescription(
         key="auto_switch",

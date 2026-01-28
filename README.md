@@ -19,10 +19,10 @@
 ![python badge][python-shield]
 
 
-This Home Assistant custom integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker power cloud. It was specifically developed to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80), Solarbank 2 E1600, Solarbank 3 E2700 and Anker smart meters has been added to the Api library and is available through the integration. The Anker power cloud also supports portable power stations (PPS), home Power Panels or home energy systems (HES) which are not or only partially supported by the api library. They may be added in the future once Api data structures for those devices are known and regular consumption data will be sent to the Anker Power cloud.
+This Home Assistant custom integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker power cloud and optionally via the Anker MQTT server. It was specifically developed to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80), Solarbank 2 E1600, Solarbank 3 E2700 and Anker smart meters has been added to the Api library and is available through the integration. The Anker power cloud also supports portable power stations (PPS), home Power Panels or home energy systems (HES) which are not or only partially supported by the power cloud. They are (or can be) integrated via the optional Anker MQTT server connection. Missing devices or features may require known Api queries or MQTT data descriptions by device owners.
 
 > [!NOTE]
-> Anker power devices which are not configured into a power system in your Anker mobile app typically do **NOT** provide any consumption data to the Anker power cloud. Likewise it has turned out, that portable power stations (PPS), power banks or power cooler do not send data to the Anker power cloud either since they are not configurable as a main power system device.Therefore, the Api library cannot get consumption data of standalone devices.
+> Anker power devices which are not configured into a power system in your Anker mobile app typically do **NOT** provide any consumption data to the Anker power cloud. Likewise it has turned out, that portable power stations (PPS), power banks or power cooler do not send data to the Anker power cloud either since they are not configurable as a main power system device. Therefore, the Api library cannot get consumption data of standalone devices through the Api cloud server, but only through the optional MQTT server connection. However, most MQTT device data is published in a hex format and varies per device model, therefore it must be [decoded and described](https://github.com/thomluther/anker-solix-api/discussions/222) first by device owners.
 
 Please refer to [supported sensors and devices](#supported-sensors-and-devices) for a list of supported Anker Solix devices.
 
@@ -53,6 +53,7 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Combined Solarbank 2 systems containing cascaded Solarbank 1 devices](#combined-solarbank-2-systems-containing-cascaded-solarbank-1-devices)
    * [Solarbank 3 devices](#solarbank-3-devices)
    * [Solarbank Multisystem with Power Dock](#solarbank-multisystem-with-power-dock)
+   * [Solarbank station controls](#solarbank-station-controls)
    * [Electric Vehicle devices](#electric-vehicle-devices)
    * [Power Panels](#power-panels)
    * [Home Energy Systems (HES)](#home-energy-systems-hes)
@@ -74,11 +75,11 @@ This integration utilizes an unofficial Python library to communicate with the A
 
 ## Anker Account Information
 
-Because of the way the Anker Solix Cloud Api was working, one account with email/password could not be used for the Anker mobile app and this Api in parallel.
-The Anker Solix Cloud allowed only one login token per account at any time. Each new login request by a client will create a new token and the previous token on the server was dropped. For that reason, it was not possible to use this Api client and your mobile app with the same account in parallel. Starting with Anker mobile app release 2.0, you could share your owned system(s) with 'family members'. Since then it was possible to create a second Anker account with a different email address and share your owned system(s) with one or more secondary accounts as member.
+Originally, one account with email/password could not be used for the Anker mobile app and this Api in parallel. In the past, the Anker Solix Cloud allowed only one login token per account at any time. Each new login request by a client will create a new token and the previous token on the server was dropped. For that reason, it was not possible to use this Api client and your mobile app with the same account in parallel. Starting with Anker mobile app release 2.0, you could share your owned system(s) with 'family members'. Since then it was possible to create a second Anker account with a different email address and share your owned system(s) with one or more secondary accounts as member.
 
 > [!NOTE]
-> System members cannot manage any devices of the shared system or view any device details. You can only see the system overview in the app. Likewise you have the same behavior when using the Api: You cannot query device details with the shared account or manage them through an MQTT connection because you don't have the required permissions for this data. However, a shared account is sufficient to monitor the overview values through the integration without being restricted for using the main account in the Anker app to manage your device settings if needed.
+> A shared account is only a member of the shared system, and as such currently has no permissions to access or query device details of the shared system.
+Therefore an Api homepage query will neither display any data for a shared account. However, a shared account can receive Api scene/site details of shared systems (app system = Api site), which is equivalent to what is displayed in the mobile app on the home screen for the selected system.
 
 > [!TIP]
 > Starting end of July 2025 and with version 3.10 of the Anker mobile app, one account can now be used across multiple devices in parallel. That means active login tokens are no longer deleted upon login of another client and parallel account usage becomes possible. Actually there is **NO NEED ANYMORE** to create a second account and share the system with it, since the main account can now be used in parallel across multiple devices and clients. To switch your account, refer to [Switching between different Anker Power accounts](#switching-between-different-anker-power-accounts)
@@ -90,16 +91,26 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 
 - The used Api library is by no means an official Api and is very limited as there is no documentation at all
 - The Api library or the login can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in the underlying Api library
-- The Api library was validated against both Anker cloud servers (EU and COM). Assignment of countries to either of the two servers however is unknown and depending on the selected country for your account. Upon wrong server assignment for your registered country, the Api may login but show no valid systems, devices or sensors in the integration
+- The Api library was validated against both Anker cloud servers (EU and COM). Assignment of countries to either of the two servers however is unknown and depending on the selected country for your account. Upon wrong server assignment for your registered country, the Api may login but show no valid systems, devices or sensors in the integration. You need to open an issue to correct your country assignment in the Api library.
 - The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
-- It was observed that solarbank or inverter devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While device Wifi is disconnected, the reported data in the cloud may be stale. You can use the cloud state sensor of the end device to verify the device cloud connection state and recognize potentially stale data.
+- Devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While device Wifi is disconnected, the reported data in the cloud may be stale. You can use the cloud state sensor of the end device to verify the device cloud connection state and recognize potentially stale data.
+- MQTT data updates depend on the publish cycle of device messages. Most messages are not published regularly, but only while the real time trigger is active for the device. Therefore MQTT data may get stale, if messages are no longer published.
+  - You may use the MQTT data timestamp as indicator when the last data update was received. However, this does not mean that all MQTT data were updated (it depends on the device and published message)
+- If you overlay MQTT data and particular MQTT data get stale due to missing messages, the entity may not longer refresh even if the Api may provide updated data
+  - You may need to automate MQTT status requests or real time triggers for the device, if certain entities no longer refresh
+  - Be aware of [additional overhead](#mqtt-managed-devices) when automating 24x7 real time trigger for your devices
 - The integration can support only Solix power devices which are defined in a power system via the Anker mobile app. While it may present also standalone devices that are not defined in a system, those standalone devices are not manageable through the cloud Api servers.
+- Dynamic tariff and price forecast is only supported for the generic Nordpool provider. Other providers typically require registration through the mobile App and will not be supported by this integration.
+- Dynamic price forecast calculations for other providers than Nordpool may be wrong, since neither the provided price unit is clear, nor whether the provider prices include fees and taxes.
 - Starting with version 3.4.0, such stand alone device can be monitored through an optional MQTT server connection. However, it depends on the decoding and description of the MQTT messages for each device model whether the integration can provide useful data
-- Further devices may be added in future once examples of Api response data or MQTT message descriptions can be provided to the developer.
+- Starting with version 3.5.0, Solix devices can also be controlled via the optional MQTT server connection. However, it depends on the decoding and description of the MQTT messages and controls for each device model whether the integration can implement control entities for the device
+- Further devices may be added in future once examples of Api response data or MQTT message and control descriptions can be provided to the developer.
 
 > [!NOTE]
 > To export randomized example data of your Anker power system configuration, please refer to the [anker-solix Python library][anker-solix-api] and the tool [export_system.py](https://github.com/thomluther/anker-solix-api#export_systempy). A new [HA service/action to export anonymized Api response data](INFO.md#export-systems-action) was added to the integration to simplify data collection in a downloadable zip file. You can open a new [issue as feature request](https://github.com/thomluther/ha-anker-solix/issues) and upload the zip file with the exported json files, together with a short description of your setup. You should enable the MQTT messages export option before exporting the configuration. To catch most values, the export should be run when the device is actually using many input and output channels including battery charge or discharge consumption to get meaningful data.
 
+> [!IMPORTANT]
+> The HA service/action only works if you have a valid hub configuration. Otherwise the Export System action may not be registered to HA and there may not be a functional Api target entity either for the export.
 
 ## Supported sensors and devices
 
@@ -120,14 +131,14 @@ Device type | Description
 -- | --
 `account` | Anker Solix user account used for the configured hub entry. It collects all common entities belonging to the account or api connection.
 `system` | Anker Solix 'Power System' as defined in the Anker app. It collects all entities belonging to the defined system and is referred as 'site' in the cloud api.
-`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1) **(includes MQTT monitoring)**<br>- A17C1: Solarbank 2 E1600 Pro **(includes partial MQTT monitoring)**<br>- A17C3: Solarbank 2 E1600 Plus **(includes partial MQTT monitoring)**<br>- A17C2: Solarbank 2 E1600 AC **(includes partial MQTT monitoring)**<br>- A17C5: Solarbank 3 E2700 **(includes partial MQTT monitoring)**
-`combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems **(includes partial MQTT monitoring)**
+`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1) **(with MQTT monitoring & control)**<br>- A17C1: Solarbank 2 E1600 Pro **(with MQTT monitoring & control)**<br>- A17C3: Solarbank 2 E1600 Plus **(with MQTT monitoring & control)**<br>- A17C2: Solarbank 2 E1600 AC **(with MQTT monitoring & control)**<br>- A17C5: Solarbank 3 E2700 **(with MQTT monitoring & control)**
+`combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems **(with MQTT monitoring & control)**
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
-`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(includes partial MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(includes partial MQTT monitoring)**
-`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No device settings supported)**
-`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(partial MQTT monitoring)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(partial MQTT monitoring)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring)**<br>- A1763: C1000 Gen 2 Portable Power Station **(partial MQTT monitoring)**<br>- A1780(P): F2000(P) Portable Power Station **(partial MQTT monitoring)**<br>- A1790(P): F3800(P) Portable Power Station **(partial MQTT monitoring)**
-`powerpanel` | Anker Solix Power Panels configured in the system **(only basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
-`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(only basic Api monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
+`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
+`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
+`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
+`powerpanel` | Anker Solix Power Panels configured in the system **(basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
+`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the announced [Anker Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (🇩🇪).
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
@@ -155,6 +166,8 @@ Solarbank 1 systems transfer their power values every 60 seconds to the cloud wh
 
 Version 3.4.0 added comprehensive [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
 
+Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
+
 
 ### Solarbank 2 devices and Smart Meters
 
@@ -163,7 +176,12 @@ Anker changed the data transfer mechanism to the Api cloud with Solarbank 2 powe
 > [!IMPORTANT]
 > Any change of the control entities is typically applied immediately to Solarbank devices. However, since all Solarbank 2 devices have only a cloud update frequency of 5 minutes, it may take up to 6 minutes until you see the effect of an applied change in other integration entities (e.g. in various power sensors).
 
-Version 3.4.0 added partial [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
+Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
+
+Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
+
+> [!ATTENTION]
+> The output limit change via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
 
 
 ### Solarbank 2 AC devices
@@ -173,7 +191,12 @@ The Solarbank 2 AC model comes with new and unique features and initial support 
 > [!NOTE]
 > The Solarbank 2 AC devices still have issues and may stop updating some values in the cloud after active use of the mobile app with the system owner. See issue [#211](https://github.com/thomluther/ha-anker-solix/issues/211#issuecomment-2692936285).
 
-Version 3.4.0 added partial [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
+Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
+
+Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
+
+> [!ATTENTION]
+> The output limit change via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
 
 
 ### Combined Solarbank 2 systems containing cascaded Solarbank 1 devices
@@ -218,7 +241,14 @@ However, it was noticed that the Solarbank charging status code is not longer be
 > [!NOTE]
 > The Solarbank 3 dynamic price VAT and fee actually cannot be determined or modified through the cloud Api. While those entities can be customized in the integration, the changes are only applied as customization to the Api cache, but **NOT** to your real system configuration. However, they are required to calculate the total dynamic prices (actual and forecast) as used by your system to evaluate charge and discharge slots as well as saving calculations. To monitor total dynamic prices and forecast also as system member, those entities have been made customizable in the Api cache for now. They will be initialized with an average default for your country if defined. Refer to [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for more details on their behavior.
 
-Version 3.4.0 added partial [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
+Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
+
+Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
+
+> [!ATTENTION]
+> Following limitations apply:
+- The output limit control via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls).
+- Dynamic price forecast support remains limited to the Nordpool provider only. **Other price providers may show wrong price calculations**, see [Dynamic price provider selection](#dynamic-price-provider-selection).
 
 
 ### Solarbank Multisystem with Power Dock
@@ -229,21 +259,50 @@ Anker announced the [Solarbank Multisystem solution for early testing in Germany
 > Actually there are significant consumption data update issues for such systems during the initial deployment phase and cloud values may be wrong or lagging hours behind. This becomes especially visible via the Api or the Anker mobile App once using a member account.
 
 The Api library implemented enhancements to mask some value errors, but this can be done only on a limited base. It also does not help for proper total value breakdown to individual devices, if the breakdown is missing in the cloud data. Therefore some of the Solarbank device power values may reflect the appliance totals instead of individual breakdown.
-Many settings for Multisystems are shared across all Solarbanks in the system, like usage mode, SOC reserve and export to grid setting. In the mobile App they are managed through the station settings, and the individual device settings are greyed out. Custom plans for output presets is shared for all devices, and the individual device output is managed automatically across all solarbanks, depending on their SOC, capacity etc. That means they cannot be modified individually anymore. The integration will still show the individual device settings if applicable, but changing them will change the settings for all devices in the system. The new combiner box device type will be used for the passive power dock, which is not reported as normal device by the cloud since it is passive and has no cloud connection. The integration will use it to reflect combined sensors and control entities for such Multisystems, although those values and settings are not managed by the combiner box itself.
+Many settings for Multisystems are shared across all Solarbanks in the system, like usage mode, SOC reserve and export to grid setting. In the mobile App they are managed through the station settings, and the individual device settings are greyed out. Custom plans for output presets is shared for all devices, and the individual device output is managed automatically across all solarbanks, depending on their SOC, capacity etc. That means they cannot be modified individually anymore.
+Starting with version 3.5.0, the integration consolidates all merged device settings in the Power Dock device and individual device controls are no longer available. The new combiner box device type will be used for the Power Dock device, and it will reflect combined sensors and control entities for such Multisystems, although those values and settings may not managed by the combiner box itself, but via Api controls or hybrid Api and MQTT controls across all devices.
 
 > [!NOTE]
-> The expected Multisystem support for Solarbank 2 devices or intermix required a new system type, that allows combining parallel and different SB2 types within a system. This may be reflected in different Api structures compared to SB3 Multisystems, and it is unclear whether the integration can support them with actual Multisystem enhancements.
+> The expected Multisystem support for Solarbank 2 devices or intermix required a new system type, that allows combining parallel and different SB2 types within a system. This may be reflected in different Api structures compared to SB3 Multisystems (which may not need a Power Dock), and it is unclear whether the integration can support SB3 Multisystems without Power Dock with the recent 3.5.0 changes.
 > For more details on Multisystem support, please refer and contribute to issue [#310](https://github.com/thomluther/ha-anker-solix/issues/310)
 
-Version 3.4.0 added partial [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities for power docks that are connected to the cloud.
+Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities for Power Docks that are connected to the cloud.
+
+Version 3.5.0 added device control via optional MQTT connection and merged individual solarbank device controls to Power Dock controls. Multisystem controls are implemented via additional or hybrid control entities.
+
+> [!ATTENTION]
+> The output limit for Multisystems is not changeable via the integration since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
+
+
+### Solarbank station controls
+
+Device controls via station controls have been implemented by Anker to manage Solarbank devices that may support Multisystem configurations (with or without Power Dock). The station provides the capability to manage a system or device control in a central place, that may have to be applied to one or more devices in parallel. The station control settings that you can find in the mobile app typically must be changed through the cloud Api, while the individual devices settings on the device details panel typically reflect the MQTT values (if it is an MQTT control). If a device control is managed centrally by the station, it is typically greyed out on the device panel, but you can still see the active setting based on MQTT data of the device. As it turned out, some of the station controls cannot be managed by the Api alone, if the cloud does not distribute the required MQTT commands to the dependent devices. On the other hand, if only the device MQTT commands are distributed by a client, the settings on the station panel will not change, and the cloud may not be aware of station control changes. Various controls shown on the station panel require various (hybrid) Api and/or MQTT control. This hybrid control is now implemented in the integration if the MQTT connection is enabled. Otherwise you may not see those MQTT dependent controls anyway.
+
+Following settings may require the hybrid approach:
+- SOC reserve (min SOC) - same for all Solarbank devices in Multisystems, must also be set on Power Dock device
+- PV input limit - individual per Solarbank
+- AC input limit (AC charge limit) - individual per Solarbank
+- AC output limit (max home load) - overall limit across all Solarbank devices in system, must also be set on Power Dock device
+  - This control has limited support through the integration
+  - It may work for single solarbank systems (but station display does not change)
+  - It is not changeable for Multisystems
+- Grid export switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device
+  - Grid export limit 100-100000 W - same for all Solarbank devices in Multisystems, must also be set on Power Dock device (requires FW that supports the limit setting)
+- 3rd party PV switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device and is typically cloud driven
+  - This will not be implemented to the integration, since it depends on FW and is typically a one time system configuration setting that does not need automation
+- EV charger enablement switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device and is typically cloud driven
+  - This will not be implemented to the integration, since it depends on FW and is typically a one time system configuration setting that does not need automation
+
+> [!ATTENTION]
+> The Api query to change the AC output limit (max home load) on the station panel is unknown. Therefore this control may not fully work for single systems, altough the device itself will show the limit change being applied through MQTT. For Multisystems, the output limit therefore cannot be changed through the integration, since that is controlled through the cloud server with regular MQTT commands across all Solarbanks and the Power Dock. This control cannot be supported by the integration until someone will find the required Api query/parameters to change the output limit for Solarbank devices. More details are discussed in this [issue comment](https://github.com/thomluther/anker-solix-api/issues/216#issuecomment-3804889623) in case you want to contribute.
 
 
 ### Electric Vehicle devices
 
-Anker announced its [Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (DE) which can be used as stand alone system or being integrated into the X1 HES system as well as into the Solarbank Multisystem (by 4Q 2025). The EV Charger device can be shared amongst Anker cloud users, while each user can define/create its own virtual electric vehicle, or even multiple of them (up to 5 vehicles per account). The vehicles are used to manage EV charging by individual users, even if they are not the owner of the system to which the EV Charger device belongs to. Each user will need to create its own vehicle(s) to create and manage charge orders for the V1. The integration currently does **NOT** yet support the vehicle creation itself, but it creates a virtual device for each existing EV under the user account and it can modify various vehicle attributes and show all entities that belong to the vehicle. The user vehicle can also be deleted by removing the vehicle device from the integration hub.
+Anker announced its [Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (DE) which can be used as stand alone system or being integrated into the X1 HES system as well as into the Solarbank Multisystem (by 4Q 2025). The EV Charger device can be shared amongst Anker cloud users, while each user can define/create its own virtual electric vehicle, or even multiple of them (up to 5 vehicles per account). The vehicles are used to manage EV charging by individual users, even if they are not the owner of the system to which the EV Charger device belongs to. Each user will need to create its own vehicle(s) to create and manage charge orders for the V1. The integration currently does **NOT** support the vehicle creation itself, but it creates a virtual device for each existing EV under the user account and it can modify various vehicle attributes and show all entities that belong to the vehicle. The user vehicle can also be deleted by removing the vehicle device from the integration hub.
 
 > [!TIP]
-> The integration will automatically discover added and removed vehicles under the user account during the regular device details refresh cycle (10 minutes per default). An immediate vehicle refresh can also be triggered manually by a corresponding button of the account device.
+> The integration will automatically discover added and remove vehicles under the user account during the regular device details refresh cycle (10 minutes per default). An immediate vehicle refresh can also be triggered manually by a corresponding button of the account device.
 
 
 ### Power Panels
@@ -254,7 +313,9 @@ Integration version 3.1.0 added a [customizable battery capacity](INFO.md#batter
 
 Power Panel owners need to explore and document cloud Api capabilities to further expand any Power Panel system or device support. Please refer to issue [Add F3800/BP3800 Equipment when connected to Home Power Panel](https://github.com/thomluther/anker-solix-api/issues/117) for contribution.
 
-Version 3.4.0 added partial [device MQTT data](#mqtt-managed-devices) for F3800(P) device that are typically attached to power panels.
+Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) for F3800(P) device that are typically attached to power panels.
+
+Version 3.5.0 added device control via optional MQTT connection for F3800(P) devices.
 
 
 ### Home Energy Systems (HES)
@@ -270,17 +331,23 @@ Integration version 3.1.0 added [Dynamic utility rate plan support](INFO.md#dyna
 
 X1 system owners need to explore and document cloud Api capabilities to further expand any X1 system or (sub-)device support. Please refer to issue [Extending the solution to support Anker Solix X1 systems](https://github.com/thomluther/anker-solix-api/issues/162) for contribution or create a new and more specific issue as feature request.
 
+> [!NOTE]
+> The X1 devices report also MQTT data, but their format is completely different than other Solix devices typically use. The X1 MQTT message format is not supported yet by the Api library and therefore cannot be implemented to the HA integration.
+
+> [!TIP]
+> If you prefer local integration of your X1 devices, please refer to the generic [HA Modbus integration](https://www.home-assistant.io/integrations/modbus/) and the [Anker X1 Modbus specification](https://support.ankersolix.com/de/s/download-preview?urlname=Anker-SOLIX-X1-Series-Modbus-Protocol). Modbus will NOT be covered by this project, and you need to configure the Modbus integration in YAML, including each sensor definition according to the documented modbus registers. Examples are shown by user [@Freacly](https://github.com/Freacly) in this [issue](https://github.com/thomluther/ha-anker-solix/issues/429#issuecomment-3810556184).
+
 
 ### Other devices
 
-Other devices not listed in the support table are neither supported nor tested with the Api library or the HA integration. Be aware that devices are only supported by the Anker cloud Api if they can be added into a Power System. Stand alone devices such as portable power stations (PPS), power charger or power cooler, can only be controlled through the MQTT server, and therefore require usage of the owner account and a description for all decoded MQTT messages types that are being provided for each particular device model.
+Other devices not listed in the support table are neither supported nor tested with the Api library or the HA integration. Be aware that devices are only supported by the Anker cloud Api if they can be added into a Power System. Stand alone devices such as portable power stations (PPS), power charger or power cooler, can only be controlled through the MQTT server, and therefore require usage of the owner account and a description for all relevant MQTT message and command types that are being used by each particular device model.
 
 To get additional Anker power devices/systems added, please review the [anker-solix Python library][anker-solix-api] and contribute to [open issues](https://github.com/thomluther/anker-solix-api/issues) or Api exploration. Most devices can neither be tested by the developer, nor can they be added to the HA integration before their Api usage, parameters, structures and fields are fully understood, interpreted and implemented into the Api library.
 You can also explore the Anker Solix cloud Api directly within your HA instance via the integration's [Api request action](INFO.md#api-request-action).
 The same applies to [MQTT managed devices](#mqtt-managed-devices), since decoding and description/interpretation of values requires real time monitoring of the messages under various conditions while comparing the decoded values with App data.
 
 > [!IMPORTANT]
-> While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or provide power values or much other details from standalone devices which are not defined to a Power System, typically since the do not require a holistic system view with a group of devices and the Api cloud does not track or provide energy statistics for those devices either. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their realtime values but only for the time they are triggered by an owner account in the App. Such data can only be integrated via the optional MQTT server connection.
+> While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or provide power values or much other details from standalone devices which are not defined to a Power System, typically since the do not require a holistic system view with a group of devices and the Api cloud does not track or provide energy statistics for those devices either. The real time data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their real time values but only for the time they are triggered by an owner account in the App. Such data can only be integrated via the optional MQTT server connection.
 
 
 ## MQTT managed devices
@@ -289,20 +356,25 @@ Since integration version 3.4.0, an additional connection to the Anker MQTT Serv
 
 The integration also supports a button per MQTT managed device that can be used to trigger real time data of the device with a common timeout that can be configured in the MQTT options of your hub. If the device will receive any trigger command, the timeout used in the last trigger command will be applied. The app typically uses timeouts of 300 seconds, which is also the default timeout of the integration.
 
-Integration version 3.4.1 added another button for a single MQTT status request. If fully supported by the device, it will send one set of status message(s) that are otherwise only sent if the realtime trigger is active. However, devices may also send only the main status message without optional extra status messages, which may be provided only if the realtime trigger is active.
+Integration version 3.4.1 added another button for a single MQTT status request. If fully supported by the device, it will send one set of status message(s) that are otherwise only sent if the real time trigger is active. However, devices may also send only the main status message without optional extra status messages, which may be provided only if the real time trigger is active.
 
 > [!NOTE]
-> Anker has no consistent implementation across their Solix devices whether they publish all status messages upon a single status request. Especially Solarbank 2 and later, as well as Multisystem constellations have many extra status messages that are only published while the **realtime trigger** is active.
+> Anker has no consistent implementation across their Solix devices whether they publish all status messages upon a single status request. Especially Solarbank 2 and later, as well as Multisystem constellations have many extra status messages that are only published while the **real time trigger** is active.
 
-Depending on how devices publish their data in regular, status request or realtime trigger messages, you may need the real time trigger to keep all MQTT based entities updating their states. Otherwise, entities with data that is only available in real time messages will get stale, if the real time data publish will timeout. The integration provides two buttons for each eligible device and you can control status requests or realtime triggers for your customized needs via an automation that will press any of the buttons at regular intervals, or only under certain conditions which you can define in your automation. The integration does not limit how often or how many real time trigger or status request commands are being sent, so you have maximum flexibility for receiving MQTT data of your devices.
+Depending on how devices publish their data in regular, status request or real time trigger messages, you may need to automate the real time trigger to keep all MQTT based entities updating their states. Otherwise, entities with data that is only available in real time messages will get stale, if the real time data publish will timeout. The integration provides two buttons for each eligible device and you can control status requests or real time triggers for your customized needs via an automation that will press any of the buttons at regular intervals, or only under certain conditions which you can define in your automation. The integration does not limit how often or how many real time trigger or status request commands are being sent, so you have maximum flexibility for receiving MQTT data of your devices.
 
 > [!IMPORTANT]
 > Be aware that real time data may come with a cost if triggered permanently:
-> - There will be larger amounts of traffic to your HA server but also between the devices and the Anker MQTT and Cloud servers
+> - There will be larger amounts of traffic to your HA server but also between the devices and the Anker MQTT and cloud servers
 > - The Anker cloud infrastructure may not be scalable enough to maintain such 24x7 real time traffic for growing number of devices, since that is no use case with normal mobile App usage
 > - The devices may be kept awake and never go to sleep mode, therefore using more power than necessary
 >
-> For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data.
+> For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data updates permanently.
+
+Integration version 3.5.0 added control entities for MQTT manageable devices. If the various MQTT commands for the device model have been decoded and described by the community, the integration can now control those devices as well and provide similar management experience as the mobile app.
+
+> [!ATTENTION]
+> Most of those controls cannot be validated by the developer since they require owner access to the real device type. Use the controls with care and validate them appropriately. You may open an issue with a system export and you have to use the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to analyse the MQTT commands from your mobile app for debugging and problem fixing.
 
 For more details on MQTT usage and hybrid integration, please refer to [MQTT connection and integration](INFO.md#mqtt-connection-and-integration).
 
@@ -385,6 +457,7 @@ If you have questions, observations, advises or want to share your experience, f
 If you want to contribute to this project, please read the [Contribution guidelines](CONTRIBUTING.md).
 As a starter, you may want to add more [translations](https://github.com/thomluther/ha-anker-solix/discussions/12) for your native language.
 If you have no Python knowledge, you can contribute by exploring the Anker Solix Api via the [Api request action](INFO.md#api-request-action) and document your discovery of new, unknown Api request capabilities and information about your owned Anker Solix devices that you still miss in the integration.
+If you don't find any data for your owned devices although you enabled the MQTT server connection, your device model still has to be decoded and described. You can contribute by starting with the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) from the [Api library](https://github.com/thomluther/anker-solix-api) and follow the [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222). In order to decode MQTT commands of your device, please follow this [MQTT command and state analysis and description](https://github.com/thomluther/anker-solix-api/discussions/222#discussioncomment-14660599).
 
 
 ## Attribution

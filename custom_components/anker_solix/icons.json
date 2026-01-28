@@ -33,7 +33,7 @@
                 "default": "mdi:car-cog"
             },
             "mqtt_realtime_trigger": {
-                "default": "mdi:arrow-decision"
+                "default": "mdi:arrow-decision-auto"
             },
             "mqtt_status_request": {
                 "default": "mdi:arrow-decision"
@@ -160,6 +160,18 @@
             },
             "energy_consumption_per_100km": {
                 "default": "mdi:car-electric"
+            },
+            "preset_ac_input_limit": {
+                "default": "mdi:speedometer"
+            },
+            "grid_export_limit": {
+                "default": "mdi:transmission-tower-import"
+            },
+            "ac_output_timeout": {
+                "default": "mdi:clock-end"
+            },
+            "dc_output_timeout": {
+                "default": "mdi:clock-end"
             }
         },
         "select": {
@@ -197,11 +209,71 @@
             "preset_inverter_limit": {
                 "default": "mdi:speedometer"
             },
+            "max_load": {
+                "default": "mdi:speedometer"
+            },
+            "max_load_total": {
+                "default": "mdi:speedometer"
+            },
             "preset_ac_input_limit": {
                 "default": "mdi:speedometer"
             },
             "preset_pv_input_limit": {
                 "default": "mdi:speedometer"
+            },
+            "device_timeout": {
+                "default": "mdi:clock-end"
+            },
+            "min_soc": {
+                "default": "mdi:battery-heart-outline"
+            },
+            "max_soc": {
+                "default": "mdi:battery-heart"
+            },
+            "temp_unit": {
+                "default": "mdi:temperature-celsius",
+                "state": {
+                    "celsius": "mdi:temperature-celsius",
+                    "fahrenheit": "mdi:temperature-fahrenheit"
+                }
+            },
+            "light_mode": {
+                "default": "mdi:lightbulb-question-outline",
+                "state": {
+                    "normal": "mdi:lightbulb-on",
+                    "mood": "mdi:lightbulb-night",
+                    "off": "mdi:lightbulb-off-outline",
+                    "low": "mdi:lightbulb-on-30",
+                    "medium": "mdi:lightbulb-on-50",
+                    "high": "mdi:lightbulb-on-80",
+                    "blinking": "mdi:alarm-light"
+                }
+            },
+            "display_timeout": {
+                "default": "mdi:clock-end"
+            },
+            "display_mode": {
+                "default": "mdi:card-bulleted-settings-outline",
+                "state": {
+                    "off": "mdi:brightness-7",
+                    "low": "mdi:brightness-4",
+                    "medium": "mdi:brightness-6",
+                    "high": "mdi:brightness-5"
+                }
+            },
+            "ac_output_mode": {
+                "default": "mdi:flash-outline",
+                "state": {
+                    "nomral": "mdi:flash",
+                    "smart": "mdi:flash-auto"
+                }
+            },
+            "dc_12v_output_mode": {
+                "default": "mdi:flash-outline",
+                "state": {
+                    "nomral": "mdi:flash",
+                    "smart": "mdi:flash-auto"
+                }
             },
             "vehicle_brand": {
                 "default": "mdi:car-info"
@@ -274,8 +346,29 @@
             "ac_output_power_total": {
                 "default": "mdi:home-battery-outline"
             },
+            "ac_output_power_signed_total": {
+                "default": "mdi:home-battery-outline"
+            },
+            "solarbank_ac_output_power_signed_total": {
+                "default": "mdi:home-battery-outline"
+            },
+            "solarbank_1_ac_output_power_signed": {
+                "default": "mdi:home-battery-outline"
+            },
+            "solarbank_2_ac_output_power_signed": {
+                "default": "mdi:home-battery-outline"
+            },
+            "solarbank_3_ac_output_power_signed": {
+                "default": "mdi:home-battery-outline"
+            },
+            "solarbank_4_ac_output_power_signed": {
+                "default": "mdi:home-battery-outline"
+            },
             "ac_to_home_load": {
                 "default": "mdi:home-import-outline"
+            },
+            "home_demand_total": {
+                "default": "mdi:home-lightning-bolt"
             },
             "home_load_power": {
                 "default": "mdi:home-lightning-bolt"
@@ -331,9 +424,6 @@
             "all_ac_input_limit": {
                 "default": "mdi:flash-triangle-outline"
             },
-            "power_limit_option": {
-                "default": "mdi:flash-auto"
-            },
             "fittings": {
                 "default": "mdi:tools"
             },
@@ -378,11 +468,20 @@
             "solar_energy": {
                 "default": "mdi:solar-power-variant"
             },
+            "consumed_energy": {
+                "default": "mdi:lightning-bolt-circle"
+            },
             "device_efficiency": {
                 "default": "mdi:percent-box"
             },
             "battery_efficiency": {
                 "default": "mdi:percent-box-outline"
+            },
+            "grid_import_energy": {
+                "default": "mdi:home-lightning-bolt-outline"
+            },
+            "grid_export_energy": {
+                "default": "mdi:transmission-tower"
             },
             "daily_discharge_energy": {
                 "default": "mdi:battery-minus-variant"
@@ -469,6 +568,12 @@
                 "default": "mdi:counter"
             },
             "smartplug_list": {
+                "default": "mdi:counter"
+            },
+            "combiner_box_list": {
+                "default": "mdi:counter"
+            },
+            "charging_pile_list": {
                 "default": "mdi:counter"
             },
             "hes_list": {
@@ -641,6 +746,34 @@
                     "on": "mdi:download",
                     "off": "mdi:download-off"
                 }
+            },
+            "ac_socket_switch": {
+                "default": "mdi:power-socket-eu"
+            },
+            "light_switch": {
+                "default": "mdi:lightbulb-question-outline",
+                "state": {
+                    "on": "mdi:lightbulb-on",
+                    "off": "mdi:lightbulb-off-outline"
+                }
+            },
+            "ac_output_power_switch": {
+                "default": "mdi:power-socket-eu"
+            },
+            "dc_output_power_switch": {
+                "default": "mdi:record-circle"
+            },
+            "ac_fast_charge_switch": {
+                "default": "mdi:power-plug-battery"
+            },
+            "ac_charge_switch": {
+                "default": "mdi:power-plug-battery-outline"
+            },
+            "display_switch": {
+                "default": "mdi:card-bulleted-outline"
+            },
+            "port_memory_switch": {
+                "default": "mdi:memory"
             },
             "allow_refresh": {
                 "default": "mdi:sync-alert",

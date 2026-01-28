@@ -17,6 +17,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfPower,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
@@ -67,6 +68,8 @@ from .solixapi.apitypes import (
     SolixVehicle,
 )
 from .solixapi.helpers import get_enum_name
+from .solixapi.mqtt_device import SolixMqttDevice
+from .solixapi.mqttcmdmap import SolixMqttCommands
 
 
 @dataclass(frozen=True)
@@ -77,38 +80,62 @@ class AnkerSolixSelectDescription(
 
     feature: AnkerSolixEntityFeature | None = None
     mqtt: bool = False
+    mqtt_cmd: str | None = None
+    mqtt_cmd_parm: str | None = None
+    api_cmd: bool | None = None
     restore: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
     value_fn: Callable[[dict, str], str | None] = (
         lambda d, jk: None if d.get(jk) is None else str(d.get(jk))
     )
-    options_fn: Callable[[dict, str], list | None] = (
-        lambda d, jk: list(d.get(jk) or []) or None
-    )
+    options_fn: Callable[[dict, str], list | None] = lambda d, jk: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
     attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
 
 
 DEVICE_SELECTS = [
     AnkerSolixSelectDescription(
-        # Solarbank Batter power cutoff setting
+        # Solarbank Battery power cutoff setting for SB 1/2
         key="power_cutoff",
         translation_key="power_cutoff",
         json_key="power_cutoff",
-        options_fn=lambda d, _: [
-            str(item.get("output_cutoff_data") or item.get("soc"))
-            for item in d.get("power_cutoff_data") or []
-        ],
         unit_of_measurement=PERCENTAGE,
         # Allow unchangeable selection for member systems if they show non 0 value
         value_fn=lambda d, jk: str(opt)
         if (opt := d.get(jk) or d.get("output_cutoff_data"))
         else None,
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
+        # Excludde for Solarbank 3 or later due to different MQTT command
+        exclude_fn=lambda s, d: not (
+            d.get("generation", 0) < 3
+            and {d.get("type")} - s
             and {ApiCategories.solarbank_cutoff} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
         ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_power_cutoff_select,
+        api_cmd=True,
+    ),
+    AnkerSolixSelectDescription(
+        # Solarbank Battery power cutoff setting for SB 3+
+        key="power_cutoff",
+        translation_key="power_cutoff",
+        json_key="power_cutoff",
+        unit_of_measurement=PERCENTAGE,
+        # Allow unchangeable selection for member systems if they show non 0 value
+        value_fn=lambda d, jk: str(opt)
+        if (opt := d.get(jk) or d.get("output_cutoff_data"))
+        else None,
+        # Excludde for Solarbank 3 or later due to different MQTT command
+        exclude_fn=lambda s, d: not (
+            d.get("generation", 0) > 2
+            and {d.get("type")} - s
+            and {ApiCategories.solarbank_cutoff} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_min_soc_select,
+        api_cmd=True,
     ),
     AnkerSolixSelectDescription(
         # Solarbank 2 Usage Mode setting
@@ -122,7 +149,10 @@ DEVICE_SELECTS = [
             SolarbankUsageMode, d.get(jk), str(d.get(jk)) if jk in d else None
         ),
         attrib_fn=lambda d, jk: {"mode": d.get(jk)},
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
     ),
     AnkerSolixSelectDescription(
         # Solarbank 2 AC Tariff type
@@ -138,7 +168,10 @@ DEVICE_SELECTS = [
         or None,
         attrib_fn=lambda d, jk: {"tariff": d.get(jk)},
         feature=AnkerSolixEntityFeature.AC_CHARGE,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
     ),
     AnkerSolixSelectDescription(
         # Inverter limit supported options
@@ -153,14 +186,86 @@ DEVICE_SELECTS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSelectDescription(
-        # AC input limit supported options
+        # SB output limit
+        key="max_load",
+        translation_key="max_load",
+        json_key="max_load",
+        unit_of_measurement=UnitOfPower.WATT,
+        # use different MQTT value name if overlay
+        #value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        value_fn=lambda d, jk: None
+        if (
+            v := (d.get(jk) or d.get("power_limit"))
+            if d.get(MQTT_OVERLAY)
+            else (d.get("power_limit") or d.get(jk))
+        )
+        is None
+        else str(v),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_max_load,
+    ),
+    AnkerSolixSelectDescription(
+        # SB Multisystem output limit
+        key="max_load_total",
+        translation_key="max_load_total",
+        json_key="max_load_total",
+        unit_of_measurement=UnitOfPower.WATT,
+        # use different MQTT value name if overlay
+        value_fn=lambda d, jk: None
+        if (
+            v := (d.get(jk) or d.get("all_power_limit"))
+            if d.get(MQTT_OVERLAY)
+            else (d.get("all_power_limit") or d.get(jk))
+        )
+        is None
+        else str(v),
+        # exclude if not main device of total load
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s
+            and (
+                d.get("type") == SolixDeviceType.COMBINER_BOX.value
+                or d.get("station_sn") == d.get("device_sn")
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_max_load_parallel,
+    ),
+    AnkerSolixSelectDescription(
+        # PPS output limit
+        key="max_load",
+        translation_key="max_load",
+        json_key="max_load",
+        unit_of_measurement=UnitOfPower.WATT,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.device_max_load,
+    ),
+    AnkerSolixSelectDescription(
+        # SB AC input limit
         key="preset_ac_input_limit",
         translation_key="preset_ac_input_limit",
         json_key="ac_input_limit",
-        # Add options once settings are supported
-        options_fn=lambda d, _: [],
         unit_of_measurement=UnitOfPower.WATT,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_ac_input_limit,
+    ),
+    AnkerSolixSelectDescription(
+        # PPS AC input limit
+        key="preset_ac_input_limit",
+        translation_key="preset_ac_input_limit",
+        json_key="ac_input_limit",
+        unit_of_measurement=UnitOfPower.WATT,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_charge_limit,
     ),
     AnkerSolixSelectDescription(
         # PV input limit supported options
@@ -168,9 +273,124 @@ DEVICE_SELECTS = [
         translation_key="preset_pv_input_limit",
         json_key="pv_power_limit",
         # Add options once settings are supported
-        options_fn=lambda d, _: [],
         unit_of_measurement=UnitOfPower.WATT,
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        # use different MQTT value name if overlay
+        value_fn=lambda d, jk: None
+        if (
+            v := (d.get("pv_limit") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("pv_limit"))
+        )
+        is None
+        else str(v),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_pv_limit_select,
+    ),
+    AnkerSolixSelectDescription(
+        # SB timeout
+        key="device_timeout",
+        translation_key="device_timeout",
+        json_key="device_timeout_minutes",
+        unit_of_measurement=UnitOfTime.MINUTES,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_device_timeout,
+    ),
+    AnkerSolixSelectDescription(
+        # PPS timeout
+        key="device_timeout",
+        translation_key="device_timeout",
+        json_key="device_timeout_minutes",
+        unit_of_measurement=UnitOfTime.MINUTES,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.device_timeout_minutes,
+    ),
+    AnkerSolixSelectDescription(
+        key="temp_unit",
+        translation_key="temp_unit",
+        json_key="temp_unit_fahrenheit",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.temp_unit_switch,
+    ),
+    AnkerSolixSelectDescription(
+        # SB light mode
+        key="light_mode",
+        translation_key="light_mode",
+        json_key="light_mode",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_light_mode_select,
+    ),
+    AnkerSolixSelectDescription(
+        # PPS light mode
+        key="light_mode",
+        translation_key="light_mode",
+        json_key="light_mode",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.light_mode_select,
+    ),
+    AnkerSolixSelectDescription(
+        key="display_timeout",
+        translation_key="display_timeout",
+        json_key="display_timeout_seconds",
+        unit_of_measurement=UnitOfTime.SECONDS,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.display_timeout_seconds,
+    ),
+    AnkerSolixSelectDescription(
+        key="display_mode",
+        translation_key="display_mode",
+        json_key="display_mode",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.display_mode_select,
+    ),
+    AnkerSolixSelectDescription(
+        key="ac_output_mode",
+        translation_key="ac_output_mode",
+        json_key="ac_output_mode",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_output_mode_select,
+    ),
+    AnkerSolixSelectDescription(
+        key="dc_12v_output_mode",
+        translation_key="dc_12v_output_mode",
+        json_key="dc_12v_output_mode",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.dc_12v_output_mode_select,
+    ),
+    AnkerSolixSelectDescription(
+        key="min_soc",
+        translation_key="min_soc",
+        json_key="power_cutoff",
+        unit_of_measurement=PERCENTAGE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.soc_limits,
+        mqtt_cmd_parm="set_min_soc",
+    ),
+    AnkerSolixSelectDescription(
+        key="max_soc",
+        translation_key="max_soc",
+        json_key="max_soc",
+        unit_of_measurement=PERCENTAGE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.soc_limits,
+        mqtt_cmd_parm="set_max_soc",
     ),
 ]
 
@@ -319,6 +539,24 @@ async def async_setup_entry(
                         or (
                             desc.mqtt
                             and desc.value_fn(mdata or data, desc.json_key) is not None
+                            # include MQTT command select entities only if no switch and max 20 options or also using Api command
+                            and (
+                                desc.api_cmd
+                                or not (
+                                    mdev
+                                    and desc.mqtt_cmd
+                                    and (
+                                        mdev.cmd_is_switch(
+                                            cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                                        )
+                                        or not mdev.get_cmd_parm_option_map(
+                                            cmd=desc.mqtt_cmd,
+                                            parm=desc.mqtt_cmd_parm,
+                                            limit=20,
+                                        )
+                                    )
+                                )
+                            )
                         )
                         # filter API only entities
                         or (
@@ -431,6 +669,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             data, self.entity_description.json_key
         )
         # Initial options update for static information not changed during Api session
+        mdev = self.coordinator.client.get_mqtt_device(context)
+        number_sort = False
         if self._attribute_name == "system_price_unit":
             # merge currencies from entity description and from Api currency list
             options = set(self._attr_options or []) | {
@@ -445,6 +685,58 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             }
             self._attr_options = list(options)
             self._attr_options.sort()
+        elif mdev and (
+            self.entity_description.mqtt_cmd == SolixMqttCommands.sb_max_load
+            and isinstance(options := mdev.device.get("power_limit_option"), list)
+        ):
+            # Limit the options to subset as provided in Api device details (from power limit query)
+            # [{'limit': 350, 'limit_real': 350}, {'limit': 600, 'limit_real': 600}, {'limit': 800, 'limit_real': 800}]
+            self._attr_options = [
+                str(d.get("limit"))
+                for d in options
+                if isinstance(d, dict)
+                for key, item in d.items()
+                if key == "limit"
+            ]
+            # fallback to MQTT command options
+            if not self._attr_options:
+                self._attr_options = list(
+                    mdev.get_cmd_parm_option_map(
+                        cmd=self.entity_description.mqtt_cmd,
+                        parm=self.entity_description.mqtt_cmd_parm,
+                    ).keys()
+                )
+            number_sort = True
+        elif (
+            mdev
+            and self.entity_description.mqtt_cmd
+            == SolixMqttCommands.sb_max_load_parallel
+        ):
+            # TODO: Update options once SB Multisystem load limit change via Api is supported
+            self._attr_options = None
+            number_sort = True
+        elif self.entity_description.mqtt_cmd and mdev:
+            # Get MQTT device options for supported control
+            self._attr_options = list(
+                mdev.get_cmd_parm_option_map(
+                    cmd=self.entity_description.mqtt_cmd,
+                    parm=self.entity_description.mqtt_cmd_parm,
+                ).keys()
+            )
+            number_sort = True
+        # ensure numbered sort also for strings
+        if number_sort and self._attr_options:
+            self._attr_options.sort(
+                key=lambda x: (
+                    not (
+                        isnum := str(x)
+                        .replace("-", "", 1)
+                        .replace(".", "", 1)
+                        .isdigit()
+                    ),
+                    float(x) if isnum else x,
+                )
+            )
         # Make sure that options are set to existing state if no options defined
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
@@ -546,6 +838,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 self._attr_options.sort()
             else:
                 self._attr_options = []
+        elif self._attribute_name == "power_cutoff":
+            data = (self.coordinator.data or {}).get(self.coordinator_context) or {}
+            self._attr_options = [
+                str(item.get("output_cutoff_data") or item.get("soc"))
+                for item in data.get("power_cutoff_data") or []
+            ]
+
         # Make sure that options are limited to existing state if no options defined
         if not self._attr_options and self._attr_current_option is not None:
             self._attr_options = [self._attr_current_option]
@@ -599,6 +898,14 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     api_prio=not mdev.device.get(MQTT_OVERLAY),
                     fromFile=self.coordinator.client.testmode(),
                 )
+                # convert command state value into option if available
+                if self.entity_description.mqtt_cmd:
+                    data.update(
+                        mdev.get_cmd_parm_state_option(
+                            cmd=self.entity_description.mqtt_cmd,
+                            fromFile=self.coordinator.client.testmode(),
+                        )
+                    )
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
                 self._attr_current_option = self.entity_description.value_fn(data, key)
@@ -642,6 +949,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     "vehicle_variant",
                 ]
                 and not self.entity_description.restore
+                and not self.entity_description.mqtt_cmd
             ):
                 # Raise alert to frontend
                 raise ServiceValidationError(
@@ -684,6 +992,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             self.entity_id,
                             option,
                         )
+            mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
             # Trigger Api calls depending on changed entity
             if self._attribute_name == "power_cutoff":
                 LOGGER.debug(
@@ -697,6 +1006,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         for d in (data.get("power_cutoff_data") or [])
                         if str(d.get("output_cutoff_data") or d.get("soc")) == option
                     ]:
+                        resp = None
                         if (
                             data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
                             or data.get("station_sn") is not None
@@ -707,6 +1017,38 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 socReserve=int(option),
                                 toFile=self.coordinator.client.testmode(),
                             )
+                            # Control all solarbank devices via individual MQTT device setting
+                            # ensure that each MQTT device uses the command as supported by its control
+                            if siteId := data.get("site_id"):
+                                stationSn = (
+                                    self.coordinator_context
+                                    if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                                    else data.get("station_sn", "")
+                                )
+                                for md in self.coordinator.client.get_mqtt_devices(
+                                    siteId=siteId,
+                                    stationSn=stationSn,
+                                    extraDeviceSn=self.coordinator_context,
+                                ):
+                                    if SolixMqttCommands.sb_min_soc_select in md.controls:
+                                        resp = (resp or {}) | {
+                                            f"mqtt_control_{md.sn}": await self._async_mqtt_option(
+                                                mdev=md,
+                                                option=option,
+                                                cmd=SolixMqttCommands.sb_min_soc_select,
+                                            )
+                                        }
+                                    elif (
+                                        SolixMqttCommands.sb_power_cutoff_select
+                                        in md.controls
+                                    ):
+                                        resp = (resp or {}) | {
+                                            f"mqtt_control_{md.sn}": await self._async_mqtt_option(
+                                                mdev=md,
+                                                option=option,
+                                                cmd=SolixMqttCommands.sb_power_cutoff_select,
+                                            )
+                                        }
                         else:
                             # control via individual device setting
                             resp = await self.coordinator.client.api.set_power_cutoff(
@@ -728,26 +1070,55 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 ),
                             )
 
-            elif self._attribute_name in [
-                "preset_ac_input_limit",
-                "preset_pv_input_limit",
-            ]:
+            elif self._attribute_name in ["max_load", "max_load_total"]:
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied",
+                    self.entity_id,
+                    option,
+                )
+                resp = None
                 with suppress(ValueError, TypeError):
-                    LOGGER.debug(
-                        "'%s' selection change to option '%s' will be applied",
-                        self.entity_id,
-                        option,
-                    )
-                    resp = await self.coordinator.client.api.set_power_limit(
-                        deviceSn=self.coordinator_context,
-                        ac_input=option
-                        if self._attribute_name == "preset_ac_input_limit"
-                        else None,
-                        pv_input=option
-                        if self._attribute_name == "preset_pv_input_limit"
-                        else None,
-                        toFile=self.coordinator.client.testmode(),
-                    )
+                    if stationSn := (
+                        self.coordinator_context
+                        if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        else data.get("station_sn")
+                    ):
+                        # TODO: Multisystem Max load control via Api unknown at this point in time
+                        # Control all solarbank devices via individual MQTT device setting if they have a station
+                        for md in self.coordinator.client.get_mqtt_devices(
+                            siteId=data.get("site_id"),
+                            stationSn=stationSn,
+                            extraDeviceSn=self.coordinator_context,
+                            mqttControl=SolixMqttCommands.sb_max_load_parallel,
+                        ):
+                            resp = (resp or {}) | {
+                                f"mqtt_control_{md.sn}": await self._async_mqtt_option(
+                                    mdev=md,
+                                    option=option,
+                                    cmd=SolixMqttCommands.sb_max_load_parallel,
+                                )
+                            }
+                    elif data.get("type") in [SolixDeviceType.SOLARBANK.value]:
+                        # use Api command to modify station settings
+                        # TODO: Verify if Api option is reflected in mobile App station settings
+                        resp = (
+                            resp or {}
+                        ) | await self.coordinator.client.api.set_power_limit(
+                            siteId=data.get("site_id", ""),
+                            deviceSn=self.coordinator_context,
+                            ac_output=option
+                            if self._attribute_name == "max_load"
+                            else None,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    # ensure that each MQTT device uses the command as supported by its max load control
+                    if self._attribute_name == "max_load" and mdev:
+                        resp = (resp or {}) | {
+                            f"mqtt_control_{mdev.sn}": await self._async_mqtt_option(
+                                mdev=mdev,
+                                option=option,
+                            )
+                        }
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied limit setting:\n%s",
@@ -755,9 +1126,46 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
                             json.dumps(
-                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                                resp,
+                                indent=2 if len(json.dumps(resp)) < 200 else None,
                             ),
                         )
+
+            elif self._attribute_name in [
+                "preset_ac_input_limit",
+                "preset_pv_input_limit",
+            ]:
+                # with suppress(ValueError, TypeError):
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied",
+                    self.entity_id,
+                    option,
+                )
+                # use Api command to modify station settings
+                resp = await self.coordinator.client.api.set_power_limit(
+                    siteId=data.get("site_id", ""),
+                    deviceSn=self.coordinator_context,
+                    ac_input=option
+                    if self._attribute_name == "preset_ac_input_limit"
+                    else None,
+                    pv_input=option
+                    if self._attribute_name == "preset_pv_input_limit"
+                    else None,
+                    toFile=self.coordinator.client.testmode(),
+                )
+                if isinstance(resp, dict) and ALLOW_TESTMODE:
+                    LOGGER.info(
+                        "%s: Applied limit setting:\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
+                    )
+                # use also MQTT command to modify device settings as well
+                if mdev and self.entity_description.mqtt_cmd in mdev.controls:
+                    await self._async_mqtt_option(mdev=mdev, option=option)
 
             elif self._attribute_name == "preset_usage_mode":
                 LOGGER.debug(
@@ -772,7 +1180,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         # Backup option cannot be enabled directly, instead activate backup mode switch
                         # This will reactivate an existing interval or start a new backup with default duration
                         resp = await self.coordinator.client.api.set_sb2_ac_charge(
-                            siteId=data.get("site_id") or "",
+                            siteId=data.get("site_id", ""),
                             deviceSn=self.coordinator_context,
                             backup_switch=True,
                             toFile=self.coordinator.client.testmode(),
@@ -784,7 +1192,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             == SolarbankUsageMode.backup.value
                         ):
                             resp = await self.coordinator.client.api.set_sb2_ac_charge(
-                                siteId=data.get("site_id") or "",
+                                siteId=data.get("site_id", ""),
                                 deviceSn=self.coordinator_context,
                                 backup_switch=False,
                                 # Use test schedule to ensure change is done in cache only
@@ -792,7 +1200,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 toFile=self.coordinator.client.testmode(),
                             )
                         resp = await self.coordinator.client.api.set_sb2_home_load(
-                            siteId=data.get("site_id") or "",
+                            siteId=data.get("site_id", ""),
                             deviceSn=self.coordinator_context,
                             usage_mode=usage_mode,
                             toFile=self.coordinator.client.testmode(),
@@ -821,7 +1229,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 )
                 with suppress(ValueError, TypeError):
                     resp = await self.coordinator.client.api.set_sb2_use_time(
-                        siteId=data.get("site_id") or "",
+                        siteId=data.get("site_id", ""),
                         deviceSn=self.coordinator_context,
                         tariff_type=option,
                         # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
@@ -1034,8 +1442,74 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             model_id=vehicle.model or UNDEFINED,
                             hw_version=str(vehicle.productive_year or "") or UNDEFINED,
                         )
+            # Trigger MQTT commands depending on changed entity
+            elif self.entity_description.mqtt_cmd and mdev:
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied via MQTT command '%s'",
+                    self.entity_id,
+                    option,
+                    self.entity_description.mqtt_cmd,
+                )
+                await self._async_mqtt_option(mdev=mdev, option=option)
+
             # trigger coordinator update with api dictionary data
             await self.coordinator.async_refresh_data_from_apidict()
+
+    async def _async_mqtt_option(
+        self,
+        mdev: SolixMqttDevice,
+        option: Any,
+        cmd: str | None = None,
+        parm: str | None = None,
+        parm_map: dict | None = None,
+    ) -> dict | None:
+        """Use MQTT device control to modify option setting."""
+        resp = None
+        if not isinstance(cmd, str):
+            cmd = self.entity_description.mqtt_cmd
+        if not isinstance(parm, str):
+            parm = self.entity_description.mqtt_cmd_parm
+        try:
+            cmdvalue = mdev.get_cmd_parm_option_map(
+                cmd=cmd,
+                parm=parm,
+            ).get(option)
+            resp = await mdev.run_command(
+                cmd=cmd,
+                parm=parm,
+                value=option if cmdvalue is None else cmdvalue,
+                parm_map=parm_map,
+                toFile=self.coordinator.client.testmode(),
+            )
+            if isinstance(resp, dict) and ALLOW_TESTMODE:
+                LOGGER.info(
+                    "%s: Applied MQTT command '%s' for '%s' change to '%s':\n%s",
+                    "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
+                    cmd,
+                    self.entity_id,
+                    option,
+                    json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
+                )
+                # copy the changed state(s) of the mock response into device cache to avoid flip back of entity until real state is received
+                for key, val in resp.items():
+                    if key in mdev.mqttdata:
+                        mdev.mqttdata[key] = val
+                # trigger status request to get updated MQTT message
+                await mdev.status_request(toFile=self.coordinator.client.testmode())
+            else:
+                LOGGER.error(
+                    "'%s' option could not be changed via MQTT command '%s'",
+                    self.entity_id,
+                    cmd,
+                )
+        except (ValueError, TypeError) as err:
+            LOGGER.error(
+                "'%s' option could not be changed via MQTT command '%s':\n%s",
+                self.entity_id,
+                cmd,
+                str(err),
+            )
+        return resp
 
     async def _solix_ac_charge_service(
         self, service_name: str, **kwargs: Any
