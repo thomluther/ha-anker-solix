@@ -311,7 +311,7 @@ class SolixMqttDevice:
         return {}
 
     def cmd_is_switch(self, cmd: str, parm: str | None = None) -> bool:
-        """Checks whether the command is a single switch control. If parm is specified, it will check the given parameter."""
+        """Check whether the command is a single switch control. If parm is specified, it will check the given parameter."""
         if isinstance(cmd, str):
             if isinstance(parm, str):
                 # use parameter flag
@@ -323,7 +323,7 @@ class SolixMqttDevice:
         return False
 
     def cmd_is_number(self, cmd: str, parm: str | None = None) -> bool:
-        """Checks whether the command is a single number control. If parm is specified, it will check the given parameter."""
+        """Check whether the command is a single number control. If parm is specified, it will check the given parameter."""
         if isinstance(cmd, str):
             if isinstance(parm, str):
                 # use parameter flag
