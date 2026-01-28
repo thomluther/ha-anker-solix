@@ -180,7 +180,7 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > The output limit change via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
 
 
@@ -195,7 +195,7 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > The output limit change via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
 
 
@@ -245,7 +245,7 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > Following limitations apply:
 - The output limit control via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls).
 - Dynamic price forecast support remains limited to the Nordpool provider only. **Other price providers may show wrong price calculations**, see [Dynamic price provider selection](#dynamic-price-provider-selection).
@@ -270,7 +270,7 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection and merged individual solarbank device controls to Power Dock controls. Multisystem controls are implemented via additional or hybrid control entities.
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > The output limit for Multisystems is not changeable via the integration since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
 
 
@@ -293,7 +293,7 @@ Following settings may require the hybrid approach:
 - EV charger enablement switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device and is typically cloud driven
   - This will not be implemented to the integration, since it depends on FW and is typically a one time system configuration setting that does not need automation
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > The Api query to change the AC output limit (max home load) on the station panel is unknown. Therefore this control may not fully work for single systems, altough the device itself will show the limit change being applied through MQTT. For Multisystems, the output limit therefore cannot be changed through the integration, since that is controlled through the cloud server with regular MQTT commands across all Solarbanks and the Power Dock. This control cannot be supported by the integration until someone will find the required Api query/parameters to change the output limit for Solarbank devices. More details are discussed in this [issue comment](https://github.com/thomluther/anker-solix-api/issues/216#issuecomment-3804889623) in case you want to contribute.
 
 
@@ -373,7 +373,7 @@ Depending on how devices publish their data in regular, status request or real t
 
 Integration version 3.5.0 added control entities for MQTT manageable devices. If the various MQTT commands for the device model have been decoded and described by the community, the integration can now control those devices as well and provide similar management experience as the mobile app.
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > Most of those controls cannot be validated by the developer since they require owner access to the real device type. Use the controls with care and validate them appropriately. You may open an issue with a system export and you have to use the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to analyse the MQTT commands from your mobile app for debugging and problem fixing.
 
 For more details on MQTT usage and hybrid integration, please refer to [MQTT connection and integration](INFO.md#mqtt-connection-and-integration).

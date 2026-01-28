@@ -77,7 +77,7 @@ This integration utilizes an unofficial Python library to communicate with the A
         - [Usage of dynamic tariffs with the Time Slot mode](#usage-of-dynamic-tariffs-with-the-time-slot-mode)
 1. **[Toggling system price type or currency settings](#toggling-system-price-type-or-currency-settings)**
     * [Dynamic utility rate plans options](#dynamic-utility-rate-plans-options)
-        - [Dynamic price provider selection](#dynamic-price-provider-selection)
+        - [Dynamic price provider](#dynamic-price-provider)
         - [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
         - [Export tariff options](#export-tariff-options)
 1. **[Solar forecast data](#solar-forecast-data)**
@@ -519,10 +519,7 @@ The provider is required to query the correct spot prices through the cloud Api.
 > A different provider can also mean changing only the region of the same provider. The supported provider options depend on the device model type and there are countries where 'Nordpool' is offering various regions.
 
 > [!IMPORTANT]
-> In December 2025, Anker implemented a new method to support additional regional dynamic price providers. This method requires a registration through the Anker App. The price formats and Api queries for registered provides are unknown and **WILL NOT BE SUPPORTED** by the integration. Therefore, any price calculations provided by the integration may be wrong for other providers than Nordpool, since the reported pricing structure varies and is not described.
-
-> [!ATTENTION]
-> With support of registered price providers, the list of standard providers has been enhanced as well. Those new providers however may not show an area code and price details cannot be queried through the Api. Furthermore, price details format is unkonwn and may be different than for Nordpool. Therefore the integration  **WILL NOT SUPPORT** other providers beside Nordpool.
+> In December 2025, Anker implemented a new method to support additional regional dynamic price providers. This method requires a registration through the Anker App. The price formats and Api queries for registered provides are unknown and **WILL NOT BE SUPPORTED** by the integration. Therefore, any price calculations provided by the integration may be wrong for other providers than Nordpool, since the reported pricing structure varies and is not described. With support of registered price providers, the list of standard providers has been enhanced as well. Those new providers however may not show an area code and price details cannot be queried through the Api. Furthermore, the price structure is unknown and may be different than for Nordpool. Therefore the integration  **WILL NOT SUPPORT** other providers beside Nordpool.
 
 > [!TIP]
 > If there are issues with dynamic price data or related queries, you can exclude the system price category in the hub options. This will remove all price related entities and avoid dynamic price related Api queries.
@@ -935,7 +932,7 @@ The Solarbank 3 electricity provider configuration allows definition of various 
 
 There may be one or more dynamic price provider options available for your Solarbank 3 system, depending on the country your Anker account is using. Typically this is 'Nordpool' for most countries, but others may be supported in future. A provider is defined via country, company and area code. Therefore multiple provider options may be presented already by the integration, if there are multiple regions supported by your country company. Any supported combination of those provider options can be chosen via a select entity. If you modify the provider as an owner account, the provider selection will be applied to your system and the dynamic price type will automatically be enabled, which is required to apply a provider selection. If you modify the provider as a member account, the change is only applied to the Api cache, but not activated on the system since your account has no permission for such a modification. The selected provider however will be used by the integration to poll spot price forecast data via the Anker cloud. The spot price data can be polled independently of your system type or access permission.
 
-> [!ATTENTION]
+> [!IMPORTANT]
 > Be aware of the limitations and support for [dynamic price provider selection](#dynamic-price-provider-selection).
 
 #### Dynamic price fees and taxes
