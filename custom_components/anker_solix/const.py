@@ -31,6 +31,9 @@ TC_LINK: Final[str] = "https://github.com/thomluther/ha-anker-solix/blob/main/RE
 MQ_LINK: Final[str] = (
     "https://github.com/thomluther/ha-anker-solix#mqtt-managed-devices"
 )
+REQUEST_LINK: Final[str] = (
+    "https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98"
+)
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,

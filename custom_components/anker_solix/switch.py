@@ -51,6 +51,7 @@ from .const import (
     INCLUDE_MQTT,
     LOGGER,
     MQTT_OVERLAY,
+    REQUEST_LINK,
     SERVICE_API_REQUEST,
     SERVICE_EXPORT_SYSTEMS,
     SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
@@ -144,7 +145,7 @@ DEVICE_SWITCHES = [
             else None
         ),
         exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
+            {d.get("type")} - s and d.get("mqtt_data")
             and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
         ),
         mqtt=True,
@@ -378,6 +379,9 @@ async def async_setup_entry(
         name=SERVICE_API_REQUEST,
         schema=SOLIX_REQUEST_SCHEMA,
         func=SERVICE_API_REQUEST,
+        description_placeholders={
+            "url": REQUEST_LINK,
+        },
         required_features=[AnkerSolixEntityFeature.ACCOUNT_INFO],
         supports_response=SupportsResponse.ONLY,
     )

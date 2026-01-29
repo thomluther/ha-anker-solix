@@ -108,7 +108,10 @@ DEVICE_SELECTS = [
         # Excludde for Solarbank 3 or later due to different MQTT command
         exclude_fn=lambda s, d: not (
             d.get("generation", 0) < 3
-            and {d.get("type")} - s
+            and (
+                ({d.get("type")} - s)
+                & {SolixDeviceType.SOLARBANK.value, SolixDeviceType.COMBINER_BOX.value}
+            )
             and {ApiCategories.solarbank_cutoff} - s
             and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
         ),
@@ -129,7 +132,10 @@ DEVICE_SELECTS = [
         # Excludde for Solarbank 3 or later due to different MQTT command
         exclude_fn=lambda s, d: not (
             d.get("generation", 0) > 2
-            and {d.get("type")} - s
+            and (
+                ({d.get("type")} - s)
+                & {SolixDeviceType.SOLARBANK.value, SolixDeviceType.COMBINER_BOX.value}
+            )
             and {ApiCategories.solarbank_cutoff} - s
             and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
         ),
@@ -192,7 +198,7 @@ DEVICE_SELECTS = [
         json_key="max_load",
         unit_of_measurement=UnitOfPower.WATT,
         # use different MQTT value name if overlay
-        #value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        # value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
         value_fn=lambda d, jk: None
         if (
             v := (d.get(jk) or d.get("power_limit"))
@@ -202,7 +208,10 @@ DEVICE_SELECTS = [
         is None
         else str(v),
         exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
+            (
+                ({d.get("type")} - s)
+                & {SolixDeviceType.SOLARBANK.value, SolixDeviceType.COMBINER_BOX.value}
+            )
             and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
         ),
         mqtt=True,
@@ -240,7 +249,9 @@ DEVICE_SELECTS = [
         translation_key="max_load",
         json_key="max_load",
         unit_of_measurement=UnitOfPower.WATT,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s - {SolixDeviceType.SOLARBANK.value}
+        ),
         value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.device_max_load,
@@ -251,7 +262,9 @@ DEVICE_SELECTS = [
         translation_key="preset_ac_input_limit",
         json_key="ac_input_limit",
         unit_of_measurement=UnitOfPower.WATT,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: not (
+            ({d.get("type")} - s) & {SolixDeviceType.SOLARBANK.value}
+        ),
         value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.sb_ac_input_limit,
@@ -262,7 +275,9 @@ DEVICE_SELECTS = [
         translation_key="preset_ac_input_limit",
         json_key="ac_input_limit",
         unit_of_measurement=UnitOfPower.WATT,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")} - s - {SolixDeviceType.SOLARBANK.value}
+        ),
         value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.ac_charge_limit,
@@ -377,7 +392,11 @@ DEVICE_SELECTS = [
         translation_key="min_soc",
         json_key="power_cutoff",
         unit_of_measurement=PERCENTAGE,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: not (
+            {d.get("type")}
+            - s
+            - {SolixDeviceType.SOLARBANK.value, SolixDeviceType.COMBINER_BOX.value}
+        ),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.soc_limits,
         mqtt_cmd_parm="set_min_soc",
@@ -1022,7 +1041,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             if siteId := data.get("site_id"):
                                 stationSn = (
                                     self.coordinator_context
-                                    if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                                    if data.get("type")
+                                    in [SolixDeviceType.COMBINER_BOX.value]
                                     else data.get("station_sn", "")
                                 )
                                 for md in self.coordinator.client.get_mqtt_devices(
@@ -1030,7 +1050,10 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                     stationSn=stationSn,
                                     extraDeviceSn=self.coordinator_context,
                                 ):
-                                    if SolixMqttCommands.sb_min_soc_select in md.controls:
+                                    if (
+                                        SolixMqttCommands.sb_min_soc_select
+                                        in md.controls
+                                    ):
                                         resp = (resp or {}) | {
                                             f"mqtt_control_{md.sn}": await self._async_mqtt_option(
                                                 mdev=md,

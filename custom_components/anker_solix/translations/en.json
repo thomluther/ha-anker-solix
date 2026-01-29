@@ -202,7 +202,7 @@
                     "exclude": "Excluded entity categories"
                 },
                 "data_description": {
-                    "exclude": "Depending on excluded entity categories, the number of Api requests can be reduced (especially for energy categories)"
+                    "exclude": "Depending on selected (= excluded) entity categories, the number of Api requests can be reduced (especially for energy categories)"
                 },
                 "sections": {
                     "api_options": {
@@ -933,6 +933,9 @@
             },
             "all_ac_input_limit": {
                 "name": "Total AC Input limit"
+            },
+            "power_limit_option": {
+                "name": "Power limit option"
             },
             "set_output_power": {
                 "name": "Home preset",
@@ -2166,7 +2169,7 @@
                 },
                 "endpoint": {
                     "name": "Endpoint",
-                    "description": "Select or define the endpoint where the request should be sent to (known endpoints are documented in https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98)"
+                    "description": "Select or define the endpoint where the request should be sent to (known endpoints are documented in {url})"
                 },
                 "payload": {
                     "name": "Payload",

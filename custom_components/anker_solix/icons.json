@@ -424,6 +424,9 @@
             "all_ac_input_limit": {
                 "default": "mdi:flash-triangle-outline"
             },
+            "power_limit_option": {
+                "default": "mdi:flash-auto"
+            },
             "fittings": {
                 "default": "mdi:tools"
             },

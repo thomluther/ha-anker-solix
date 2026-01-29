@@ -190,7 +190,7 @@ DEVICE_NUMBERS = [
         json_key="ac_input_limit",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s and d.get("mqtt_data")),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.ac_charge_limit,
     ),
@@ -202,6 +202,7 @@ DEVICE_NUMBERS = [
         device_class=NumberDeviceClass.POWER,
         exclude_fn=lambda s, d: not (
             {d.get("type")} - s
+            and d.get("mqtt_data")
             and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
         ),
         mqtt=True,

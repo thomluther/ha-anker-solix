@@ -202,7 +202,7 @@
                     "exclude": "Ausgeschlossene Entitäts-Kategorien"
                 },
                 "data_description": {
-                    "exclude": "Abhängig von den ausgeschlossenen Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)"
+                    "exclude": "Abhängig von den gewählten (= ausgeschlossenen) Kategorien kann die Anzahl der Api Anfragen reduziert werden (besonders für Energie Kategorien)"
                 },
                 "sections": {
                     "api_options": {
@@ -933,6 +933,9 @@
             },
             "all_ac_input_limit": {
                 "name": "AC Eingangslimit gesamt"
+            },
+            "power_limit_option": {
+                "name": "Leistungslimit Option"
             },
             "set_output_power": {
                 "name": "Einspeisevorgabe",
@@ -2166,7 +2169,7 @@
                 },
                 "endpoint": {
                     "name": "Endpunkt",
-                    "description": "Wähle oder definiere den Endpunkt, an den die Anfrage gesendet werden soll (bekannte Endpunkte sind in https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98 dokumentiert)"
+                    "description": "Wähle oder definiere den Endpunkt, an den die Anfrage gesendet werden soll (bekannte Endpunkte sind in {url} dokumentiert)"
                 },
                 "payload": {
                     "name": "Nutzdaten",
