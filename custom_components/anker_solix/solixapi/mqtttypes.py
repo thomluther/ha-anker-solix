@@ -409,7 +409,7 @@ class DeviceHexDataField:
                     if isinstance(bitlist, list):
                         for bitmap in bitlist:
                             if (mask := bitmap.get("mask", 0)) and (
-                                name := bitmap.get(NAME, "")
+                                name := bitmap.get(NAME, "") and len(self.f_value) > pos
                             ):
                                 value = self.f_value[pos]
                                 # shift mask and value right until LSB of mask is one, then get bit value according to mask
@@ -430,7 +430,9 @@ class DeviceHexDataField:
                 # 4 bytes, signed float LE (Base type)
                 if len(hexdata) == 4 and (name := fieldmap.get(NAME, "")):
                     # floats should not be rounded to factor, but avoid negative 0 for negative factors
-                    value = struct.unpack("<f", hexdata)[0] * float(fieldmap.get(FACTOR, 1))
+                    value = struct.unpack("<f", hexdata)[0] * float(
+                        fieldmap.get(FACTOR, 1)
+                    )
                     values[name] = 0 if value == 0 else value
             case DeviceHexDataTypes.strb.value:
                 # 06 can be many bytes, mix of Str and Byte values

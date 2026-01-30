@@ -45,7 +45,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.5.1.0"
+VERSION: str = "3.5.1.1"
 
 
 class AnkerSolixApiExport:
@@ -61,7 +61,9 @@ class AnkerSolixApiExport:
         # get the api client and optional mqtt session from passed object
         if isinstance(client, api.AnkerSolixApi):
             self.client = client.apisession
-            mqttsession = client.mqttsession
+            # Force creation of new MQTT client if Api MQTT client is broken
+            if (mqttsession := client.mqttsession) and not mqttsession.is_connected():
+                mqttsession = None
         else:
             self.client = client
             mqttsession = None

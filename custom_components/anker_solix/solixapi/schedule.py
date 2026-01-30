@@ -353,7 +353,9 @@ async def get_device_parm(
                 station["allow_grid_export"] = not bool(
                     paramData.get("switch_0w", None)
                 )
-                station["grid_export_limit"] = str(paramData.get("feed-in_power_limit", ""))
+                station["grid_export_limit"] = str(
+                    paramData.get("feed-in_power_limit", "")
+                )
                 self._update_dev(station)
     return data
 
@@ -1497,7 +1499,7 @@ async def set_sb2_home_load(  # noqa: C901
         max_load = SolixDefaults.PRESET_MAX
     # Adjust provided appliance limits
     # Relaxed max_load to device type max if schedule max_load no longer reflecting active device limit, see issue #309
-    if (d := self.devices.get(deviceSn, {}).get("generation", 0)) >= 2:
+    if (d := self.devices.get(deviceSn, {})).get("generation", 0) >= 2:
         model = d.get("device_pn") or ""
         max_load = max(
             [
