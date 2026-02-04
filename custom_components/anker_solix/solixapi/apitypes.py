@@ -1279,7 +1279,7 @@ class SolarbankParallelTypes(StrEnum):
     cascaded = "cascaded"  # For SB1 only if SB1 is attached to SB2 in single system
     ae100 = "ae100"  # Solarbank power dock in use
     ae100v2 = "ae100v2"
-    diy = "diy" # Solarbank 3 parallel without power dock
+    diy = "diy"  # Solarbank 3 parallel without power dock
 
 
 class SmartmeterStatus(StrEnum):
@@ -1315,13 +1315,35 @@ class SolixGridStatus(StrEnum):
     unknown = "unknown"
 
 
+class SolixPlantStatus(StrEnum):
+    """Str Enumeration for Anker Solix plant status."""
+
+    # 1: On-grid; 2: Off-grid 3: Standby 4: Fault
+    on_grid = "1"
+    off_grid = "2"
+    standby = "3"
+    fault = "4"
+    unknown = "unknown"
+
+
+class SolixBatteryStatus(StrEnum):
+    """Str Enumeration for Anker Solix battery status."""
+
+    # 0: Standby; 1: Charging; 2: Discharging; 3: Sleep
+    standby = "0"
+    charging = "1"
+    discharging = "2"
+    sleep = "3"
+    unknown = "unknown"
+
+
 class SolixRoleStatus(StrEnum):
     """Str Enumeration for Anker Solix role status of devices."""
 
     # The device role status codes as used for HES devices
     # TODO(X1): The proper description of those codes has to be confirmed
     primary = "1"  # Master role in Api
-    subordinate = "2"  # Slave role in Api, to be confirmed!!!
+    subordinate = "2"  # Slave role in Api
     unknown = "unknown"
 
 

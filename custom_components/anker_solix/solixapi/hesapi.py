@@ -99,7 +99,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 device.update({"site_id": str(siteId)})
             if isAdmin is not None:
                 device["is_admin"] = isAdmin
-            elif device.get("is_admin") is None and (value := devData.get("ms_device_type")) is not None:
+            elif (
+                device.get("is_admin") is None
+                and (value := devData.get("ms_device_type")) is not None
+            ):
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
             calc_capacity = False  # Flag whether capacity may need recalculation
@@ -150,6 +153,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # Examples for boolean key values
                         "auto_upgrade",
                         "is_subdevice",
+                        "is_primary",
                     ]:
                         device[key] = bool(value)
                     elif key in [
@@ -171,15 +175,17 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # For HES this is actually not a relative rssi value (0-255), but signal strength 0-100 %
                         device["wifi_signal"] = str(value)
                     elif key in ["average_power"] and value:
+                        calc_capacity |= (device.get("average_power") or {}).get(
+                            "state_of_charge"
+                        ) != value.get("state_of_charge")
                         device[key] = value
-                        calc_capacity = True
                     elif key in ["batCount"] and str(value).isdigit():
+                        calc_capacity |= device.get(key) != int(value)
                         device[key] = int(value)
-                        calc_capacity = True
                     elif key in ["battery_capacity"] and str(value).isdigit():
                         # This key is used to trigger recalculation from customization
-                        device[key] = value
                         calc_capacity = True
+                        device[key] = value
                     # generate extra values when certain conditions are met
                     if calc_capacity:
                         # generate battery values for main device only when soc updated or battery modules count change
@@ -206,29 +212,52 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                     and str(c).isdigit()
                                     else int(dev.get("battery_capacity"))
                                 )
+                        device["battery_capacity"] = str(cap)
+                        # Calculate remaining energy in Wh and add values
+                        # Calculate energy only for primary device
+                        site_id = device.get("site_id", "")
+                        if device.get("is_primary") or devData.get("is_primary"):
+                            prim_dev = device
+                        else:
+                            prim_dev = next(
+                                iter(
+                                    [
+                                        d
+                                        for d in self.devices.values()
+                                        if site_id == d.get("site_id")
+                                        and d.get("is_primary")
+                                    ]
+                                ),
+                                {},
+                            )
                         soc = (devData.get("average_power") or {}).get(
                             "state_of_charge"
-                        ) or (device.get("average_power") or {}).get("state_of_charge")
-                        # Calculate remaining energy in Wh and add values
-                        if cap and soc and str(cap).isdigit() and str(soc).isdigit():
+                        ) or (prim_dev.get("average_power") or {}).get(
+                            "state_of_charge"
+                        )
+                        if prim_dev and soc and str(soc).isdigit():
                             # Get optional customized capacity for correct energy calculation if adjusted externally
-                            custom_cap = (
-                                custom_cap
-                                if (
-                                    custom_cap := (device.get("customized") or {}).get(
-                                        "battery_capacity"
+                            custom_cap = 0
+                            # consider customized capacity for calculation from main devices only
+                            for dev in [
+                                d
+                                for d in self.devices.values()
+                                if site_id == d.get("site_id")
+                                and (d.get("batCount") or 0) > 0
+                                and str(d.get("battery_capacity")).isdigit()
+                            ]:
+                                custom_cap += (
+                                    int(c)
+                                    if (
+                                        c := (dev.get("customized") or {}).get(
+                                            "battery_capacity"
+                                        )
                                     )
+                                    and str(c).isdigit()
+                                    else int(dev.get("battery_capacity"))
                                 )
-                                and str(custom_cap).isdigit()
-                                else cap
-                            )
-                            device.update(
-                                {
-                                    "battery_capacity": str(cap),
-                                    "battery_energy": str(
-                                        int(int(custom_cap) * int(soc) / 100)
-                                    ),
-                                }
+                            prim_dev["battery_energy"] = str(
+                                int(int(custom_cap) * int(soc) / 100)
                             )
                         calc_capacity = False
 
@@ -342,9 +371,18 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             {"products": await self.get_products(fromFile=fromFile)}
                         )
                     # query site device info if not provided in site Data
+                    run_info = {}
                     if not (
                         hes_list := (siteData.get("hes_info") or {}).get("hes_list")
                     ):
+                        # Query running info ocne if not available yet
+                        self._logger.debug(
+                            "Getting api %s system running info for HES site",
+                            self.apisession.nickname,
+                        )
+                        run_info = await self.get_system_running_info(
+                            siteId=myid, fromFile=fromFile
+                        )
                         self._logger.debug(
                             "Getting api %s device info for HES site",
                             self.apisession.nickname,
@@ -358,20 +396,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     myinfo["hes_list"] = hes_list
                     mysite["hes_info"] = myinfo
                     main_sn = None
+                    primary_sn = myinfo.get("main_sn") or run_info.get("mainSn")
                     for hes in hes_list or []:
                         main_sn = hes.get("sn") or ""
-                        if sn := self._update_dev(
-                            {
-                                "device_sn": hes.get("sn") or "",
-                                "main_sn": main_sn,
-                                "device_pn": hes.get("pn") or "",
-                                "device_name": "",
-                            },
-                            devType=SolixDeviceType.HES.value,
-                            siteId=myid,
-                            isAdmin=admin,
-                        ):
-                            self._site_devices.add(sn)
+                        batcount = 0
+                        # first add sub devices
                         for subdev in [
                             dev
                             for dev in (hes.get("subDevInfo") or [])
@@ -379,6 +408,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         ]:
                             if sn := self._update_dev(
                                 {
+                                    "site_id": myid,
                                     "device_sn": subdev.get("sn") or "",
                                     "main_sn": main_sn,
                                     "is_subdevice": True,
@@ -390,6 +420,24 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 isAdmin=admin,
                             ):
                                 self._site_devices.add(sn)
+                                if self.devices.get(sn, {}).get("battery_capacity"):
+                                    batcount += 1
+                        # update main device
+                        if sn := self._update_dev(
+                            {
+                                "site_id": myid,
+                                "device_sn": hes.get("sn") or "",
+                                "main_sn": main_sn,
+                                "is_primary": main_sn == primary_sn,
+                                "device_pn": hes.get("pn") or "",
+                                "device_name": "",
+                                "batCount": batcount,
+                            },
+                            devType=SolixDeviceType.HES.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        ):
+                            self._site_devices.add(sn)
 
                     # Query 5 min avg power and soc from energy stats as work around since no current power values found for hes in cloud server yet
                     if not (
@@ -399,8 +447,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         }
                         & exclude
                     ):
+                        # Add average power only to primary HES controller
                         if avg_data := await self.get_avg_power_from_energy(
-                            siteId=myid, fromFile=fromFile, mainSn=main_sn
+                            siteId=myid,
+                            fromFile=fromFile,
+                            mainSn=primary_sn,
                         ):
                             # Add energy offset info to site cache
                             mysite.update(
@@ -655,9 +706,12 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         """Get the site running information with tracked total stats.
 
         Example data:
-        {"mainSn": "SFW0EKTKW7IA043U","pcsSns": ["ATHRE00E22200039"],"mainDeviceModel": "A5103","connected": true,"totalSystemSavings": 134.7,"systemSavingsPriceUnit": "\u20ac",
+        {"mainSn": "SFW0EKTKW7IA043U","pcsSns": ["HJPFY7GBN0N0QDBK"],"mainDeviceModel": "A5103","connected": true,"totalSystemSavings": 134.7,"systemSavingsPriceUnit": "\u20ac",
         "saveCarbonFootprint": 304,"saveCarbonUnit": "kg","saveCarbonC": 0.997,"totalSystemPowerGeneration": 304.42,"systemPowerGenerationUnit": "KWh","numberOfParallelDevice": 1,
-        "batCount": 3,"rePostTime": 5,"supportDiesel": false,"net": 2,"isAddHeatPump": false,"realNet": 1,"systemCode": "DE202411140001"}
+        "batCount": 3,"rePostTime": 5,"supportDiesel": false,"net": 2,"isAddHeatPump": false,"realNet": 1,"systemCode": "DE202411140001","emsDisable": false,
+        "enwgs": null,"hasEvCharger": true,"evChargerInfos": [{
+            "evChargerSn": "E8T9BAMC9YPUK8EXF","evChargerStatus": 0,"evChargerHesAlarm": 0,"evChargerName": "V1 EV Charger"}],
+        "countryCode": "GB","mode": 16}
         """
         data = {"siteId": siteId}
         if fromFile:
@@ -672,7 +726,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         data = resp.get("data") or {}
         # update sites dict with relevant info and with required structure
         stats = []
-        if data and (mysite := self.sites.get(siteId)):
+        if data:
+            mysite = self.sites.get(siteId) or {}
             # create statistics dictionary as used in scene_info for other sites to allow direct replacement
             # Total Energy
             stats.append(
@@ -719,6 +774,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     "supportDiesel": data.get("supportDiesel"),
                     "isAddHeatPump": data.get("isAddHeatPump"),
                     "systemCode": data.get("systemCode"),
+                    "emsDisable": data.get("emsDisable"),
+                    "hasEvCharger": data.get("hasEvCharger"),
+                    "evChargerInfos": data.get("evChargerInfos"),
+                    "countryCode": data.get("countryCode"),
+                    "mode": data.get("mode"),
                 }
             )
             mysite.update({"hes_info": myinfo, "statistics": stats})
@@ -728,9 +788,15 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 {
                     "device_sn": data.get("mainSn"),
                     "device_pn": data.get("mainDeviceModel"),
-                    "batCount": data.get("batCount"),
                 }
             )
+            for ev_charger in data.get("evChargerInfos") or []:
+                self._update_dev(
+                    {
+                        "device_sn": ev_charger.get("evChargerSn"),
+                        "alias": ev_charger.get("evChargerName"),
+                    }
+                )
         return data
 
     async def get_avg_power_from_energy(

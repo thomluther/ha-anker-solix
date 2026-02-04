@@ -1619,7 +1619,7 @@ class AnkerSolixApiExport:
         randomstr = self._randomdata.get(val, "")
         # generate new random string
         if not randomstr and val and key not in ["device_name"]:
-            if "_sn" in key or "mainSn" in key or key in ["sn"]:
+            if "_sn" in key or "Sn" in key or key in ["sn"]:
                 randomstr = "".join(
                     random.choices(string.ascii_uppercase + string.digits, k=len(val))
                 )
@@ -1640,7 +1640,7 @@ class AnkerSolixApiExport:
                         a + b
                         for a, b in zip(randomstr[::2], randomstr[1::2], strict=False)
                     )
-            elif "_id" in key or "_password" in key:
+            elif any(x in key for x in ["_id", "_password", "stationId"]):
                 for part in val.split("-"):
                     if randomstr:
                         randomstr = "-".join(
@@ -1696,9 +1696,10 @@ class AnkerSolixApiExport:
                 x in k
                 for x in [
                     "_sn",
-                    "mainSn",
+                    "Sn",
                     "site_id",
                     "station_id",
+                    "stationId",
                     "user_id",
                     "member_id",
                     "vehicle_id",
@@ -2015,7 +2016,7 @@ class AnkerSolixApiExport:
                 if not (
                     msgtype := DeviceHexData(hexbytes=data).msg_header.msgtype.hex()
                 ):
-                    msgtype = "other"
+                    msgtype = "json"
                 # randomize potential hex serials of system device serials in hex data
                 if self.randomized:
                     if siteId := (self.api_power.devices.get(device_sn) or {}).get(
@@ -2036,7 +2037,10 @@ class AnkerSolixApiExport:
             if isinstance(payload, dict):
                 if datastr:
                     # replace based64 encoded string in data field of message payload
-                    payload["data"] = b64encode(bytes.fromhex(datastr)).decode()
+                    if "data" in payload:
+                        payload["data"] = b64encode(bytes.fromhex(datastr)).decode()
+                    elif "trans" in payload:
+                        payload["trans"] = b64encode(bytes.fromhex(datastr)).decode()
                 # replace other sensitive values in payload
                 payload = self._check_keys(payload)
                 message["payload"] = json.dumps(payload)

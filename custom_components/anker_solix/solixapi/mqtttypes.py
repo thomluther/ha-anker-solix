@@ -1,7 +1,9 @@
 """Default definitions required for the Anker MQTT Cloud API."""
 
+import contextlib
 from dataclasses import InitVar, asdict, dataclass, field
 from datetime import datetime
+import json
 import struct
 from typing import Any, Self
 
@@ -28,7 +30,7 @@ from .mqttmap import SOLIXMQTTMAP
 
 @dataclass(order=True, kw_only=True)
 class DeviceHexDataHeader:
-    """Dataclass to structure Solix device hex data headers as received from MQTT or BT transmissions.
+    """Dataclass to structure Solix device hex data headers as received from MQTT transmissions.
 
     Message header structure (9-10 Bytes):
     FF 09    | 2 Bytes fixed message prefix for Anker Solix message
@@ -295,22 +297,22 @@ class DeviceHexDataField:
         match fieldtype:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, string (Base type), use only printable part
-                if NAME in fieldmap:
-                    if "timestamp" in fieldmap.get(NAME):
+                if name := fieldmap.get(NAME):
+                    if "timestamp" in name:
                         # convert ms string into timestamp value of seconds
-                        values[fieldmap.get(NAME)] = convert_timestamp(hexdata, ms=True)
+                        values[name] = convert_timestamp(hexdata, ms=True)
                     else:
                         # convert bytes to string
-                        values[fieldmap.get(NAME)] = "".join(
+                        values[name] = "".join(
                             c
                             for c in hexdata.decode(errors="ignore").strip()
                             if c.isprintable()
                         )
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
-                if NAME in fieldmap:
+                if name := fieldmap.get(NAME):
                     factor = fieldmap.get(FACTOR, 1)
-                    values[fieldmap.get(NAME)] = round_by_factor(
+                    values[name] = round_by_factor(
                         int.from_bytes(
                             hexdata,
                             signed=fieldmap.get(SIGNED) is True,
@@ -320,7 +322,7 @@ class DeviceHexDataField:
                     )
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
-                if name := fieldmap.get(NAME, ""):
+                if name := fieldmap.get(NAME):
                     value = int(
                         int.from_bytes(
                             hexdata,
@@ -340,7 +342,7 @@ class DeviceHexDataField:
                 # var is always 4 bytes, but could be 1-4 * int, 1-2 * signed int LE or 4 Byte signed int LE
                 # mapping must specify "values" to indicate number of values in bytes from beginning. Default is 0 for 1 value in 4 bytes
                 # If a float factor is specified, value will be rounded to factor digits
-                if name := fieldmap.get(NAME, ""):
+                if name := fieldmap.get(NAME):
                     factor = fieldmap.get(FACTOR, 1)
                     if (count := int(fieldmap.get("values", 0))) == 1:
                         value = round_by_factor(
@@ -408,8 +410,10 @@ class DeviceHexDataField:
                     pos = int(key)
                     if isinstance(bitlist, list):
                         for bitmap in bitlist:
-                            if (mask := bitmap.get("mask", 0)) and (
-                                name := bitmap.get(NAME, "") and len(self.f_value) > pos
+                            if (
+                                (mask := bitmap.get("mask", 0))
+                                and (name := bitmap.get(NAME, ""))
+                                and len(self.f_value) > pos
                             ):
                                 value = self.f_value[pos]
                                 # shift mask and value right until LSB of mask is one, then get bit value according to mask
@@ -558,7 +562,7 @@ class DeviceHexDataField:
         # use default value if defined in fieldmap
         elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
             raise ValueError(
-                f"Expected (default) value for encoding, parameter '{desc.get('name', '')}' value was {type(value)}: {value!s}, with value options: {options!s}"
+                f"Expected (default) value for encoding, parameter '{desc.get(NAME, '')}' value was {type(value)}: {value!s}, with value options: {options!s}"
             )
         # set parameters for value conversion and encoding
         signed = desc.get(SIGNED) is not False
@@ -611,7 +615,7 @@ class DeviceHexDataField:
                 )
         if not hexvalue:
             raise TypeError(
-                f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter '{desc.get('name', '')}' was {type(value)}: {value!s}, with value options: {options!s}"
+                f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter '{desc.get(NAME, '')}' was {type(value)}: {value!s}, with value options: {options!s}"
             )
         return hexvalue
 
@@ -844,6 +848,248 @@ class DeviceHexData:
         return df
 
 
+@dataclass(order=True, kw_only=True)
+class DeviceJsonData:
+    """Dataclass to structure Solix device json data as received from MQTT transmissions.
+
+    Messages structure:
+    Json string
+    """
+
+    hexbytes: bytearray = field(default_factory=bytearray)
+    model: str = ""
+    msgtype: str = "json"
+    length: int = 0
+    data: dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Post init the dataclass to decode the bytes into dict."""
+        if isinstance(self.hexbytes, str):
+            self.hexbytes = bytearray(bytes.fromhex(self.hexbytes.replace(":", "")))
+        elif isinstance(self.hexbytes, bytes):
+            self.hexbytes = bytearray(self.hexbytes)
+        if self.hexbytes:
+            self.length = len(self.hexbytes)
+            with contextlib.suppress(UnicodeDecodeError):
+                self.data = json.loads(self.hexbytes.decode())
+        else:
+            # update length and hexbytes if not initialized via hexbytes
+            self._update_hexbytes()
+
+    def __len__(self) -> int:
+        """Return Byte count of hex data."""
+        return self.length
+
+    def __str__(self) -> str:
+        """Print the fields and hex bytes with separator."""
+        return f"model:{self.model}, data:{{{self.data!s}}}, hexbytes:{self.hexbytes.hex()}"
+
+    def _get_fieldmap(self) -> dict:
+        if self.model in SOLIXMQTTMAP:
+            fieldmap = SOLIXMQTTMAP.get(self.model).get(self.msgtype, {})
+            # if isinstance(m_type := self.data.get("type"), str) and "data" in self.data:
+            #     # extend fieldmap with field descriptions under type_data map
+            #     fieldmap = fieldmap | SOLIXMQTTMAP.get(self.model).get(
+            #         f"{m_type}_data", {}
+            #     )
+            return fieldmap
+        return {}
+
+    def _update_hexbytes(self) -> None:
+        # init hexbytes
+        self.hexbytes = bytearray()
+        if not isinstance(self.data, dict):
+            self.data = {}
+        if self.data:
+            self.hexbytes = bytearray(
+                json.dumps(self.data, separators=(",", ":")), "utf-8"
+            )
+        self.length = len(self.hexbytes)
+
+    def hex(self, sep: str = "") -> str:
+        """Print the hex bytes with optional separator."""
+        if sep:
+            return self.hexbytes.hex(sep=sep)
+        return self.hexbytes.hex()
+
+    def update(
+        self,
+        name: str | dict,
+        value: float | str | dict | list | bool | None = None,
+        desc: dict | None = None,
+        remove: bool = False,
+    ) -> Self:
+        """Return the updated class instance, exception is raised if value encoding was not successfull."""
+        d_data = None
+        if isinstance(name, dict):
+            # get nested name and data for update
+            if d_name := next(iter(name.keys()), default=""):
+                d_data = self.data.get(d_name) or {}
+                name = str(name.get(d_name) or "")
+            else:
+                raise TypeError(f"Missing json field name in '{name}'")
+        elif not isinstance(name, str):
+            name = None
+        if not name:
+            raise TypeError("Error updating DeviceJsonData: Missing field identifier")
+        try:
+            if isinstance(value, float | int | str):
+                value = self.encode_value(value=value, desc=desc)
+            # Update hex bytes and length
+            if isinstance(d_data, dict):
+                if remove:
+                    d_data.pop(name, None)
+                else:
+                    d_data[name] = value
+                if d_data or d_name in self.data:
+                    self.data[d_name] = d_data
+            elif remove:
+                self.data.pop(name, None)
+            else:
+                self.data[name] = value
+            self._update_hexbytes()
+        except (ValueError, TypeError) as err:
+            raise type(err)(f"Error updating json field {name}: {err!s}") from err
+        else:
+            return self
+
+    def encode_value(
+        self,
+        value: float | str,
+        desc: dict | None = None,
+    ) -> Any | None:
+        """Return the encoded value according to existing or provided value and field description."""
+        if not isinstance(desc, dict):
+            desc = {}
+        options = desc.get(VALUE_OPTIONS, {})
+        is_str = isinstance(value, str)
+        if isinstance(value, str | int | float):
+            # for provided default or state values without value validation descriptions, use value as is
+            if not (options or VALUE_MIN in desc or VALUE_MAX in desc):
+                options = (
+                    [value]
+                    if VALUE_STATE in desc
+                    else [desc.get(VALUE_DEFAULT)]
+                    if VALUE_DEFAULT in desc
+                    else options
+                )
+            # convert string value into float or int
+            if (
+                isinstance(value, str)
+                and value.replace("-", "", 1).replace(".", "", 1).isdigit()
+            ):
+                value = float(value) if "." in value else round(float(value))
+            fieldvalue = round_by_factor(value / (desc.get(VALUE_DIVIDER) or 1), value)
+            # get a validated value for encoding, will raise value or Type Error for invalid value or definitions
+            fieldvalue = (
+                MqttCmdValidator(
+                    min=desc.get(VALUE_MIN),
+                    max=desc.get(VALUE_MAX),
+                    step=desc.get(VALUE_STEP),
+                    options=options,
+                ).check(value)
+                if value != desc.get(VALUE_DEFAULT)
+                else value
+            )
+        # use default value if defined in fieldmap
+        elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
+            raise ValueError(
+                f"Expected (default) base type value for encoding, parameter '{desc.get(NAME, '')}' value was {type(value)}: {value!s}, with value options: {options!s}"
+            )
+        return str(fieldvalue) if is_str else fieldvalue
+
+    def decode(self) -> str:
+        """Return the data representation in human readable format."""
+        if self.length > 0:
+            if isinstance(m_type := self.data.get("type"), str) and "data" in self.data:
+                # data field descriptions under type_data map
+                msgtype = f"{self.msgtype}_{m_type}_data"
+            else:
+                # root field descriptions under class message type map "json"
+                msgtype = self.msgtype
+            pn = (
+                f" {str(getattr(SolixDeviceCategory, self.model, 'Unknown Device')).capitalize()} "
+                f"/ {Color.CYAN + self.model + Color.OFF} / {Color.GREEN + msgtype + Color.OFF} "
+                if self.model
+                else ""
+            )
+            # add descriptions to decoded fields
+            lines = json.dumps(self.data, indent=2, default=str).splitlines()
+            if fieldmap := self._get_fieldmap():
+                if (
+                    isinstance(m_type := self.data.get("type"), str)
+                    and "data" in self.data
+                ):
+                    # extend fieldmap with field descriptions under type_data map
+                    fieldmap = fieldmap | SOLIXMQTTMAP.get(self.model).get(
+                        self.msgtype, {}
+                    ).get(f"{m_type}_data", {})
+                # search each json key in fieldmap
+                for i, line in enumerate(lines):
+                    if (key := (line.split('"')[1:2] or [""])[0]) and (
+                        fld := fieldmap.get(key, {})
+                    ):
+                        value = self.data.get(key)
+                        name = fld.get(NAME) or ""
+                        factor = fld.get(FACTOR) or None
+                        divider = fld.get(VALUE_DIVIDER) or None
+                        if isinstance(value, float | int) and "timestamp" in str(name):
+                            name = f"{name} ({datetime.fromtimestamp(convert_timestamp(value, ms=(isinstance(value, float)))).strftime('%Y-%m-%d %H:%M:%S')})"
+                        if name:
+                            lines[i] = (
+                                f"{line}  {Color.CYAN} --> {name}{('' if factor is None else ' (' + FACTOR + ' ' + str(factor) + ')')}"
+                                f"{('' if divider is None else ' (' + VALUE_DIVIDER + ' ' + str(divider) + ')')}{Color.OFF}"
+                            )
+            return "\n".join([f"{pn:-^98}", *lines])
+        return ""
+
+    def asdict(self) -> dict:
+        """Return a dictionary representation of the class fields."""
+        return asdict(self)
+
+    def values(self) -> dict:
+        """Return a dictionary with extracted values based on defined field mappings."""
+        fieldmap = self._get_fieldmap()
+        return self._extract_values(data=self.data, fieldmap=fieldmap)
+
+    def _extract_values(self, data: dict, fieldmap: dict) -> dict[str, Any]:
+        """Get described json values in fieldmap from provided data."""
+        values = {}
+        if isinstance(data, dict) and isinstance(fieldmap, dict):
+            # get map
+            for key, value in [
+                (k, v) for k, v in data.items() if k in fieldmap or isinstance(v, dict)
+            ]:
+                f_map = fieldmap.get(key, {})
+                if isinstance(value, dict):
+                    # nested mapping, recall extraction
+                    # update fieldmap if key is a data key
+                    if key == "data":
+                        f_map = fieldmap.get(f"{data.get('type', '')}_data", {})
+                    values.update(self._extract_values(data=value, fieldmap=f_map))
+                elif name := f_map.get(NAME):
+                    if (factor := f_map.get(FACTOR)) and isinstance(value, float | int):
+                        values[name] = round_by_factor(
+                            value * factor,
+                            factor,
+                        )
+                    elif isinstance(value, list):
+                        for idx, v in enumerate(value, 1):
+                            if isinstance(v, float | int) and factor:
+                                v = round_by_factor(
+                                    v * factor,
+                                    factor,
+                                )
+                            values[
+                                name.replace("{x}", str(idx), 1)
+                                if "{x}" in name
+                                else f"{name}_{idx}"
+                            ] = v
+                    else:
+                        values[name] = value
+        return values
+
+
 @dataclass(kw_only=True)
 class MqttDataStats:
     """Dataclass to track MQTT statistics."""
@@ -854,7 +1100,7 @@ class MqttDataStats:
     kb_hourly_received: float = 0
     start_time: datetime = field(default_factory=datetime.now)
     dev_messages: dict[str, dict[str, dict]] = field(default_factory=dict)
-    msg_data: InitVar[DeviceHexData | None] = None
+    msg_data: InitVar[DeviceHexData | DeviceJsonData | bytes | dict | None] = None
 
     def __post_init__(self, msg_data) -> None:
         """Init the dataclass from optional DeviceHexData for first stats."""
@@ -862,7 +1108,7 @@ class MqttDataStats:
             self.start_time = datetime.now()
         if not isinstance(self.dev_messages, dict):
             self.dev_messages = {}
-        if isinstance(msg_data, DeviceHexData):
+        if isinstance(msg_data, DeviceHexData | DeviceJsonData | bytes | dict):
             self.add_data(device_data=msg_data)
 
     def __str__(self) -> str:
@@ -888,22 +1134,39 @@ class MqttDataStats:
                 self.bytes_received += int(count)
         self.update()
 
-    def add_data(self, device_data: DeviceHexData) -> None:
+    def add_data(
+        self,
+        device_data: DeviceHexData | DeviceJsonData | bytes | dict,
+        model: str | None = None,
+    ) -> None:
         """Add device data and calculate device messages."""
-        if isinstance(device_data, DeviceHexData):
+        msg_type = None
+        if isinstance(device_data, DeviceHexData | DeviceJsonData):
+            if isinstance(device_data, DeviceHexData):
+                msg_type = device_data.msg_header.msgtype.hex() or "unknown"
+            else:
+                msg_type = "json"
+            model = device_data.model or model
+            length = device_data.length
+        elif isinstance(device_data, dict):
+            msg_type = "other"
+            model = device_data.get("device_pn") or model
+            length = device_data.get("length") or len(str(device_data))
+        elif isinstance(device_data, bytes):
+            msg_type = "binary"
+            length = len(device_data)
+        if msg_type:
             # increate total count
             self.dev_messages["count"] = self.dev_messages.get("count", 0) + 1
-            self.dev_messages["bytes"] = (
-                self.dev_messages.get("bytes", 0) + device_data.length
-            )
+            self.dev_messages["bytes"] = self.dev_messages.get("bytes", 0) + length
             # increase count and bytes per device model and message type
-            msg_type = device_data.msg_header.msgtype.hex()
-            device_map = self.dev_messages.get(device_data.model, {})
+            model = model or "unkonwn"
+            device_map = self.dev_messages.get(model, {})
             messages = device_map.get(msg_type, {})
             messages["count"] = messages.get("count", 0) + 1
-            messages["bytes"] = messages.get("bytes", 0) + device_data.length
+            messages["bytes"] = messages.get("bytes", 0) + length
             device_map[msg_type] = messages
-            self.dev_messages[device_data.model] = device_map
+            self.dev_messages[model] = device_map
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""

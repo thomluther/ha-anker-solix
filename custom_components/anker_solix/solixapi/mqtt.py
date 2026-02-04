@@ -30,6 +30,7 @@ from .mqttcmdmap import (
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
+    DeviceJsonData,
     DeviceHexDataField,
     DeviceHexDataHeader,
     MqttDataStats,
@@ -136,7 +137,12 @@ class AnkerSolixMqttSession:
         if not (device_sn := payload.get("sn") if isinstance(payload, dict) else None):
             # extract sn from received topic
             device_sn = (str(msg.topic).split("/")[3:4] or [None])[0]
-        data = (payload.get("data")) if isinstance(payload, dict) else None
+        # hex data from devices use data fields, json strings from X1 use trans fields
+        data = (
+            (payload.get("data") or payload.get("trans"))
+            if isinstance(payload, dict)
+            else None
+        )
         # Decrypt base64-encoded encrypted data field from expected dictionary in message payload
         data = b64decode(data) if isinstance(data, str) else data
         self._logger.debug(
@@ -149,23 +155,39 @@ class AnkerSolixMqttSession:
         valueupdate = False
         # Update data stats
         if isinstance(data, bytes):
-            # structure hex data
-            hd = DeviceHexData(model=model, hexbytes=data)
-            self.mqtt_stats.add_data(device_data=hd)
-            # extract described values and save them in common mqtt data cache
-            if device_sn and model and (values := hd.values()):
+            hd = None
+            if "data" in payload:
+                # structure hex data and extract values
+                hd = DeviceHexData(model=model, hexbytes=data)
+            elif "trans" in payload:
+                # structure json data and extract values
+                hd = DeviceJsonData(model=model, hexbytes=data)
+                # use dict as data to distinguish format for subsequent callbacks
+                data = hd.data
+            # extract values and update stats
+            self.mqtt_stats.add_data(device_data=hd or data, model=model)
+            if not hd:
+                self._logger.debug(
+                    "Api %s MQTT session client received message from device %s (%s) with unknown payload data format:\n%s",
+                    self.apisession.nickname,
+                    device_sn,
+                    model,
+                    str(payload),
+                )
+            # save extracted values in common mqtt data cache
+            elif device_sn and model:
                 # get existing mqtt data for device
                 device = self.mqtt_data.get(device_sn) or {}
                 topics = set(device.get("topics") or [])
                 topics.add(msg.topic)
                 self.mqtt_data[device_sn] = (
                     device
-                    | values
+                    | hd.values()
                     | {"last_message": timestamp, "topics": list(topics)}
                 )
                 valueupdate = True
         elif data:
-            # no encoded data in message, print object whatever it is
+            # no encoded data in payload, print object whatever it is
             self._logger.debug(
                 "Api %s MQTT session client received message from device %s (%s) with non-byte data:\n%s",
                 self.apisession.nickname,
@@ -532,43 +554,6 @@ class AnkerSolixMqttSession:
             raise
         return self.client
 
-    def _extract_mqtt_data(
-        self,
-        session,
-        topic: str,
-        message: Any,
-        data: bytes,
-        model: str,
-    ) -> None:
-        """Extract device data from mqtt messages and add it to the mqtt data cache."""
-        timestamp = ""
-        if isinstance(message, dict):
-            timestamp = datetime.fromtimestamp(
-                (message.get("head") or {}).get("timestamp") or 0
-            ).strftime("%Y-%m-%d %H:%M:%S")
-        device_sn = (str(topic).split("/")[1:2] or [""])[0]
-        if isinstance(data, bytes) and device_sn and model:
-            # structure hex data
-            hd = DeviceHexData(model=model, hexbytes=data)
-            # extract described values save them in common mqtt data cache
-            if values := hd.values():
-                device = self.mqtt_data.get(device_sn) or {}
-                topics = set(device.get("topics") or []).add(topic)
-                self.mqtt_data[device_sn] = (
-                    device
-                    | values
-                    | {"last_message": timestamp, "topics": list(topics)}
-                )
-        elif data:
-            # no encoded data in message, dump object whatever it is
-            self._logger.info(
-                "Api %s received MQTT message from device %s (%s) with non-byte data: %s",
-                self.apisession.nickname,
-                device_sn,
-                model,
-                str(data),
-            )
-
     def cleanup(self):
         """Clean up client connections and delete certificate files."""
         if self.is_connected():
@@ -841,9 +826,9 @@ class AnkerSolixMqttSession:
                             duration = max(
                                 60, timestamps[len(timestamps) - 1] - timestamps[0]
                             )
-                            cycleoffset = datetime.now().timestamp() - timestamps[0]
-                            addtime = 0
                             speedstart = timestamps[0]
+                            cycleoffset = datetime.now().timestamp() - speedstart
+                            addtime = 0
                             # write cycle progress into folderdict
                             folderdict["progress"] = 0
                             folderdict["duration"] = duration
@@ -871,6 +856,7 @@ class AnkerSolixMqttSession:
                                 message,
                             )
                             # mock timestamp in message for subsequent cycles
+                            message = message.copy()
                             if addtime > 0 and (
                                 timestamp := (message.get("head") or {}).get(
                                     "timestamp"
@@ -891,14 +877,15 @@ class AnkerSolixMqttSession:
                     ):
                         time_idx = 0
                         # reset cycle offset with 5 sec gap between last and first message
-                        cycleoffset = datetime.now().timestamp() - timestamps[0]
-                        addtime += duration + 5
                         speedstart = timestamps[0]
+                        cycleoffset = datetime.now().timestamp() - speedstart
+                        addtime += duration + 5
                     # check for speed change at runtime
                     if (newspeed := folderdict.get("speed")) and speed != newspeed:
                         # reset the offset into the cycle
                         speed = newspeed
                         speedstart = timestamps[max(0, time_idx - 1)]
+                        cycleoffset = datetime.now().timestamp() - speedstart
                 await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             self._logger.info(
