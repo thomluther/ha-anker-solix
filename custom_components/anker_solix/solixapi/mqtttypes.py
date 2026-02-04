@@ -677,6 +677,9 @@ class DeviceHexData:
         """Print the fields and hex bytes with separator."""
         return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}, checksum:{self.checksum.hex()}"
 
+    def _get_fieldmap(self) -> dict:
+        return SOLIXMQTTMAP.get(self.model, {}).get(self.msg_header.msgtype.hex(), {})
+
     def _get_xor_checksum(self, hexbytes: bytearray | None = None) -> bytearray:
         """Generate the XOR checksum byte across provided bytearray or actual hexdata."""
         if not (hexbytes or self.hexbytes):
@@ -729,11 +732,7 @@ class DeviceHexData:
             )
             if self.msg_fields:
                 s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
-                fieldmap = (
-                    (SOLIXMQTTMAP.get(self.model).get(msgtype) or {})
-                    if self.model in SOLIXMQTTMAP
-                    else {}
-                )
+                fieldmap = self._get_fieldmap()
                 if cmd_list := fieldmap.get(COMMAND_LIST):
                     # extract the maps from all nested commands, they should not have duplicate field names
                     fieldmap = {
@@ -777,9 +776,7 @@ class DeviceHexData:
     def values(self) -> dict:
         """Return a dictionary with extracted values based on defined field mappings."""
         values = {}
-        fieldmap = SOLIXMQTTMAP.get(self.model, {}).get(
-            self.msg_header.msgtype.hex(), {}
-        )
+        fieldmap = self._get_fieldmap()
         if cmd_list := fieldmap.get(COMMAND_LIST):
             # extract the maps from all nested commands, they should not have duplicate field names
             fieldmap = {
@@ -885,15 +882,7 @@ class DeviceJsonData:
         return f"model:{self.model}, data:{{{self.data!s}}}, hexbytes:{self.hexbytes.hex()}"
 
     def _get_fieldmap(self) -> dict:
-        if self.model in SOLIXMQTTMAP:
-            fieldmap = SOLIXMQTTMAP.get(self.model).get(self.msgtype, {})
-            # if isinstance(m_type := self.data.get("type"), str) and "data" in self.data:
-            #     # extend fieldmap with field descriptions under type_data map
-            #     fieldmap = fieldmap | SOLIXMQTTMAP.get(self.model).get(
-            #         f"{m_type}_data", {}
-            #     )
-            return fieldmap
-        return {}
+        return SOLIXMQTTMAP.get(self.model, {}).get(self.msgtype, {})
 
     def _update_hexbytes(self) -> None:
         # init hexbytes
@@ -1021,9 +1010,7 @@ class DeviceJsonData:
                     and "data" in self.data
                 ):
                     # extend fieldmap with field descriptions under type_data map
-                    fieldmap = fieldmap | SOLIXMQTTMAP.get(self.model).get(
-                        self.msgtype, {}
-                    ).get(f"{m_type}_data", {})
+                    fieldmap = fieldmap | self._get_fieldmap().get(f"{m_type}_data", {})
                 # search each json key in fieldmap
                 for i, line in enumerate(lines):
                     if (key := (line.split('"')[1:2] or [""])[0]) and (
