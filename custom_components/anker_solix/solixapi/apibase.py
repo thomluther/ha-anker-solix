@@ -888,7 +888,9 @@ class AnkerSolixBaseApi:
                             # trigger correct class with old capacity since this will cause capacity recalculation
                             if self.hesApi and sn in self.hesApi.devices:
                                 api = self.hesApi
-                            elif self.powerpanelApi and sn in self.powerpanelApi.devices:
+                            elif (
+                                self.powerpanelApi and sn in self.powerpanelApi.devices
+                            ):
                                 api = self.powerpanelApi
                             else:
                                 api = self
@@ -1927,6 +1929,8 @@ class AnkerSolixBaseApi:
             or SolixDefaults.DYNAMIC_TARIFF_PRICE_VAT.get("DEFAULT")
         )
         priceData["dynamic_price_total"] = ""
+        # Assume end price for any other provider than nordpool
+        endprice = provider.company != "Nordpool"
         if (
             spot_prices := self.account.get(
                 f"price_details_{str(provider).replace('/', '_')}"
@@ -1975,8 +1979,10 @@ class AnkerSolixBaseApi:
                     trend.extend(
                         {
                             "timestamp": f"{daystring} {item.get('time')}",
-                            "price": f"{(float(spotprice) / 1000 + fee) * (1 + vat / 100):0.4f}",
-                            "spot_mwh": spotprice,
+                            "price": f"{float(spotprice):0.4f}"
+                            if endprice
+                            else f"{(float(spotprice) / 1000 + fee) * (1 + vat / 100):0.4f}",
+                            "spot_mwh": None if endprice else spotprice,
                         }
                         for item in (
                             spot_prices.get(

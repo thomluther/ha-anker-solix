@@ -1027,6 +1027,36 @@
             "parallel_device_count": {
                 "name": "Parallel devices"
             },
+            "battery_status": {
+                "name": "Battery status",
+                "state": {
+                    "standby": "Standby",
+                    "charging": "Charging",
+                    "discharging": "Discharging",
+                    "sleep": "Sleep",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
+            "plant_status": {
+                "name": "Plant status",
+                "state": {
+                    "on_grid": "On grid",
+                    "off_grid": "Off grid",
+                    "standby": "Standby",
+                    "fault": "Fault",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
             "fittings": {
                 "name": "Accessory",
                 "state_attributes": {
@@ -1236,6 +1266,18 @@
             "photovoltaic_to_grid_power": {
                 "name": "Grid export"
             },
+            "battery_to_grid_power": {
+                "name": "Battery grid export"
+            },
+            "battery_to_home_power": {
+                "name": "Battery usage"
+            },
+            "pv_to_home_power": {
+                "name": "Solar usage"
+            },
+            "pv_to_battery_power": {
+                "name": "Solar charge"
+            },
             "grid_power_signed": {
                 "name": "Grid power"
             },
@@ -1244,6 +1286,24 @@
             },
             "grid_export_energy": {
                 "name": "Grid energy exported"
+            },
+            "discharge_power_avg": {
+                "name": "Discharge power ⌀"
+            },
+            "charge_power_avg": {
+                "name": "Charge power ⌀"
+            },
+            "input_power_avg": {
+                "name": "Solar power ⌀"
+            },
+            "home_load_power_avg": {
+                "name": "Home demand ⌀"
+            },
+            "grid_to_home_power_avg": {
+                "name": "Grid import ⌀"
+            },
+            "photovoltaic_to_grid_power_avg": {
+                "name": "Grid export ⌀"
             },
             "solar_forecast_today": {
                 "name": "Solar forecast today",

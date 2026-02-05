@@ -320,8 +320,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 )
                     elif key in ["battery_power"] and value:
                         # This is a percentage value for the battery state of charge, not power
+                        calc_capacity |= device.get("battery_soc") != str(value)
                         device["battery_soc"] = str(value)
-                        calc_capacity = True
                     elif key in ["photovoltaic_power"]:
                         device["input_power"] = str(value)
                     elif (
@@ -365,8 +365,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
+                            calc_capacity |= device.get(key) != int(value)
                             device[key] = int(value)
-                            calc_capacity = True
                     elif key in ["battery_capacity"] and str(value).isdigit():
                         # This key is only used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
@@ -1892,7 +1892,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 },
             )
         # query the actual limits and update cache
-        return {"device_attributes": attr_resp} | await self.get_power_limit(siteId=siteId, fromFile=toFile)
+        return {"device_attributes": attr_resp} | await self.get_power_limit(
+            siteId=siteId, fromFile=toFile
+        )
 
     async def get_ota_info(
         self, solarbankSn: str = "", inverterSn: str = "", fromFile: bool = False

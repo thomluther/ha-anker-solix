@@ -486,6 +486,24 @@
             "grid_export_energy": {
                 "default": "mdi:transmission-tower"
             },
+            "discharge_power_avg": {
+                "default": "mdi:battery-minus-variant"
+            },
+            "charge_power_avg": {
+                "default": "mdi:battery-plus-variant"
+            },
+            "input_power_avg": {
+                "default": "mdi:solar-power"
+            },
+            "home_load_power_avg": {
+                "default": "mdi:home-lightning-bolt"
+            },
+            "grid_to_home_power_avg": {
+                "default": "mdi:home-import-outline"
+            },
+            "photovoltaic_to_grid_power_avg": {
+                "default": "mdi:transmission-tower-import"
+            },
             "daily_discharge_energy": {
                 "default": "mdi:battery-minus-variant"
             },
@@ -617,6 +635,26 @@
             "parallel_device_count": {
                 "default": "mdi:server"
             },
+            "battery_status": {
+                "default": "mdi:battery-alert-variant",
+                "state": {
+                    "standby": "mdi:battery-off",
+                    "charging": "mdi:battery-plus",
+                    "discharging": "mdi:battery-minus",
+                    "sleep": "mdi:battery-clock-outline",
+                    "unknown": "mdi:battery-unknown"
+                }
+            },
+            "plant_status": {
+                "default": "mdi:timeline-question",
+                "state": {
+                    "on_grid": "mdi:transmission-tower",
+                    "off_grid": "mdi:transmission-tower-off",
+                    "standby": "mdi:sleep",
+                    "fault": "mdi:alert",
+                    "unknown": "mdi:timeline-question"
+                }
+            },
             "total_co2_saving": {
                 "default": "mdi:sprout"
             },
@@ -654,6 +692,18 @@
             },
             "photovoltaic_to_grid_power": {
                 "default": "mdi:transmission-tower-import"
+            },
+            "battery_to_grid_power": {
+                "default": "mdi:transmission-tower-import"
+            },
+            "battery_to_home_power": {
+                "default": "mdi:home-battery"
+            },
+            "pv_to_home_power": {
+                "default": "mdi:solar-power"
+            },
+            "pv_to_battery_power": {
+                "default": "mdi:solar-power"
             },
             "grid_power_signed": {
                 "default": "mdi:transmission-tower"

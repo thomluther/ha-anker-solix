@@ -800,6 +800,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             options = self.coordinator.client.api.price_provider_options(
                 siteId=self.coordinator_context
             )
+            # add active provider to options if not listed in provider options
+            if self._attr_current_option is not None:
+                options.add(self._attr_current_option)
             # TODO(SB3): Add None as option only if the provider can ever be removed
             # options.add("none")
             if options != set(self._attr_options or []):

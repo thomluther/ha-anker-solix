@@ -99,7 +99,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 device.update({"is_admin": True})
             if isAdmin is not None:
                 device["is_admin"] = isAdmin
-            elif device.get("is_admin") is None and (value := devData.get("ms_device_type")) is not None:
+            elif (
+                device.get("is_admin") is None
+                and (value := devData.get("ms_device_type")) is not None
+            ):
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
             calc_capacity = False  # Flag whether capacity may need recalculation
@@ -139,9 +142,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         device[key] = value
                         calc_capacity = True
                     elif key in ["average_power"] and value:
-                        device[key] = value
                         # calculate remaining capacity for new SOC
-                        calc_capacity = True
+                        calc_capacity |= (device.get("average_power") or {}).get(
+                            "state_of_charge"
+                        ) != value.get("state_of_charge")
+                        device[key] = value
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",

@@ -1027,6 +1027,36 @@
             "parallel_device_count": {
                 "name": "Parallele Geräte"
             },
+            "battery_status": {
+                "name": "Batteriezustand",
+                "state": {
+                    "standby": "Bereitschaft",
+                    "charging": "Aufladung",
+                    "discharging": "Entladung",
+                    "sleep": "Schlafend",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
+            "plant_status": {
+                "name": "Kraftwerkszustand",
+                "state": {
+                    "on_grid": "Am Netz",
+                    "off_grid": "Netzunabhängig",
+                    "standby": "Bereitschaft",
+                    "fault": "Fehler",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
             "fittings": {
                 "name": "Zubehör",
                 "state_attributes": {
@@ -1236,6 +1266,18 @@
             "photovoltaic_to_grid_power": {
                 "name": "Netzeinspeisung"
             },
+            "battery_to_grid_power": {
+                "name": "Netzentladung"
+            },
+            "battery_to_home_power": {
+                "name": "Hausentladung"
+            },
+            "pv_to_home_power": {
+                "name": "Solarnutzung"
+            },
+            "pv_to_battery_power": {
+                "name": "Solaraufladung"
+            },
             "grid_power_signed": {
                 "name": "Netzleistung"
             },
@@ -1244,6 +1286,24 @@
             },
             "grid_export_energy": {
                 "name": "Netzenergie Einspeisung"
+            },
+            "discharge_power_avg": {
+                "name": "Entladeleistung ⌀"
+            },
+            "charge_power_avg": {
+                "name": "Aufladeleistung ⌀"
+            },
+            "input_power_avg": {
+                "name": "Solarleistung ⌀"
+            },
+            "home_load_power_avg": {
+                "name": "Hausbedarf ⌀"
+            },
+            "grid_to_home_power_avg": {
+                "name": "Netzbezug ⌀"
+            },
+            "photovoltaic_to_grid_power_avg": {
+                "name": "Netzeinspeisung ⌀"
             },
             "solar_forecast_today": {
                 "name": "Solar Prognose heute",

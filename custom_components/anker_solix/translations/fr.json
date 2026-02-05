@@ -1027,6 +1027,36 @@
             "parallel_device_count": {
                 "name": "Dispositifs parallèles"
             },
+            "battery_status": {
+                "name": "État de la batterie",
+                "state": {
+                    "standby": "Veille",
+                    "charging": "Recharge",
+                    "discharging": "Décharge",
+                    "sleep": "Sommeil",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
+            "plant_status": {
+                "name": "État de la centrale électrique",
+                "state": {
+                    "on_grid": "Sur le réseau",
+                    "off_grid": "Hors réseau",
+                    "standby": "Veille",
+                    "fault": "Défaut",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
             "fittings": {
                 "name": "Accessoire",
                 "state_attributes": {
@@ -1236,6 +1266,18 @@
             "photovoltaic_to_grid_power": {
                 "name": "Alimentation du réseau"
             },
+            "battery_to_grid_power": {
+                "name": "Batterie au réseau électrique"
+            },
+            "battery_to_home_power": {
+                "name": "Utilisation de la batterie"
+            },
+            "pv_to_home_power": {
+                "name": "Utilisation de l'énergie solaire"
+            },
+            "pv_to_battery_power": {
+                "name": "Charge solaire"
+            },
             "grid_power_signed": {
                 "name": "Électricité du réseau"
             },
@@ -1244,6 +1286,24 @@
             },
             "grid_export_energy": {
                 "name": "Énergie réseau injectée"
+            },
+            "discharge_power_avg": {
+                "name": "Puissance de décharge ⌀"
+            },
+            "charge_power_avg": {
+                "name": "Puissance de charge ⌀"
+            },
+            "input_power_avg": {
+                "name": "Puissance solaire ⌀"
+            },
+            "home_load_power_avg": {
+                "name": "Demande domestique ⌀"
+            },
+            "grid_to_home_power_avg": {
+                "name": "Achat sur le réseau ⌀"
+            },
+            "photovoltaic_to_grid_power_avg": {
+                "name": "Alimentation du réseau ⌀"
             },
             "solar_forecast_today": {
                 "name": "Prévision solaire aujourd'hui",
