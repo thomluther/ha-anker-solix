@@ -138,7 +138,7 @@ Device type | Description
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
 `pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
-`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
+`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the announced [Anker Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (🇩🇪).
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
@@ -326,13 +326,12 @@ Since integration version 3.0.0, a customizable battery capacity entity was impl
 
 Integration version 3.1.0 added [Dynamic utility rate plan support](INFO.md#dynamic-utility-rate-plans-options) to monitor dynamic price forecasts for your system. However, none of those entities can actually control your X1 system settings, they are only used as [customizable entities](INFO.md#customizable-entities-of-the-api-cache) to calculate the total energy price.
 
-> [!IMPORTANT]
-> I have not seen any data of X1 systems that have more than 1 controller device (I think there can be up to 3 🤔). Therefore I have no clue how SOC and average power entities are reported across multiple controller devices in the system. They may be created as duplicates for each controller and also the system capacity calculation may be completely wrong. Please open an issue and export your X1 system data if you have such an installation and weird entity constellations.
-
 X1 system owners need to explore and document cloud Api capabilities to further expand any X1 system or (sub-)device support. Please refer to issue [Extending the solution to support Anker Solix X1 systems](https://github.com/thomluther/anker-solix-api/issues/162) for contribution or create a new and more specific issue as feature request.
 
 > [!NOTE]
-> The X1 devices report also MQTT data, but their format is completely different than other Solix devices typically use. The X1 MQTT message format is not supported yet by the Api library and therefore cannot be implemented to the HA integration.
+> The X1 devices report also MQTT data, but their format is a json string with abbreviated field names and unknown context. You need to use the mqtt_monitor tool and describe the json fields appropriately in [this issue](https://github.com/thomluther/anker-solix-api/issues/162) for proper data extraction and usage in the HA integration.
+
+Version 3.5.2 added experimental [device MQTT data](#mqtt-managed-devices) for X1 primary controller modules. This version also changed the capacity calculations per controller, which now only reflects the (customized) capacity of the battery modules they control. For larger systems with multiple controllers, there will only be one primary controller that is used as home for all entities. This also seems to be the only device that reports MQTT messages. Any overall SOC and Battery Energy calculation will be assigned to the primary controller device.
 
 > [!TIP]
 > If you prefer local integration of your X1 devices, please refer to the generic [HA Modbus integration](https://www.home-assistant.io/integrations/modbus/) and the [Anker X1 Modbus specification](https://support.ankersolix.com/de/s/download-preview?urlname=Anker-SOLIX-X1-Series-Modbus-Protocol). Modbus will NOT be covered by this project, and you need to configure the Modbus integration in YAML, including each sensor definition according to the documented modbus registers. Examples are shown by user [@Freacly](https://github.com/Freacly) in this [issue](https://github.com/thomluther/ha-anker-solix/issues/429#issuecomment-3810556184).
