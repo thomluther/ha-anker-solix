@@ -82,7 +82,7 @@ Originally, one account with email/password could not be used for the Anker mobi
 Therefore an Api homepage query will neither display any data for a shared account. However, a shared account can receive Api scene/site details of shared systems (app system = Api site), which is equivalent to what is displayed in the mobile app on the home screen for the selected system.
 
 > [!TIP]
-> Starting end of July 2025 and with version 3.10 of the Anker mobile app, one account can now be used across multiple devices in parallel. That means active login tokens are no longer deleted upon login of another client and parallel account usage becomes possible. Actually there is **NO NEED ANYMORE** to create a second account and share the system with it, since the main account can now be used in parallel across multiple devices and clients. To switch your account, refer to [Switching between different Anker Power accounts](#switching-between-different-anker-power-accounts)
+> Starting end of July 2025 and with version 3.10 of the Anker mobile app, one account can now be used across multiple devices in parallel. That means active login tokens are no longer deleted upon login of another client and parallel account usage becomes possible. Actually there is **NO NEED ANYMORE** to create a second account and share the system with it, since the main account can now be used in parallel across multiple devices and clients. To switch your account, refer to [Switching between different Anker Power accounts](INFO.md#switching-between-different-anker-power-accounts)
 
 For detailed usage instructions, please refer to the [INFO](INFO.md)
 
