@@ -87,8 +87,9 @@ DEVICE_SENSORS = [
         json_key="wired_connected",
         entity_category=EntityCategory.DIAGNOSTIC,
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s)
-        or not d.get("is_support_wired"),
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s) or not d.get("is_support_wired")
+        ),
     ),
     AnkerSolixBinarySensorDescription(
         key="ota_update",
@@ -116,9 +117,11 @@ DEVICE_SENSORS = [
             ),
         },
         entity_category=EntityCategory.DIAGNOSTIC,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
     ),
     AnkerSolixBinarySensorDescription(

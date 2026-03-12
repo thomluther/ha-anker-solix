@@ -335,7 +335,7 @@ async def poll_sites(  # noqa: C901
                     # Mark SB1 cascaded if other SB types in system
                     cascaded = (
                         sb_count != len(sb_list)
-                        and solarbank.get("device_pn") in ["A17C0"]
+                        and solarbank.get("device_pn") == "A17C0"
                     ) or None
 
                     # Work around for weird charging power fields in SB totals and device list: They have same names, but completely different usage
@@ -573,74 +573,100 @@ async def poll_sites(  # noqa: C901
                                 }
                             )
                 # make sure to write back any changes to the solarbank info in sites dict
-                new_sites.update({myid: mysite})
+                new_sites[myid] = mysite
 
-                grid_info = mysite.get("grid_info") or {}
-                for grid in grid_info.get("grid_list") or []:
-                    # modify only a copy of the device dict to prevent changing the scene info dict
-                    grid = dict(grid).copy()
-                    # work around for device_name which is actually the device_alias in scene info
-                    if "device_name" in grid:
-                        grid.update({"alias_name": grid.pop("device_name")})
-                    if sn := api._update_dev(
-                        grid
-                        | {
-                            "data_valid": data_valid,
-                            "photovoltaic_to_grid_power": grid_info.get(
-                                "photovoltaic_to_grid_power", ""
-                            ),
-                            "grid_to_home_power": grid_info.get(
-                                "grid_to_home_power", ""
-                            ),
-                            "grid_status": grid_info.get("grid_status", ""),
-                        },
-                        devType=SolixDeviceType.SMARTMETER.value,
-                        siteId=myid,
-                        isAdmin=admin,
-                    ):
-                        api._site_devices.add(sn)
-                smartplug_info = mysite.get("smart_plug_info") or {}
-                for smartplug in smartplug_info.get("smartplug_list") or []:
-                    # work around for device_name which is actually the device_alias in scene info
-                    if "device_name" in smartplug:
+                if grid_info := mysite.get("grid_info") or {}:
+                    for grid in grid_info.get("grid_list") or []:
                         # modify only a copy of the device dict to prevent changing the scene info dict
+                        grid = dict(grid).copy()
+                        # work around for device_name which is actually the device_alias in scene info
+                        if "device_name" in grid:
+                            grid["alias_name"] = grid.pop("device_name")
+                        if sn := api._update_dev(
+                            grid
+                            | {
+                                "data_valid": data_valid,
+                                "photovoltaic_to_grid_power": grid_info.get(
+                                    "photovoltaic_to_grid_power", ""
+                                ),
+                                "grid_to_home_power": grid_info.get(
+                                    "grid_to_home_power", ""
+                                ),
+                                "grid_status": grid_info.get("grid_status", ""),
+                            },
+                            devType=SolixDeviceType.SMARTMETER.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        ):
+                            api._site_devices.add(sn)
+                if smartplug_info := mysite.get("smart_plug_info") or {}:
+                    for smartplug in smartplug_info.get("smartplug_list") or []:
+                        # work around for device_name which is actually the device_alias in scene info
                         smartplug = dict(smartplug).copy()
-                        smartplug.update({"alias_name": smartplug.pop("device_name")})
-                    if sn := api._update_dev(
-                        smartplug,
-                        devType=SolixDeviceType.SMARTPLUG.value,
-                        siteId=myid,
-                        isAdmin=admin,
-                    ):
-                        api._site_devices.add(sn)
-                pps_info = mysite.get("pps_info") or {}
-                for pps in pps_info.get("pps_list") or []:
-                    # modify only a copy of the device dict to prevent changing the scene info dict
-                    pps = dict(pps).copy()
-                    # work around for device_name which is actually the device_alias in scene info
-                    if "device_name" in pps:
-                        pps.update({"alias_name": pps.pop("device_name")})
-                    if sn := api._update_dev(
-                        pps,
-                        devType=SolixDeviceType.PPS.value,
-                        siteId=myid,
-                        isAdmin=admin,
-                    ):
-                        api._site_devices.add(sn)
-                sb_pps_info = mysite.get("solarbank_pps_info") or {}
-                for sbpps in sb_pps_info.get("pps_list") or []:
-                    # modify only a copy of the device dict to prevent changing the scene info dict
-                    sbpps = dict(sbpps).copy()
-                    # work around for device_name which is actually the device_alias in scene info
-                    if "device_name" in sbpps:
-                        sbpps.update({"alias_name": sbpps.pop("device_name")})
-                    if sn := api._update_dev(
-                        sbpps,
-                        devType=SolixDeviceType.SOLARBANK_PPS.value,
-                        siteId=myid,
-                        isAdmin=admin,
-                    ):
-                        api._site_devices.add(sn)
+                        if "device_name" in smartplug:
+                            # modify only a copy of the device dict to prevent changing the scene info dict
+                            smartplug["alias_name"] = smartplug.pop("device_name")
+                        if sn := api._update_dev(
+                            smartplug,
+                            devType=SolixDeviceType.SMARTPLUG.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        ):
+                            api._site_devices.add(sn)
+                if pps_info := mysite.get("pps_info") or {}:
+                    for pps in pps_info.get("pps_list") or []:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        pps = dict(pps).copy()
+                        # work around for device_name which is actually the device_alias in scene info
+                        if "device_name" in pps:
+                            pps["alias_name"] = pps.pop("device_name")
+                        if sn := api._update_dev(
+                            pps,
+                            devType=SolixDeviceType.PPS.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        ):
+                            api._site_devices.add(sn)
+                if sb_pps_info := mysite.get("solarbank_pps_info") or {}:
+                    # work around to correct totals and make them consistent with solarbank fields
+                    sb_pps_info["total_photovoltaic_power"] = sb_pps_info.pop(
+                        "total_pv_input_power", ""
+                    )
+                    # Calculate total signed charging_power similar to solarbanks
+                    sb_total_charge_calc = 0
+                    sb_total_discharge_calc = 0
+                    for sbpps in sb_pps_info.get("pps_list") or []:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        sbpps = dict(sbpps).copy()
+                        # work around for device_name which is actually the device_alias in scene info
+                        if "device_name" in sbpps:
+                            sbpps["alias_name"] = sbpps.pop("device_name")
+                        # Work around to avoid mix and map device keys to solarbank keys
+                        sbpps["photovoltaic_power"] = sbpps.pop("pv_power", "")
+                        charge = sbpps.pop("charging_power", "")
+                        discharge = sbpps.pop("discharging_power", "")
+                        sbpps["bat_charge_power"] = charge
+                        sbpps["bat_discharge_power"] = discharge
+                        # calculate the signed battery power as used for Solarbank
+                        charge_calc = float(charge or 0) - float(discharge or 0)
+                        sb_total_charge_calc += charge_calc
+                        sb_total_discharge_calc += float(discharge or 0)
+                        sbpps["charging_power"] = f"{charge_calc:.0f}"
+                        sbpps["to_home_load"] = sbpps.pop("home_load_power", "")
+                        if sn := api._update_dev(
+                            sbpps,
+                            devType=SolixDeviceType.SOLARBANK_PPS.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        ):
+                            api._site_devices.add(sn)
+                    sb_pps_info["total_charging_power"] = f"{sb_total_charge_calc:.0f}" # original may reflect only battery charge but no discharge
+                    sb_pps_info["battery_discharge_power"] = (
+                        f"{sb_total_discharge_calc:.0f}"
+                    )
+                    # make sure to write back any changes to the solarbank info in sites dict
+                    new_sites[myid] = mysite
+
                 if not (cb_info := mysite.get("combiner_box_info") or {}) and (
                     station_sn := mysite.get("station_sn")
                 ):
@@ -651,7 +677,7 @@ async def poll_sites(  # noqa: C901
                     cb = dict(cb).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in cb:
-                        cb.update({"alias_name": cb.pop("device_name")})
+                        cb["alias_name"] = cb.pop("device_name")
                     cb.update({"set_load_power": total_preset})
                     # as time progressed, update actual schedule slot presets from a cached schedule if available
                     if schedule := (api.devices.get(cb.get("device_sn", ""), {})).get(
@@ -670,20 +696,23 @@ async def poll_sites(  # noqa: C901
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
-                cp_info = mysite.get("charging_pile_info") or {}
-                for cp in cp_info.get("charging_pile_list") or []:
-                    # modify only a copy of the device dict to prevent changing the scene info dict
-                    cp = dict(cp).copy()
-                    # work around for device_name which is actually the device_alias in scene info
-                    if "device_name" in cp:
-                        cp.update({"alias_name": cp.pop("device_name")})
-                    if sn := api._update_dev(
-                        cp,
-                        devType=SolixDeviceType.EV_CHARGER.value,
-                        siteId=myid,
-                        isAdmin=admin,
-                    ):
-                        api._site_devices.add(sn)
+                if cp_info := mysite.get("charging_pile_info") or {}:
+                    for cp in cp_info.get("charging_pile_list") or []:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        cp = dict(cp).copy()
+                        # work around for device_name which is actually the device_alias in scene info
+                        if "device_name" in cp:
+                            cp["alias_name"] = cp.pop("device_name")
+                        # work around to merge various EV charger field names
+                        cp["ev_charger_status"] = cp.pop("operating_state", None)
+                        cp["charging_power"] = cp.pop("power", "")
+                        if sn := api._update_dev(
+                            cp,
+                            devType=SolixDeviceType.EV_CHARGER.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        ):
+                            api._site_devices.add(sn)
                 for solar in mysite.get("solar_list") or []:
                     # modify only a copy of the device dict to prevent changing the scene info dict
                     solar = dict(solar).copy()
@@ -822,7 +851,7 @@ async def poll_site_details(
                     )
                     await api.get_device_pv_price(deviceSn=deviceSn, fromFile=fromFile)
         # Fetch solarbank data that works for member or admin sites
-        if site.get("site_type") in [SolixDeviceType.SOLARBANK.value]:
+        if site.get("site_type") == SolixDeviceType.SOLARBANK.value:
             # First fetch details that only work for site admins
             if site.get("site_admin", False):
                 # Fetch site price and CO2 settings
@@ -847,7 +876,7 @@ async def poll_site_details(
                 )
                 await api.get_co2_ranking(siteId=site_id, fromFile=fromFile)
             # Fetch AI EMS runtime stats for sites supporting it
-            if site.get("power_site_type") in [12]:
+            if site.get("power_site_type") == 12:
                 api._logger.debug(
                     "Getting api %s AI EMS runtime",
                     api.apisession.nickname,
@@ -861,7 +890,7 @@ async def poll_site_details(
                         "current_site_device_models"
                     )
                     or []
-                    if m in ["A17C5"]
+                    if m == "A17C5"
                 }:
                     # fetch provider list for supported models only once per day
                     if (datetime.now().strftime("%Y-%m-%d")) != (
@@ -1149,6 +1178,11 @@ async def poll_device_details(  # noqa: C901
                         fromFile=fromFile,
                     )
 
+        # Fetch device type specific details, if device type not excluded
+        if dev_Type in ({SolixDeviceType.EV_CHARGER.value} - exclude):
+            # Fetch charger total statistics
+            await api.get_device_charge_order_stats(deviceSn=sn, fromFile=fromFile)
+
         # Merge additional powerpanel data
         if api.powerpanelApi:
             device.update(api.powerpanelApi.devices.get(sn) or {})
@@ -1156,8 +1190,6 @@ async def poll_device_details(  # noqa: C901
         # Merge additional hes data
         if api.hesApi:
             device.update(api.hesApi.devices.get(sn) or {})
-
-        # TODO(#0): Fetch other details of specific device types as known and relevant
 
         # update entry in devices and notify registered callbacks
         api.devices.update({sn: device})

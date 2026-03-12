@@ -88,9 +88,11 @@ DEVICE_NUMBERS = [
         native_step=10,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
         force_creation_fn=lambda d, jk: jk in d,
     ),
@@ -105,9 +107,11 @@ DEVICE_NUMBERS = [
         native_step=5,
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
         force_creation_fn=lambda d, jk: jk in d,
     ),
@@ -135,9 +139,11 @@ DEVICE_NUMBERS = [
         native_min_value=0,
         native_max_value=1000,
         native_step=0.01,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
     ),
     AnkerSolixNumberDescription(
@@ -152,14 +158,16 @@ DEVICE_NUMBERS = [
         native_step=1,
         mode=NumberMode.BOX,
         value_fn=lambda d, jk: (d.get("customized") or {}).get(jk) or d.get(jk),
-        attrib_fn=lambda d, _: {
-            "expansions": d.get("sub_package_num"),
-            "calculated": d.get("battery_capacity"),
-        }
-        | (
-            {"customized": c}
-            if (c := (d.get("customized") or {}).get("battery_capacity"))
-            else {}
+        attrib_fn=lambda d, _: (
+            {
+                "expansions": d.get("sub_package_num"),
+                "calculated": d.get("battery_capacity"),
+            }
+            | (
+                {"customized": c}
+                if (c := (d.get("customized") or {}).get("battery_capacity"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         restore=True,
@@ -200,10 +208,12 @@ DEVICE_NUMBERS = [
         json_key="grid_export_limit",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and d.get("mqtt_data")
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and d.get("mqtt_data")
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.sb_disable_grid_export_switch,
@@ -235,12 +245,14 @@ SITE_NUMBERS = [
             (d.get("site_details") or {}).get("dynamic_price_details") or {}
         ).get("spot_price_unit"),
         value_fn=lambda d, jk: (
-            (d.get("site_details") or {}).get("dynamic_price_details") or {}
-        ).get(jk)
-        or None,
-        attrib_fn=lambda d, _: {"customized": c}
-        if (c := (d.get("customized") or {}).get("dynamic_price_fee"))
-        else {},
+            ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(jk)
+            or None
+        ),
+        attrib_fn=lambda d, _: (
+            {"customized": c}
+            if (c := (d.get("customized") or {}).get("dynamic_price_fee"))
+            else {}
+        ),
         native_min_value=0,
         native_max_value=100,
         native_step=0.0001,
@@ -257,12 +269,14 @@ SITE_NUMBERS = [
         json_key="dynamic_price_vat",
         native_unit_of_measurement=PERCENTAGE,
         value_fn=lambda d, jk: (
-            (d.get("site_details") or {}).get("dynamic_price_details") or {}
-        ).get(jk)
-        or None,
-        attrib_fn=lambda d, _: {"customized": c}
-        if (c := (d.get("customized") or {}).get("dynamic_price_vat"))
-        else {},
+            ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(jk)
+            or None
+        ),
+        attrib_fn=lambda d, _: (
+            {"customized": c}
+            if (c := (d.get("customized") or {}).get("dynamic_price_vat"))
+            else {}
+        ),
         native_min_value=0,
         native_max_value=100,
         native_step=0.01,
@@ -577,7 +591,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 # update number limits for presets based on solarbank count in system or active max
                 if self._attribute_name == "preset_system_output_power":
                     if (
-                        data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        data.get("type") == SolixDeviceType.COMBINER_BOX.value
                         or (data.get("generation") or 0) >= 2
                     ):
                         # SB2 has min limit of 0W, they are typically correctly set in the schedule depending on device settings
@@ -724,7 +738,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                         siteId = data.get("site_id") or ""
                         if (
-                            data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                            data.get("type") == SolixDeviceType.COMBINER_BOX.value
                             or (data.get("generation") or 0) >= 2
                         ):
                             # SB2 preset change
@@ -914,7 +928,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     )
                     resp = None
                     if (
-                        data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        data.get("type") == SolixDeviceType.COMBINER_BOX.value
                         or data.get("station_sn") is not None
                     ):
                         # control station settings via Api
@@ -927,7 +941,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     if siteId := data.get("site_id"):
                         stationSn = (
                             self.coordinator_context
-                            if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                            if data.get("type") == SolixDeviceType.COMBINER_BOX.value
                             else data.get("station_sn", "")
                         )
                         for md in self.coordinator.client.get_mqtt_devices(

@@ -66,7 +66,7 @@ class AnkerSolixBaseApi:
         self.account: dict[str, dict] = {}
         self.sites: dict[str, dict] = {}
         self.devices: dict[str, dict] = {}
-        self._device_callbacks: dict[str, set] = {}
+        self._device_callbacks: dict[str, dict] = {}
 
     def testDir(self, subfolder: str | None = None) -> str:
         """Get or set the subfolder for local API test files in the api session."""
@@ -112,7 +112,7 @@ class AnkerSolixBaseApi:
         """Clear the api cache dictionaries."""
         # check callbacks and notify registered devices about removal from cache
         for callbacks in self._device_callbacks.values():
-            for func in callbacks:
+            for func in callbacks.get("functions", set()):
                 if callable(func):
                     func(device={})
         self._device_callbacks = {}
@@ -143,7 +143,7 @@ class AnkerSolixBaseApi:
                     and value
                 ):
                     # dynamic price related updates should always be triggered if customized, independent of existing keys
-                    if key in ["dynamic_price"]:
+                    if key == "dynamic_price":
                         # convert a provider string to dict
                         if isinstance(value, str):
                             customized[key] = SolixPriceProvider(
@@ -158,7 +158,7 @@ class AnkerSolixBaseApi:
                             )
                         },
                     )
-                elif key in ["pv_forecast_details"] and value:
+                elif key == "pv_forecast_details" and value:
                     # update whole solar forecast in energy details
                     self.extractSolarForecast(siteId=id)
                 elif key in (data.get("site_details") or {}):
@@ -179,7 +179,7 @@ class AnkerSolixBaseApi:
                     self._update_dev(devData={"device_sn": id, key: data[key]})
                     # Ensure to update main device capacity as well if sub device was customized
                     if (
-                        key in ["battery_capacity"]
+                        key == "battery_capacity"
                         and value
                         and data.get("is_subdevice")
                         and (main := data.get("main_sn"))
@@ -225,7 +225,8 @@ class AnkerSolixBaseApi:
         for dev in rem_devices:
             self.devices.pop(dev, None)
             # check callbacks and notify registered devices about removal from cache
-            for func in self._device_callbacks.pop(dev, set()):
+            cbs = self._device_callbacks.pop(dev, {})
+            for func in cbs.get("functions", set()):
                 if callable(func):
                     func(device={})
 
@@ -237,18 +238,21 @@ class AnkerSolixBaseApi:
                 self.sites.pop(site, None)
 
     def register_device_callback(
-        self, deviceSn: str, func: DeviceCacheCallback
+        self, deviceSn: str, func: DeviceCacheCallback, dynamic_descriptions: dict
     ) -> None:
         """Register a device callback function to notify about Api cache object changes."""
         # register callback if callable
         if callable(func):
-            dev_callbacks = self._device_callbacks.get(deviceSn) or set()
-            dev_callbacks.add(func)
-            self._device_callbacks[deviceSn] = dev_callbacks
+            cbs = self._device_callbacks.get(deviceSn, {})
+            f = cbs.get("functions", set())
+            f.add(func)
+            cbs["functions"] = f
+            cbs["dynamic_descriptions"] = dynamic_descriptions
+            self._device_callbacks[deviceSn] = cbs
 
     def notify_device(self, deviceSn: str) -> None:
         """Notify all callbacks that are registered for a device."""
-        for func in self._device_callbacks.get(deviceSn, set()):
+        for func in self._device_callbacks.get(deviceSn, {}).get("functions", set()):
             if callable(func):
                 func(device=self.devices.get(deviceSn, {}))
 
@@ -388,19 +392,21 @@ class AnkerSolixBaseApi:
             if siteId:
                 device.update({"site_id": str(siteId)})
             if isAdmin is not None:
+                # always update admin flag if passed as parameter
                 device["is_admin"] = isAdmin
-            elif (
-                device.get("is_admin") is None
-                and (value := devData.get("ms_device_type")) is not None
-            ):
+            elif (value := devData.get("ms_device_type")) is not None:
+                # update admin flag if recognizable from provided devData
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
+                # member devices should only be listed in bind_device query and return owner_user_id
+                if value := devData.get("owner_user_id"):
+                    device["owner_user_id"] = value
             for key, value in devData.items():
                 try:
                     #
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     #
-                    if key in ["device_sw_version"] and value:
+                    if key == "device_sw_version" and value:
                         # Example for key name conversion when value is given
                         device.update({"sw_version": str(value)})
                     elif key in [
@@ -415,12 +421,8 @@ class AnkerSolixBaseApi:
                         "wireless_type",
                         "ota_version",
                     ] or (
-                        key
-                        in [
-                            # Example for key with string values that should only be updated if value returned
-                            "wifi_name",
-                        ]
-                        and value
+                        # Example for key with string values that should only be updated if value returned
+                        key == "wifi_name" and value
                     ):
                         device.update({key: str(value)})
                     else:
@@ -448,25 +450,29 @@ class AnkerSolixBaseApi:
         data: bytes,
         model: str,
         deviceSn: str,
-        valueupdate: bool,
+        extracted_values: dict,
         *args,
         **kwargs,
     ) -> None:
         """Define callback for MQTT session to update device MQTT data in cache and trigger MQTT update callback for device if registered."""
-        if valueupdate and deviceSn:
-            new_values = self.update_device_mqtt(deviceSn=deviceSn)
+        if extracted_values and deviceSn:
+            new_values = self.update_device_mqtt(
+                deviceSn=deviceSn, values=extracted_values
+            )
             if new_values and callable(self._mqtt_update_callback):
                 self._mqtt_update_callback(deviceSn)
 
     def update_device_mqtt(  # noqa: C901
         self,
         deviceSn: str | None = None,
+        values: dict | None = None,
     ) -> bool:
         """Update the mqtt data cache of the given device or all devices and return whether update was done.
 
         This will consolidate various device related mqtt key values under a common set of device keys.
         """
         updated = False
+        dyn_desc = False
         if self.mqttsession:
             for sn, device in [
                 (sn, device)
@@ -476,16 +482,16 @@ class AnkerSolixBaseApi:
                 # get old MQTT data of device
                 device_mqtt = device.get("mqtt_data") or {}
                 oldsize = len(device_mqtt)
-                oldtime = device_mqtt.get("last_update") or ""
+                # oldtime = device_mqtt.get("last_update") or ""
                 # check if newer MQTT data is available from last message timestamp
                 # use copy of MQTT dict for device because it may be modified upon received messages
                 if (
                     mqtt := (self.mqttsession.mqtt_data.get(sn) or {}).copy()
-                ) and oldtime < (mqtt.get("last_message") or ""):
+                ) and values:  # and oldtime < (mqtt.get("last_message") or "")
                     # cycle through all items and extract what is needed for the device type
                     calc_efficiency = False
                     calc_capacity = False
-                    for key, value in mqtt.items():
+                    for key, value in values.items():
                         # Implement device MQTT merge code with key filtering, conversion, consolidation, calculation or dependency updates
                         # skip value update marker for static fields that may be extracted from various messages
                         value_updated = True
@@ -495,7 +501,7 @@ class AnkerSolixBaseApi:
                                 # keys with value being saved as string
                                 "device_sn",
                                 "sub_device_sn",
-                                "local_time",
+                                "local_datetime",
                                 "exp_1_sn",
                                 "exp_2_sn",
                                 "exp_3_sn",
@@ -522,12 +528,22 @@ class AnkerSolixBaseApi:
                                 "pps_2_sn",
                                 "pps_1_model",
                                 "pps_2_model",
+                                "toggle_to_delay_time",
+                                "toggle_to_elapsed_time",
+                                "light_off_start_time",
+                                "light_off_end_time",
+                                "week_start_time",
+                                "week_end_time",
+                                "weekend_start_time",
+                                "weekend_end_time",
+                                "load_balance_monitor_device",
+                                "solar_evcharge_monitor_device",
                             ]
                             and value is not None
                         ):
                             device_mqtt.update({key: str(value)})
                             value_updated = bool(
-                                key not in ["wifi_name"] and not key.endswith("_sn")
+                                key != "wifi_name" and not key.endswith("_sn")
                             )
                         elif (
                             key
@@ -595,6 +611,16 @@ class AnkerSolixBaseApi:
                                 "pv_to_grid_power",
                                 "grid_to_home_power",
                                 "wifi_signal",
+                                "charging_power",
+                                "charging_power_p1",
+                                "charging_power_p2",
+                                "charging_power_p3",
+                                "min_current_limit",
+                                "max_current_limit",
+                                "main_breaker_limit",
+                                "max_evcharge_current",
+                                "solar_evcharge_min_current",
+                                "light_brightness",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -608,8 +634,9 @@ class AnkerSolixBaseApi:
                         elif (
                             key
                             in [
-                                # keys with value that should be saved as rounded as 3 decimal float string
+                                # keys with value that should be saved as rounded 3 decimal float string
                                 "battery_soh",
+                                "battery_soc_ah",
                                 "voltage",
                                 "pv_1_voltage",
                                 "pv_2_voltage",
@@ -636,6 +663,12 @@ class AnkerSolixBaseApi:
                                 "usbc_4_current",
                                 "usba_1_current",
                                 "usba_2_current",
+                                "voltage_p1",
+                                "voltage_p2",
+                                "voltage_p3",
+                                "current_p1",
+                                "current_p2",
+                                "current_p3",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -654,12 +687,29 @@ class AnkerSolixBaseApi:
                             "home_consumption",
                             "grid_import_energy",
                             "grid_export_energy",
+                            "charging_energy",
+                            "charging_energy_p1",
+                            "charging_energy_p2",
+                            "charging_energy_p3",
                             "charged_energy_today",
                             "discharged_energy_today",
+                            "pv_yield_today",
+                            "pv_consumption_today",
+                            "pv_charge_today",
+                            "pv_export_today",
+                            "battery_consumption_today",
+                            "grid_discharged_today",
+                            "grid_charged_today",
+                            "grid_consumption_today",
+                            "home_consumption_today",
                         ]:
                             # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
-                            # 0 value should be ignored, since that may reset energy counters if 0 values read on startup
-                            if 0 < float(value) > float(device_mqtt.get(key, 0)):
+                            # 0 value should be ignored for aggregated, since that may reset energy counters if 0 values read on startup
+                            if (
+                                str(key).startswith("charging_")
+                                or str(key).endswith("_today")
+                                or 0 < float(value) > float(device_mqtt.get(key, 0))
+                            ):
                                 device_mqtt[key] = f"{float(value):.3f}"
                                 if key in [
                                     "output_energy",
@@ -686,6 +736,11 @@ class AnkerSolixBaseApi:
                                 "usbc_4_status",
                                 "usba_1_status",
                                 "usba_2_status",
+                                "usbc_1_switch",
+                                "usbc_2_switch",
+                                "usbc_3_switch",
+                                "usbc_4_switch",
+                                "usba_switch",
                                 "usage_mode",
                                 "energy_saving_mode",
                                 "allow_export_switch",
@@ -721,8 +776,38 @@ class AnkerSolixBaseApi:
                                 "utc_timestamp",
                                 "timestamp_backup_start",
                                 "timestamp_backup_end",
-                                "toggle_to_delay_seconds",
-                                "toggle_to_elapsed_seconds",
+                                "charging_start_timestamp",
+                                "tcp_timeout_seconds",
+                                "charging_duration_seconds",
+                                "charging_window_seconds",
+                                "plug_lock_switch",
+                                "plug_countdown_seconds",
+                                "start_countdown_seconds",
+                                "auto_start_switch",
+                                "auto_charge_restart_switch",
+                                "start_evcharge_switch",
+                                "random_delay_switch",
+                                "smart_touch_mode",
+                                "wipe_up_mode",
+                                "wipe_down_mode",
+                                "light_off_schedule_switch",
+                                "modbus_switch",
+                                "tcp_port",
+                                "ip_address",
+                                "load_balance_switch",
+                                "solar_evcharge_switch",
+                                "solar_evcharge_mode",
+                                "phase_operating_mode",
+                                "auto_phase_switch",
+                                "schedule_switch",
+                                "weekend_mode",
+                                "schedule_mode",
+                                "charging_mode",
+                                "ev_charger_status",
+                                "boost_status",
+                                "ocpp_connect_status",
+                                "cp_signal_status",
+                                "plug_status",
                             ]
                             and value is not None
                         ):
@@ -805,12 +890,25 @@ class AnkerSolixBaseApi:
                                     calc_capacity = True
                         elif key in ["output_cutoff_data", "min_soc"]:
                             device_mqtt["power_cutoff"] = str(value)
-                        elif key in ["last_message"]:
-                            device_mqtt["last_update"] = str(value)
-                            value_updated = False
+                        elif key == "set_port_switch_select":
+                            # update A2345 port state based on toggle command or confirmation msg for cache update upon passive change
+                            if (
+                                switch_name := {
+                                    0: "usbc_1_switch",
+                                    1: "usbc_2_switch",
+                                    2: "usbc_3_switch",
+                                    3: "usbc_4_switch",
+                                    4: "usba_switch",
+                                }.get(value)
+                            ) and (
+                                switch_value := values.get("set_port_switch")
+                            ) is not None:
+                                device_mqtt[switch_name] = switch_value
                         else:
                             value_updated = False
                         updated = updated or value_updated
+                    # update last message timestamp from mqtt cache
+                    device_mqtt["last_update"] = str(mqtt.get("last_message"))
                     # calculate extra fields if required values were updated
                     if calc_efficiency:
                         pv = device_mqtt.get("pv_yield")
@@ -897,10 +995,20 @@ class AnkerSolixBaseApi:
                             api._update_dev({"device_sn": sn, "battery_capacity": cap})  # noqa: SLF001
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
-                    # notify registered devices if new mqtt data cache was generated
-                    if oldsize == 0:
+                    # notify registered devices if new mqtt data cache was generated or dynamic description state changed
+                    descs = self._device_callbacks.get(deviceSn, {}).get(
+                        "dynamic_descriptions", {}
+                    )
+                    for key, item in descs.items():
+                        # check if key in message values and compare old state with new state
+                        if values.get(key) is not None and str(
+                            device_mqtt.get(key)
+                        ) != str(item.get("last_value", "")):
+                            # flag to trigger update if dynamic description value changed
+                            dyn_desc = True
+                            break
+                    if oldsize == 0 or dyn_desc:
                         self.notify_device(deviceSn=sn)
-
             # update MQTT statistic in account cache, convert datetime to json compatible format
             stats = self.mqttsession.mqtt_stats.asdict()
             if (start := stats.pop("start_time")) and isinstance(start, datetime):
@@ -1738,7 +1846,7 @@ class AnkerSolixBaseApi:
         data["price"] = (
             float(price) if isinstance(price, float | int) else details.get("price")
         )
-        data["site_price_unit"] = unit if unit else details.get("site_price_unit")
+        data["site_price_unit"] = unit or details.get("site_price_unit")
         data["site_co2"] = (
             float(co2) if isinstance(co2, float | int) else details.get("site_co2")
         )
@@ -1747,7 +1855,7 @@ class AnkerSolixBaseApi:
                 decimals if decimals is not None else details.get("accuracy")
             )
         if "price_type" in details or price_type:
-            data["price_type"] = price_type if price_type else details.get("price_type")
+            data["price_type"] = price_type or details.get("price_type")
         if "dynamic_price" in details or provider:
             data["dynamic_price"] = (
                 provider.asdict() if provider else details.get("dynamic_price")
