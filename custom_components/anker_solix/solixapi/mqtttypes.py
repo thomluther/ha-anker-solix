@@ -1457,16 +1457,17 @@ def convert_timestamp(
 def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
     """Convert time between bytes used in MQTT messages and string formats.
 
-    Automatically detects input type and converts accordingly.
+    Automatically detects input value type and converts accordingly.
 
     Args:
-        data: Time data in bytes format (2-3 bytes in little endian: ([seconds,] minutes, hours))
+        value: Time data in bytes format (2-3 bytes in little endian: ([seconds,] minutes, hours))
               or string format (HH:MM or HH:MM:SS).
 
     Returns:
         String in HH:MM[:SS] format if input is bytes/bytearray.
-        Bytes (2-3 bytes) if input is string ([seconds,] minutes, hours)
+        2-3 Bytes ([seconds,] minutes, hours) if input is string.
         None if input is invalid or unsupported type.
+
     """
     if isinstance(value, bytes | bytearray) and (2 <= len(value) <= 3):
         # Convert bytes to string
