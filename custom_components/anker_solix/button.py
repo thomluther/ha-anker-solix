@@ -247,7 +247,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 self._attr_supported_features: AnkerSolixEntityFeature = (
                     description.feature
                 )
-            if self._attribute_name in ["refresh_device"]:
+            if self._attribute_name == "refresh_device":
                 # set the correct device type picture for the device refresh entity, which is available for any device and account type
                 if (pn := str(data.get("device_pn") or "").upper()) and hasattr(
                     AnkerSolixPicturePath, pn
@@ -466,9 +466,10 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 },
             )
         # When running in Test mode do not run services that are not supporting a testmode
-        if self.coordinator.client.testmode() and service_name not in [
-            SERVICE_GET_DEVICE_INFO
-        ]:
+        if (
+            self.coordinator.client.testmode()
+            and service_name != SERVICE_GET_DEVICE_INFO
+        ):
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
@@ -493,7 +494,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
             and hasattr(self.coordinator, "data")
             and self.coordinator_context in self.coordinator.data
         ):
-            if service_name in [SERVICE_GET_DEVICE_INFO]:
+            if service_name == SERVICE_GET_DEVICE_INFO:
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()

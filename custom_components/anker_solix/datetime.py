@@ -60,24 +60,32 @@ DEVICE_DATETIMES = [
         key="preset_manual_backup_start",
         translation_key="preset_manual_backup_start",
         json_key="preset_manual_backup_start",
-        value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk)).astimezone()
-        if d.get(jk) is not None
-        else None,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        value_fn=lambda d, jk: (
+            datetime.fromtimestamp(d.get(jk)).astimezone()
+            if d.get(jk) is not None
+            else None
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
     ),
     AnkerSolixDateTimeDescription(
         key="preset_manual_backup_end",
         translation_key="preset_manual_backup_end",
         json_key="preset_manual_backup_end",
-        value_fn=lambda d, jk: datetime.fromtimestamp(d.get(jk)).astimezone()
-        if d.get(jk) is not None
-        else None,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        value_fn=lambda d, jk: (
+            datetime.fromtimestamp(d.get(jk)).astimezone()
+            if d.get(jk) is not None
+            else None
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
     ),
 ]
@@ -324,7 +332,10 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                 ]
                 and isinstance(value, datetime)
                 and self._native_value != value
-                and (data.get("type") in [SolixDeviceType.COMBINER_BOX.value] or (data.get("generation") or 0) >= 2)
+                and (
+                    data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                    or (data.get("generation") or 0) >= 2
+                )
             ):
                 LOGGER.debug("%s change to %s will be applied", self.entity_id, value)
                 siteId = data.get("site_id") or ""

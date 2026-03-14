@@ -591,18 +591,18 @@ async def energy_analysis(
         "type": rangeType if rangeType in ["week", "month", "year"] else "day",
         "start_time": startDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
         "end_time": ""
         if not isinstance(endDay, datetime)
         else endDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
     }
@@ -1021,18 +1021,18 @@ async def get_device_pv_statistics(
         "type": rangeType,
         "start": startDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
         "end": ""
         if not endDay
         else endDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
         "version": version,
@@ -1049,6 +1049,7 @@ async def get_device_charge_order_stats(
     rangeType: str | None = None,
     startDay: datetime | None = None,
     endDay: datetime | None = None,
+    fromFile: bool = False,
 ) -> dict:
     """Get EV charger order statistics on a weekly, monthly, yearly or total basis.
 
@@ -1057,10 +1058,16 @@ async def get_device_charge_order_stats(
     - endDay is to limit period, default is requested range type
 
     Example data:
-    {"total_stats": {"charge_unit": "","charge_total": 0,"charge_time": 0,"charge_count": 0,"cost": 0,"cost_unit": "\u20ac","cost_saving": 0,
-    "co2_saving": 0,"co2_saveing_unit": "","mile_age": 0},"date_list": []}
+    {"total_stats": {"charge_unit": "kWh","charge_total": 146.354,"charge_time": 325555,"charge_count": 7,"cost": 12.05,"cost_unit": "\u00a3",
+      "cost_saving": 23.32,"co2_saving": 54.187,"co2_saveing_unit": "kg","mile_age": 871.86},
+    "date_list": [
+      {"date_number": 1,"date_range": {"start_date": "2026-02-01","end_date": "2026-02-01"},"date_stats": {
+          "charge_unit": "kWh","charge_total": 42.238,"charge_time": 63266,"charge_count": 1,"cost": 3.29,"cost_unit": "\u00a3",
+          "cost_saving": 8.99,"co2_saving": 15.629,"co2_saveing_unit": "kg","mile_age": 267.33}},
+      {"date_number": 2,"date_range": {"start_date": "2026-02-02","end_date": "2026-02-02"},"date_stats": {
+          "charge_unit": "kWh","charge_total": 19.524,"charge_time": 109642,"charge_count": 1,"cost": 1.68,"cost_unit": "\u00a3",
+          "cost_saving": 4,"co2_saving": 7.228,"co2_saveing_unit": "kg","mile_age": 123.57}}]}
     """
-    # TODO: Update example once range break down is available, will field name typo still be corrected?
     rangeType = rangeType if rangeType in ["week", "month", "year"] else "all"
     startDay = startDay if isinstance(startDay, datetime) else datetime.now()
     endDay = endDay if isinstance(endDay, datetime) else startDay
@@ -1068,13 +1075,25 @@ async def get_device_charge_order_stats(
         "device_sn": deviceSn,
         "date_type": rangeType,
         "start_date": ""
-        if not startDay or rangeType in ["all"]
+        if not startDay or rangeType == "all"
         else startDay.strftime("%Y-%m-%d"),
         "end_date": ""
-        if not endDay or rangeType in ["all"]
+        if not endDay or rangeType == "all"
         else endDay.strftime("%Y-%m-%d"),
     }
-    resp = await self.apisession.request(
-        "post", API_ENDPOINTS["get_device_charge_order_stats"], json=data
-    )
-    return resp.get("data") or {}
+    # get first data period from file or api
+    if fromFile:
+        resp = (
+            await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_device_charge_order_stats']}_{rangeType}_{deviceSn}.json"
+            )
+        ).get("data", {})
+    else:
+        resp = await self.apisession.request(
+            "post", API_ENDPOINTS["get_device_charge_order_stats"], json=data
+        )
+    data = resp.get("data") or {}
+    if stats := data.get("total_stats"):
+        self._update_dev({"device_sn": deviceSn, "total_stats": stats})
+    return data

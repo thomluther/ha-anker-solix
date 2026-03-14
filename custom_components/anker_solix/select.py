@@ -989,7 +989,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             await self.coordinator.client.validate_cache()
             # Customize cache first if restore entity
             if self.entity_description.restore:
-                if self._attribute_name in ["dynamic_price_provider"]:
+                if self._attribute_name == "dynamic_price_provider":
                     # refresh the price details for new provider prior customizing cache or switching provider
                     await self.coordinator.client.api.refresh_provider_prices(
                         provider=option,
@@ -1030,7 +1030,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     ]:
                         resp = None
                         if (
-                            data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                            data.get("type") == SolixDeviceType.COMBINER_BOX.value
                             or data.get("station_sn") is not None
                         ):
                             # control via station setting
@@ -1039,42 +1039,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 socReserve=int(option),
                                 toFile=self.coordinator.client.testmode(),
                             )
-                            # Control all solarbank devices via individual MQTT device setting
-                            # ensure that each MQTT device uses the command as supported by its control
-                            if siteId := data.get("site_id"):
-                                stationSn = (
-                                    self.coordinator_context
-                                    if data.get("type")
-                                    in [SolixDeviceType.COMBINER_BOX.value]
-                                    else data.get("station_sn", "")
-                                )
-                                for md in self.coordinator.client.get_mqtt_devices(
-                                    siteId=siteId,
-                                    stationSn=stationSn,
-                                    extraDeviceSn=self.coordinator_context,
-                                ):
-                                    if (
-                                        SolixMqttCommands.sb_min_soc_select
-                                        in md.controls
-                                    ):
-                                        resp = (resp or {}) | {
-                                            f"mqtt_control_{md.sn}": await self._async_mqtt_option(
-                                                mdev=md,
-                                                option=option,
-                                                cmd=SolixMqttCommands.sb_min_soc_select,
-                                            )
-                                        }
-                                    elif (
-                                        SolixMqttCommands.sb_power_cutoff_select
-                                        in md.controls
-                                    ):
-                                        resp = (resp or {}) | {
-                                            f"mqtt_control_{md.sn}": await self._async_mqtt_option(
-                                                mdev=md,
-                                                option=option,
-                                                cmd=SolixMqttCommands.sb_power_cutoff_select,
-                                            )
-                                        }
                         else:
                             # control via individual device setting
                             resp = await self.coordinator.client.api.set_power_cutoff(
@@ -1082,6 +1046,39 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 setId=int(selected_id[0]),
                                 toFile=self.coordinator.client.testmode(),
                             )
+                        # Control all solarbank devices via individual MQTT device setting
+                        # ensure that each MQTT device uses the command as supported by its control
+                        if siteId := data.get("site_id"):
+                            stationSn = (
+                                self.coordinator_context
+                                if data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                                else data.get("station_sn", "")
+                            )
+                            for md in self.coordinator.client.get_mqtt_devices(
+                                siteId=siteId,
+                                stationSn=stationSn,
+                                extraDeviceSn=self.coordinator_context,
+                            ):
+                                if SolixMqttCommands.sb_min_soc_select in md.controls:
+                                    resp = (resp or {}) | {
+                                        f"mqtt_control_{md.sn}": await self._async_mqtt_option(
+                                            mdev=md,
+                                            option=option,
+                                            cmd=SolixMqttCommands.sb_min_soc_select,
+                                        )
+                                    }
+                                elif (
+                                    SolixMqttCommands.sb_power_cutoff_select
+                                    in md.controls
+                                    # and data.get("generation", 0) >= 2
+                                ):
+                                    resp = (resp or {}) | {
+                                        f"mqtt_control_{md.sn}": await self._async_mqtt_option(
+                                            mdev=md,
+                                            option=option,
+                                            cmd=SolixMqttCommands.sb_power_cutoff_select,
+                                        )
+                                    }
                         if isinstance(resp, dict) and ALLOW_TESTMODE:
                             LOGGER.info(
                                 "%s: Applied settings for '%s' change to '%s':\n%s",
@@ -1106,7 +1103,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 with suppress(ValueError, TypeError):
                     if stationSn := (
                         self.coordinator_context
-                        if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        if data.get("type") == SolixDeviceType.COMBINER_BOX.value
                         else data.get("station_sn")
                     ):
                         # TODO: Multisystem Max load control via Api unknown at this point in time
@@ -1124,7 +1121,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                     cmd=SolixMqttCommands.sb_max_load_parallel,
                                 )
                             }
-                    elif data.get("type") in [SolixDeviceType.SOLARBANK.value]:
+                    elif data.get("type") == SolixDeviceType.SOLARBANK.value:
                         # use Api command to modify station settings
                         # TODO: Verify if Api option is reflected in mobile App station settings
                         resp = (
@@ -1553,9 +1550,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 },
             )
         # When running in Test mode do not run services that are not supporting a testmode
-        if self.coordinator.client.testmode() and service_name not in [
-            SERVICE_MODIFY_SOLIX_USE_TIME,
-        ]:
+        if self.coordinator.client.testmode() and service_name != SERVICE_MODIFY_SOLIX_USE_TIME:
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
@@ -1578,7 +1573,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         if self.coordinator and hasattr(self.coordinator, "data"):
             result = False
             data: dict = self.coordinator.data.get(self.coordinator_context) or {}
-            if service_name in [SERVICE_MODIFY_SOLIX_USE_TIME]:
+            if service_name == SERVICE_MODIFY_SOLIX_USE_TIME:
                 LOGGER.debug("%s action will be applied", service_name)
                 result = await self.coordinator.client.api.set_sb2_use_time(
                     siteId=data.get("site_id") or "",
@@ -1645,7 +1640,7 @@ class AnkerSolixRestoreSelect(AnkerSolixSelect, RestoreEntity):
                 and last_state.state in self.options
                 and not self._attr_current_option
             ):
-                if self._attribute_name in ["dynamic_price_provider"]:
+                if self._attribute_name == "dynamic_price_provider":
                     # refresh the price details for restored provider
                     await self.coordinator.client.api.refresh_provider_prices(
                         provider=last_state.state,

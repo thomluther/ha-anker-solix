@@ -111,7 +111,7 @@ class DeviceHexDataHeader:
         """Print the header fields representation in human readable format."""
         if len(self) > 0:
             s = f"{self.prefix.hex(' '):<8}: 2 Byte Anker Solix message marker (supposed 'ff 09')"
-            s += f"\n{Color.YELLOW}{int.to_bytes(self.msglength, length=2, byteorder='little').hex(' '):<8}{Color.OFF}:"
+            s += f"\n{Color.YELLOW}{self.msglength.to_bytes(length=2, byteorder='little').hex(' '):<8}{Color.OFF}:"
             s += f" 2 Byte total message length ({Color.YELLOW}{self.msglength!s}{Color.OFF}) in Bytes (Little Endian format)"
             s += f"\n{self.pattern.hex(' '):<8}: 3 Byte fixed message pattern (supposed `03 00/01 0f` for send/receive)"
             s += f"\n{Color.GREEN}{self.msgtype.hex(' ')!s:<8}{Color.OFF}: 2 Byte message type pattern (varies per device model and message type)"
@@ -131,7 +131,7 @@ class DeviceHexDataField:
 
     Common data field structure:
     XX     | 1 Byte data field name (A1, A2, A3 ...), naming can be different per device model and message type
-    XX     | 1 Byte data length (bytes following until end of field)
+    XX     | 1-2 Bytes data length (bytes following until end of field), 2 bytes LE only for json field types
     XX ... | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
     """
 
@@ -140,6 +140,8 @@ class DeviceHexDataField:
     f_type: bytearray = field(default_factory=bytearray)
     f_value: bytearray = field(default_factory=bytearray)
     hexbytes: InitVar[bytearray | bytes | str | None] = None
+    json: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+    _len_bytes: int = field(default=1, init=False, repr=False, compare=False)
 
     def __post_init__(self, hexbytes) -> None:
         """Init the dataclass from an optional hexbytes."""
@@ -149,12 +151,33 @@ class DeviceHexDataField:
             hexbytes = bytearray(hexbytes)
         if isinstance(hexbytes, bytearray) and len(hexbytes) >= 2:
             self.f_name = hexbytes[0:1]
-            self.f_length = int.from_bytes(hexbytes[1:2])
+            # test if 2 byte LE length for str fields
+            self.f_length = int.from_bytes(hexbytes[1:3], byteorder="little")
+            if (
+                hexbytes[3:4] == DeviceHexDataTypes.str.value
+                and 255 < self.f_length <= len(hexbytes) - 4
+            ):
+                try:
+                    # try string decoding
+                    hexbytes[4 : 3 + self.f_length].decode()
+                    self._len_bytes = 2
+                except UnicodeDecodeError:
+                    self.f_length = int.from_bytes(hexbytes[1:2])
+            else:
+                self.f_length = int.from_bytes(hexbytes[1:2])
             if 0 < self.f_length <= len(hexbytes) - 2:
-                if self.f_length > 1 and bytes(hexbytes[2:3]) < b"10":
-                    # field with value type
-                    self.f_type = hexbytes[2:3]
-                    self.f_value = hexbytes[3 : 2 + self.f_length]
+                if self.f_length > 1 and (
+                    bytes(hexbytes[2:3]) < b"10" or self.f_length > 1
+                ):
+                    if self._len_bytes > 1:
+                        # 2 byte length with str field
+                        self.f_value = hexbytes[4 : 3 + self.f_length]
+                        self.f_type = hexbytes[3:4]
+                    else:
+                        # field with value type
+                        self.f_type = hexbytes[2:3]
+                        self.f_value = hexbytes[3 : 2 + self.f_length]
+                    self._check_json()
                 else:
                     # field with single byte value
                     self.f_type = bytearray()
@@ -163,8 +186,20 @@ class DeviceHexDataField:
                 self.f_type = bytearray()
                 self.f_value = bytearray()
         else:
+            # check types
+            if isinstance(self.f_type, bytes):
+                self.f_type = bytearray(self.f_type)
+            elif not isinstance(self.f_type, bytearray):
+                self.f_type = bytearray()
+            if isinstance(self.f_value, bytes):
+                self.f_value = bytearray(self.f_value)
+            elif not isinstance(self.f_value, bytearray):
+                self.f_value = bytearray()
             # Update data length if initialized without hexbytes
             self.f_length = len(self.f_type) + len(self.f_value)
+            if self.f_length > 255:
+                self._len_bytes = 2
+            self._check_json()
 
     def __len__(self) -> int:
         """Return Bytes used for field."""
@@ -172,16 +207,36 @@ class DeviceHexDataField:
             len(self.f_name)
             + len(self.f_type)
             + len(self.f_value)
-            + 1 * (self.f_length > 0)
+            + (self.f_length > 0) * self._len_bytes
         )
 
     def __str__(self) -> str:
         """Print the class fields."""
         return f"f_name:{self.f_name.hex()}, f_length:{self.f_length!s}, f_type:{self.f_type.hex()}, f_value:{self.f_value.hex(':')}"
 
+    def _check_json(self) -> None:
+        """Try to convert field value to json and update attributes."""
+        if self.f_type in [
+            DeviceHexDataTypes.str.value,
+            DeviceHexDataTypes.json.value,
+        ] and (
+            self.f_value.startswith(bytearray(b"{"))
+            or self.f_value.startswith(bytearray(b"["))
+        ):
+            with contextlib.suppress(UnicodeDecodeError):
+                self.json = json.loads(self.f_value)
+                self.f_type = DeviceHexDataTypes.json.value
+
     def hex(self, sep: str = "") -> str:
         """Get the field as hex string."""
-        b = self.f_name + self.f_length.to_bytes() + self.f_type + self.f_value
+        b = (
+            self.f_name
+            + self.f_length.to_bytes(
+                length=(self.f_length.bit_length() + 7) // 8, byteorder="little"
+            )
+            + self.f_type
+            + self.f_value
+        )
         if sep:
             return f"{b.hex(sep=sep)}"
         return f"{b.hex()}"
@@ -216,6 +271,7 @@ class DeviceHexDataField:
                 DeviceHexDataTypes.str.name,
                 DeviceHexDataTypes.bin.name,
                 DeviceHexDataTypes.strb.name,
+                DeviceHexDataTypes.json.name,
                 DeviceHexDataTypes.unk.name,
             ]:
                 # unsigned int little endian
@@ -263,18 +319,21 @@ class DeviceHexDataField:
                     else ""
                 )
             else:
-                uile = str(bytes(self.f_value))
+                if typ == DeviceHexDataTypes.json.name:
+                    # uile = f"{json.dumps(self.json, separators=(',', ':')):<15}"
+                    # field will be printed by DeviceHexData class with model type decoding
+                    uile = ""
+                else:
+                    uile = f"{bytes(self.f_value)!s:<15}"
                 sile = ""
                 fle = ""
                 dle = ""
-            s = (
-                f"{Color.RED}{self.f_name.hex()!s:<4}{Color.OFF} {int.to_bytes(self.f_length).hex():<3} "
-                f"{tcol}{(self.f_type.hex() or '--')!s:<4}{Color.OFF}  {self.f_value.hex(':')}\n"
-                f"{'└->':<3} {self.f_length!s:>3} {tcol}{typ!s:<5}{Color.OFF} "
-                f"{tcol if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''}{uile:>15}{Color.OFF if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''} "
-                f"{tcol if typ == DeviceHexDataTypes.sile.name else ''}{sile:>15}{Color.OFF if typ == DeviceHexDataTypes.sile.name else ''} "
-                f"{tcol if typ == DeviceHexDataTypes.sfle.name else ''}{fle:>15}{Color.OFF if typ == DeviceHexDataTypes.sfle.name else ''} {dle:>15}"
-            )
+            s = f"{Color.RED}{self.f_name.hex()!s:<2}{Color.OFF} {self.f_length.to_bytes(length=(self.f_length.bit_length() + 7) // 8, byteorder='little').hex():>4} "
+            s += f"{tcol}{(self.f_type.hex().replace('fe', '00') or '--')!s:<4}{Color.OFF}  {self.f_value.hex(':')}\n"
+            s += f"{'└->':<3}{self.f_length!s:>4} {tcol}{typ!s:<5}{Color.OFF} "
+            s += f"{tcol if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''}{uile:>15}{Color.OFF if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''} "
+            s += f"{tcol if typ == DeviceHexDataTypes.sile.name else ''}{sile:>15}{Color.OFF if typ == DeviceHexDataTypes.sile.name else ''} "
+            s += f"{tcol if typ == DeviceHexDataTypes.sfle.name else ''}{fle:>15}{Color.OFF if typ == DeviceHexDataTypes.sfle.name else ''} {dle:>15}"
         else:
             s = ""
         return s
@@ -323,18 +382,22 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
                 if name := fieldmap.get(NAME):
-                    value = int(
-                        int.from_bytes(
-                            hexdata,
-                            byteorder="little",
-                            signed=fieldmap.get(SIGNED) is not False,
+                    if name.endswith("_time"):
+                        # special case for 2 bytes indicating minutes, hours
+                        value = convert_time(hexdata) or ""
+                    else:
+                        value = int(
+                            int.from_bytes(
+                                hexdata,
+                                byteorder="little",
+                                signed=fieldmap.get(SIGNED) is not False,
+                            )
                         )
-                    )
                     # check if value stands for software version and convert to version number
                     if "version" in name or "sw_" in name:
                         # convert int to string for version numbering
                         value = ".".join(str(value))
-                    else:
+                    elif not isinstance(value, str):
                         factor = fieldmap.get(FACTOR, 1)
                         value = round_by_factor(value * factor, factor)
                     values[name] = value
@@ -373,6 +436,9 @@ class DeviceHexDataField:
                             )
                             for b in hexdata
                         ]
+                    elif name.endswith("_time"):
+                        # special case for 2-3 bytes indicating [seconds,] minutes, hours
+                        value = convert_time(hexdata) or ""
                     else:
                         value = round_by_factor(
                             int.from_bytes(
@@ -478,6 +544,14 @@ class DeviceHexDataField:
                                 fieldmap=bytemap,
                             )
                         )
+            case DeviceHexDataTypes.json.value:
+                # Use Json Data class for extraction
+                values.update(
+                    DeviceJsonData().extract_values(
+                        data=self.json,
+                        fieldmap=fieldmap.get(DeviceHexDataTypes.json.name, {}),
+                    )
+                )
             case _:
                 # check if type provided in mapping and convert value accordingly
                 if (
@@ -519,6 +593,9 @@ class DeviceHexDataField:
             )
             # Update data length
             self.f_length = len(self.f_type) + len(self.f_value)
+            if self.f_length > 255:
+                self._len_bytes = 2
+            self._check_json()
         except (ValueError, TypeError) as err:
             raise type(err)(
                 f"Error updating DeviceHexDataField {self.f_name.hex()}: {err!s}"
@@ -528,7 +605,7 @@ class DeviceHexDataField:
 
     def encode_value(
         self,
-        value: float | str,
+        value: float | str | dict,
         fieldtype: bytearray | bytes | None = None,
         desc: dict | None = None,
     ) -> bytearray | None:
@@ -538,7 +615,10 @@ class DeviceHexDataField:
         if not isinstance(desc, dict):
             desc = {}
         options = desc.get(VALUE_OPTIONS, {})
-        if isinstance(value, str | int | float):
+        if desc.get(NAME, "").endswith("_time"):
+            # special case for time strings HH:MM[:SS], convert to bytes already
+            fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
+        elif isinstance(value, str | int | float):
             # for provided default or state values without value validation descriptions, use value as is
             if not (options or VALUE_MIN in desc or VALUE_MAX in desc):
                 options = (
@@ -559,6 +639,9 @@ class DeviceHexDataField:
                 if value != desc.get(VALUE_DEFAULT)
                 else value
             )
+        # use json as is
+        elif isinstance(value, dict):
+            fieldvalue = value
         # use default value if defined in fieldmap
         elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
             raise ValueError(
@@ -595,6 +678,10 @@ class DeviceHexDataField:
                             length=2, byteorder="little", signed=signed
                         )
                     )
+                # special case for converted time bytes
+                elif isinstance(fieldvalue, bytes):
+                    # drop first byte with seconds
+                    hexvalue = bytearray(fieldvalue[-2:])
             case DeviceHexDataTypes.var.value:
                 # var is always 4 bytes, assuming provided value is int
                 # If a divider is specified, value will be devided prior encoding
@@ -604,11 +691,21 @@ class DeviceHexDataField:
                             length=4, byteorder="little", signed=signed
                         )
                     )
+                # special case for converted time bytes
+                elif isinstance(fieldvalue, bytes):
+                    # ensure 4 bytes length if requirded
+                    hexvalue = bytearray(
+                        (bytes.fromhex("0000") + fieldvalue)[-(desc.get(LENGTH, 3)) :]
+                    )
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 # '<f' little-endian 32-bit float (4 Bytes, single)
                 if isinstance(fieldvalue, int | float):
                     hexvalue = bytearray(struct.pack("<f", fieldvalue / divider))
+            case DeviceHexDataTypes.json.value:
+                hexvalue = bytearray(
+                    json.dumps(fieldvalue, separators=(",", ":")), "utf-8"
+                )
             case _:
                 raise TypeError(
                     f"Field type not supported for encoding, got {fieldtype!s}"
@@ -664,7 +761,7 @@ class DeviceHexData:
                 f = DeviceHexDataField(hexbytes=self.hexbytes[idx:])
                 if f.f_name:
                     self.msg_fields[f.f_name.hex()] = f
-                idx += int(f.f_length) + 2
+                idx += len(f)
         else:
             # update length and hexbytes if not initialized via hexbytes
             self._update_hexbytes()
@@ -678,7 +775,11 @@ class DeviceHexData:
         return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}, checksum:{self.checksum.hex()}"
 
     def _get_fieldmap(self) -> dict:
-        return SOLIXMQTTMAP.get(self.model, {}).get(self.msg_header.msgtype.hex(), {})
+        return (
+            SOLIXMQTTMAP.get(self.model, {})
+            .get(self.msg_header.msgtype.hex(), {})
+            .copy()
+        )
 
     def _get_xor_checksum(self, hexbytes: bytearray | None = None) -> bytearray:
         """Generate the XOR checksum byte across provided bytearray or actual hexdata."""
@@ -731,7 +832,7 @@ class DeviceHexData:
                 f"{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
             )
             if self.msg_fields:
-                s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
+                s += f"\n{'Fld':<3}{'Len':>4} {'Type':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
                 fieldmap = self._get_fieldmap()
                 if cmd_list := fieldmap.get(COMMAND_LIST):
                     # extract the maps from all nested commands, they should not have duplicate field names
@@ -764,6 +865,13 @@ class DeviceHexData:
                             f"{('' if divider is None else ' (' + VALUE_DIVIDER + ' ' + str(divider) + ')')}"
                             f"{('' if signed is None else ' (' + SIGNED + ' ' + str(signed) + ')')}{Color.OFF}"
                         )
+                    elif f.json:
+                        s += DeviceJsonData(
+                            model=self.model,
+                            msgtype=self.msg_header.msgtype,
+                            fieldname=f.f_name,
+                            data=f.json,
+                        ).decode_fields()
                 s += f"\n{80 * '-'}"
         else:
             s = ""
@@ -807,13 +915,21 @@ class DeviceHexData:
             # update length and hexbytes
             self._update_hexbytes()
 
-    def add_timestamp_field(self, fieldname: str | bytes = "fe") -> None:
+    def add_timestamp_field(
+        self,
+        fieldname: str | bytes = "fe",
+        fieldtype: bytes | None = DeviceHexDataTypes.var.value,
+    ) -> None:
         """Add or update a timestamp field in seconds as maybe required to publish command data."""
         if isinstance(fieldname, str):
             fieldname = bytes.fromhex(fieldname)
+        if not isinstance(fieldtype, bytes):
+            fieldtype = DeviceHexDataTypes.var.value
+        if fieldtype == DeviceHexDataTypes.unk.value:
+            fieldtype = None
         datafield = DeviceHexDataField(
             f_name=fieldname,
-            f_type=DeviceHexDataTypes.var.value,
+            f_type=fieldtype,
             f_value=convert_timestamp(datetime.now().timestamp()),
         )
         self.update_field(datafield=datafield)
@@ -855,12 +971,21 @@ class DeviceJsonData:
 
     hexbytes: bytearray = field(default_factory=bytearray)
     model: str = ""
-    msgtype: str = "json"
+    msgtype: str | bytearray | bytes = DeviceHexDataTypes.json.name
+    fieldname: str | bytearray | bytes = ""
     length: int = 0
     data: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Post init the dataclass to decode the bytes into dict."""
+        if isinstance(self.msgtype, bytes | bytearray):
+            self.msgtype = self.msgtype.hex()
+        elif not isinstance(self.msgtype, str):
+            self.msgtype = ""
+        if isinstance(self.fieldname, bytes | bytearray):
+            self.fieldname = self.fieldname.hex()
+        elif not isinstance(self.fieldname, str):
+            self.fieldname = ""
         if isinstance(self.hexbytes, str):
             self.hexbytes = bytearray(bytes.fromhex(self.hexbytes.replace(":", "")))
         elif isinstance(self.hexbytes, bytes):
@@ -882,7 +1007,10 @@ class DeviceJsonData:
         return f"model:{self.model}, data:{{{self.data!s}}}, hexbytes:{self.hexbytes.hex()}"
 
     def _get_fieldmap(self) -> dict:
-        return SOLIXMQTTMAP.get(self.model, {}).get(self.msgtype, {})
+        fmap = SOLIXMQTTMAP.get(self.model, {}).get(self.msgtype, {}).copy()
+        if self.fieldname:
+            return fmap.get(self.fieldname, {})
+        return fmap.copy()
 
     def _update_hexbytes(self) -> None:
         # init hexbytes
@@ -988,7 +1116,7 @@ class DeviceJsonData:
         return str(fieldvalue) if is_str else fieldvalue
 
     def decode(self) -> str:
-        """Return the data representation in human readable format."""
+        """Return a header and data representation in human readable format."""
         if self.length > 0:
             if isinstance(m_type := self.data.get("type"), str) and "data" in self.data:
                 # data field descriptions under type_data map
@@ -1002,19 +1130,47 @@ class DeviceJsonData:
                 if self.model
                 else ""
             )
-            # add descriptions to decoded fields
-            lines = json.dumps(self.data, indent=2, default=str).splitlines()
-            if fieldmap := self._get_fieldmap():
-                if (
-                    isinstance(m_type := self.data.get("type"), str)
-                    and "data" in self.data
-                ):
-                    # extend fieldmap with field descriptions under type_data map
-                    fieldmap = fieldmap | self._get_fieldmap().get(f"{m_type}_data", {})
-                # search each json key in fieldmap
-                for i, line in enumerate(lines):
-                    if (key := (line.split('"')[1:2] or [""])[0]) and (
-                        fld := fieldmap.get(key, {})
+            return "\n".join([f"{pn:-^98}", self.decode_fields()])
+        return ""
+
+    def decode_fields(self) -> str:
+        """Return only the data representation in human readable format."""
+        # add descriptions to decoded fields
+        lines = json.dumps(self.data, indent=2, default=str).splitlines()
+        nested_fields = []
+        list_fields = 0
+        isnested = False
+        if fieldmap := self._get_fieldmap():
+            # extract nested json field from mapping for decoding
+            fieldmap = fieldmap.copy().pop("json", fieldmap)
+            if "data" in self.data:
+                # extend fieldmap with field descriptions under type_data map
+                if isinstance(m_type := self.data.get("type"), str):
+                    fieldmap |= fieldmap.copy().pop(f"{m_type}_data", {})
+                else:
+                    fieldmap |= fieldmap.copy().pop("data", {})
+            # search each json key in fieldmap,
+            for i, line in enumerate(lines):
+                # check if nested dict ends
+                if len(nested_fields) > 0 and line.endswith("}"):
+                    nested_fields = nested_fields[:-1]
+                    isnested = len(nested_fields) > 1 or not (
+                        nested_fields[-1:] or [""]
+                    )[0].endswith("data")
+                elif line.endswith("]"):
+                    list_fields -= 1
+                if key := (line.split('"')[1:2] or [""])[0]:
+                    # check if nested dict starts
+                    if line.endswith("{"):
+                        nested_fields.append(key)
+                        isnested = len(nested_fields) > 1 or not (
+                            nested_fields[-1:] or [""]
+                        )[0].endswith("data")
+                    # check if list starts
+                    if (
+                        not isnested
+                        and list_fields <= 0
+                        and (fld := fieldmap.get(key, {}))
                     ):
                         value = self.data.get(key)
                         name = fld.get(NAME) or ""
@@ -1027,8 +1183,10 @@ class DeviceJsonData:
                                 f"{line}  {Color.CYAN} --> {name}{('' if factor is None else ' (' + FACTOR + ' ' + str(factor) + ')')}"
                                 f"{('' if divider is None else ' (' + VALUE_DIVIDER + ' ' + str(divider) + ')')}{Color.OFF}"
                             )
-            return "\n".join([f"{pn:-^98}", *lines])
-        return ""
+                if line.endswith("["):
+                    list_fields += 1
+
+        return "\n".join(lines)
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -1037,9 +1195,9 @@ class DeviceJsonData:
     def values(self) -> dict:
         """Return a dictionary with extracted values based on defined field mappings."""
         fieldmap = self._get_fieldmap()
-        return self._extract_values(data=self.data, fieldmap=fieldmap)
+        return self.extract_values(data=self.data, fieldmap=fieldmap)
 
-    def _extract_values(self, data: dict, fieldmap: dict) -> dict[str, Any]:
+    def extract_values(self, data: dict, fieldmap: dict) -> dict[str, Any]:
         """Get described json values in fieldmap from provided data."""
         values = {}
         if isinstance(data, dict) and isinstance(fieldmap, dict):
@@ -1052,8 +1210,10 @@ class DeviceJsonData:
                     # nested mapping, recall extraction
                     # update fieldmap if key is a data key
                     if key == "data":
-                        f_map = fieldmap.get(f"{data.get('type', '')}_data", {})
-                    values.update(self._extract_values(data=value, fieldmap=f_map))
+                        f_map = fieldmap.get(
+                            f"{data.get('type', '')}_data", fieldmap.get(key, {})
+                        )
+                    values.update(self.extract_values(data=value, fieldmap=f_map))
                 elif name := f_map.get(NAME):
                     if (factor := f_map.get(FACTOR)) and isinstance(value, float | int):
                         values[name] = round_by_factor(
@@ -1291,4 +1451,42 @@ def convert_timestamp(
                 return float(msec) / 1000
         else:
             return float(int.from_bytes(value, byteorder="little", signed=True))
+    return None
+
+
+def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
+    """Convert time between bytes used in MQTT messages and string formats.
+
+    Automatically detects input value type and converts accordingly.
+
+    Args:
+        value: Time data in bytes format (2-3 bytes in little endian: ([seconds,] minutes, hours))
+              or string format (HH:MM or HH:MM:SS).
+
+    Returns:
+        String in HH:MM[:SS] format if input is bytes/bytearray.
+        2-3 Bytes ([seconds,] minutes, hours) if input is string.
+        None if input is invalid or unsupported type.
+
+    """
+    if isinstance(value, bytes | bytearray) and (2 <= len(value) <= 3):
+        # Convert bytes to string
+        parts = [f"{x:02d}" for x in value]
+        parts.reverse()  # reverse to little endian
+        return ":".join(parts)
+    if (
+        isinstance(value, str)
+        and (parts := value.split(":"))
+        and (2 <= len(parts) <= 3)
+    ):
+        # Convert string to bytes
+        if (
+            (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
+            and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
+            and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
+        ):
+            return bytes(
+                ([int(parts[2])] if len(parts) > 2 else [])
+                + [int(parts[1]), int(parts[0])]
+            )
     return None

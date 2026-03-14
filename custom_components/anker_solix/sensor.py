@@ -83,12 +83,13 @@ from .solixapi.apitypes import (
     Solarbank2Timeslot,
     SolarbankAiemsRuntimeStatus,
     SolarbankPowerMode,
+    SolarbankPpsStatus,
     SolarbankRatePlan,
     SolarbankStatus,
     SolarbankTimeslot,
     SolarbankUsageMode,
-    SolixChargerPortStatus,
     SolixBatteryStatus,
+    SolixChargerPortStatus,
     SolixDeviceStatus,
     SolixDeviceType,
     SolixGridStatus,
@@ -159,7 +160,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.ENUM,
         options=[status.name for status in SolarbankStatus],
         attrib_fn=lambda d, _: {"charging_status": d.get("charging_status")},
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
     ),
@@ -189,15 +190,19 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         # use different MQTT value name if overlay
-        value_fn=lambda d, jk, _: (d.get("photovoltaic_power") or d.get(jk))
-        if d.get(MQTT_OVERLAY)
-        else (d.get(jk) or d.get("photovoltaic_power")),
+        value_fn=lambda d, jk, _: (
+            (d.get("photovoltaic_power") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("photovoltaic_power"))
+        ),
         # track MPPT voltage here if no PV channel breakdown in data
-        attrib_fn=lambda d, _: {}
-        if d.get("solar_power_1") or d.get("pv_1_power")
-        else (
-            ({"pv_1_voltage": v} if (v := d.get("pv_1_voltage")) else {})
-            | ({"pv_2_voltage": v} if (v := d.get("pv_2_voltage")) else {})
+        attrib_fn=lambda d, _: (
+            {}
+            if d.get("solar_power_1") or d.get("pv_1_power")
+            else (
+                ({"pv_1_voltage": v} if (v := d.get("pv_1_voltage")) else {})
+                | ({"pv_2_voltage": v} if (v := d.get("pv_2_voltage")) else {})
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
@@ -211,13 +216,17 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: (d.get("pv_1_power") or d.get(jk))
-        if d.get(MQTT_OVERLAY)
-        else (d.get(jk) or d.get("pv_1_power")),
-        attrib_fn=lambda d, _: {
-            "name": (d.get("pv_name") or {}).get("pv1_name") or "",
-        }
-        | ({"voltage": v} if (v := d.get("pv_1_voltage")) else {}),
+        value_fn=lambda d, jk, _: (
+            (d.get("pv_1_power") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("pv_1_power"))
+        ),
+        attrib_fn=lambda d, _: (
+            {
+                "name": (d.get("pv_name") or {}).get("pv1_name") or "",
+            }
+            | ({"voltage": v} if (v := d.get("pv_1_voltage")) else {})
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
@@ -230,13 +239,17 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: (d.get("pv_2_power") or d.get(jk))
-        if d.get(MQTT_OVERLAY)
-        else (d.get(jk) or d.get("pv_2_power")),
-        attrib_fn=lambda d, _: {
-            "name": (d.get("pv_name") or {}).get("pv2_name") or "",
-        }
-        | ({"voltage": v} if (v := d.get("pv_2_voltage")) else {}),
+        value_fn=lambda d, jk, _: (
+            (d.get("pv_2_power") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("pv_2_power"))
+        ),
+        attrib_fn=lambda d, _: (
+            {
+                "name": (d.get("pv_name") or {}).get("pv2_name") or "",
+            }
+            | ({"voltage": v} if (v := d.get("pv_2_voltage")) else {})
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
@@ -249,13 +262,17 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: (d.get("pv_3_power") or d.get(jk))
-        if d.get(MQTT_OVERLAY)
-        else (d.get(jk) or d.get("pv_3_power")),
-        attrib_fn=lambda d, _: {
-            "name": (d.get("pv_name") or {}).get("pv3_name") or "",
-        }
-        | ({"voltage": v} if (v := d.get("pv_3_voltage")) else {}),
+        value_fn=lambda d, jk, _: (
+            (d.get("pv_3_power") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("pv_3_power"))
+        ),
+        attrib_fn=lambda d, _: (
+            {
+                "name": (d.get("pv_name") or {}).get("pv3_name") or "",
+            }
+            | ({"voltage": v} if (v := d.get("pv_3_voltage")) else {})
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
@@ -268,13 +285,17 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: (d.get("pv_4_power") or d.get(jk))
-        if d.get(MQTT_OVERLAY)
-        else (d.get(jk) or d.get("pv_4_power")),
-        attrib_fn=lambda d, _: {
-            "name": (d.get("pv_name") or {}).get("pv4_name") or "",
-        }
-        | ({"voltage": v} if (v := d.get("pv_4_voltage")) else {}),
+        value_fn=lambda d, jk, _: (
+            (d.get("pv_4_power") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("pv_4_power"))
+        ),
+        attrib_fn=lambda d, _: (
+            {
+                "name": (d.get("pv_name") or {}).get("pv4_name") or "",
+            }
+            | ({"voltage": v} if (v := d.get("pv_4_voltage")) else {})
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
@@ -380,8 +401,15 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        exclude_fn=lambda s, d: not (
-            {t := d.get("type")} - s and t not in [SolixDeviceType.SOLARBANK.value]
+        exclude_fn=lambda s, d: (
+            not (
+                {t := d.get("type")} - s
+                and t
+                not in [
+                    SolixDeviceType.SOLARBANK.value,
+                    SolixDeviceType.SOLARBANK_PPS.value,
+                ]
+            )
         ),
         mqtt=True,
     ),
@@ -416,11 +444,11 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {"device_sn": v} if (v := d.get("solarbank_1_sn")) else {}
-        )
-        | ({"state_of_charge": v} if (v := d.get("solarbank_1_soc")) else {}),
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_1_sn")
+            ({"device_sn": v} if (v := d.get("solarbank_1_sn")) else {})
+            | ({"state_of_charge": v} if (v := d.get("solarbank_1_soc")) else {})
+        ),
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_1_sn"))
         ),
         mqtt=True,
     ),
@@ -433,11 +461,11 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {"device_sn": v} if (v := d.get("solarbank_2_sn")) else {}
-        )
-        | ({"state_of_charge": v} if (v := d.get("solarbank_2_soc")) else {}),
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_2_sn")
+            ({"device_sn": v} if (v := d.get("solarbank_2_sn")) else {})
+            | ({"state_of_charge": v} if (v := d.get("solarbank_2_soc")) else {})
+        ),
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_2_sn"))
         ),
         mqtt=True,
     ),
@@ -450,11 +478,11 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {"device_sn": v} if (v := d.get("solarbank_3_sn")) else {}
-        )
-        | ({"state_of_charge": v} if (v := d.get("solarbank_3_soc")) else {}),
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_3_sn")
+            ({"device_sn": v} if (v := d.get("solarbank_3_sn")) else {})
+            | ({"state_of_charge": v} if (v := d.get("solarbank_3_soc")) else {})
+        ),
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_3_sn"))
         ),
         mqtt=True,
     ),
@@ -467,11 +495,11 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {"device_sn": v} if (v := d.get("solarbank_4_sn")) else {}
-        )
-        | ({"state_of_charge": v} if (v := d.get("solarbank_4_soc")) else {}),
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_4_sn")
+            ({"device_sn": v} if (v := d.get("solarbank_4_sn")) else {})
+            | ({"state_of_charge": v} if (v := d.get("solarbank_4_soc")) else {})
+        ),
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_4_sn"))
         ),
         mqtt=True,
     ),
@@ -484,9 +512,11 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         # use different MQTT value name if overlay
-        value_fn=lambda d, jk, _: (d.get("battery_power_signed") or d.get(jk))
-        if d.get(MQTT_OVERLAY)
-        else (d.get(jk) or d.get("battery_power_signed")),
+        value_fn=lambda d, jk, _: (
+            (d.get("battery_power_signed") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("battery_power_signed"))
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -521,11 +551,20 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         # use different MQTT value name if overlay
-        value_fn=lambda d, jk, _: (d.get("ac_output_power") or d.get(jk))
-        if d.get(MQTT_OVERLAY)
-        else (d.get(jk) or d.get("ac_output_power")),
-        exclude_fn=lambda s, d: not (
-            {t := d.get("type")} - s and t in [SolixDeviceType.SOLARBANK.value]
+        value_fn=lambda d, jk, _: (
+            (d.get("ac_output_power") or d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (d.get(jk) or d.get("ac_output_power"))
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                {t := d.get("type")} - s
+                and t
+                in [
+                    SolixDeviceType.SOLARBANK.value,
+                    SolixDeviceType.SOLARBANK_PPS.value,
+                ]
+            )
         ),
         check_invalid=True,
         mqtt=True,
@@ -538,7 +577,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: (d.get(jk) or d.get("home_demand")),
+        value_fn=lambda d, jk, _: d.get(jk) or d.get("home_demand"),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -562,24 +601,28 @@ DEVICE_SENSORS = [
         suggested_display_precision=0,
         # use different MQTT value name if overlay
         value_fn=lambda d, jk, _: (
-            (d.get("power") or d.get(jk))
-            if d.get(MQTT_OVERLAY)
-            else (d.get(jk) or d.get("power"))
-        )
-        or None,
+            (
+                (d.get("power") or d.get(jk))
+                if d.get(MQTT_OVERLAY)
+                else (d.get(jk) or d.get("power"))
+            )
+            or None
+        ),
         attrib_fn=lambda d, _: (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("current"))
-            else {}
+            (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -657,8 +700,8 @@ DEVICE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: d.get(jk),
         attrib_fn=lambda d, _: {"last_period": d.get("energy_last_period")},
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s and {ApiCategories.smartplug_energy} - s
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and {ApiCategories.smartplug_energy} - s)
         ),
     ),
     AnkerSolixSensorDescription(
@@ -683,9 +726,11 @@ DEVICE_SENSORS = [
             in [SolixDeviceType.SOLARBANK.value, SolixDeviceType.COMBINER_BOX.value]
             and "set_output_power" in d
         ),
-        exclude_fn=lambda s, d: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
         mqtt=True,
     ),
@@ -699,10 +744,12 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: {
             "mode": d.get("preset_power_mode"),
         },
-        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
-        force_creation_fn=lambda d: "preset_power_mode" in d
-        and d.get("cascaded")
-        and int(d.get("solarbank_count") or 0) > 1,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        force_creation_fn=lambda d: (
+            "preset_power_mode" in d
+            and d.get("cascaded")
+            and int(d.get("solarbank_count") or 0) > 1
+        ),
     ),
     AnkerSolixSensorDescription(
         # general device overall state of charge
@@ -713,25 +760,36 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d, jk, _: (
-            (d.get(jk) or d.get("average_power", {}).get("state_of_charge"))
-            if d.get(MQTT_OVERLAY)
-            else (d.get("average_power", {}).get("state_of_charge") or d.get(jk))
-        )
-        or None,
+            (
+                (d.get(jk) or d.get("average_power", {}).get("state_of_charge"))
+                if d.get(MQTT_OVERLAY)
+                else (d.get("average_power", {}).get("state_of_charge") or d.get(jk))
+            )
+            or None
+        ),
         # show some attributes only if no main battery data available, to avoid duplicate attributes
         attrib_fn=lambda d, _: (
-            {
-                "state_of_health": v,
-            }
-            if (v := d.get("battery_soh")) and "main_battery_soc" not in d
-            else {}
-        )
-        | (
-            {
-                "voltage": v,
-            }
-            if (v := d.get("battery_voltage"))
-            else {}
+            (
+                {
+                    "state_of_health": v,
+                }
+                if (v := d.get("battery_soh")) and "main_battery_soc" not in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": v,
+                }
+                if (v := d.get("battery_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "energy_ah": v,
+                }
+                if (v := d.get("battery_soc_ah"))
+                else {}
+            )
         ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -742,9 +800,9 @@ DEVICE_SENSORS = [
         key="remaining_time_hours",
         translation_key="remaining_time_hours",
         json_key="remaining_time_hours",
-        value_fn=lambda d, jk, _: None
-        if (val := d.get(jk)) is None
-        else timedelta(hours=val),
+        value_fn=lambda d, jk, _: (
+            None if (val := d.get(jk)) is None else timedelta(hours=val)
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -773,8 +831,8 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -786,8 +844,8 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -799,8 +857,8 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -812,8 +870,8 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -825,8 +883,8 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -837,8 +895,8 @@ DEVICE_SENSORS = [
         json_key="device_efficiency",
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=2,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -849,8 +907,8 @@ DEVICE_SENSORS = [
         json_key="battery_efficiency",
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=2,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -947,11 +1005,13 @@ DEVICE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         # use different MQTT value name if overlay, show only if exp pack installed
         value_fn=lambda d, jk, _: (
-            (d.get("expansion_packs") or d.get(jk))
-            if d.get(MQTT_OVERLAY)
-            else (d.get(jk) or d.get("expansion_packs"))
-        )
-        or None,
+            (
+                (d.get("expansion_packs") or d.get(jk))
+                if d.get(MQTT_OVERLAY)
+                else (d.get(jk) or d.get("expansion_packs"))
+            )
+            or None
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
@@ -967,9 +1027,8 @@ DEVICE_SENSORS = [
             "solar_model": (d.get("solar_info") or {}).get("solar_model"),
             "solar_sn": (d.get("solar_info") or {}).get("solar_sn"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_solar_info} - s
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and {ApiCategories.solarbank_solar_info} - s)
         ),
     ),
     AnkerSolixSensorDescription(
@@ -995,9 +1054,8 @@ DEVICE_SENSORS = [
                 "bt_ble_mac"
             ),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_fittings} - s
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and {ApiCategories.solarbank_fittings} - s)
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1021,16 +1079,17 @@ DEVICE_SENSORS = [
         suggested_display_precision=0,
         # use different MQTT value name if overlay
         value_fn=lambda d, jk, _: (
-            (d.get("pv_to_grid_power") or d.get(jk))
-            if d.get(MQTT_OVERLAY)
-            else (d.get(jk) or d.get("pv_to_grid_power"))
-        )
-        or None,
+            (
+                (d.get("pv_to_grid_power") or d.get(jk))
+                if d.get(MQTT_OVERLAY)
+                else (d.get(jk) or d.get("pv_to_grid_power"))
+            )
+            or None
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
     ),
-
     AnkerSolixSensorDescription(
         key="battery_to_home_power",
         translation_key="battery_to_home_power",
@@ -1075,8 +1134,6 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
-
-
     AnkerSolixSensorDescription(
         key="grid_to_home_power",
         translation_key="grid_to_home_power",
@@ -1085,6 +1142,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        value_fn=lambda d, jk, _: d.get(jk) or None,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
@@ -1124,8 +1182,8 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -1137,8 +1195,8 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
-        exclude_fn=lambda s, d: not (
-            ({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s)
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
         mqtt=True,
     ),
@@ -1148,8 +1206,8 @@ DEVICE_SENSORS = [
         json_key="tag",
         # This value my be empty for devices not supporting tags
         value_fn=lambda d, jk, _: d.get(jk) or None,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s and {ApiCategories.device_tag} - s
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and {ApiCategories.device_tag} - s)
         ),
         check_invalid=True,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -1167,108 +1225,138 @@ DEVICE_SENSORS = [
         key="discharge_power_avg",
         translation_key="discharge_power_avg",
         json_key="discharge_power_avg",
-        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
-        .lower()
-        .replace("w", "W"),
+        unit_fn=lambda d, _: (
+            str((d.get("average_power") or {}).get("power_unit") or "")
+            .lower()
+            .replace("w", "W")
+        ),
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (avg := d.get("average_power"))
-        else avg.get(jk),
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
-            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        value_fn=lambda d, jk, _: (
+            None if not (avg := d.get("average_power")) else avg.get(jk)
+        ),
+        exclude_fn=lambda s, _: (
+            not (
+                {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+                and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
+                - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
         key="charge_power_avg",
         translation_key="charge_power_avg",
         json_key="charge_power_avg",
-        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
-        .lower()
-        .replace("w", "W"),
+        unit_fn=lambda d, _: (
+            str((d.get("average_power") or {}).get("power_unit") or "")
+            .lower()
+            .replace("w", "W")
+        ),
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (avg := d.get("average_power"))
-        else avg.get(jk),
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
-            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        value_fn=lambda d, jk, _: (
+            None if not (avg := d.get("average_power")) else avg.get(jk)
+        ),
+        exclude_fn=lambda s, _: (
+            not (
+                {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+                and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
+                - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
         key="solar_power_avg",
         translation_key="input_power_avg",
         json_key="solar_power_avg",
-        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
-        .lower()
-        .replace("w", "W"),
+        unit_fn=lambda d, _: (
+            str((d.get("average_power") or {}).get("power_unit") or "")
+            .lower()
+            .replace("w", "W")
+        ),
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (avg := d.get("average_power"))
-        else avg.get(jk),
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
-            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        value_fn=lambda d, jk, _: (
+            None if not (avg := d.get("average_power")) else avg.get(jk)
+        ),
+        exclude_fn=lambda s, _: (
+            not (
+                {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+                and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
+                - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
         key="home_usage_avg",
         translation_key="home_load_power_avg",
         json_key="home_usage_avg",
-        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
-        .lower()
-        .replace("w", "W"),
+        unit_fn=lambda d, _: (
+            str((d.get("average_power") or {}).get("power_unit") or "")
+            .lower()
+            .replace("w", "W")
+        ),
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (avg := d.get("average_power"))
-        else avg.get(jk),
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
-            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        value_fn=lambda d, jk, _: (
+            None if not (avg := d.get("average_power")) else avg.get(jk)
+        ),
+        exclude_fn=lambda s, _: (
+            not (
+                {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+                and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
+                - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
         key="grid_import_avg",
         translation_key="grid_to_home_power_avg",
         json_key="grid_import_avg",
-        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
-        .lower()
-        .replace("w", "W"),
+        unit_fn=lambda d, _: (
+            str((d.get("average_power") or {}).get("power_unit") or "")
+            .lower()
+            .replace("w", "W")
+        ),
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (avg := d.get("average_power"))
-        else avg.get(jk),
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
-            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        value_fn=lambda d, jk, _: (
+            None if not (avg := d.get("average_power")) else avg.get(jk)
+        ),
+        exclude_fn=lambda s, _: (
+            not (
+                {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+                and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
+                - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
         key="grid_export_avg",
         translation_key="photovoltaic_to_grid_power_avg",
         json_key="grid_export_avg",
-        unit_fn=lambda d, _: str((d.get("average_power") or {}).get("power_unit") or "")
-        .lower()
-        .replace("w", "W"),
+        unit_fn=lambda d, _: (
+            str((d.get("average_power") or {}).get("power_unit") or "")
+            .lower()
+            .replace("w", "W")
+        ),
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (avg := d.get("average_power"))
-        else avg.get(jk),
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
-            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        value_fn=lambda d, jk, _: (
+            None if not (avg := d.get("average_power")) else avg.get(jk)
+        ),
+        exclude_fn=lambda s, _: (
+            not (
+                {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+                and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
+                - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1276,22 +1364,29 @@ DEVICE_SENSORS = [
         key="data_timestamp",
         translation_key="data_timestamp",
         json_key="valid_time",
-        value_fn=lambda d, jk, _: None
-        if not (val := (d.get("average_power") or {}).get(jk) or "")
-        else (
-            (tm := datetime.strptime(val, "%Y-%m-%d %H:%M:%S"))
-            - timedelta(
-                minutes=tm.minute % 5, seconds=tm.second, microseconds=tm.microsecond
-            )
-        ).isoformat(sep=" "),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (val := (d.get("average_power") or {}).get(jk) or "")
+            else (
+                (tm := datetime.strptime(val, "%Y-%m-%d %H:%M:%S"))
+                - timedelta(
+                    minutes=tm.minute % 5,
+                    seconds=tm.second,
+                    microseconds=tm.microsecond,
+                )
+            ).isoformat(sep=" ")
+        ),
         attrib_fn=lambda d, _: {
             "last_check": None
             if not (tm := (d.get("average_power") or {}).get("last_check"))
             else datetime.strptime(tm, "%Y-%m-%d %H:%M:%S").isoformat(sep=" "),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
-            and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power} - s
+        exclude_fn=lambda s, _: (
+            not (
+                {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
+                and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
+                - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -1300,9 +1395,11 @@ DEVICE_SENSORS = [
         translation_key="mqtt_timestamp",
         json_key="last_update",
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: None
-        if not (val := d.get(jk) or "")
-        else (datetime.strptime(val, "%Y-%m-%d %H:%M:%S")).isoformat(sep=" "),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (val := d.get(jk) or "")
+            else (datetime.strptime(val, "%Y-%m-%d %H:%M:%S")).isoformat(sep=" ")
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -1315,31 +1412,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("usbc_1_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "usbc_1_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("usbc_1_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("usbc_1_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("usbc_1_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "usbc_1_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("usbc_1_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("usbc_1_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1353,31 +1452,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("usbc_2_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "usbc_2_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("usbc_2_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("usbc_2_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("usbc_2_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "usbc_2_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("usbc_2_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("usbc_2_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1391,31 +1492,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("usbc_3_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "usbc_3_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("usbc_3_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("usbc_3_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("usbc_3_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "usbc_3_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("usbc_3_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("usbc_3_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1429,31 +1532,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("usbc_4_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "usbc_4_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("usbc_4_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("usbc_4_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("usbc_4_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "usbc_4_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("usbc_4_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("usbc_4_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1467,31 +1572,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("usba_1_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "usba_1_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("usba_1_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("usba_1_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("usba_1_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "usba_1_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("usba_1_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("usba_1_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1505,31 +1612,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("usba_2_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "usba_2_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("usba_2_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("usba_2_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("usba_2_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "usba_2_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("usba_2_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("usba_2_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1543,31 +1652,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("dc_12v_1_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "dc_12v_1_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("dc_12v_1_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("dc_12v_1_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("dc_12v_1_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "dc_12v_1_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("dc_12v_1_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("dc_12v_1_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1581,31 +1692,33 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {
-                "port_status": get_enum_name(
-                    SolixChargerPortStatus
-                    if d.get("type") in [SolixDeviceType.CHARGER.value]
-                    else SolixPpsPortStatus,
-                    str(d.get("dc_12v_2_status")),
-                    default=SolixPpsPortStatus.unknown.name,
-                ),
-            }
-            if "dc_12v_2_status" in d
-            else {}
-        )
-        | (
-            {
-                "voltage": val,
-            }
-            if (val := d.get("dc_12v_2_voltage"))
-            else {}
-        )
-        | (
-            {
-                "current": val,
-            }
-            if (val := d.get("dc_12v_2_current"))
-            else {}
+            (
+                {
+                    "port_status": get_enum_name(
+                        SolixChargerPortStatus
+                        if d.get("type") == SolixDeviceType.CHARGER.value
+                        else SolixPpsPortStatus,
+                        str(d.get("dc_12v_2_status")),
+                        default=SolixPpsPortStatus.unknown.name,
+                    ),
+                }
+                if "dc_12v_2_status" in d
+                else {}
+            )
+            | (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("dc_12v_2_voltage"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("dc_12v_2_current"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1618,18 +1731,20 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         attrib_fn=lambda d, _: (
-            {
-                "state_of_health": v,
-            }
-            if (v := d.get("battery_soh"))
-            else {}
-        )
-        | (
-            {
-                "serialnumber": v,
-            }
-            if (v := d.get("device_sn"))
-            else {}
+            (
+                {
+                    "state_of_health": v,
+                }
+                if (v := d.get("battery_soh"))
+                else {}
+            )
+            | (
+                {
+                    "serialnumber": v,
+                }
+                if (v := d.get("device_sn"))
+                else {}
+            )
         ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -1643,25 +1758,27 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         attrib_fn=lambda d, _: (
-            {
-                "state_of_health": v,
-            }
-            if (v := d.get("exp_1_soh"))
-            else {}
-        )
-        | (
-            {
-                "serialnumber": v,
-            }
-            if (v := d.get("exp_1_sn"))
-            else {}
-        )
-        | (
-            {
-                "type": v,
-            }
-            if (v := d.get("exp_1_type"))
-            else {}
+            (
+                {
+                    "state_of_health": v,
+                }
+                if (v := d.get("exp_1_soh"))
+                else {}
+            )
+            | (
+                {
+                    "serialnumber": v,
+                }
+                if (v := d.get("exp_1_sn"))
+                else {}
+            )
+            | (
+                {
+                    "type": v,
+                }
+                if (v := d.get("exp_1_type"))
+                else {}
+            )
         ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -1676,25 +1793,27 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         attrib_fn=lambda d, _: (
-            {
-                "state_of_health": v,
-            }
-            if (v := d.get("exp_2_soh"))
-            else {}
-        )
-        | (
-            {
-                "serialnumber": v,
-            }
-            if (v := d.get("exp_2_sn"))
-            else {}
-        )
-        | (
-            {
-                "type": v,
-            }
-            if (v := d.get("exp_2_type"))
-            else {}
+            (
+                {
+                    "state_of_health": v,
+                }
+                if (v := d.get("exp_2_soh"))
+                else {}
+            )
+            | (
+                {
+                    "serialnumber": v,
+                }
+                if (v := d.get("exp_2_sn"))
+                else {}
+            )
+            | (
+                {
+                    "type": v,
+                }
+                if (v := d.get("exp_2_type"))
+                else {}
+            )
         ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -1709,25 +1828,27 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         attrib_fn=lambda d, _: (
-            {
-                "state_of_health": v,
-            }
-            if (v := d.get("exp_3_soh"))
-            else {}
-        )
-        | (
-            {
-                "serialnumber": v,
-            }
-            if (v := d.get("exp_3_sn"))
-            else {}
-        )
-        | (
-            {
-                "type": v,
-            }
-            if (v := d.get("exp_3_type"))
-            else {}
+            (
+                {
+                    "state_of_health": v,
+                }
+                if (v := d.get("exp_3_soh"))
+                else {}
+            )
+            | (
+                {
+                    "serialnumber": v,
+                }
+                if (v := d.get("exp_3_sn"))
+                else {}
+            )
+            | (
+                {
+                    "type": v,
+                }
+                if (v := d.get("exp_3_type"))
+                else {}
+            )
         ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -1742,25 +1863,27 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         attrib_fn=lambda d, _: (
-            {
-                "state_of_health": v,
-            }
-            if (v := d.get("exp_4_soh"))
-            else {}
-        )
-        | (
-            {
-                "serialnumber": v,
-            }
-            if (v := d.get("exp_4_sn"))
-            else {}
-        )
-        | (
-            {
-                "type": v,
-            }
-            if (v := d.get("exp_4_type"))
-            else {}
+            (
+                {
+                    "state_of_health": v,
+                }
+                if (v := d.get("exp_4_soh"))
+                else {}
+            )
+            | (
+                {
+                    "serialnumber": v,
+                }
+                if (v := d.get("exp_4_sn"))
+                else {}
+            )
+            | (
+                {
+                    "type": v,
+                }
+                if (v := d.get("exp_4_type"))
+                else {}
+            )
         ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -1775,25 +1898,27 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         attrib_fn=lambda d, _: (
-            {
-                "state_of_health": v,
-            }
-            if (v := d.get("exp_5_soh"))
-            else {}
-        )
-        | (
-            {
-                "serialnumber": v,
-            }
-            if (v := d.get("exp_5_sn"))
-            else {}
-        )
-        | (
-            {
-                "type": v,
-            }
-            if (v := d.get("exp_5_type"))
-            else {}
+            (
+                {
+                    "state_of_health": v,
+                }
+                if (v := d.get("exp_5_soh"))
+                else {}
+            )
+            | (
+                {
+                    "serialnumber": v,
+                }
+                if (v := d.get("exp_5_sn"))
+                else {}
+            )
+            | (
+                {
+                    "type": v,
+                }
+                if (v := d.get("exp_5_type"))
+                else {}
+            )
         ),
         suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -1843,10 +1968,26 @@ SITE_SENSORS = [
         json_key="solarbank_list",
         picture_path=AnkerSolixPicturePath.SOLARBANK,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list((d.get("solarbank_info") or {}).get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("solarbank_info") or {}).get(jk) or []))) > 0
+            else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK.value} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="solarbank_pps_list",
+        translation_key="solarbank_pps_list",
+        json_key="pps_list",
+        picture_path=AnkerSolixPicturePath.SOLARBANK_PPS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("solarbank_pps_info") or {}).get(jk) or [])))
+            > 0
+            else None
+        ),
+        exclude_fn=lambda s, _: not ({SolixDeviceType.SOLARBANK_PPS.value} - s),
     ),
     AnkerSolixSensorDescription(
         key="pps_list",
@@ -1854,9 +1995,11 @@ SITE_SENSORS = [
         json_key="pps_list",
         picture_path=AnkerSolixPicturePath.PPS,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list((d.get("pps_info") or {}).get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("pps_info") or {}).get(jk) or []))) > 0
+            else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.PPS.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1865,9 +2008,9 @@ SITE_SENSORS = [
         json_key="solar_list",
         picture_path=AnkerSolixPicturePath.INVERTER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list(d.get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count if (count := len(list(d.get(jk) or []))) > 0 else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1876,9 +2019,9 @@ SITE_SENSORS = [
         json_key="powerpanel_list",
         picture_path=AnkerSolixPicturePath.POWERPANEL,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list(d.get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count if (count := len(list(d.get(jk) or []))) > 0 else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.POWERPANEL.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1887,9 +2030,11 @@ SITE_SENSORS = [
         json_key="grid_list",
         picture_path=AnkerSolixPicturePath.SMARTMETER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list((d.get("grid_info") or {}).get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("grid_info") or {}).get(jk) or []))) > 0
+            else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTMETER.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1898,9 +2043,11 @@ SITE_SENSORS = [
         json_key="smartplug_list",
         picture_path=AnkerSolixPicturePath.SMARTPLUG,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list((d.get("smart_plug_info") or {}).get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("smart_plug_info") or {}).get(jk) or []))) > 0
+            else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.SMARTPLUG.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1909,9 +2056,12 @@ SITE_SENSORS = [
         json_key="combiner_box_list",
         picture_path=AnkerSolixPicturePath.COMBINER_BOX,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list((d.get("combiner_box_info") or {}).get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("combiner_box_info") or {}).get(jk) or [])))
+            > 0
+            else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.COMBINER_BOX.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1920,9 +2070,11 @@ SITE_SENSORS = [
         json_key="hes_list",
         picture_path=AnkerSolixPicturePath.HES,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list((d.get("hes_info") or {}).get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("hes_info") or {}).get(jk) or []))) > 0
+            else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.HES.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1931,9 +2083,12 @@ SITE_SENSORS = [
         json_key="charging_pile_list",
         picture_path=AnkerSolixPicturePath.EV_CHARGER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: count
-        if (count := len(list((d.get("charging_pile_info") or {}).get(jk) or []))) > 0
-        else None,
+        value_fn=lambda d, jk, _: (
+            count
+            if (count := len(list((d.get("charging_pile_info") or {}).get(jk) or [])))
+            > 0
+            else None
+        ),
         exclude_fn=lambda s, _: not ({SolixDeviceType.EV_CHARGER.value} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1944,11 +2099,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
+        value_fn=lambda d, jk, _: (
+            (d.get("solarbank_info") or {}).get(jk)
+            or (d.get("solarbank_pps_info") or {}).get(jk)
+            or None
+        ),
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s)
-        or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and (
+                    (d.get("solarbank_info") or {}).get("solarbank_list")
+                    or (d.get("solarbank_pps_info") or {}).get("pps_list")
+                )
+            )
+        ),
         check_invalid=True,
     ),
     AnkerSolixSensorDescription(
@@ -1959,11 +2125,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
+        value_fn=lambda d, jk, _: (
+            (d.get("solarbank_info") or {}).get(jk)
+            or (d.get("solarbank_pps_info") or {}).get(jk)
+            or None
+        ),
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s)
-        or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and (
+                    (d.get("solarbank_info") or {}).get("solarbank_list")
+                    or (d.get("solarbank_pps_info") or {}).get("pps_list")
+                )
+            )
+        ),
         check_invalid=True,
     ),
     AnkerSolixSensorDescription(
@@ -1974,11 +2151,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
+        value_fn=lambda d, jk, _: (
+            (d.get("solarbank_info") or {}).get(jk)
+            or (d.get("solarbank_pps_info") or {}).get("total_home_load_power")
+            or None
+        ),
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s)
-        or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and (
+                    (d.get("solarbank_info") or {}).get("solarbank_list")
+                    or (d.get("solarbank_pps_info") or {}).get("pps_list")
+                )
+            )
+        ),
         check_invalid=True,
     ),
     AnkerSolixSensorDescription(
@@ -1989,11 +2177,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d, jk, _: 100 * float((d.get("solarbank_info") or {}).get(jk)),
+        value_fn=lambda d, jk, _: (
+            100 * float((d.get("solarbank_info") or {}).get(jk) or 0)
+            or (d.get("solarbank_pps_info") or {}).get(jk)
+            or None
+        ),
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s)
-        or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and (
+                    (d.get("solarbank_info") or {}).get("solarbank_list")
+                    or (d.get("solarbank_pps_info") or {}).get("pps_list")
+                )
+            )
+        ),
         check_invalid=True,
     ),
     AnkerSolixSensorDescription(
@@ -2005,8 +2204,12 @@ SITE_SENSORS = [
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         attrib_fn=lambda d, _: {"tz_offset_sec": d.get("energy_offset_tz") or 0},
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SOLARBANK.value} - s)
-        or not list((d.get("solarbank_info") or {}).get("solarbank_list") or []),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and (d.get("solarbank_info") or {}).get("solarbank_list")
+            )
+        ),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps charging power on site
@@ -2019,8 +2222,9 @@ SITE_SENSORS = [
         value_fn=lambda d, jk, _: (d.get("pps_info") or {}).get(jk),
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.PPS.value} - s)
-        or not list((d.get("pps_info") or {}).get("pps_list") or []),
+        exclude_fn=lambda s, d: (
+            not ({d.get("site_type")} - s and (d.get("pps_info") or {}).get("pps_list"))
+        ),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps output power on site
@@ -2033,8 +2237,9 @@ SITE_SENSORS = [
         value_fn=lambda d, jk, _: (d.get("pps_info") or {}).get(jk),
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.PPS.value} - s)
-        or not list((d.get("pps_info") or {}).get("pps_list") or []),
+        exclude_fn=lambda s, d: (
+            not ({d.get("site_type")} - s and (d.get("pps_info") or {}).get("pps_list"))
+        ),
     ),
     AnkerSolixSensorDescription(
         # Summary of all pps state of charge on site
@@ -2047,8 +2252,9 @@ SITE_SENSORS = [
         value_fn=lambda d, jk, _: 100 * float((d.get("pps_info") or {}).get(jk)),
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.PPS.value} - s)
-        or not list((d.get("pps_info") or {}).get("pps_list") or []),
+        exclude_fn=lambda s, d: (
+            not ({d.get("site_type")} - s and (d.get("pps_info") or {}).get("pps_list"))
+        ),
     ),
     AnkerSolixSensorDescription(
         # Summary of all smartplug output power on site
@@ -2058,10 +2264,15 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d, jk, _: (d.get("smart_plug_info") or {}).get(jk),
+        value_fn=lambda d, jk, _: (d.get("smart_plug_info") or {}).get(jk) or None,
         suggested_display_precision=0,
         # exclude sensor if unused artifacts in structure
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SMARTPLUG.value} - s),
+        exclude_fn=lambda s, d: (
+            not (
+                {SolixDeviceType.SMARTPLUG.value} - s
+                and (d.get("smart_plug_info") or {}).get("smartplug_list")
+            )
+        ),
     ),
     AnkerSolixSensorDescription(
         # Other smart plug load given by blend plan
@@ -2073,8 +2284,12 @@ SITE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         # exclude sensor of main site structure when no smart plugs installed since this should only be used for blend plan in smart plug mode
-        exclude_fn=lambda s, d: not ({SolixDeviceType.SMARTPLUG.value} - s)
-        or not list((d.get("smart_plug_info") or {}).get("smartplug_list") or []),
+        exclude_fn=lambda s, d: (
+            not (
+                {SolixDeviceType.SMARTPLUG.value} - s
+                and (d.get("smart_plug_info") or {}).get("smartplug_list")
+            )
+        ),
     ),
     AnkerSolixSensorDescription(
         # house demand as calculated by cloud
@@ -2085,12 +2300,14 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: d.get(jk) or None
-        if (
-            ((d.get("grid_info") or {}).get("grid_list") or [])
-            or ((d.get("smart_plug_info") or {}).get("smartplug_list") or [])
-        )
-        else None,
+        value_fn=lambda d, jk, _: (
+            d.get(jk) or None
+            if (
+                ((d.get("grid_info") or {}).get("grid_list"))
+                or ((d.get("smart_plug_info") or {}).get("smartplug_list"))
+            )
+            else None
+        ),
     ),
     AnkerSolixSensorDescription(
         # third party PV as calculated by cloud
@@ -2101,9 +2318,11 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: None
-        if not (d.get("feature_switch") or {}).get("show_third_party_pv_panel")
-        else d.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (d.get("feature_switch") or {}).get("show_third_party_pv_panel")
+            else d.get(jk) or None
+        ),
     ),
     AnkerSolixSensorDescription(
         key="total_co2_saving",
@@ -2119,28 +2338,28 @@ SITE_SENSORS = [
             ]
             or [None]
         )[0],
-        attrib_fn=lambda d, _: {
-            "rank": rank.get("ranking"),
-            "trees": rank.get("tree"),
-            "message": rank.get("content"),
-        }
-        if (rank := (d.get("site_details") or {}).get("co2_ranking") or {})
-        else None,
+        attrib_fn=lambda d, _: (
+            {
+                "rank": rank.get("ranking"),
+                "trees": rank.get("tree"),
+                "message": rank.get("content"),
+            }
+            if (rank := (d.get("site_details") or {}).get("co2_ranking") or {})
+            else None
+        ),
         # device_class=SensorDeviceClass.WEIGHT,
         state_class=SensorStateClass.MEASUREMENT,
         force_creation_fn=lambda d: True,
         value_fn=lambda d, jk, _: (
-            (
-                [
-                    stat.get(jk)
-                    for stat in filter(
-                        lambda item: item.get("type") == "2",
-                        d.get("statistics") or [{}],
-                    )
-                ]
-                or [None]
-            )[0]
-        ),
+            [
+                stat.get(jk)
+                for stat in filter(
+                    lambda item: item.get("type") == "2",
+                    d.get("statistics") or [{}],
+                )
+            ]
+            or [None]
+        )[0],
     ),
     AnkerSolixSensorDescription(
         key="total_saved_money",
@@ -2160,17 +2379,15 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         force_creation_fn=lambda d: True,
         value_fn=lambda d, jk, _: (
-            (
-                [
-                    stat.get(jk)
-                    for stat in filter(
-                        lambda item: item.get("type") == "3",
-                        d.get("statistics") or [{}],
-                    )
-                ]
-                or [None]
-            )[0]
-        ),
+            [
+                stat.get(jk)
+                for stat in filter(
+                    lambda item: item.get("type") == "3",
+                    d.get("statistics") or [{}],
+                )
+            ]
+            or [None]
+        )[0],
     ),
     AnkerSolixSensorDescription(
         # Systemenergy
@@ -2178,36 +2395,36 @@ SITE_SENSORS = [
         translation_key="total_output_energy",
         json_key="total",
         state_class=SensorStateClass.TOTAL_INCREASING,
-        unit_fn=lambda d, _: str(
-            (
-                [
-                    stat.get("unit")
-                    for stat in filter(
-                        lambda item: item.get("type") == "1",
-                        d.get("statistics") or [{}],
-                    )
-                ]
-                or [None]
-            )[0]
-        )
-        .upper()
-        .replace("K", "k")
-        .replace("H", "h"),
+        unit_fn=lambda d, _: (
+            str(
+                (
+                    [
+                        stat.get("unit")
+                        for stat in filter(
+                            lambda item: item.get("type") == "1",
+                            d.get("statistics") or [{}],
+                        )
+                    ]
+                    or [None]
+                )[0]
+            )
+            .upper()
+            .replace("K", "k")
+            .replace("H", "h")
+        ),
         device_class=SensorDeviceClass.ENERGY,
         force_creation_fn=lambda d: True,
         feature=AnkerSolixEntityFeature.SYSTEM_INFO,
         value_fn=lambda d, jk, _: (
-            (
-                [
-                    stat.get(jk)
-                    for stat in filter(
-                        lambda item: item.get("type") == "1",
-                        d.get("statistics") or [{}],
-                    )
-                ]
-                or [None]
-            )[0]
-        ),
+            [
+                stat.get(jk)
+                for stat in filter(
+                    lambda item: item.get("type") == "1",
+                    d.get("statistics") or [{}],
+                )
+            ]
+            or [None]
+        )[0],
     ),
     AnkerSolixSensorDescription(
         key="total_aiems_profit",
@@ -2230,9 +2447,8 @@ SITE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         options=[status.name for status in SolarbankAiemsRuntimeStatus],
         value_fn=lambda d, jk, _: (
-            (d.get("site_details") or {}).get("ai_ems_runtime") or {}
-        ).get(jk)
-        or None,
+            ((d.get("site_details") or {}).get("ai_ems_runtime") or {}).get(jk) or None
+        ),
         attrib_fn=lambda d, _: {
             "status": (
                 col := (d.get("site_details") or {}).get("ai_ems_runtime") or {}
@@ -2257,9 +2473,9 @@ SITE_SENSORS = [
         ).get("spot_price_unit"),
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
-            (d.get("site_details") or {}).get("dynamic_price_details") or {}
-        ).get(jk)
-        or None,
+            ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(jk)
+            or None
+        ),
         attrib_fn=lambda d, _: {
             "price_calc": (
                 dp := (d.get("site_details") or {}).get("dynamic_price_details") or {}
@@ -2276,19 +2492,21 @@ SITE_SENSORS = [
         key="spot_price_mwh",
         translation_key="spot_price_mwh",
         json_key="spot_price_mwh",
-        unit_fn=lambda d, _: str(
-            ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(
-                "spot_price_unit"
+        unit_fn=lambda d, _: (
+            str(
+                ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(
+                    "spot_price_unit"
+                )
+                or ""
             )
-            or ""
-        )
-        + "/"
-        + UnitOfEnergy.MEGA_WATT_HOUR,
+            + "/"
+            + UnitOfEnergy.MEGA_WATT_HOUR
+        ),
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
-            (d.get("site_details") or {}).get("dynamic_price_details") or {}
-        ).get(jk)
-        or None,
+            ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(jk)
+            or None
+        ),
         attrib_fn=lambda d, _: {
             "provider": (
                 dp := (d.get("site_details") or {}).get("dynamic_price_details") or {}
@@ -2310,9 +2528,9 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("pv_forecast_details") or {}
-        ).get(jk)
-        or None,
+            ((d.get("energy_details") or {}).get("pv_forecast_details") or {}).get(jk)
+            or None
+        ),
         attrib_fn=lambda d, _: {
             "remain_today": (
                 fc := (d.get("energy_details") or {}).get("pv_forecast_details") or {}
@@ -2338,9 +2556,9 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
-            (d.get("energy_details") or {}).get("pv_forecast_details") or {}
-        ).get(jk)
-        or None,
+            ((d.get("energy_details") or {}).get("pv_forecast_details") or {}).get(jk)
+            or None
+        ),
         attrib_fn=lambda d, _: {
             "hour_end": (
                 fc := (d.get("energy_details") or {}).get("pv_forecast_details") or {}
@@ -2374,9 +2592,15 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.ENUM,
         options=list({m.name for m in SolarbankUsageMode}),
         # Use new field for scene mode optionally, which reports scene also for member accounts
-        value_fn=lambda d, jk, _: None
-        if not ((mode := d.get(jk) or d.get("user_scene_mode")) and str(mode).isdigit())
-        else get_enum_name(SolarbankUsageMode, mode, SolarbankUsageMode.unknown.name),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (
+                (mode := d.get(jk) or d.get("user_scene_mode")) and str(mode).isdigit()
+            )
+            else get_enum_name(
+                SolarbankUsageMode, mode, SolarbankUsageMode.unknown.name
+            )
+        ),
         attrib_fn=lambda d, _: {
             "mode_type": d.get("scene_mode") or d.get("user_scene_mode"),
         },
@@ -2390,9 +2614,11 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
         # ensure backward compatibility to old key in json files
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk) or items.get("solarbank_discharge"),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk) or items.get("solarbank_discharge")
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -2400,19 +2626,11 @@ SITE_SENSORS = [
             ).get("battery_discharge")
             or items.get("solarbank_discharge"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2424,9 +2642,11 @@ SITE_SENSORS = [
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
         # ensure backward compatibility to old key in json files
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk) or items.get("solarbank_charge"),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk) or items.get("solarbank_charge")
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
@@ -2434,19 +2654,11 @@ SITE_SENSORS = [
             ).get("battery_charge")
             or items.get("solarbank_charge"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2457,41 +2669,38 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
-        attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_production"),
-        }
-        # Add hourly production data if solar forecast possible for system
-        | (
-            {
-                "hourly_unit": (
-                    fc := (d.get("energy_details") or {}).get("pv_forecast_details")
-                    or {}
-                ).get("trend_unit"),
-                "produced_hourly": fc.get("produced_hourly"),
-            }
-            if "pv_forecast_details" in (d.get("energy_details") or {})
-            else {}
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
         ),
-        exclude_fn=lambda s, _: not (
+        attrib_fn=lambda d, _: (
             {
-                SolixDeviceType.INVERTER.value,
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
+                "date": ((d.get("energy_details") or {}).get("today") or {}).get(
+                    "date"
+                ),
+                "last_period": (
+                    (d.get("energy_details") or {}).get("last_period") or {}
+                ).get("solar_production"),
             }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+            # Add hourly production data if solar forecast possible for system
+            | (
+                {
+                    "hourly_unit": (
+                        fc := (d.get("energy_details") or {}).get("pv_forecast_details")
+                        or {}
+                    ).get("trend_unit"),
+                    "produced_hourly": fc.get("produced_hourly"),
+                }
+                if "pv_forecast_details" in (d.get("energy_details") or {})
+                else {}
+            )
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2502,18 +2711,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_production_pv1"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2524,18 +2737,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_production_pv2"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2546,18 +2763,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_production_pv3"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2568,18 +2789,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_production_pv4"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2590,18 +2815,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_production_microinverter"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2612,28 +2841,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_to_home"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2644,28 +2867,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_to_battery"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2676,18 +2893,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("3rd_party_pv_to_bat"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SMARTMETER.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2698,18 +2919,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("3rd_party_pv_to_grid"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SMARTMETER.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2720,18 +2945,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("ac_socket"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SOLARBANK.value} - s
-            and {ApiCategories.solarbank_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2742,32 +2971,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("home_usage"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.SMARTMETER.value,
-                SolixDeviceType.SMARTPLUG.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.smartmeter_energy,
-                ApiCategories.smartplug_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2778,28 +2997,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("battery_to_home"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2810,18 +3023,24 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("smartplugs_total"),
         },
-        exclude_fn=lambda s, _: not (
-            {SolixDeviceType.SMARTPLUG.value} - s
-            and {ApiCategories.smartplug_energy} - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+                and {SolixDeviceType.SMARTPLUG.value} - s
+                and {ApiCategories.smartplug_energy} - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2832,28 +3051,24 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("grid_import"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SMARTMETER.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.smartmeter_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+                and {SolixDeviceType.SMARTMETER.value} - s
+                and {ApiCategories.smartmeter_energy} - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2864,28 +3079,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("grid_to_home"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2896,28 +3105,22 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("grid_to_battery"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2928,28 +3131,24 @@ SITE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=2,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else items.get(jk),
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else items.get(jk)
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": (
                 (d.get("energy_details") or {}).get("last_period") or {}
             ).get("solar_to_grid"),
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+                and {SolixDeviceType.SMARTMETER.value} - s
+                and {ApiCategories.smartmeter_energy} - s
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2958,11 +3157,13 @@ SITE_SENSORS = [
         json_key="solar_percentage",
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else 100 * float(items.get(jk))
-        if str(items.get(jk)).replace(".", "", 1).isdigit()
-        else None,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else 100 * float(items.get(jk))
+            if str(items.get(jk)).replace(".", "", 1).isdigit()
+            else None
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
@@ -2971,19 +3172,11 @@ SITE_SENSORS = [
             if str(items.get("solar_percentage")).replace(".", "", 1).isdigit()
             else None,
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -2992,11 +3185,13 @@ SITE_SENSORS = [
         json_key="battery_percentage",
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else 100 * float(items.get(jk))
-        if str(items.get(jk)).replace(".", "", 1).isdigit()
-        else None,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else 100 * float(items.get(jk))
+            if str(items.get(jk)).replace(".", "", 1).isdigit()
+            else None
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
@@ -3005,19 +3200,11 @@ SITE_SENSORS = [
             if str(items.get("battery_percentage")).replace(".", "", 1).isdigit()
             else None,
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -3026,11 +3213,13 @@ SITE_SENSORS = [
         json_key="other_percentage",
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=0,
-        value_fn=lambda d, jk, _: None
-        if not (items := (d.get("energy_details") or {}).get("today") or {})
-        else 100 * float(items.get(jk))
-        if str(items.get(jk)).replace(".", "", 1).isdigit()
-        else None,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            else 100 * float(items.get(jk))
+            if str(items.get(jk)).replace(".", "", 1).isdigit()
+            else None
+        ),
         attrib_fn=lambda d, _: {
             "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
             "last_period": None
@@ -3039,19 +3228,11 @@ SITE_SENSORS = [
             if str(items.get("other_percentage")).replace(".", "", 1).isdigit()
             else None,
         },
-        exclude_fn=lambda s, _: not (
-            {
-                SolixDeviceType.SOLARBANK.value,
-                SolixDeviceType.POWERPANEL.value,
-                SolixDeviceType.HES.value,
-            }
-            - s
-            and {
-                ApiCategories.solarbank_energy,
-                ApiCategories.powerpanel_energy,
-                ApiCategories.hes_energy,
-            }
-            - s
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("site_type")} - s
+                and ({f"{d.get('site_type', '')!s}_energy"} - s)
+            )
         ),
     ),
     AnkerSolixSensorDescription(
@@ -3134,9 +3315,9 @@ VEHICLE_SENSORS = [
         translation_key="update_timestamp",
         json_key="update_time",
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: datetime.fromtimestamp(int(d.get(jk)))
-        if str(d.get(jk)).isdigit()
-        else None,
+        value_fn=lambda d, jk, _: (
+            datetime.fromtimestamp(int(d.get(jk))) if str(d.get(jk)).isdigit() else None
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
 ]
@@ -3291,6 +3472,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "device_sn",
             "device_name",
             "device_pn",
+            "energy_ah",
             "fittings",
             "forecast",
             "forecast_24h",
@@ -3372,9 +3554,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             self._attr_entity_picture = description.picture_path
         self._attr_extra_state_attributes = None
         # Split context for nested device serials
-        self._context_base = context.split("_")[0]
-        if len(context.split("_")) > 1:
-            self._context_nested = context.split("_")[1]
+        contexts = context.split("_")
+        self._context_base = contexts[0]
+        if len(contexts) > 1:
+            self._context_nested = contexts[1]
 
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
@@ -3387,7 +3570,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 self._attr_device_info = get_AnkerSolixDeviceInfo(
                     data, self._context_base, coordinator.client.api.apisession.email
                 )
-            # add service attribute for managble devices
+            # add service attribute for manageable devices
             self._attr_supported_features: AnkerSolixEntityFeature = (
                 description.feature if data.get("is_admin", False) else None
             )
@@ -3399,6 +3582,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     ).get("product_code")
                 ) and hasattr(AnkerSolixPicturePath, pn):
                     self._attr_entity_picture = getattr(AnkerSolixPicturePath, pn)
+            elif self._attribute_name == "charging_status_desc":
+                # change the charing status options for matching device type
+                if data.get("type") == SolixDeviceType.SOLARBANK_PPS.value:
+                    self._attr_options=[status.name for status in SolarbankPpsStatus]
             # disable picture again if path does not exist to allow display of icons alternatively
             if (
                 self._attr_entity_picture
@@ -3651,9 +3838,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 },
             )
         # When running in Test mode do not run services that are not supporting a testmode
-        if self.coordinator.client.testmode() and service_name not in [
-            SERVICE_GET_SYSTEM_INFO
-        ]:
+        if (
+            self.coordinator.client.testmode()
+            and service_name != SERVICE_GET_SYSTEM_INFO
+        ):
             raise ServiceValidationError(
                 f"{self.entity_id} cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
@@ -3678,7 +3866,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             and hasattr(self.coordinator, "data")
             and self._context_base in self.coordinator.data
         ):
-            if service_name in [SERVICE_GET_SYSTEM_INFO]:
+            if service_name == SERVICE_GET_SYSTEM_INFO:
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
@@ -3757,7 +3945,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             data: dict = self.coordinator.data.get(self._context_base)
             generation: int = (
                 2
-                if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                if data.get("type") == SolixDeviceType.COMBINER_BOX.value
                 else int(data.get("generation") or 0)
             )
             siteId = data.get("site_id") or ""
@@ -3978,7 +4166,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         },
                     )
 
-            elif service_name in [SERVICE_GET_SOLARBANK_SCHEDULE]:
+            elif service_name == SERVICE_GET_SOLARBANK_SCHEDULE:
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
@@ -4006,7 +4194,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 await self.coordinator.async_refresh_data_from_apidict()
                 return {"schedule": result}
 
-            elif service_name in [SERVICE_CLEAR_SOLARBANK_SCHEDULE]:
+            elif service_name == SERVICE_CLEAR_SOLARBANK_SCHEDULE:
                 LOGGER.debug("%s action will be applied", service_name)
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
@@ -4110,7 +4298,7 @@ class AnkerSolixRestoreSensor(AnkerSolixSensor, RestoreSensor):
             last_data := await self.async_get_last_sensor_data()
         ):
             # handle special entity restore actions for customized attributes even if old state was unknown
-            if self._attribute_name in ["solar_forecast_today"]:
+            if self._attribute_name == "solar_forecast_today":
                 attribute = "forecast_hourly"
                 if (
                     attr_value := last_state.attributes.get(attribute)

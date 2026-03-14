@@ -662,7 +662,7 @@ class AnkerSolixClientSession:
                 raise errors.AuthorizationError(
                     f"Login failed for user {self._email}"
                 ) from err
-            if resp.status in [429]:
+            if resp.status == 429:
                 # Too Many Requests for endpoint, repeat once after throttle delay and add endpoint to throttle
                 if self._retry_attempt not in [True, 429] and self._endpoint_limit:
                     self._retry_attempt = resp.status

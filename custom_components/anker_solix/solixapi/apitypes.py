@@ -273,10 +273,10 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/group/save_group_devices',
     'power_service/v1/app/group/force_save_group_devices',
     'power_service/v1/app/group/delete_group_devices',
-    'power_service/v1/app/order/get_charging_order_list',  # may need real EV_Charger?, {"device_sn": deviceSn, "start_time": "<timestamp>"}
-    'power_service/v1/app/order/get_charging_order_detail',  # may need real EV_Charger? {"device_sn": deviceSn}
-    'power_service/v1/app/order/get_charging_order_sec_detail',  # may need real EV_Charger? {"order_id": "1","start_time": "<timestamp>"}
-    'power_service/v1/app/order/get_charging_order_sec_preview',  # may need real EV_Charger? {"order_id": "1"}
+    'power_service/v1/app/order/get_charging_order_list',  # may need member EV_Charger, Get all orders in range, {"device_sn": deviceSn, "start_time": "2026-02-09"}
+    'power_service/v1/app/order/get_charging_order_detail',  # # Data points for charts of order, also vehicle details {"device_sn": deviceSn, "order_id": orderId}
+    'power_service/v1/app/order/get_charging_order_sec_detail',  # may need real EV_Charger? {"order_id": orderId,"start_time": <timestamp>}
+    'power_service/v1/app/order/get_charging_order_sec_preview',  # may need real EV_Charger? {"order_id": orderId}
     'power_service/v1/app/order/export_charge_order',
     'power_service/v1/app/after_sale/get_popup',  # works as site member, {"site_id": siteId}, get active pop ups with code
     'power_service/v1/app/after_sale/check_popup',
@@ -1100,7 +1100,6 @@ class SolarbankDeviceMetrics:
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
         "sub_package_num",
-        "bat_charge_power",
         "solar_power_1",
         "solar_power_2",
         "ac_power",
@@ -1127,7 +1126,6 @@ class SolarbankDeviceMetrics:
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
         "sub_package_num",
-        "bat_charge_power",
         "solar_power_1",
         "solar_power_2",
         "solar_power_3",
@@ -1141,6 +1139,17 @@ class SolarbankDeviceMetrics:
         "pv_power_limit",
         "ac_input_limit",
         "power_limit_option",
+    }
+    # SOLIX Solarbank PPS F3000, with 2 MPPT channels
+    A1782: ClassVar[set[str]] = {
+        "sub_package_num",
+        "solar_power_1",
+        "solar_power_2",
+        "to_home_load",
+        "grid_to_battery_power",
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
     }
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
@@ -1264,6 +1273,16 @@ class SolarbankStatus(StrEnum):
     # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
+class SolarbankPpsStatus(StrEnum):
+    """Str Enumeration for Anker Solix Solarbank PPS status."""
+
+    # 0: Standby?; 1: Discharge; 2: Charge
+    standby = "0"
+    discharge = "1"
+    charge = "2"
+    unknown = "unknown"
+
+
 class SolarbankLightMode(StrEnum):
     """Str Enumeration for Anker Solix Solarbank light modes."""
 
@@ -1365,6 +1384,14 @@ class SolixSwitchMode(IntEnum):
     unknown = -1
 
 
+class SolixSwitchModeV2(StrEnum):
+    """Str Enumeration for generic Anker Solix switch modes V2."""
+
+    on = "1"
+    off = "2"
+    unknown = "unknown"
+
+
 class SolixPpsOutputStatus(StrEnum):
     """Str Enumeration for Anker Solix PPS output status."""
 
@@ -1424,6 +1451,107 @@ class SolixChargerPortStatus(StrEnum):
 
     inactive = "0"
     active = "1"
+    unknown = "unknown"
+
+
+class SolixPhaseMode(StrEnum):
+    """Str Enumeration for Anker Solix Phase operation mode."""
+
+    auto_switch = "0"
+    one_phase = "1"
+    three_phase = "2"
+    unknown = "unknown"
+
+
+class SolixOcppConnectionStatus(StrEnum):
+    """Str Enumeration for OCPP connection status."""
+
+    disconnected = "0"
+    connecting = "1"
+    connected = "2"
+    unknown = "unknown"
+
+
+class SolixConnectionStatus(StrEnum):
+    """Str Enumeration for generic connection status."""
+
+    disconnected = "0"
+    connected = "1"
+    unknown = "unknown"
+
+
+class SolixCpSignalStatus(StrEnum):
+    """Str Enumeration for CP Signal status."""
+
+    a_12v = "0"
+    b1_9v = "3"
+    b2_9v = "4"
+    c1_6v = "5"
+    c2_6v = "6"
+    error = "7"
+    d1_3v = "8"
+    d2_3v = "9"
+    e_0v = "10"
+    f_minus_12v = "11"
+    unknown = "unknown"
+
+
+class SolixEvChargerStatus(StrEnum):
+    """Str Enumeration for EV Charger status."""
+
+    standby = "0"
+    preparing = "1"
+    charging = "2"
+    charger_paused = "3"
+    vehicle_paused = "4"
+    completed = "5"
+    reserving = "6"
+    disabled = "7"
+    error = "8"
+    unknown = "unknown"
+
+
+class SolixEvChargerMode(StrEnum):
+    """Str Enumeration for EV Charger operational mode."""
+
+    start_charge = "1"
+    stop_charge = "2"
+    skip_delay = "3"
+    boost_charge = "4"
+    unknown = "unknown"
+
+
+class SolixEvChargerWipeMode(StrEnum):
+    """Str Enumeration for EV Charger Smart Touch Wipe modes."""
+
+    off = "0"
+    start_charge = "1"
+    stop_charge = "2"
+    boost_charge = "3"
+    unknown = "unknown"
+
+
+class SolixSmartTouchMode(StrEnum):
+    """Str Enumeration for EV Charger Smart Touch mode."""
+
+    simple = "0"
+    anti_mistouch = "1"
+    unknown = "unknown"
+
+
+class SolixEvChargerSolarMode(StrEnum):
+    """Str Enumeration for EV Charger Solar charging mode."""
+
+    solar_grid = "0"
+    solar_only = "1"
+    unknown = "unknown"
+
+
+class SolixScheduleWeekendMode(StrEnum):
+    """Str Enumeration for schedule weekend mode."""
+
+    same = "1"
+    different = "2"
     unknown = "unknown"
 
 
@@ -1601,7 +1729,7 @@ class SolixVehicle:
         d = asdict(self)
         if skip_empty:
             keys = d.keys()
-            for key in [key for key in keys if not d[key] or key in ["id"]]:
+            for key in [key for key in keys if not d[key] or key == "id"]:
                 d.pop(key, None)
         return d
 
@@ -1640,4 +1768,5 @@ class DeviceHexDataTypes(Enum):
     # The optional LENGTH with int for byte count can be specified (default is 0 if no base type used),
     # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
     strb = bytes.fromhex("06")
+    json = bytes.fromhex("FE")  # virtual type to mark json in string types
     unk = bytes.fromhex("FF")  # unkonwn marker

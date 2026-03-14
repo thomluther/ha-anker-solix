@@ -18,6 +18,7 @@ from .apitypes import (
     SmartmeterStatus,
     SolarbankAiemsRuntimeStatus,
     SolarbankDeviceMetrics,
+    SolarbankPpsStatus,
     SolarbankRatePlan,
     SolarbankStatus,
     SolarbankUsageMode,
@@ -29,6 +30,7 @@ from .apitypes import (
     SolixDeviceType,
     SolixGridStatus,
     SolixNetworkStatus,
+    SolixOcppConnectionStatus,
     SolixParmType,
     SolixPriceTypes,
     SolixRoleStatus,
@@ -130,20 +132,24 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if siteId:
                 device["site_id"] = str(siteId)
             if isAdmin is not None:
+                # always update admin flag if passed as parameter
                 device["is_admin"] = isAdmin
-            elif (
-                device.get("is_admin") is None
-                and (value := devData.get("ms_device_type")) is not None
-            ):
+            elif (value := devData.get("ms_device_type")) is not None:
+                # update admin flag if recognizable from provided devData
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
+                # member devices should only be listed in bind_device query and return owner_user_id
+                if value := devData.get("owner_user_id"):
+                    device["owner_user_id"] = value
             calc_capacity = False  # Flag whether capacity may need recalculation
             for key, value in devData.items():
                 try:
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
                         # Flag device for supported mqtt trigger if admin and device not passive
-                        if device.get("is_admin") and not device.get("is_passive"):
+                        if (
+                            device.get("is_admin") or device.get("owner_user_id")
+                        ) and not device.get("is_passive"):
                             device["mqtt_supported"] = True
                             # update customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
@@ -180,9 +186,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device["type"] = "_".join(dev_type[:-1])
                             else:
                                 device["type"] = "_".join(dev_type)
-                    elif key in ["device_name"] and value:
+                    elif key == "device_name" and value:
                         device["name"] = str(value)
-                    elif key in ["alias_name"] and value:
+                    elif key == "alias_name" and value:
                         device["alias"] = str(value)
                         # preset default device name if only alias provided, fallback to alias if product name not listed
                         if (
@@ -198,9 +204,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 or getattr(SolixDeviceNames, pn, "")
                                 or str(value)
                             )
-                    elif key in ["device_sw_version"] and value:
+                    elif key == "device_sw_version" and value:
                         device["sw_version"] = str(value)
-                    elif key in ["preset_inverter_limit"] and str(value):
+                    elif key == "preset_inverter_limit" and str(value):
                         device.update(
                             {
                                 "preset_inverter_limit": str(value)
@@ -220,8 +226,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "power_limit_option_real",
                         "all_power_limit_option",
                         "station_sn",
+                        "total_stats",
                     ]:
-                        if key in ["power_limit_option"]:
+                        if key == "power_limit_option":
                             if key in getattr(
                                 SolarbankDeviceMetrics,
                                 device.get("device_pn") or "",
@@ -275,24 +282,24 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "energy_last_period",
                             "time_zone",
                             "grid_export_limit",
+                            "owner_user_id",
+                            "phase",
                         ]
                         and value
                     ):
                         device[key] = str(value)
-                    elif key in ["mqtt_overlay"] and value is not None:
+                    elif key == "mqtt_overlay" and value is not None:
                         # keys that are customized
                         custom = (device.get("customized") or {}).get(key)
                         device[key] = custom if custom is not None else value
-                    elif (
-                        key in ["bt_ble_id"] and value and not devData.get("bt_ble_mac")
-                    ):
+                    elif key == "bt_ble_id" and value and not devData.get("bt_ble_mac"):
                         # Make sure that BT ID is added if mac not in data
                         device["bt_ble_mac"] = str(value).replace(":", "")
-                    elif key in ["wifi_signal"]:
+                    elif key == "wifi_signal":
                         # Make sure that key is added, but update only if new value provided to avoid deletion of value from rssi calculation
                         if value or device.get(key) is None:
                             device[key] = str(value)
-                    elif key in ["rssi"]:
+                    elif key == "rssi":
                         # This is actually not a relative rssi value (0-255), but a negative value and seems to be the absolute dBm of the signal strength
                         device[key] = str(value)
                         # calculate the wifi_signal percentage if that is not provided for the device while rssi is available
@@ -318,11 +325,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         )
                                     }
                                 )
-                    elif key in ["battery_power"] and value:
+                    elif key == "battery_power" and value:
                         # This is a percentage value for the battery state of charge, not power
                         calc_capacity |= device.get("battery_soc") != str(value)
                         device["battery_soc"] = str(value)
-                    elif key in ["photovoltaic_power"]:
+                    elif key == "photovoltaic_power":
                         device["input_power"] = str(value)
                     elif (
                         # Add solarbank string metrics depending on device type or generation
@@ -361,13 +368,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
                             device[key] = int(value)
-                    elif key in ["sub_package_num"] and str(value).isdigit():
+                    elif key == "sub_package_num" and str(value).isdigit():
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
                             calc_capacity |= device.get(key) != int(value)
                             device[key] = int(value)
-                    elif key in ["battery_capacity"] and str(value).isdigit():
+                    elif key == "battery_capacity" and str(value).isdigit():
                         # This key is only used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         calc_capacity = True
@@ -377,7 +384,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device["set_output_power"] = str(value).replace("W", "")
                     # The current_home_load from get_device_load always shows the system wide settings made via the schedule
                     # get_device_load cannot be used for SB2 schedules, but site refresh will pass this as workaround.
-                    elif key in ["current_home_load"] and value:
+                    elif key == "current_home_load" and value:
                         # Value may include unit, remove unit to have content consistent
                         home_load = str(value).replace("W", "")
                         device["set_system_output_power"] = home_load
@@ -395,24 +402,32 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     else home_load
                                 }
                             )
-                    elif key in ["status"]:
+                    elif key == "status":
                         # decode the device status into a description
                         device.update(
                             {
                                 key: str(value),
-                                "status_desc": next(
-                                    iter(
-                                        [
-                                            item.name
-                                            for item in SolixDeviceStatus
-                                            if item.value == str(value)
-                                        ]
-                                    ),
+                                "status_desc": get_enum_name(
+                                    SolixDeviceStatus,
+                                    str(value),
                                     SolixDeviceStatus.unknown.name,
                                 ),
                             }
                         )
-                    elif key in ["charging_status"]:
+                    elif (
+                        key == "charging_status"
+                        and device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                    ):
+                        # handle Solarbank PPS charging status
+                        device[key] = str(value)
+                        # TODO: Use proper status definitions once all state descriptions are known
+                        description = get_enum_name(
+                            SolarbankPpsStatus,
+                            str(value),
+                            SolarbankPpsStatus.unknown.name,
+                        )
+                        device["charging_status_desc"] = description
+                    elif key == "charging_status":
                         device[key] = str(value)
                         # decode the charging status into a description
                         description = get_enum_name(
@@ -539,13 +554,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["power_cutoff_data", "ota_children"] and value:
                         # list items with value
                         device[key] = list(value)
-                    elif key in ["fittings"]:
+                    elif key == "fittings":
                         # update nested dictionary
                         if key in device:
                             device[key].update(dict(value))
                         else:
                             device[key] = dict(value)
-                    elif key in ["solar_info"] and isinstance(value, dict):
+                    elif key == "solar_info" and isinstance(value, dict):
                         # remove unnecessary keys from solar_info
                         keylist = value.keys()
                         for extra in [
@@ -555,11 +570,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         ]:
                             value.pop(extra, None)
                         device[key] = value
-                    elif key in ["solarbank_count"] and value:
+                    elif key == "solarbank_count" and value:
                         device[key] = value
                     # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
                     # When individual device schedules are supported in future, this info is needed per device anyway
-                    elif key in ["schedule"] and isinstance(value, dict):
+                    elif key == "schedule" and isinstance(value, dict):
                         device[key] = dict(value)
                         # set default presets for no active schedule slot
                         if device.get("type") == SolixDeviceType.COMBINER_BOX.value:
@@ -585,10 +600,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "default_home_load"
                                     )
                                     or SolixDefaults.PRESET_NOSCHEDULE
-                                    if mode_type in [SolarbankUsageMode.manual.value]
+                                    if mode_type == SolarbankUsageMode.manual.value
                                     else 0
-                                    if mode_type
-                                    in [SolarbankUsageMode.smartplugs.value]
+                                    if mode_type == SolarbankUsageMode.smartplugs.value
                                     else None,
                                 }
                             )
@@ -886,27 +900,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     device["set_output_power"] = dev_power
 
                     # inverter specific keys
-                    elif key in ["generate_power"]:
+                    elif key == "generate_power":
                         device[key] = str(value)
 
                     # Power Panel specific keys
-                    elif key in ["average_power"] and isinstance(value, dict):
+                    elif key == "average_power" and isinstance(value, dict):
                         device[key] = value
 
                     # smartmeter specific keys
-                    elif key in ["grid_status"]:
+                    elif key == "grid_status":
                         # decode the grid status into a description
                         device.update(
                             {
                                 key: str(value),
-                                "grid_status_desc": next(
-                                    iter(
-                                        [
-                                            item.name
-                                            for item in SmartmeterStatus
-                                            if item.value == str(value)
-                                        ]
-                                    ),
+                                "grid_status_desc": get_enum_name(
+                                    SmartmeterStatus,
+                                    str(value),
                                     SmartmeterStatus.unknown.name,
                                 ),
                             }
@@ -922,7 +931,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device[key] = value
 
                     # power dock specific keys
-                    elif key in ["dock_status"]:
+                    elif key == "dock_status":
                         # decode the dock status into a description
                         device.update(
                             {
@@ -940,8 +949,26 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             }
                         )
 
+                    # Solarbank PPS specific keys, map them to solarbank keys where applicable
+                    elif key == "pv_high_power":
+                        device["solar_power_1"] = str(value)
+                    elif key == "pv_low_power":
+                        device["solar_power_2"] = str(value)
+                    elif key == "pv_high_name":
+                        device["pv_name"] = (device.get("pv_name") or {}) | {
+                            "pv1_name": str(value)
+                        }
+                    elif key == "pv_low_name":
+                        device["pv_name"] = (device.get("pv_name") or {}) | {
+                            "pv2_name": str(value)
+                        }
+
+                    # EV charger specific keys
+                    elif key == "ev_charger_status":
+                        device[key] = value
+
                     # hes specific keys
-                    elif key in ["hes_data"] and isinstance(value, dict):
+                    elif key == "hes_data" and isinstance(value, dict):
                         # decode the status into a description
                         if "online_status" in value:
                             code = str(value.get("online_status"))
@@ -996,10 +1023,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
                     # EV charger specific keys
                     elif (
-                        key
-                        in [
-                            "ocpp_connect_status",
-                        ]
+                        key == "ocpp_connect_status"
                         and device.get("type") == SolixDeviceType.EV_CHARGER.value
                     ):
                         if key == "ocpp_connect_status":
@@ -1007,15 +1031,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device.update(
                                 {
                                     key: value,
-                                    "ocpp_status_desc": next(
-                                        iter(
-                                            [
-                                                item.name
-                                                for item in SolixDeviceStatus
-                                                if item.value == str(value)
-                                            ]
-                                        ),
-                                        SolixDeviceStatus.unknown.name,
+                                    "ocpp_status_desc": get_enum_name(
+                                        SolixOcppConnectionStatus,
+                                        str(value),
+                                        SolixOcppConnectionStatus.unknown.name,
                                     ),
                                 }
                             )
@@ -1100,10 +1119,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     def clearCaches(self) -> None:
         """Clear the api cache dictionaries and close active MQTT client."""
         super().clearCaches()
-        if self.powerpanelApi:
-            self.powerpanelApi.clearCaches()
-        if self.hesApi:
-            self.hesApi.clearCaches()
+        self.powerpanelApi = None
+        self.hesApi = None
 
     async def update_sites(
         self,
@@ -1861,7 +1878,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             attr_resp := await self.set_device_attributes(
                 deviceSn=deviceSn,
                 attributes=data,
-                query_attributes=query if query else None,
+                query_attributes=query or None,
                 toFile=toFile,
             ),
             dict,
@@ -1996,7 +2013,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             resp = await self.apisession.loadFromFile(
                 Path(
                     self.testDir()
-                    / f"{API_FILEPREFIXES['get_upgrade_record']}_{recordType}_{deviceSn if deviceSn else siteId if siteId else recordType}.json"
+                    / f"{API_FILEPREFIXES['get_upgrade_record']}_{recordType}_{deviceSn or siteId or recordType}.json"
                 )
             )
         else:
@@ -2024,14 +2041,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if data := resp.get("data") or {}:
             # add data to site_details
             mydata = data.copy()
-            mydata["status_desc"] = next(
-                iter(
-                    [
-                        item.name
-                        for item in SolarbankAiemsRuntimeStatus
-                        if item.value == mydata.get("status")
-                    ]
-                ),
+            mydata["status_desc"] = get_enum_name(
+                SolarbankAiemsRuntimeStatus,
+                mydata.get("status"),
                 SolarbankAiemsRuntimeStatus.unknown.name,
             )
             self._update_site(siteId=siteId, details={"ai_ems_runtime": mydata})
@@ -2238,7 +2250,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             return False
         # Prepare payload from details
         data: dict = {}
-        data["currencyUnit"] = unit if unit else details.get("site_price_unit")
+        data["currencyUnit"] = unit or details.get("site_price_unit")
         # limit tiers to single full day tier since others are ignored by the cloud
         data["tieredElecPrices"] = [
             {

@@ -124,9 +124,11 @@ DEVICE_SWITCHES = [
         translation_key="preset_backup_option",
         json_key="preset_backup_option",
         feature=AnkerSolixEntityFeature.AC_CHARGE,
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
     ),
     AnkerSolixSwitchDescription(
@@ -134,19 +136,22 @@ DEVICE_SWITCHES = [
         translation_key="allow_grid_export",
         json_key="allow_grid_export",
         value_fn=lambda d, jk: (
-            not v if (v := d.get("grid_export_disabled")) is not None else d.get(jk)
-        )
-        if d.get(MQTT_OVERLAY)
-        else (
-            v
-            if (v := d.get(jk)) is not None
-            else not v
-            if (v := d.get("grid_export_disabled")) is not None
-            else None
+            (not v if (v := d.get("grid_export_disabled")) is not None else d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (
+                v
+                if (v := d.get(jk)) is not None
+                else not v
+                if (v := d.get("grid_export_disabled")) is not None
+                else None
+            )
         ),
-        exclude_fn=lambda s, d: not (
-            {d.get("type")} - s and d.get("mqtt_data")
-            and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and d.get("mqtt_data")
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
         ),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.sb_disable_grid_export_switch,
@@ -180,9 +185,11 @@ DEVICE_SWITCHES = [
         translation_key=MQTT_OVERLAY,
         json_key=MQTT_OVERLAY,
         entity_category=EntityCategory.DIAGNOSTIC,
-        attrib_fn=lambda d, _: {"customized": c}
-        if (c := (d.get("customized") or {}).get(MQTT_OVERLAY)) is not None
-        else {},
+        attrib_fn=lambda d, _: (
+            {"customized": c}
+            if (c := (d.get("customized") or {}).get(MQTT_OVERLAY)) is not None
+            else {}
+        ),
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
         restore=True,
         mqtt=True,
@@ -671,7 +678,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     self.entity_id,
                     "enabled" if enable else "disabled",
                 )
-                if self._attribute_name in ["preset_backup_option"]:
+                if self._attribute_name == "preset_backup_option":
                     # SB2 AC option
                     resp = await self.coordinator.client.api.set_sb2_ac_charge(
                         siteId=data.get("site_id") or "",
@@ -689,9 +696,9 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         backup_switch=enable ^ self.entity_description.inverted,
                         toFile=self.coordinator.client.testmode(),
                     )
-                elif self._attribute_name in ["allow_grid_export"]:
+                elif self._attribute_name == "allow_grid_export":
                     if (
-                        data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                        data.get("type") == SolixDeviceType.COMBINER_BOX.value
                         or data.get("station_sn") is not None
                     ):
                         # control station settings via Api
@@ -704,7 +711,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     if siteId := data.get("site_id"):
                         stationSn = (
                             self.coordinator_context
-                            if data.get("type") in [SolixDeviceType.COMBINER_BOX.value]
+                            if data.get("type") == SolixDeviceType.COMBINER_BOX.value
                             else data.get("station_sn", "")
                         )
                         for md in self.coordinator.client.get_mqtt_devices(
@@ -878,7 +885,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         # Reset last run after timeout (for unexpected exceptions)
         self.last_run = None
         if self.coordinator and hasattr(self.coordinator, "data"):
-            if service_name in [SERVICE_EXPORT_SYSTEMS]:
+            if service_name == SERVICE_EXPORT_SYSTEMS:
                 LOGGER.debug("'%s' action will be applied", service_name)
                 self.last_run = datetime.now().astimezone()
                 exportlogger: logging.Logger = logging.getLogger("anker_solix_export")
@@ -919,7 +926,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     # reset action blocker
                     self.last_run = None
                 return {"export_filename": result}
-            if service_name in [SERVICE_API_REQUEST]:
+            if service_name == SERVICE_API_REQUEST:
                 LOGGER.debug("%s action will be applied", service_name)
                 self.last_run = datetime.now().astimezone()
                 # Wait until client cache is valid
@@ -985,9 +992,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 },
             )
         # When running in Test mode do not run services that are not supporting a testmode
-        if self.coordinator.client.testmode() and service_name not in [
-            SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
-        ]:
+        if (
+            self.coordinator.client.testmode()
+            and service_name != SERVICE_MODIFY_SOLIX_BACKUP_CHARGE
+        ):
             raise ServiceValidationError(
                 f"'{self.entity_id}' cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,
@@ -1010,7 +1018,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         if self.coordinator and hasattr(self.coordinator, "data"):
             result = False
             data: dict = self.coordinator.data.get(self.coordinator_context) or {}
-            if service_name in [SERVICE_MODIFY_SOLIX_BACKUP_CHARGE]:
+            if service_name == SERVICE_MODIFY_SOLIX_BACKUP_CHARGE:
                 LOGGER.debug("'%s' action will be applied", service_name)
                 # backup_start = None if not isinstance(kwargs.get(BACKUP_START), datetime) else kwargs.get(BACKUP_START)
                 # backup_end = None if not isinstance(kwargs.get(BACKUP_END), datetime) else kwargs.get(BACKUP_END)

@@ -14,6 +14,7 @@ from .apitypes import SolixDefaults
 from .helpers import round_by_factor
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import (
+    COMMAND_ENCODING,
     COMMAND_LIST,
     COMMAND_NAME,
     NAME,
@@ -22,14 +23,16 @@ from .mqttcmdmap import (
     VALUE_DEFAULT,
     VALUE_FOLLOWS,
     VALUE_MAX,
+    VALUE_MAX_STATE,
     VALUE_MIN,
+    VALUE_MIN_STATE,
     VALUE_OPTIONS,
     VALUE_STATE,
     VALUE_STEP,
     SolixMqttCommands,
 )
 from .mqttmap import SOLIXMQTTMAP
-from .mqtttypes import MqttCmdValidator
+from .mqtttypes import MqttCmdValidator, convert_time
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -64,11 +67,16 @@ class SolixMqttDevice:
         self.controls: dict = {}
         self._map: dict = {}
         self._filedata: dict = {}
+        self.dynamic_descriptions: dict = {}
         self._logger = api_instance.logger()
         # initialize device data
         self.update_device(device=self.api.devices.get(self.sn) or {})
         # register callback for Api
-        self.api.register_device_callback(deviceSn=self.sn, func=self.update_device)
+        self.api.register_device_callback(
+            deviceSn=self.sn,
+            func=self.update_device,
+            dynamic_descriptions=self.dynamic_descriptions,
+        )
         # create list of supported commands and options
         self._setup_controls()
 
@@ -123,6 +131,8 @@ class SolixMqttDevice:
                                     in [
                                         VALUE_MIN,
                                         VALUE_MAX,
+                                        VALUE_MIN_STATE,
+                                        VALUE_MAX_STATE,
                                         VALUE_STEP,
                                         VALUE_STATE,
                                         VALUE_OPTIONS,
@@ -172,6 +182,33 @@ class SolixMqttDevice:
                                     )
                                     # add descriptors
                                     parameters[name] = descriptors
+                                    # save reference to descriptor for dynamic updates if state was found
+                                    if (
+                                        state_name := descriptors.get(VALUE_MIN_STATE)
+                                    ) is not None:
+                                        desc = self.dynamic_descriptions.get(
+                                            state_name, {}
+                                        )
+                                        self.dynamic_descriptions[state_name] = {
+                                            "key": VALUE_MIN,
+                                            "desc": [
+                                                *desc.get("desc", []),
+                                                descriptors,
+                                            ],
+                                        }
+                                    if (
+                                        state_name := descriptors.get(VALUE_MAX_STATE)
+                                    ) is not None:
+                                        desc = self.dynamic_descriptions.get(
+                                            state_name, {}
+                                        )
+                                        self.dynamic_descriptions[state_name] = {
+                                            "key": VALUE_MAX,
+                                            "desc": [
+                                                *desc.get("desc", []),
+                                                descriptors,
+                                            ],
+                                        }
                         control["parameters"] = parameters
                         # check if control is a switch with only "on" and "off" in single required option
                         control["is_switch"] = bool(
@@ -184,7 +221,7 @@ class SolixMqttDevice:
                         # check if control is a single number control
                         control["is_number"] = bool(required_number)
                         self.controls[cmd] = control
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError) as _:
                         self._logger.error(
                             "MQTT device %s (%s) control setup error - Command '%s' has invalid description for parameter '%s': %s",
                             self.sn,
@@ -202,6 +239,26 @@ class SolixMqttDevice:
                 self.pn = pn
                 self.device = device
                 self.mqttdata = device.get("mqtt_data", {})
+                # update dynamic descriptions and controls if state values are changed
+                for state_name, d in self.dynamic_descriptions.items():
+                    if (state := self.mqttdata.get(state_name)) is not None and str(
+                        state
+                    ) != str(d.get("last_value")):
+                        key = d["key"]
+                        if (
+                            key in [VALUE_MIN, VALUE_MAX, VALUE_STEP]
+                            and str(state)
+                            .replace("-", "", 1)
+                            .replace(".", "", 1)
+                            .isdigit()
+                        ):
+                            # update all dependent parameter descriptors
+                            for desc in d.get("desc", []):
+                                desc[key] = round_by_factor(
+                                    float(state), desc.get(VALUE_STEP, 1)
+                                )
+                            # save applied state
+                            d["last_value"] = state
             else:
                 self._logger.error(
                     "Device %s (%s) is not in supported models %s for MQTT control",
@@ -380,8 +437,12 @@ class SolixMqttDevice:
             return None
         # use default if value not provided
         value = desc.get(VALUE_DEFAULT) if value is None else value
-        # lookup state if default is string
-        if (
+        # if value is string make further conversions to get the actual value
+        if desc.get(STATE_NAME, "").endswith("_time"):
+            # special case for fields indicating (seconds), minutes, hours per byte
+            value = value if isinstance(convert_time(value), bytes) else None
+        # lookup state if value is string
+        elif (
             isinstance(value, str)
             and str(val := self.get_status(fromFile=True).get(value))
             .replace("-", "", 1)
@@ -412,6 +473,7 @@ class SolixMqttDevice:
                     options=desc.get(VALUE_OPTIONS),
                 ).check(value)
                 if value != desc.get(VALUE_DEFAULT)
+                and not desc.get(STATE_NAME, "").endswith("_time")
                 else value
             )
         except (ValueError, TypeError) as err:
@@ -436,7 +498,7 @@ class SolixMqttDevice:
 
         Args:
             self: The API instance
-            command: Command name for get_command_data
+            command: Command name
             parameters: Command parameters
             description: Human-readable description for logging
             toFile: If True, skip publish and print decoded command (for testing compatibility)
@@ -446,7 +508,14 @@ class SolixMqttDevice:
 
         """
         # Generate command hex data
-        if not (hexdata := generate_mqtt_command(command, parameters, self.pn)):
+        if not (
+            hexdata := generate_mqtt_command(
+                command=command,
+                parameters=parameters,
+                model=self.pn,
+                dynamic_descriptions=self.get_cmd_parms(cmd=command, all=True),
+            )
+        ):
             self._logger.error(
                 "MQTT device %s (%s) failed to generate hex data for command %s",
                 self.sn,
@@ -473,7 +542,11 @@ class SolixMqttDevice:
                         )
                         return None
                 # Publish MQTT command
-                _, mqtt_info = self.api.mqttsession.publish(self.device, hexdata.hex())
+                _, mqtt_info = self.api.mqttsession.publish(
+                    deviceDict=self.device,
+                    hexbytes=hexdata.hex(),
+                    encoding_type=self.controls.get(command, {}).get(COMMAND_ENCODING),
+                )
                 # Wait for publish completion with timeout
                 with contextlib.suppress(ValueError, RuntimeError):
                     mqtt_info.wait_for_publish(timeout=5)

@@ -966,6 +966,9 @@
                     },
                     "state_of_health": {
                         "name": "Santé %"
+                    },
+                    "energy_ah": {
+                        "name": "Énergie Ah"
                     }
                 }
             },
@@ -1091,6 +1094,9 @@
             },
             "solarbank_list": {
                 "name": "Banques solaires"
+            },
+            "solarbank_pps_list": {
+                "name": "Centrales électriques solaires"
             },
             "powerpanel_list": {
                 "name": "Panneaux électriques"

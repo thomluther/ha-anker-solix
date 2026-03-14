@@ -576,6 +576,9 @@
             "solarbank_list": {
                 "default": "mdi:counter"
             },
+            "solarbank_pps_list": {
+                "default": "mdi:counter"
+            },
             "solar_list": {
                 "default": "mdi:counter"
             },

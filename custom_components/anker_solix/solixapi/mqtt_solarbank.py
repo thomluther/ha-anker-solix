@@ -45,8 +45,8 @@ FEATURES = {
     SolixMqttCommands.sb_device_timeout: MODELS,
     SolixMqttCommands.sb_ac_input_limit: MODELS,
     SolixMqttCommands.sb_pv_limit_select: MODELS,
-    # SolixMqttCommands.sb_3rd_party_pv_switch: MODELS, # TODO: require also Api support
-    # SolixMqttCommands.sb_ev_charger_switch: {"AE100"}, # TODO: require also Api support
+    # SolixMqttCommands.sb_3rd_party_pv_switch: MODELS, # TODO: requires also Api support
+    # SolixMqttCommands.sb_ev_charger_switch: {"AE100"}, # TODO: requires also Api support
 }
 
 

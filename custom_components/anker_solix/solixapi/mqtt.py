@@ -9,7 +9,7 @@ from functools import partial
 import json
 import os
 from pathlib import Path
-from random import randint
+import secrets
 import ssl
 import tempfile
 from typing import Any
@@ -30,9 +30,9 @@ from .mqttcmdmap import (
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
-    DeviceJsonData,
     DeviceHexDataField,
     DeviceHexDataHeader,
+    DeviceJsonData,
     MqttDataStats,
 )
 from .session import AnkerSolixClientSession
@@ -141,7 +141,7 @@ class AnkerSolixMqttSession:
         data = (
             (payload.get("data") or payload.get("trans"))
             if isinstance(payload, dict)
-            else None
+            else payload
         )
         # Decrypt base64-encoded encrypted data field from expected dictionary in message payload
         data = b64decode(data) if isinstance(data, str) else data
@@ -152,7 +152,7 @@ class AnkerSolixMqttSession:
             message,
             msg.topic,
         )
-        valueupdate = False
+        extracted_values = {}
         # Update data stats
         if isinstance(data, bytes):
             hd = None
@@ -180,12 +180,12 @@ class AnkerSolixMqttSession:
                 device = self.mqtt_data.get(device_sn) or {}
                 topics = set(device.get("topics") or [])
                 topics.add(msg.topic)
+                extracted_values = hd.values()
                 self.mqtt_data[device_sn] = (
                     device
-                    | hd.values()
+                    | extracted_values
                     | {"last_message": timestamp, "topics": list(topics)}
                 )
-                valueupdate = True
         elif data:
             # no encoded data in payload, print object whatever it is
             self._logger.debug(
@@ -198,7 +198,7 @@ class AnkerSolixMqttSession:
         # call message callback if defined
         if callable(self._message_callback):
             self._message_callback(
-                self, msg.topic, message, data, model, device_sn, valueupdate
+                self, msg.topic, message, data, model, device_sn, extracted_values
             )
 
     def on_disconnect(
@@ -322,9 +322,15 @@ class AnkerSolixMqttSession:
         command: str = SolixMqttCommands.realtime_trigger,
         parameters: dict | None = None,
         model: str | None = None,
+        dynamic_descriptions: dict | None = None,
     ) -> str | None:
         """Compose the hex data for MQTT publish payload to Anker Solix devices."""
-        if hexdata := generate_mqtt_command(command, parameters, model):
+        if hexdata := generate_mqtt_command(
+            command=command,
+            parameters=parameters,
+            model=model,
+            dynamic_descriptions=dynamic_descriptions,
+        ):
             self._logger.debug(
                 "Api %s MQTT session generated hexdata for device%s command %s:\n%s",
                 self.apisession.nickname,
@@ -341,6 +347,7 @@ class AnkerSolixMqttSession:
         hexbytes: bytearray | bytes | str,
         cmd: int = 17,
         sessId: str = "1234-5678",
+        encoding_type: int | None = None,
     ) -> tuple[str, mqtt.MQTTMessageInfo]:
         """Publish an MQTT message with provided bytes and device data.
 
@@ -355,7 +362,9 @@ class AnkerSolixMqttSession:
                 "client_id": f"android-{self.mqtt_info.get('app_name')}-{self.mqtt_info.get('user_id')}-{self.mqtt_info.get('certificate_id')}",
                 "sess_id": sessId,  # eg "5681-3252", can this be fix, or can it be obtained from client connection?
                 "msg_seq": 1,
-                "seed": 1,
+                "seed": secrets.token_hex(16)
+                if isinstance(encoding_type, int)
+                else 1,  # random 16 Bytes seed if any encoding type provided
                 "timestamp": int(datetime.now().timestamp()),
                 "cmd_status": 2,
                 "cmd": cmd,
@@ -367,11 +376,19 @@ class AnkerSolixMqttSession:
             },
             "payload": json.dumps(
                 {
-                    "account_id": self.mqtt_info.get("user_id"),
                     "device_sn": sn,
+                    # use device owner for member devices if available
+                    "account_id": deviceDict.get("owner_user_id")
+                    or self.mqtt_info.get("user_id"),
                     # data field in payload must be b64 encoded
                     "data": b64encode(hexbytes or b"").decode("utf-8"),
-                },
+                }
+                # add encoding type field to payload if provided
+                | (
+                    {"encoding_type": encoding_type}
+                    if isinstance(encoding_type, int)
+                    else {}
+                ),
                 separators=(",", ":"),
             ),
         }
@@ -491,7 +508,7 @@ class AnkerSolixMqttSession:
             # Create client instance
             self.client = mqtt.Client(
                 callback_api_version=CallbackAPIVersion.VERSION2,
-                client_id=f"{self.mqtt_info.get('thing_name')}_{randint(1, 10000):05}",
+                client_id=f"{self.mqtt_info.get('thing_name')}_{secrets.randbelow(99999):05}",
                 clean_session=True,
             )
             # Set userdata for client
@@ -622,12 +639,12 @@ class AnkerSolixMqttSession:
     ) -> None:
         """Run MQTT message poller and optional device update trigger in background.
 
-        topics must be a shared mutable object containing the topics be subscribed for MQTT message updates.
-        real_time_devices must be a shared mutable object containing the device serials which should trigger real time updates.
+        Topics must be a shared mutable object containing the topics to be subscribed for MQTT message updates.
+        Real_time_devices must be a shared mutable object containing the device serials which should trigger real time updates.
         The update trigger will be refreshed automatically while poller is running.
         msg_callback is the function that will be called back upon received mqtt data with following parameters:
+            topic: str, message: Any, data: bytes, model: str
         Optional timeout specifies how long devices should publish real time updates before trigger must be resent.
-        topic: str, message: Any, data: bytes, model: str
         """
         try:
             # register message callback function
@@ -970,6 +987,7 @@ def generate_mqtt_command(
     command: str = SolixMqttCommands.realtime_trigger,
     parameters: dict | None = None,
     model: str | None = None,
+    dynamic_descriptions: dict | None = None,
 ) -> DeviceHexData | None:
     r"""Compose the hex data for MQTT publish payload to Anker Solix devices.
 
@@ -997,6 +1015,8 @@ def generate_mqtt_command(
     fields = {}
     if not isinstance(parameters, dict):
         parameters = {}
+    if not isinstance(dynamic_descriptions, dict):
+        dynamic_descriptions = {}
     # get defined message type and description for command if model provided
     if isinstance(model, str) and (pn_map := SOLIXMQTTMAP.get(model)):
         msgtype, fields = (
@@ -1025,11 +1045,11 @@ def generate_mqtt_command(
                 if (name := desc.get(NAME)) == "pattern_22":
                     hexdata.update_field(DeviceHexDataField(hexbytes=f"{field}0122"))
                 elif name == "msg_timestamp":
-                    # select proper timestamp format depending on field name
+                    # select proper timestamp format depending on field name and type
                     if field == "fd":
                         hexdata.add_timestamp_ms_field()
                     else:
-                        hexdata.add_timestamp_field()
+                        hexdata.add_timestamp_field(fieldtype=desc.get(TYPE))
                 else:
                     # compose command field based on description
                     value = parameters.get(desc.get(VALUE_FOLLOWS) or name)
@@ -1038,7 +1058,7 @@ def generate_mqtt_command(
                             value=value,
                             name=field,
                             fieldtype=desc.get(TYPE),
-                            desc=desc,
+                            desc=desc | dynamic_descriptions.get(name, {}),
                         )
                     )
     elif command == SolixMqttCommands.realtime_trigger:

@@ -45,7 +45,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.5.1.1"
+VERSION: str = "3.5.3.0"
 
 
 class AnkerSolixApiExport:
@@ -743,7 +743,7 @@ class AnkerSolixApiExport:
                     admin=admin,
                 )
                 # Additional exports for site types support AI mode
-                if power_site_type in [12]:
+                if power_site_type == 12:
                     self._logger.info("Exporting site forecast schedule...")
                     await self.query(
                         endpoint=API_ENDPOINTS["get_forecast_schedule"],
@@ -1618,8 +1618,8 @@ class AnkerSolixApiExport:
         val = str(val)
         randomstr = self._randomdata.get(val, "")
         # generate new random string
-        if not randomstr and val and key not in ["device_name"]:
-            if "_sn" in key or "Sn" in key or key in ["sn"]:
+        if not randomstr and val and key != "device_name":
+            if "_sn" in key or "Sn" in key or key == "sn":
                 randomstr = "".join(
                     random.choices(string.ascii_uppercase + string.digits, k=len(val))
                 )
@@ -1681,10 +1681,10 @@ class AnkerSolixApiExport:
             self._randomdata.update({val: randomstr})
         return randomstr or str(val)
 
-    def _check_keys(self, data: Any):
+    def _check_keys(self, data: Any) -> Any:
         """Recursive traversal of complex nested objects to randomize value for certain keys."""
 
-        if isinstance(data, int | float | str):
+        if isinstance(data, int | float | str | bool):
             return data
         for k, v in data.copy().items():
             if isinstance(v, dict):
@@ -1692,31 +1692,43 @@ class AnkerSolixApiExport:
             if isinstance(v, list):
                 v = [self._check_keys(i) for i in v]
             # Randomize value for certain keys
-            if any(
-                x in k
-                for x in [
-                    "_sn",
-                    "Sn",
-                    "site_id",
-                    "station_id",
-                    "stationId",
-                    "user_id",
-                    "member_id",
-                    "vehicle_id",
-                    "trace_id",
-                    "bt_ble_",
-                    "wifi_name",
-                    "ssid",
-                    "home_load_data",
-                    "param_data",
-                    "device_name",
-                    "token",
-                    "email",
-                    "_password",
-                    "_mac",
-                ]
-            ) or k in ["sn"]:
-                data[k] = self._randomize(v, k)
+            if (
+                any(
+                    x in k
+                    for x in [
+                        "_sn",
+                        "Sn",
+                        "site_id",
+                        "station_id",
+                        "stationId",
+                        "user_id",
+                        "member_id",
+                        "vehicle_id",
+                        "trace_id",
+                        "bt_ble_",
+                        "wifi_name",
+                        "ssid",
+                        "home_load_data",
+                        "param_data",
+                        "device_name",
+                        "token",
+                        "email",
+                        "_password",
+                        "_mac",
+                    ]
+                )
+                or k == "sn"
+            ):
+                if isinstance(v, list):
+                    # randomize individual string elements in list
+                    data[k] = [
+                        self._randomize(value, k) if isinstance(value, str) else value
+                        for value in v
+                    ]
+                elif isinstance(v, str):
+                    data[k] = self._randomize(v, k)
+                else:
+                    data[k] = v
         return data
 
     async def _export(
@@ -1843,11 +1855,11 @@ class AnkerSolixApiExport:
 
         mqttsession = None
         try:
-            # get all owned devices that may support MQTT messages
+            # get all owned or member devices that may support MQTT messages
             if mqttdevices := [
                 dev
                 for dev in self.api_power.devices.values()
-                if dev.get("is_admin") and not dev.get("is_passive")
+                if dev.get("mqtt_supported")
             ]:
                 # reuse existing MQTT client or start new one
                 if mqttsession := self.api_power.mqttsession:
@@ -1909,26 +1921,26 @@ class AnkerSolixApiExport:
                         )
                         for dev in mqttdevices:
                             sn = dev.get("device_sn")
-                            if sn not in request_devices:
-                                resp = mqttsession.realtime_trigger(
-                                    deviceDict=dev,
-                                    timeout=60,
-                                    wait_for_publish=2,
+                            # if sn not in request_devices: # RT trigger only for devices without Status Request description
+                            resp = mqttsession.realtime_trigger(
+                                deviceDict=dev,
+                                timeout=60,
+                                wait_for_publish=2,
+                            )
+                            if resp.is_published():
+                                self._logger.info(
+                                    "Published MQTT Real Time trigger message for device %s",
+                                    self._randomize(sn, "device_sn"),
                                 )
-                                if resp.is_published():
-                                    self._logger.info(
-                                        "Published MQTT Real Time trigger message for device %s",
-                                        self._randomize(sn, "device_sn"),
-                                    )
-                                    mqttsession.triggered_devices.add(sn)
-                                else:
-                                    self._logger.warning(
-                                        "Failed to publish Real Time trigger message for device %s",
-                                        self._randomize(sn, "device_sn"),
-                                    )
-                                    mqttsession.triggered_devices.discard(sn)
-                    # wait for the RT trigger to timeout and publish requests for required devices
-                    for _ in range(12):
+                                mqttsession.triggered_devices.add(sn)
+                            else:
+                                self._logger.warning(
+                                    "Failed to publish Real Time trigger message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.discard(sn)
+                    # wait for the RT trigger to timeout and publish status requests for described devices
+                    for _ in range(6):
                         for sn in request_devices:
                             resp = mqttsession.status_request(
                                 deviceDict=self.api_power.devices.get(sn, {}),
@@ -1944,7 +1956,30 @@ class AnkerSolixApiExport:
                                     "Failed to publish MQTT Status Request message for device %s",
                                     self._randomize(sn, "device_sn"),
                                 )
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(10)
+                    # Cycle through ALL devices and publish a status request to verify response
+                    if mqttsession.is_connected():
+                        self._logger.info(
+                            "Publish last Status Request and waiting for messages..."
+                        )
+                        for dev in mqttdevices:
+                            sn = dev.get("device_sn")
+                            resp = mqttsession.status_request(
+                                deviceDict=self.api_power.devices.get(sn, {}),
+                                wait_for_publish=2,
+                            )
+                            if resp.is_published():
+                                self._logger.info(
+                                    "Published Status Request message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.add(sn)
+                            else:
+                                self._logger.warning(
+                                    "Failed to publish Status Request message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.discard(sn)
                     mqttsession.triggered_devices.clear()
                     # wait another 3 minutes to get all standard messages in 5 minute interval
                     for i in range(3, 0, -1):
