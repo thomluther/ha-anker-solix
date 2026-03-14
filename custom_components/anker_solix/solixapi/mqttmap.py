@@ -177,10 +177,10 @@ _A1728_0405 = {
     "a7": {NAME: "usbc_4_power"},  # USB-C top output power
     "a8": {NAME: "usba_1_power"},  # USB-A left output power
     "a9": {NAME: "usba_2_power"},  # USB-A right output power
-    "aa": {NAME: "dc_12v_1_power"},  # DC output power 12V
-    "ab": {NAME: "photovoltaic_power"},  # Solar input
-    "ac": {NAME: "input_power_total"},  # DC input power (solar + USB-C)
-    "ad": {NAME: "output_power_total"},  # Total DC output power for all ports
+    "aa": {NAME: "dc_12v_1_power"},  # 12V car charger port output power
+    "ab": {NAME: "photovoltaic_power"},  # Solar input power
+    "ac": {NAME: "dc_input_power_total"},  # DC input power total (solar + USB-C input)
+    "ad": {NAME: "dc_output_power_total"},  # Total DC output power for all ports
     "af": {NAME: "battery_soc_ah", FACTOR: 0.001},  # Battery SOC (Ah)
     "b0": {NAME: "sw_version", "values": 1},  # Main firmware version
     # "b1": {NAME: "version1?", "values": 1},  # Version?
@@ -193,24 +193,14 @@ _A1728_0405 = {
     },
     "b7": {NAME: "battery_soc"},  # Battery SOC
     "b8": {NAME: "battery_soh"},  # Battery health
-    "b9": {
-        NAME: "usbc_1_status"
-    },  # USB-C left status: Inactive (0), Discharging (1)
+    "b9": {NAME: "usbc_1_status"},  # USB-C left status: Inactive (0), Discharging (1)
     "ba": {
         NAME: "usbc_2_status"
     },  # USB-C center status: Inactive (0), Discharging (1), Charging (2)
-    "bb": {
-        NAME: "usbc_3_status"
-    },  # USB-C right status: Inactive (0), Discharging (1)
-    "bc": {
-        NAME: "usbc_4_status"
-    },  # USB-C top status: Inactive (0), Discharging (1)
-    "bd": {
-        NAME: "usba_1_status"
-    },  # USB-A left status: Inactive (0), Discharging (1)
-    "be": {
-        NAME: "usba_2_status"
-    },  # USB-A right status: Inactive (0), Discharging (1)
+    "bb": {NAME: "usbc_3_status"},  # USB-C right status: Inactive (0), Discharging (1)
+    "bc": {NAME: "usbc_4_status"},  # USB-C top status: Inactive (0), Discharging (1)
+    "bd": {NAME: "usba_1_status"},  # USB-A left status: Inactive (0), Discharging (1)
+    "be": {NAME: "usba_2_status"},  # USB-A right status: Inactive (0), Discharging (1)
     "bf": {
         NAME: "dc_12v_1_status"
     },  # DC 12V status: Inactive (0), Discharging (1), Charging (2)
@@ -627,7 +617,7 @@ _A1782_0421 = {
                 LENGTH: 4,
             },
             "04": {
-                NAME: "ac_input_limit?",  # AC charge limit: 100-1200 W, step: 100
+                NAME: "ac_input_limit",  # AC charge limit: 100-1200 W, step: 100
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "07": {
@@ -648,7 +638,7 @@ _A1782_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "15": {
-                NAME: "display_timeout_seconds?",  # 0 (Never), 10, 30, 60, 300, 1800
+                NAME: "display_timeout_seconds",  # 0 (Never), 10, 30, 60, 300, 1800
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "17": {
@@ -664,7 +654,7 @@ _A1782_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "port_memory_switch?",  # Output Port Memory switch: Disabled (0) or Enabled (1)
+                NAME: "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
@@ -672,12 +662,12 @@ _A1782_0421 = {
     "a5": {
         BYTES: {
             "00": {
-                NAME: "temperature?",
+                NAME: "temperature",
                 SIGNED: True,
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
-                NAME: "battery_soc?",
+                NAME: "battery_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
@@ -685,7 +675,7 @@ _A1782_0421 = {
     "a6": {
         BYTES: {
             "00": {
-                NAME: "output_power_total?",  # Output power total
+                NAME: "output_power_total",  # Output power total
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
@@ -697,7 +687,7 @@ _A1782_0421 = {
     "a7": {
         BYTES: {
             "00": {
-                NAME: "ac_output_power_switch?",  # Off (0), On (1)
+                NAME: "ac_output_power_switch",  # Off (0), On (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
@@ -709,11 +699,11 @@ _A1782_0421 = {
     "a8": {
         BYTES: {
             "00": {
-                NAME: "dc_input_power_switch?",  # Off (0), On (1)
+                NAME: "dc_output_power_switch?",  # Car Charger Output: Off (0), On (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "dc_input_power_total?",  # DC input power (solar + car charging)
+                NAME: "dc_output_power?",  # DC 12V output power when enabled
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2201,13 +2191,13 @@ _EV_CHARGER_0405 = {
 _EV_CHARGER_0410 = {
     # V1 status message
     TOPIC: "param_info",
-    "a2": {NAME: "voltage_p1", "factor": 0.1},
-    "a3": {NAME: "voltage_p2", "factor": 0.1},
-    "a4": {NAME: "voltage_p3", "factor": 0.1},
-    "a5": {NAME: "current_p1", "factor": 0.1},
-    "a6": {NAME: "current_p2", "factor": 0.1},
-    "a7": {NAME: "current_p3", "factor": 0.1},
-    "a8": {NAME: "charging_power"},
+    "a2": {NAME: "voltage_l1", "factor": 0.1},
+    "a3": {NAME: "voltage_l2", "factor": 0.1},
+    "a4": {NAME: "voltage_l3", "factor": 0.1},
+    "a5": {NAME: "current_l1", "factor": 0.1},
+    "a6": {NAME: "current_l2", "factor": 0.1},
+    "a7": {NAME: "current_l3", "factor": 0.1},
+    "a8": {NAME: "bat_charge_power"},
     "a9": {NAME: "charging_duration_seconds"},
     "aa": {NAME: "charging_energy", "factor": 0.001},
     "ac": {
@@ -2217,12 +2207,12 @@ _EV_CHARGER_0410 = {
     "ad": {NAME: "plug_countdown_seconds"},
     "ae": {NAME: "start_countdown_seconds"},
     "af": {NAME: "charging_window_seconds"},
-    "b0": {NAME: "charging_power_p1"},
-    "b1": {NAME: "charging_power_p2"},
-    "b2": {NAME: "charging_power_p3"},
-    "b3": {NAME: "charging_energy_p1", "factor": 0.001},
-    "b4": {NAME: "charging_energy_p2", "factor": 0.001},
-    "b5": {NAME: "charging_energy_p3", "factor": 0.001},
+    "b0": {NAME: "power_l1"},
+    "b1": {NAME: "power_l2"},
+    "b2": {NAME: "power_l3"},
+    "b3": {NAME: "charging_energy_l1", "factor": 0.001},
+    "b4": {NAME: "charging_energy_l2", "factor": 0.001},
+    "b5": {NAME: "charging_energy_l3", "factor": 0.001},
     "b6": {NAME: "order_id?"},
     "b7": {NAME: "unknown_b7?"},  #  (0),  (1)
     "b8": {
@@ -2714,6 +2704,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1782_0421,
+        "0900": _A1782_0421,  # Same content as 0421
     },
     # Solarbank 1 E1600
     "A17C0": {
@@ -3027,6 +3018,32 @@ SOLIXMQTTMAP: Final[dict] = {
             "aa": {NAME: "grid_import_energy", FACTOR: 0.01},
             "ab": {NAME: "grid_export_energy", FACTOR: 0.01},
             # "ad": {NAME: "pv_to_grid_power"},
+        },
+    },
+    # Anker Solarbank Smartmeter
+    "A17X7US": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0405": {
+            # Interval: ~5 seconds, but only with realtime trigger
+            TOPIC: "param_info",
+            "a2": {NAME: "device_sn"},
+            "a6": {NAME: "sw_version", "values": 4},
+            "a7": {NAME: "sw_controller", "values": 4},
+            "b1": {NAME: "grid_to_home_power_l1"},
+            "b2": {NAME: "grid_to_home_power_l2"},
+            "b3": {NAME: "grid_to_home_power"},
+            "b4": {NAME: "grid_to_home_current_l1?"},
+            "b5": {NAME: "voltage_l1n?"},
+            "b6": {NAME: "grid_to_home_current_l2?"},
+            "b7": {NAME: "voltage_l2n?"},
+            "b8": {NAME: "ct_gain_factor?"},
+            "b9": {NAME: "voltage_l1l2?"},
+            "ba": {NAME: "home_to_pps_power_l1"},
+            "bb": {NAME: "home_to_pps_power_l2"},
+            "bc": {NAME: "home_to_pps_current_l1?"},
+            "bd": {NAME: "home_to_pps_current_l2?"},
+            "be": {NAME: "voltage_l1l2_alt?"},
+            "fe": {NAME: "msg_timestamp"},
         },
     },
     # Shello Pro 3 EM

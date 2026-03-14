@@ -627,7 +627,10 @@ async def poll_sites(  # noqa: C901
                             isAdmin=admin,
                         ):
                             api._site_devices.add(sn)
-                if sb_pps_info := mysite.get("solarbank_pps_info") or {}:
+                # Extract and merge SB_PPS data if no artefacts (existing device in list)
+                if (sb_pps_info := mysite.get("solarbank_pps_info") or {}) and (
+                    sb_pps_list := sb_pps_info.get("pps_list") or []
+                ):
                     # work around to correct totals and make them consistent with solarbank fields
                     sb_pps_info["total_photovoltaic_power"] = sb_pps_info.pop(
                         "total_pv_input_power", ""
@@ -635,7 +638,7 @@ async def poll_sites(  # noqa: C901
                     # Calculate total signed charging_power similar to solarbanks
                     sb_total_charge_calc = 0
                     sb_total_discharge_calc = 0
-                    for sbpps in sb_pps_info.get("pps_list") or []:
+                    for sbpps in sb_pps_list:
                         # modify only a copy of the device dict to prevent changing the scene info dict
                         sbpps = dict(sbpps).copy()
                         # work around for device_name which is actually the device_alias in scene info
@@ -660,7 +663,9 @@ async def poll_sites(  # noqa: C901
                             isAdmin=admin,
                         ):
                             api._site_devices.add(sn)
-                    sb_pps_info["total_charging_power"] = f"{sb_total_charge_calc:.0f}" # original may reflect only battery charge but no discharge
+                    sb_pps_info["total_charging_power"] = (
+                        f"{sb_total_charge_calc:.0f}"  # original may reflect only battery charge but no discharge
+                    )
                     sb_pps_info["battery_discharge_power"] = (
                         f"{sb_total_discharge_calc:.0f}"
                     )
@@ -705,7 +710,7 @@ async def poll_sites(  # noqa: C901
                             cp["alias_name"] = cp.pop("device_name")
                         # work around to merge various EV charger field names
                         cp["ev_charger_status"] = cp.pop("operating_state", None)
-                        cp["charging_power"] = cp.pop("power", "")
+                        cp["bat_charge_power"] = cp.pop("power", "")
                         if sn := api._update_dev(
                             cp,
                             devType=SolixDeviceType.EV_CHARGER.value,

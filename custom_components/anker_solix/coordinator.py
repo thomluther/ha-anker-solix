@@ -152,7 +152,8 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             if self.hass.loop.time() - self.update_handler.when() <= 0:
                 # skip listener update for now
                 LOGGER.log(
-                    logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                    # logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                    logging.DEBUG,
                     "Coordinator %s skipped listener update due to active delayed processing",
                     self.client.api.apisession.nickname,
                 )

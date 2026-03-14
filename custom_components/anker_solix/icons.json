@@ -756,6 +756,12 @@
             "usba_2_power": {
                 "default": "mdi:usb-port"
             },
+            "dc_12v_1_power": {
+                "default": "mdi:record-circle-outline"
+            },
+            "dc_12v_2_power": {
+                "default": "mdi:record-circle-outline"
+            },
             "remaining_time_hours": {
                 "default": "mdi:timelapse"
             }
