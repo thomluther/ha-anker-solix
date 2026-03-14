@@ -140,10 +140,10 @@ _A1728_0405 = {
     "a7": {NAME: "usbc_4_power"},  # USB-C solar output power
     "a8": {NAME: "usba_1_power"},  # USB-A left output power
     "a9": {NAME: "usba_2_power"},  # USB-A right output power
-    "aa": {NAME: "dc_input_power?"},  # DC input power 12V car charging?
-    "ab": {NAME: "photovoltaic_power"},  # Solar input
-    "ac": {NAME: "dc_input_power_total?"},  # DC input power (solar + car charging)?
-    "ad": {NAME: "output_power_total?"},  # Total DC output power for all ports?
+    "aa": {NAME: "dc_12v_1_power"},  # 12V car charger port output power
+    "ab": {NAME: "photovoltaic_power"},  # Solar input power
+    "ac": {NAME: "dc_input_power_total"},  # DC input power total (solar + USB-C input)
+    "ad": {NAME: "dc_output_power_total"},  # Total DC output power for all ports
     "b5": {NAME: "temperature", SIGNED: True},  # In Celsius
     "b6": {
         NAME: "charging_status",  # Publishes the raw integer value (0-3): Inactive (0), Solar (1), DC Input (2), Both (3)
