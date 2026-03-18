@@ -493,18 +493,83 @@ class AnkerSolixMqttSession:
         # return client connection state is client started
         return bool(self.client and self.client.is_connected())
 
+    @property
+    def _mqtt_info_cache_file(self) -> Path:
+        """Return path for the cached mqtt_info JSON file."""
+        return self._auth_cache_dir / f"{self.apisession.email}_mqtt_info.json"
+
+    async def _save_mqtt_info_cache(self) -> None:
+        """Persist mqtt_info (broker address and metadata) to disk for fallback use."""
+        # Only cache connection-relevant fields, not the full certificate content
+        cache_data = {
+            k: self.mqtt_info[k]
+            for k in ("endpoint_addr", "thing_name", "user_id", "app_name")
+            if k in self.mqtt_info
+        }
+        if cache_data.get("endpoint_addr"):
+            async with aiofiles.open(
+                self._mqtt_info_cache_file, "w", encoding="utf-8"
+            ) as f:
+                await f.write(json.dumps(cache_data))
+            self._logger.debug(
+                "Api %s MQTT broker info cached to %s",
+                self.apisession.nickname,
+                self._mqtt_info_cache_file,
+            )
+
+    async def _load_mqtt_info_cache(self) -> dict:
+        """Load previously cached mqtt_info from disk."""
+        try:
+            if self._mqtt_info_cache_file.is_file():
+                async with aiofiles.open(
+                    self._mqtt_info_cache_file, encoding="utf-8"
+                ) as f:
+                    return json.loads(await f.read())
+        except Exception:
+            self._logger.debug(
+                "Api %s failed to load cached MQTT broker info",
+                self.apisession.nickname,
+            )
+        return {}
+
     async def create_client(self) -> mqtt.Client | None:
         """Create and configure MQTT client with SSL/TLS certificates queried from Anker Solix api session."""
         try:
-            # get latest mqtt info from api session
-            self.mqtt_info = await self.apisession.get_mqtt_info()
+            # get latest mqtt info from api session, fall back to cache on failure
+            api_available = True
+            try:
+                self.mqtt_info = await self.apisession.get_mqtt_info()
+            except Exception as err:
+                api_available = False
+                self._logger.warning(
+                    "Api %s failed to get MQTT info from cloud API (%s), attempting cached fallback",
+                    self.apisession.nickname,
+                    err,
+                )
+                self.mqtt_info = {}
             # extract host from info
             self.host = self.mqtt_info.get("endpoint_addr") or None
+            if not self.host:
+                # Try loading cached broker info as fallback
+                if not api_available:
+                    cached_info = await self._load_mqtt_info_cache()
+                    if cached_info.get("endpoint_addr"):
+                        # Merge cached broker metadata with empty mqtt_info
+                        self.mqtt_info.update(cached_info)
+                        self.host = cached_info["endpoint_addr"]
+                        self._logger.info(
+                            "Api %s using cached MQTT broker address: %s",
+                            self.apisession.nickname,
+                            self.host,
+                        )
             if not self.host:
                 self.mqtt_info = {}
                 self.host = None
                 self.client = None
                 return self.client
+            # Cache broker info on successful API retrieval for future fallback
+            if api_available:
+                await self._save_mqtt_info_cache()
             # Create client instance
             self.client = mqtt.Client(
                 callback_api_version=CallbackAPIVersion.VERSION2,
@@ -521,30 +586,43 @@ class AnkerSolixMqttSession:
             self.client.on_subscribe = self.on_subscribe
             self.client.on_unsubscribe = self.on_unsubscribe
             self.client.on_publish = self.on_publish
-            # create temporary cert files
-            self._temp_cert_files = []
-            for certname in [
+            # create/update cert files from API response, or reuse existing cached certs
+            cert_names = [
                 "aws_root_ca1_pem",
                 "certificate_pem",
                 "private_key",
-            ]:
+            ]
+            self._temp_cert_files = []
+            for certname in cert_names:
                 filename = str(
                     self._auth_cache_dir
                     / f"{self.apisession.email}_mqtt_{certname}.crt"
                 )
-                # remove file if existing
-                if Path(filename).is_file():
-                    with contextlib.suppress(Exception):
-                        Path(filename).unlink()
-                # Cache login response in file for reuse
-                async with aiofiles.open(filename, "w", encoding="utf-8") as certfile:
-                    await certfile.write(self.mqtt_info.get(certname))
-                    self._logger.debug(
-                        "Api %s MQTT session certificate dumped to file: %s",
+                cert_content = self.mqtt_info.get(certname)
+                if cert_content:
+                    # Write new cert (overwrites any existing cached file)
+                    async with aiofiles.open(filename, "w", encoding="utf-8") as certfile:
+                        await certfile.write(cert_content)
+                        self._logger.debug(
+                            "Api %s MQTT session certificate dumped to file: %s",
+                            self.apisession.nickname,
+                            filename,
+                        )
+                elif not Path(filename).is_file():
+                    # No cert from API and no cached file available
+                    self._logger.warning(
+                        "Api %s MQTT certificate %s not available and no cached file found",
+                        self.apisession.nickname,
+                        certname,
+                    )
+                    break
+                else:
+                    self._logger.info(
+                        "Api %s reusing cached MQTT certificate: %s",
                         self.apisession.nickname,
                         filename,
                     )
-                    self._temp_cert_files.append(filename)
+                self._temp_cert_files.append(filename)
             # Configure SSL/TLS using temporary files
             if len(self._temp_cert_files) == 3:
                 # run this in loop executor to avoid blocking calls to files
@@ -571,8 +649,8 @@ class AnkerSolixMqttSession:
             raise
         return self.client
 
-    def cleanup(self):
-        """Clean up client connections and delete certificate files."""
+    def cleanup(self, delete_certs: bool = False):
+        """Clean up client connections. Certificate files are preserved for fallback reuse by default."""
         if self.is_connected():
             self.client.disconnect()
             self.client.loop_stop()
@@ -580,16 +658,17 @@ class AnkerSolixMqttSession:
         self.subscriptions = set()
         self.triggered_devices = set()
         self._message_callback = None
-        for filename in self._temp_cert_files:
-            # remove file if existing
-            if Path(filename).is_file():
-                with contextlib.suppress(Exception):
-                    Path(filename).unlink()
-                    self._logger.debug(
-                        "Api %s MQTT session deleted cert file: %s",
-                        self.apisession.nickname,
-                        filename,
-                    )
+        if delete_certs:
+            for filename in self._temp_cert_files:
+                # remove file if existing
+                if Path(filename).is_file():
+                    with contextlib.suppress(Exception):
+                        Path(filename).unlink()
+                        self._logger.debug(
+                            "Api %s MQTT session deleted cert file: %s",
+                            self.apisession.nickname,
+                            filename,
+                        )
         self._temp_cert_files = []
 
     def realtime_trigger(
