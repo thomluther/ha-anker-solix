@@ -1975,6 +1975,21 @@
             "port_memory_switch": {
                 "name": "Ausgangsanschlussspeicher"
             },
+            "usbc_1_switch": {
+                "name": "USB-C Port 1"
+            },
+            "usbc_2_switch": {
+                "name": "USB-C Port 2"
+            },
+            "usbc_3_switch": {
+                "name": "USB-C Port 3"
+            },
+            "usbc_4_switch": {
+                "name": "USB-C Port 4"
+            },
+            "usba_switch": {
+                "name": "USB-A Ports"
+            },
             "allow_refresh": {
                 "name": "Api Nutzung",
                 "state_attributes": {

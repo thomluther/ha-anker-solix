@@ -3585,7 +3585,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             elif self._attribute_name == "charging_status_desc":
                 # change the charing status options for matching device type
                 if data.get("type") == SolixDeviceType.SOLARBANK_PPS.value:
-                    self._attr_options=[status.name for status in SolarbankPpsStatus]
+                    self._attr_options = [status.name for status in SolarbankPpsStatus]
             # disable picture again if path does not exist to allow display of icons alternatively
             if (
                 self._attr_entity_picture
@@ -3677,6 +3677,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         elif self._context_base in self.coordinator.data:
             # Api device data
             data = self.coordinator.data.get(self._context_base)
+            ignore_invalid = False
             if self.entity_description.mqtt and (
                 mdev := self.coordinator.client.get_mqtt_device(self._context_base)
             ):
@@ -3685,6 +3686,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     api_prio=not mdev.device.get(MQTT_OVERLAY),
                     fromFile=self.coordinator.client.testmode(),
                 )
+                ignore_invalid = mdev.device.get(MQTT_OVERLAY) and mdev.is_connected
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
                 # check if FW changed for device and update device entry in registry
@@ -3712,8 +3714,10 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         data, self.coordinator_context
                     ):
                         self._attr_native_unit_of_measurement = unit
-                    if self.entity_description.check_invalid and not data.get(
-                        "data_valid", True
+                    if (
+                        not ignore_invalid
+                        and self.entity_description.check_invalid
+                        and not data.get("data_valid", True)
                     ):
                         # skip update or mark unvailable
                         if not self.coordinator.config_entry.options.get(

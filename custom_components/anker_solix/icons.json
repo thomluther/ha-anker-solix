@@ -837,6 +837,21 @@
             "port_memory_switch": {
                 "default": "mdi:memory"
             },
+            "usbc_1_switch": {
+                "default": "mdi:usb-c-port"
+            },
+            "usbc_2_switch": {
+                "default": "mdi:usb-c-port"
+            },
+            "usbc_3_switch": {
+                "default": "mdi:usb-c-port"
+            },
+            "usbc_4_switch": {
+                "default": "mdi:usb-c-port"
+            },
+            "usba_switch": {
+                "default": "mdi:usb-port"
+            },
             "allow_refresh": {
                 "default": "mdi:sync-alert",
                 "state": {
