@@ -13,6 +13,7 @@
                 "solarbank_energy": "Statistiques sur l'énergie de Solarbank",
                 "solarbank": "Solarbanks",
                 "solarbank_pps": "Centrales électrique Solarbank",
+                "solarbank_pps_energy": "Statistiques énergétiques du centrales électrique Solarbank",
                 "inverter": "Onduleurs",
                 "combiner_box": "Boîtes de jonction",
                 "pps": "Centrales électriques portables",
@@ -29,7 +30,9 @@
                 "hes_avg_power": "⌀-puissance du HES",
                 "vehicle": "Véhicules",
                 "ev_charger": "Chargeur de véhicule électrique",
-                "charger": "Chargeur électrique"
+                "charger": "Chargeur électrique",
+                "generator": "Générateur",
+                "home_backup": "Sauvegarde à domicile"
             }
         },
         "plan": {
@@ -408,6 +411,28 @@
                 "state": {
                     "on": "actif",
                     "off": "inactif"
+                }
+            },
+            "sub_pack_temp_alarm": {
+                "name": "Alerte de température d'extension",
+                "state": {
+                    "on": "actif",
+                    "off": "inactif"
+                }
+            },
+            "protection_status": {
+                "name": "Protection anti-tempête",
+                "state": {
+                    "on": "actif",
+                    "off": "inactif"
+                },
+                "state_attributes": {
+                    "charge_threshold": {
+                        "name": "Seuil de facturation"
+                    },
+                    "discharge_threshold": {
+                        "name": "Seuil de décharge"
+                    }
                 }
             },
             "site_admin": {
@@ -1285,7 +1310,101 @@
                 "name": "Charge solaire"
             },
             "grid_power_signed": {
-                "name": "Électricité du réseau"
+                "name": "Électricité du réseau",
+                "state_attributes": {
+                    "power_factor": {
+                        "name": "Facteur de puissance"
+                    },
+                    "voltage_l1l2": {
+                        "name": "L1-L2 Volt"
+                    },
+                    "voltage_l1l3": {
+                        "name": "L1-L3 Volt"
+                    },
+                    "voltage_l2l3": {
+                        "name": "L2-L3 Volt"
+                    }
+                }
+            },
+            "grid_power_signed_l1": {
+                "name": "Alimentation secteur L1",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampère"
+                    }
+                }
+            },
+            "grid_power_signed_l2": {
+                "name": "Alimentation secteur L2",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampère"
+                    }
+                }
+            },
+            "grid_power_signed_l3": {
+                "name": "Alimentation secteur L3",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampère"
+                    }
+                }
+            },
+            "system_output_power_signed_l1": {
+                "name": "Alimentation du système L1",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampère"
+                    }
+                }
+            },
+            "system_output_power_signed_l2": {
+                "name": "Alimentation du système L2",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampère"
+                    }
+                }
+            },
+            "system_output_power_signed_l3": {
+                "name": "Alimentation du système L3",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampère"
+                    }
+                }
+            },
+            "phase": {
+                "name": "Phase",
+                "state_attributes": {
+                    "main_ct_number": {
+                        "name": "CT principal"
+                    },
+                    "branch_ct_number": {
+                        "name": "Succursale CT"
+                    },
+                    "main_branch_check_status": {
+                        "name": "Vérifier le statut"
+                    }
+                }
             },
             "grid_import_energy": {
                 "name": "Énergie réseau consommée"

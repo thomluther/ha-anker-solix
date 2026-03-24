@@ -66,17 +66,19 @@ API_CATEGORIES: list = [
     SolixDeviceType.POWERPANEL.value,
     SolixDeviceType.INVERTER.value,
     SolixDeviceType.SOLARBANK.value,
+    SolixDeviceType.SOLARBANK_PPS.value,
     SolixDeviceType.SMARTMETER.value,
     SolixDeviceType.SMARTPLUG.value,
     SolixDeviceType.COMBINER_BOX.value,
     SolixDeviceType.HES.value,
+    SolixDeviceType.HOME_BACKUP.value,
     SolixDeviceType.VEHICLE.value,
-    # SolixDeviceType.CHARGER.value,
-    # SolixDeviceType.SOLARBANK_PPS.value,
-    # SolixDeviceType.EV_CHARGER.value,
+    SolixDeviceType.CHARGER.value,
+    SolixDeviceType.EV_CHARGER.value,
     # SolixDeviceType.POWERCOOLER.value,
     ApiCategories.account_info,
     ApiCategories.solarbank_energy,
+    ApiCategories.solarbank_pps_energy,
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
@@ -93,6 +95,7 @@ API_CATEGORIES: list = [
 ]
 DEFAULT_EXCLUDE_CATEGORIES: list = [
     ApiCategories.solarbank_energy,
+    ApiCategories.solarbank_pps_energy,
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
@@ -686,7 +689,7 @@ class AnkerSolixApiClient:
             else:
                 self.api.stopMqttSession()
                 # drop MQTT device instances
-                self.mqtt_devices = {}
+                self.mqtt_devices.clear()
         return self._mqtt_usage
 
     def trigger_timeout(self, seconds: int | None = None) -> int:
@@ -739,77 +742,86 @@ class AnkerSolixApiClient:
 
     async def check_mqtt_session(self) -> None:
         """Check mqtt usage and status of session, restart if required."""
-        if self._mqtt_usage and (
-            not self.api.mqttsession or not self.api.mqttsession.is_connected()
-        ):
-            _LOGGER.info(
-                "Api Coordinator %s is (re-)starting MQTT session",
-                self.api.apisession.nickname,
-            )
-            if await self.api.startMqttSession(fromFile=self._testmode):
-                mqtt_devs = [
-                    dev
-                    for dev in self.api.devices.values()
-                    if dev.get("mqtt_supported")
-                ]
-                if self._testmode:
-                    # start MQTT file poller in file mode
-                    # update the folder in the task dictionary for MQTT file polling
-                    self._task_dict["folder"] = self.api.testDir()
-                    self._task_dict["speed"] = self._mqtt_test_speed
-                    # Create task for polling mqtt messages from files for testing
-                    self._mqtt_task = asyncio.get_running_loop().create_task(
-                        self.api.mqttsession.file_poller(
-                            folderdict=self._task_dict,
-                        )
-                    )
-                    _LOGGER.info(
-                        "Api Coordinator %s MQTT file data poller task was started with speed %s for folder: %s",
-                        self.api.apisession.nickname,
-                        self._task_dict["speed"],
-                        self._task_dict["folder"],
-                    )
-                else:
-                    # subscribe eligible devices in live mode
-                    _LOGGER.info(
-                        "Api Coordinator %s MQTT session connected, subscribing eligible devices",
-                        self.api.apisession.nickname,
-                    )
-                    for dev in mqtt_devs:
-                        topic = (
-                            f"{self.api.mqttsession.get_topic_prefix(deviceDict=dev)}#"
-                        )
-                        resp = self.api.mqttsession.subscribe(topic)
-                        if resp and resp.is_failure:
-                            _LOGGER.warning(
-                                "Api Coordinator %s failed subscription for MQTT topic: %s",
-                                self.api.apisession.nickname,
-                                topic,
-                            )
-                        else:
-                            _LOGGER.log(
-                                logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
-                                "Api Coordinator %s subscribed to MQTT topic %s",
-                                self.api.apisession.nickname,
-                                topic,
-                            )
-                    if not mqtt_devs:
-                        _LOGGER.warning(
-                            "Api Coordinator %s did not find eligible devices for MQTT subscription",
-                            self.api.apisession.nickname,
-                        )
-                # create MQTT device instances
-                for dev in mqtt_devs:
-                    sn = dev.get("device_sn")
-                    if sn and (
-                        mdev := SolixMqttDeviceFactory(
-                            api_instance=self.api, device_sn=sn
-                        ).create_device()
-                    ):
-                        self.mqtt_devices[sn] = mdev
-                # Note: The method for update callback will be checked and set during coordinator updates
-            else:
-                _LOGGER.error(
-                    "Api Coordinator %s failed to start MQTT session",
+        if self._mqtt_usage:
+            # restart connection if not connected
+            if not self.api.mqttsession or not self.api.mqttsession.is_connected():
+                _LOGGER.info(
+                    "Api Coordinator %s is (re-)starting MQTT session",
                     self.api.apisession.nickname,
                 )
+                if await self.api.startMqttSession(fromFile=self._testmode):
+                    mqtt_devs = [
+                        dev
+                        for dev in self.api.devices.values()
+                        if dev.get("mqtt_supported")
+                    ]
+                    if self._testmode:
+                        # start MQTT file poller in file mode
+                        # update the folder in the task dictionary for MQTT file polling
+                        self._task_dict["folder"] = self.api.testDir()
+                        self._task_dict["speed"] = self._mqtt_test_speed
+                        # Create task for polling mqtt messages from files for testing
+                        self._mqtt_task = asyncio.get_running_loop().create_task(
+                            self.api.mqttsession.file_poller(
+                                folderdict=self._task_dict,
+                            )
+                        )
+                        _LOGGER.info(
+                            "Api Coordinator %s MQTT file data poller task was started with speed %s for folder: %s",
+                            self.api.apisession.nickname,
+                            self._task_dict["speed"],
+                            self._task_dict["folder"],
+                        )
+                    else:
+                        # subscribe eligible devices in live mode
+                        _LOGGER.info(
+                            "Api Coordinator %s MQTT session connected, subscribing eligible devices",
+                            self.api.apisession.nickname,
+                        )
+                        for dev in mqtt_devs:
+                            self.subscribe_device(dev)
+                        if not mqtt_devs:
+                            _LOGGER.warning(
+                                "Api Coordinator %s did not find eligible devices for MQTT subscription",
+                                self.api.apisession.nickname,
+                            )
+                    # create MQTT device instances
+                    for dev in mqtt_devs:
+                        sn = dev.get("device_sn")
+                        if sn and (
+                            mdev := SolixMqttDeviceFactory(
+                                api_instance=self.api, device_sn=sn
+                            ).create_device()
+                        ):
+                            self.mqtt_devices[sn] = mdev
+                    # Note: The method for update callback will be checked and set during coordinator updates
+                else:
+                    _LOGGER.error(
+                        "Api Coordinator %s failed to start MQTT session",
+                        self.api.apisession.nickname,
+                    )
+                    # drop MQTT device instances
+                    self.mqtt_devices.clear()
+            # check and redo subscription for existing mqtt devices
+            elif not self._testmode:
+                for mdev in self.mqtt_devices.values():
+                    if not mdev.is_subscribed() and not self.subscribe_device(
+                        mdev.device
+                    ):
+                        # clear mqtt data cache to avoid orphaned data
+                        mdev.mqttdata.clear()
+
+    def subscribe_device(self, deviceDict: dict) -> bool:
+        """Subscribe a device to MQTT messages."""
+        if self.api.mqttsession.is_connected():
+            topic = f"{self.api.mqttsession.get_topic_prefix(deviceDict=deviceDict)}#"
+            resp = self.api.mqttsession.subscribe(topic)
+            if resp and resp.is_failure:
+                _LOGGER.warning(
+                    "Api Coordinator %s failed subscription for MQTT topic: %s",
+                    self.api.apisession.nickname,
+                    topic,
+                )
+                return False
+            return True
+        return False

@@ -729,7 +729,7 @@ class SolixMqttDevice:
 
         """
         # Validate parameters and publish command
-        parms = self.get_cmd_parms(cmd=SolixMqttCommands.realtime_trigger)
+        parms = self.get_cmd_parms(cmd=SolixMqttCommands.realtime_trigger, all=True)
         return await self.run_command(
             cmd=SolixMqttCommands.realtime_trigger,
             value=timeout if "trigger_timeout_sec" in parms else None,

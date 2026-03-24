@@ -711,6 +711,18 @@
             "grid_power_signed": {
                 "default": "mdi:transmission-tower"
             },
+            "grid_power_signed_l1": {
+                "default": "mdi:numeric-1-circle"
+            },
+            "grid_power_signed_l2": {
+                "default": "mdi:numeric-2-circle"
+            },
+            "grid_power_signed_l3": {
+                "default": "mdi:numeric-3-circle"
+            },
+            "phase": {
+                "default": "mdi:current-ac"
+            },
             "data_timestamp": {
                 "default": "mdi:weather-cloudy-clock"
             },

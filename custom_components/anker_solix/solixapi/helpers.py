@@ -84,8 +84,8 @@ def generateTimestamp(in_ms: bool = False) -> str:
     return str(int(datetime.now().timestamp() * (1000 if in_ms else 1)))
 
 
-def convertToKwh(val: str | float, unit: str) -> str | float | None:
-    """Convert a given value to kWh depending on unit."""
+def convertToKwh(val: str | float, unit: str, decimals: int = 2) -> str | float | None:
+    """Convert a given value to kWh depending on unit, rounded to decimals."""
     try:
         result = None
         if isinstance(val, str):
@@ -95,14 +95,14 @@ def convertToKwh(val: str | float, unit: str) -> str | float | None:
         if result is None or not isinstance(unit, str):
             return None
         if (unit := unit.lower()) == "wh":
-            result = round(result / 1000, 2)
+            result = round(result / 1000, decimals)
         elif unit == "mwh":
-            result = round(result * 1000, 2)
+            result = round(result * 1000, decimals)
         elif unit == "gwh":
-            result = round(result * 1000 * 1000, 2)
+            result = round(result * 1000 * 1000, decimals)
         else:
-            return val
-        return str(result) if isinstance(val, str) else result
+            result = round(result, decimals)
+        return f"{result:.{decimals}f}" if isinstance(val, str) else result
     except ValueError:
         return None
 

@@ -62,6 +62,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         energy_daily,
         get_device_charge_order_stats,
         get_device_pv_statistics,
+        get_energy_offset,
         home_load_chart,
         refresh_pv_forecast,
     )
@@ -227,6 +228,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "all_power_limit_option",
                         "station_sn",
                         "total_stats",
+                        "energy_details",
                     ]:
                         if key == "power_limit_option":
                             if key in getattr(
@@ -283,7 +285,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "time_zone",
                             "grid_export_limit",
                             "owner_user_id",
-                            "phase",
                         ]
                         and value
                     ):
@@ -920,10 +921,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 ),
                             }
                         )
-                    elif key in [
-                        "photovoltaic_to_grid_power",
-                        "grid_to_home_power",
-                    ]:
+                    elif (
+                        key
+                        in [
+                            "photovoltaic_to_grid_power",
+                            "grid_to_home_power",
+                        ]
+                        and value
+                    ):
                         device[key] = str(value)
 
                     # smartplug specific keys
@@ -962,9 +967,16 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device["pv_name"] = (device.get("pv_name") or {}) | {
                             "pv2_name": str(value)
                         }
-
-                    # EV charger specific keys
-                    elif key == "ev_charger_status":
+                    elif key in [
+                        "phase",
+                        "main_ct_number",
+                        "branch_ct_number",
+                        "main_branch_check_status",
+                        "sub_pack_temp_alarm",
+                        "protection_status",
+                        "charge_protect_threshold",
+                        "discharge_protect_threshold",
+                    ]:
                         device[key] = value
 
                     # hes specific keys
@@ -1022,6 +1034,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device[key] = value
 
                     # EV charger specific keys
+                    elif key == "ev_charger_status":
+                        device[key] = value
                     elif (
                         key == "ocpp_connect_status"
                         and device.get("type") == SolixDeviceType.EV_CHARGER.value
@@ -1075,7 +1089,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     # recalculate capacity if required
                     if cap_change and str(size).isdigit() and str(exp).isdigit():
                         # NOTE: Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
-                        device["battery_capacity"] = f"{size * (1 + exp):.0f}"
+                        # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
+                        controller_bat = 0 if device.get("device_pn") == "A17E1" else 1
+                        device["battery_capacity"] = (
+                            f"{size * (controller_bat + exp):.0f}"
+                        )
                     cap = device.get("battery_capacity")
                     # get total SOC, prefer value depending on overlay
                     soc = (

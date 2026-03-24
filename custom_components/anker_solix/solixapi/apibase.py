@@ -592,6 +592,9 @@ class AnkerSolixBaseApi:
                                 "ac_output_power_signed_total",
                                 "ac_socket_power",
                                 "grid_power_signed",
+                                "grid_power_signed_l1",
+                                "grid_power_signed_l2",
+                                "grid_power_signed_l3",
                                 "heating_power",
                                 "grid_to_battery_power",
                                 "home_demand",
@@ -610,6 +613,8 @@ class AnkerSolixBaseApi:
                                 "home_load_preset",
                                 "pv_to_grid_power",
                                 "grid_to_home_power",
+                                "system_output_power_signed_l1",
+                                "system_output_power_signed_l2",
                                 "wifi_signal",
                                 "charging_power",
                                 "power_l1",
@@ -668,9 +673,16 @@ class AnkerSolixBaseApi:
                                 "voltage_l1",
                                 "voltage_l2",
                                 "voltage_l3",
+                                "voltage_l1l2",
+                                "voltage_l1l3",
+                                "voltage_l2l3",
+                                "power_factor",
                                 "current_l1",
                                 "current_l2",
                                 "current_l3",
+                                "system_output_current_l1",
+                                "system_output_current_l2",
+                                "system_output_current_l3",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -813,10 +825,18 @@ class AnkerSolixBaseApi:
                                 "ocpp_connect_status",
                                 "cp_signal_status",
                                 "plug_status",
+                                "solar_evcharge_monitoring_mode",
                             ]
                             and value is not None
                         ):
                             device_mqtt[key] = value
+                            # determine EV charger model 3 phase capability
+                            if key == "charging_duration_seconds":
+                                device_mqtt["installed_phases"] = (
+                                    int(values.get("voltage_l1", 0) > 0)
+                                    + int(values.get("voltage_l2", 0) > 0)
+                                    + int(values.get("voltage_l3", 0) > 0)
+                                )
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key

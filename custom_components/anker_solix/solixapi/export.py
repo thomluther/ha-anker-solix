@@ -45,7 +45,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.5.3.0"
+VERSION: str = "3.5.4.0"
 
 
 class AnkerSolixApiExport:
@@ -742,8 +742,8 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
-                # Additional exports for site types support AI mode
-                if power_site_type == 12:
+                # Additional exports for site types supporting AI mode
+                if power_site_type in [12, 14, 18]:
                     self._logger.info("Exporting site forecast schedule...")
                     await self.query(
                         endpoint=API_ENDPOINTS["get_forecast_schedule"],
@@ -801,6 +801,7 @@ class AnkerSolixApiExport:
                     "solar_production",
                     "home_usage",
                     "grid",
+                    "pps",
                 ]:
                     self._logger.info(
                         "Exporting site energy data for %s...",
@@ -812,7 +813,7 @@ class AnkerSolixApiExport:
                         filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_{self._randomize(siteId, 'site_id')}.json",
                         payload={
                             "site_id": siteId,
-                            "device_sn": "",
+                            "device_sn": "",  # All data, device independent
                             "type": "week",
                             "device_type": stat_type,
                             "start_time": (
@@ -828,7 +829,7 @@ class AnkerSolixApiExport:
                         filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_today_{self._randomize(siteId, 'site_id')}.json",
                         payload={
                             "site_id": siteId,
-                            "device_sn": "",
+                            "device_sn": "",  # All data, device independent
                             "type": "day",
                             "device_type": stat_type,
                             "start_time": datetime.today().strftime("%Y-%m-%d"),
@@ -836,32 +837,69 @@ class AnkerSolixApiExport:
                         },
                         replace=[(siteId, "<siteId>")],
                     )
-                for ch in ["pv" + str(num) for num in range(1, 5)] + ["microinverter"]:
-                    self._logger.info(
-                        "Exporting site energy data for solar production channel %s...",
-                        ch.upper(),
-                    )
-                    response = await self.query(
-                        endpoint=API_ENDPOINTS["energy_analysis"],
-                        filename=f"{API_FILEPREFIXES['energy_solar_production']}_{ch}_{self._randomize(siteId, 'site_id')}.json",
-                        payload={
-                            "site_id": siteId,
-                            "device_sn": "",
-                            "type": "week",
-                            "device_type": f"solar_production_{ch}",
-                            "start_time": (
-                                datetime.today() - timedelta(days=1)
-                            ).strftime("%Y-%m-%d"),
-                            "end_time": datetime.today().strftime("%Y-%m-%d"),
-                        },
-                        replace=[(siteId, "<siteId>")],
-                    )
-                    if not isinstance(response, dict) or not response.get("data"):
-                        self._logger.warning(
-                            "No solar production energy available for channel %s, skipping remaining solar channel export...",
+                # exporting more energy stats depending on system type
+                if site.get("site_type") == api.SolixDeviceType.SOLARBANK_PPS.value:
+                    # export PPS device related data
+                    pps = [
+                        key
+                        for key, item in self.api_power.devices.items()
+                        if item.get("site_id") == siteId
+                        and item.get("type") == api.SolixDeviceType.SOLARBANK_PPS.value
+                    ]
+                    for stat_type in [
+                        "home_usage",
+                        "pps",
+                    ]:
+                        self._logger.info(
+                            "Exporting device energy data for %s...",
+                            stat_type.upper(),
+                        )
+                        for sn in pps:
+                            await self.query(
+                                endpoint=API_ENDPOINTS["energy_analysis"],
+                                filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_{self._randomize(sn, 'device_sn')}_{self._randomize(siteId, 'site_id')}.json",
+                                payload={
+                                    "site_id": siteId,
+                                    "device_sn": sn,  # device specific data only
+                                    "type": "week",
+                                    "device_type": stat_type,
+                                    "start_time": (
+                                        datetime.today() - timedelta(days=1)
+                                    ).strftime("%Y-%m-%d"),
+                                    "end_time": datetime.today().strftime("%Y-%m-%d"),
+                                },
+                                replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                            )
+                else:
+                    # export PV channel data
+                    for ch in ["pv" + str(num) for num in range(1, 5)] + [
+                        "microinverter"
+                    ]:
+                        self._logger.info(
+                            "Exporting site energy data for solar production channel %s...",
                             ch.upper(),
                         )
-                        break
+                        response = await self.query(
+                            endpoint=API_ENDPOINTS["energy_analysis"],
+                            filename=f"{API_FILEPREFIXES['energy_solar_production']}_{ch}_{self._randomize(siteId, 'site_id')}.json",
+                            payload={
+                                "site_id": siteId,
+                                "device_sn": "",
+                                "type": "week",
+                                "device_type": f"solar_production_{ch}",
+                                "start_time": (
+                                    datetime.today() - timedelta(days=1)
+                                ).strftime("%Y-%m-%d"),
+                                "end_time": datetime.today().strftime("%Y-%m-%d"),
+                            },
+                            replace=[(siteId, "<siteId>")],
+                        )
+                        if not isinstance(response, dict) or not response.get("data"):
+                            self._logger.warning(
+                                "No solar production energy available for channel %s, skipping remaining solar channel export...",
+                                ch.upper(),
+                            )
+                            break
 
             # loop through all devices for other queries
             for sn, device in self.api_power.devices.items():
@@ -1179,7 +1217,11 @@ class AnkerSolixApiExport:
                 )
                 # check if valid charging data available for site and skip if not enforced
                 if not (
-                    is_charging := len(site.get("powerpanel_list") or []) > 0
+                    is_charging := site.get("site_type")
+                    in [
+                        api.SolixDeviceType.POWERPANEL.value,
+                        api.SolixDeviceType.HOME_BACKUP.value,
+                    ]
                 ) and not self.export_services & {ApiEndpointServices.charging}:
                     self._logger.info(
                         "No system for %s endpoint data found, skipping remaining site queries...",
@@ -1264,10 +1306,13 @@ class AnkerSolixApiExport:
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
 
-                # run only for main power panel devices for site owner
-                if (
-                    dev_type := device.get("type")
-                ) == api.SolixDeviceType.POWERPANEL.value:
+                # run only for appropriate devices and site owner
+                if (dev_type := device.get("type")) in [
+                    api.SolixDeviceType.POWERPANEL.value,
+                    api.SolixDeviceType.HOME_BACKUP.value,
+                    api.SolixDeviceType.COMBINER_BOX.value,
+                    api.SolixDeviceType.GENERATOR.value,
+                ]:
                     self._logger.info("Exporting %s monetary units...", dev_type)
                     # works only for site owners
                     await self.query(
@@ -1312,10 +1357,13 @@ class AnkerSolixApiExport:
                         admin=admin,
                     )
 
-                # run for power panel or pps devices for site owner
+                # run for proper device types if site owner
                 if dev_type in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.PPS.value,
+                    api.SolixDeviceType.HOME_BACKUP.value,
+                    api.SolixDeviceType.COMBINER_BOX.value,
+                    api.SolixDeviceType.GENERATOR.value,
                 ]:
                     self._logger.info("Exporting %s wifi info...", dev_type)
                     # works only for site owners
@@ -1565,7 +1613,11 @@ class AnkerSolixApiExport:
                 admin = device.get("is_admin")
 
                 # queries for HES devices
-                if device.get("type") == api.SolixDeviceType.HES.value:
+                if device.get("type") in [
+                    api.SolixDeviceType.HES.value,
+                    api.SolixDeviceType.COMBINER_BOX.value,
+                    api.SolixDeviceType.GENERATOR.value,
+                ]:
                     self._logger.info("Exporting HES device wifi info...")
                     # works only for site owners
                     await self.query(

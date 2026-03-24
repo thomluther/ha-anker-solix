@@ -13,6 +13,7 @@
                 "solarbank_energy": "Solarbank energy stats",
                 "solarbank": "Solarbanks",
                 "solarbank_pps": "Solarbank power stations",
+                "solarbank_pps_energy": "Solarbank PPS energy stats",
                 "inverter": "Inverter",
                 "combiner_box": "Combiner boxes",
                 "pps": "Portable power stations",
@@ -29,7 +30,9 @@
                 "hes_avg_power": "HES ⌀-power",
                 "vehicle": "Vehicles",
                 "ev_charger": "EV Charger",
-                "charger": "Power charger"
+                "charger": "Power charger",
+                "generator": "Generator",
+                "home_backup": "Home Backup"
             }
         },
         "plan": {
@@ -408,6 +411,28 @@
                 "state": {
                     "on": "On",
                     "off": "Off"
+                }
+            },
+            "sub_pack_temp_alarm": {
+                "name": "Exp. temperature alert",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                }
+            },
+            "protection_status": {
+                "name": "Storm guard",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                },
+                "state_attributes": {
+                    "charge_threshold": {
+                        "name": "Charge threshold"
+                    },
+                    "discharge_threshold": {
+                        "name": "Discharge threshold"
+                    }
                 }
             },
             "site_admin": {
@@ -1285,7 +1310,101 @@
                 "name": "Solar charge"
             },
             "grid_power_signed": {
-                "name": "Grid power"
+                "name": "Grid power",
+                "state_attributes": {
+                    "power_factor": {
+                        "name": "Power factor"
+                    },
+                    "voltage_l1l2": {
+                        "name": "L1-L2 Volt"
+                    },
+                    "voltage_l1l3": {
+                        "name": "L1-L3 Volt"
+                    },
+                    "voltage_l2l3": {
+                        "name": "L2-L3 Volt"
+                    }
+                }
+            },
+            "grid_power_signed_l1": {
+                "name": "Grid power L1",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
+            },
+            "grid_power_signed_l2": {
+                "name": "Grid power L2",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
+            },
+            "grid_power_signed_l3": {
+                "name": "Grid power L3",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
+            },
+            "system_output_power_signed_l1": {
+                "name": "System power L1",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
+            },
+            "system_output_power_signed_l2": {
+                "name": "System power L2",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
+            },
+            "system_output_power_signed_l3": {
+                "name": "System power L3",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
+            },
+            "phase": {
+                "name": "Phase",
+                "state_attributes": {
+                    "main_ct_number": {
+                        "name": "Main CT"
+                    },
+                    "branch_ct_number": {
+                        "name": "Branch CT"
+                    },
+                    "main_branch_check_status": {
+                        "name": "Check status"
+                    }
+                }
             },
             "grid_import_energy": {
                 "name": "Grid energy imported"

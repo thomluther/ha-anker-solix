@@ -104,6 +104,7 @@ API_ENDPOINTS: Final[dict] = {
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
     "site_detail": "power_service/v1/site/get_site_detail",  # Information for given site_id, can also be used by shared accounts
+    "site_detail_by_sn": "power_service/v1/site/get_site_detail_by_sn",  # needs owner, {"device_sn": deviceSn}, site_info from site list response
     "site_rules": "power_service/v1/site/get_site_rules",  # Information for supported power site types and their min and max qty per device model types
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
@@ -118,6 +119,7 @@ API_ENDPOINTS: Final[dict] = {
     "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
     "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
     "get_site_power_limit": "power_service/v1/site/get_power_limit",  # needs owner, lists power limits for system
+    "get_site_csv_export": "power_service/v1/site/site_data_exported",  # works for member, but system must support csv export, {"site_id": siteId, "start_time": "2026-03-14", "end_time": "2026-03-15"}, filename and URL for CSV download
     # Power endpoints */v1/app/*
     "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, only works for site owner account
     "set_auto_upgrade": "power_service/v1/app/set_auto_upgrade",  # Set/Enable Auto-Upgrade configuration, works only for site owner account
@@ -173,6 +175,12 @@ API_ENDPOINTS: Final[dict] = {
     # Power endpoints */v1/ai_ems/*
     "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
     "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
+    # Power endpoints for extender systems with generator
+    "get_extender_system_pn_ota": "power_service/v1/app/get_extender_system_pn_ota",  # works for member, get PNs and required? firmware in relation to generator A7320?
+    "get_extender_system_list": "power_service/v1/app/get_extender_system_list",  # works for member but empty, may list only systems with generator?
+    "get_extender_system_detail": "power_service/v1/app/get_extender_system_detail",  # requires extender system, {"extender_system_id": siteId},
+    "get_extender_system_cumulative_data": "power_service/v1/app/get_extender_system_cumulative_data",  # works for member but no data, may require correct system type, {"extender_system_id": siteId, other?},
+    "get_device_bind_details": "power_service/v1/app/get_device_bind_details",  # works for member, {"device_sn_list": [deviceSn]}, provides extender system id
     # App endpoints
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
@@ -230,7 +238,7 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 83 + 72 used => 155
+""" Other endpoints neither implemented nor explored: 97 + 79 used => 176
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message', # payload format unknown
@@ -256,6 +264,9 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/site/local_net',
     'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]}) May be used for automatic control of plugs in smart mode?
     'power_service/v1/site/site_data_check' # works for member, {"site_id": siteId, "current_time": "2025-12-10"}, check if site has data
+    'power_service/v1/site/get_site_list' # already used, but found twice in app package
+    'power_service/v1/site/electrician/add'
+    'power_service/v1/site/electrician/get' # needs owner, {"site_id": siteId}, shows electrician name and email
     'power_service/v1/app/compatible/check_third_sn',
     'power_service/v1/app/compatible/confirm_permissions_settings',
     'power_service/v1/app/compatible/get_confirm_permissions', # works as member, {"device_model": "A17C0"} => "data": {"is_confirm": 1,"confirm_type": "APs"}
@@ -278,6 +289,7 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/order/get_charging_order_sec_detail',  # may need real EV_Charger? {"order_id": orderId,"start_time": <timestamp>}
     'power_service/v1/app/order/get_charging_order_sec_preview',  # may need real EV_Charger? {"order_id": orderId}
     'power_service/v1/app/order/export_charge_order',
+    'power_service/v1/app/order/delete_charging_order',
     'power_service/v1/app/after_sale/get_popup',  # works as site member, {"site_id": siteId}, get active pop ups with code
     'power_service/v1/app/after_sale/check_popup',
     'power_service/v1/app/after_sale/check_sn',  # checks whether any account device SN is eligible for replacement of battery (recall programs?)
@@ -291,11 +303,21 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     2*'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
     2*"power_service/v1/app/user/set_user_param",
     'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list with objects for unknown feature_code e.g. {"check_list": [{"feature_code": "smartmeter", "product_code": "A17C5"}]}
+    'power_service/v1/app/set_extender_system_cumulative_data'
+    'power_service/v1/app/set_extender_system_name'
+    'power_service/v1/app/add_extender_system'
+    'power_service/v1/app/add_extender_system_device_list'
+    'power_service/v1/app/del_extender_system'
+    'power_service/v1/app/update_extender_system_strategy' # may change the extender strategy?
+    'power_service/v1/app/batch_add_extender_system_device'
+    'power_service/v1/app/batch_del_extender_system_device'
+    'power_service/v1/app/get_strategy_last_record' # may need owner access and correct system type {"extender_system_id": siteId, "strategy_type": 1},
     'power_service/v1/app/get_phonecode_list',
     'power_service/v1/app/get_annual_report',  # new report starting Jan 2025?
     'power_service/v1/app/report_tlv_event',  # tamper event? unknown what events to report, {"device_sn": deviceSn, "events": [{}]}
     'power_service/v1/app/shelly_ctrl_device', # {"device_sn": deviceSn, "op_type": "parameter", "value": value})) # Control shelly device settings, may require owner, usage known
-    'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
+    'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report {"device_sn": deviceSn, others?},
+    'power_service/v1/app/upgrade_event_reports' # {"upgrade_even_device_infos": [???]},
     'power_service/v1/app/mothly_report_show',  # This is no typo in the endpoint! Get link to actual html report, but App is required to view
     'power_service/v1/app/mothly_report_list',  # This is no typo in the endpoint! List existing monthly reports {"site_id": siteId}
     'power_service/v1/app/get_monthly_report_configs', # get the monthly report messages {"site_id": siteId}
@@ -319,7 +341,7 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
 
-App related: 18 + 3 used => 21 total
+App related: 21 + 3 used => 24 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/cloudstor/get_app_up_token_without_login',
@@ -338,6 +360,9 @@ App related: 18 + 3 used => 21 total
     'app/news/popup_record',
     'app/push/clear_count',
     'app/push/register_push_token',
+    'smart_service/v1/app/anka/get_entry_config',
+    'smart_service/v1/app/anka/get_menu_config',
+    'smart_service/v1/app/anka/set_entry_switch',
 
 Passport related: 30 + 0 used => 30 total
     'passport/get_user_param', # specify param_type which must be parsable as list of int, but does not show anything in response
@@ -371,7 +396,7 @@ Passport related: 30 + 0 used => 30 total
     'passport/discount_desc',  # get title, sub_title, button and sub_button
 
 PPS and Power Panel related: 6 + 12 used => 18 total
-    "charging_energy_service/sync_installation_inspection", #Unknown at this time
+    "charging_energy_service/sync_installation_inspection", # Unknown at this time
     "charging_energy_service/sync_config",
     "charging_energy_service/restart_peak_session",
     "charging_energy_service/preprocess_utility_rate_plan",
@@ -379,10 +404,10 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/adjust_station_price_unit",
 
     "charging_common_svc/location/get",  # Get default and identifier location for identifier_id, identifier_type, business_type with longitude, latitude, country_code, place_id, display_name, formatted_address
-    "charging_common_svc/location/set",  # Set default and identifier location
+    2*"charging_common_svc/location/set",  # Set default and identifier location
     "charging_common_svc/location/support",
 
-Home Energy System related (X1): 44 + 20 used => 64 total
+Home Energy System related (X1): 45 + 20 used => 65 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -392,6 +417,8 @@ Home Energy System related (X1): 44 + 20 used => 64 total
     "charging_hes_svc/device_self_check",
     "charging_hes_svc/deal_share_data",
     "charging_hes_svc/download_energy_statistics",
+    "charging_hes_svc/enable_aiems_mode",
+    "charging_hes_svc/get_aiems_profit",
     "charging_hes_svc/get_auto_disaster_prepare_status",
     "charging_hes_svc/get_auto_disaster_prepare_detail",
     "charging_hes_svc/get_back_up_history",
@@ -405,11 +432,11 @@ Home Energy System related (X1): 44 + 20 used => 64 total
     "charging_hes_svc/get_history_setting", # needs owner
     "charging_hes_svc/get_site_mi_list",
     "charging_hes_svc/get_station_config_and_status",
-    "charging_hes_svc/get_system_device_time",
-    "charging_hes_svc/get_tou_price_plan_detail",
-    "charging_hes_svc/get_user_fault_info",
     "charging_hes_svc/get_station_evchargers",  # needs owner
-    "charging_hes_svc/get_utility_rate_plan",
+    "charging_hes_svc/get_system_device_time",
+    "charging_hes_svc/get_tou_price_plan_detail", # {"site_id": siteId, "template_id": 2, "template_name": "Test", "customer_segment_type": 1}
+    "charging_hes_svc/get_user_fault_info",
+    "charging_hes_svc/get_utility_rate_plan", # page not found?
     "charging_hes_svc/get_vpp_check_code",
     "charging_hes_svc/get_vpp_service_policy_by_agg_user",
     "charging_hes_svc/update_device_info_by_app",
@@ -430,7 +457,7 @@ Home Energy System related (X1): 44 + 20 used => 64 total
     "charging_hes_svc/share_device/invite_installer_member",
     "charging_hes_svc/share_device/get_installer_invited_list",
 
-Home Energy System related (X1): 7 + 0 used => 7 total
+Home Energy System related (X1): 6 + 0 used => 6 total
     "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
     "charging_hes_dynamic_price_svc/get_price_company", # needs owner
     "charging_hes_dynamic_price_svc/get_price", # needs owner
@@ -447,11 +474,24 @@ related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/disaster_detail',
 
-related to Prime charger models: 8 + 9 used => 17 total
+related to Prime charger models: 22 + 9 used => 31 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
     'mini_power/v1/app/setting/set_charging_mode_status',
+    'mini_power/v1/app/setting/get_port_remark',
+    'mini_power/v1/app/setting/set_port_remark',
+    'mini_power/v1/app/setting/get_charging_device_identity_new_status',
+    'mini_power/v1/app/setting/set_charging_device_identity_new_status',
+    'mini_power/v1/app/setting/set_charging_device_identity_status',
+    'mini_power/v1/app/setting/get_charging_device_identity_status_default_true',
+    'mini_power/v1/app/setting/set_charging_device_identity_status_default_true',
+    'mini_power/v1/app/setting/get_power_range_support_protocols',
+    'mini_power/v1/app/setting/get_protocol_status',
+    'mini_power/v1/app/setting/set_protocol_status',
+    'mini_power/v1/app/setting/get_port_protocol_status',
+    'mini_power/v1/app/setting/set_port_protocol_status',
+    'mini_power/v1/app/setting/set_mode_sub_status',
     'mini_power/v1/app/egg/add_easter_egg_trigger_record',
     'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
     'mini_power/v1/app/setting/set_compatibility_status',
@@ -459,6 +499,7 @@ related to Prime charger models: 8 + 9 used => 17 total
     'mini_power/v1/app/style/add_manual_clock_screensavers',
     'mini_power/v1/app/style/delete_manual_clock_screensavers',
     'mini_power/v1/app/style/get_url',
+    'mini_power/v1/app/style/get_screensaver_img_url',
     'mini_power/v1/app/style/set_manual_clock_screensaver_name',
 
 Structure of the JSON response for an API Login Request:
@@ -495,13 +536,16 @@ API_FILEPREFIXES: Final[dict] = {
     "get_third_platforms": "list_third_platforms",
     "get_token_by_userid": "get_token",
     "get_shelly_status": "shelly_status",
+    "get_site_csv_export": "site_csv_export",  # works for member, but system must support csv export, {"site_id": siteId, "start_time": "2026-03-14", "end_time": "2026-03-15"}, filename and URL for CSV download
     "scene_info": "scene",
     "site_detail": "site_detail",
+    "site_detail_by_sn": "site_detail_sn",
     "wifi_list": "wifi_list",
     "energy_solarbank": "energy_solarbank",
     "energy_solar_production": "energy_solar_production",
     "energy_home_usage": "energy_home_usage",
     "energy_grid": "energy_grid",
+    "energy_pps": "energy_pps",
     "solar_info": "solar_info",
     "compatible_process": "compatible_process",
     "get_cutoff": "power_cutoff",
@@ -537,6 +581,11 @@ API_FILEPREFIXES: Final[dict] = {
     "get_vehicle_year_attributes": "vehicle_year_attributes",
     "get_user_vehicles": "user_vehicles",
     "get_user_vehicle_details": "user_vehicle_details",
+    "get_extender_system_pn_ota": "extender_system_pn_ota",
+    "get_extender_system_list": "extender_system_list",
+    "get_extender_system_detail": "extender_system_detail",
+    "get_extender_system_cumulative_data": "extender_system_data",
+    "get_device_bind_details": "device_bind_details",
     "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
@@ -641,7 +690,7 @@ A17A2  Powered Cooler 50                        Powered Cooler
 A17A3  SOLIX Everfrost 2 23L                    Powered Cooler
 A17A4  SOLIX Everfrost 2 40L                    Powered Cooler
 A17A5  SOLIX Everfrost 2 58L                    Powered Cooler
-A17B1  SOLIX Home Power Panel                   Power Solution
+A17B1  SOLIX Home Power Panel                   Home Backup System
 A17C0  Solarbank E1600                          Balcony Solar Power System
 A17C1  Solarbank 2 E1600 Pro                    Balcony Solar Power System
 A17C2  Solarbank 2 E1600 AC                     Balcony Solar Power System
@@ -668,6 +717,9 @@ AE100  SOLIX Power Dock                         Balcony Solar Power System
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 AS100  C1000 Gen 2 LE                           Portable Power Station
 AX1S0  Power Dock Pro                           Residential Storage System
+AX170  Power Dock                               Home Backup System
+A17E1  Anker SOLIX E10                          Home Backup System
+A7320  SOLIX Smart Generator 5500               Smart Generator
 ----------------------------------------------------------------------------------------------------
 """
 
@@ -713,6 +765,8 @@ class SolixDeviceType(Enum):
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
     HES = "hes"
+    HOME_BACKUP = "home_backup"
+    GENERATOR = "generator"
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
     POWERBANK = "powerbank"
@@ -856,6 +910,7 @@ class ApiCategories:
     solarbank_fittings: str = "solarbank_fittings"
     solarbank_cutoff: str = "solarbank_cutoff"
     solarbank_solar_info: str = "solarbank_solar_info"
+    solarbank_pps_energy: str = "solarbank_pps_energy"
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
     powerpanel_energy: str = "powerpanel_energy"
@@ -924,6 +979,7 @@ class SolixDeviceCapacity:
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
+    A17E1: int = 6144  # SOLIX E10 Battery module, Controller has no battery?
 
 
 @dataclass(frozen=True)
@@ -947,9 +1003,13 @@ class SolixSiteType:
     )  # Main A17C5 SB3 Pro, including power dock option for SB3 multisystems
     t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782 SOLIX F3000 Portable Power Station (Solarbank PPS) with Smart Meter support for US market
     t_14 = SolixDeviceType.EV_CHARGER.value  # Main A5191 Smart EV Charger
-    # t_15 = ???  # Main A17E1 & A17X7US Smart Meter for US market
+    t_15 = (
+        SolixDeviceType.HOME_BACKUP.value
+    )  # Main E10 A17E1 & A17X7US Smart Meter for US market
     # t_16 = ???  # Main A1903 Charging base & 4 each A110A, A110B, A110G, A1341
-    # t_17 = ??? # Only AX170
+    t_17 = (
+        SolixDeviceType.HOME_BACKUP.value
+    )  # Only AX170: Power Dock US market to connect multiple E10
     t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, SHEM3, SHEMP3, A17X8, SHPPS, A5191
 
 
@@ -974,7 +1034,9 @@ class SolixDeviceCategory:
         SolixDeviceType.SOLARBANK.value + "_3"
     )  # SOLIX Solarbank 3 E2700 Pro, generation 3
     # Station
-    AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock
+    AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock Solarbanks
+    AX1S0: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Pro HES system
+    AX170: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Home Backup
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
@@ -1026,25 +1088,26 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
+    A1783: str = (
+        SolixDeviceType.PPS.value
+    )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    A1785: str = (
+        SolixDeviceType.PPS.value
+    )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
+    A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
+    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
+    # Solarbank PPS devices
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX F3000 Portable Power Station with SM support (US Market)
-    A1783: str = (
-        SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
-    A1785: str = (
-        SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
-    A17E1: str = (
-        SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX Solarbank Prime E10 Power Module (US Market)
-
-    A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
-    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
-    # Home Power Panels
+    # Power Panels (Home_backup)
     A17B1: str = (
         SolixDeviceType.POWERPANEL.value
     )  # SOLIX Home Power Panel for SOLIX F3800
+    # Home Backup devices
+    A17E1: str = (
+        SolixDeviceType.HOME_BACKUP.value
+    )  # SOLIX Home Backup system E10 Power Module (US Market)
     # Home Energy System (HES)
     A5101: str = SolixDeviceType.HES.value  # SOLIX X1 P6K US
     A5102: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 1P H(3.68~6)K
@@ -1053,7 +1116,6 @@ class SolixDeviceCategory:
     A5220: str = SolixDeviceType.HES.value  # SOLIX X1 Battery module
     A5341: str = SolixDeviceType.HES.value  # SOLIX X1 Backup Controller
     A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
-    AX1S0: str = SolixDeviceType.HES.value  # SOLIX Power Dock Pro
     # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
@@ -1076,6 +1138,8 @@ class SolixDeviceCategory:
     )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
+    # Smart Generators
+    A7320: str = SolixDeviceType.GENERATOR.value  # SOLIX Smart Generator 5500
 
 
 @dataclass(frozen=True)
@@ -1457,9 +1521,9 @@ class SolixChargerPortStatus(StrEnum):
 class SolixPhaseMode(StrEnum):
     """Str Enumeration for Anker Solix Phase operation mode."""
 
-    auto_switch = "0"
+    automatic = "0"
     one_phase = "1"
-    three_phase = "2"
+    # three_phase = "2"
     unknown = "unknown"
 
 

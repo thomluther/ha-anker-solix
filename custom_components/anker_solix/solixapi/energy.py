@@ -13,6 +13,7 @@ from .apitypes import (
     SolarbankUsageMode,
     SolixDeviceType,
 )
+from .helpers import convertToKwh
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -31,8 +32,9 @@ async def energy_daily(  # noqa: C901
 ) -> dict:
     """Fetch daily Energy data for given interval and provide it in a table format dictionary.
 
-    Solar production data is always queried. Additional energy data will be queried for devtypes 'solarbank' or 'smartmeter'. The number of
-    queries is optimized if dayTotals is True
+    Solar production data is always queried if devtypes does not contain 'solarbank_pps'.
+    Additional energy data will be queried for devtypes 'solarbank' or 'smartmeter'.
+    The number of queries is optimized if dayTotals is True
     Example:
     {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "battery_discharge": "0.47", "battery_charge": "0.56"},
      "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
@@ -80,6 +82,10 @@ async def energy_daily(  # noqa: C901
                 devType="solarbank",
             )
         items = resp.get("power") or []
+        # power unit is incorrectly wh, but values are kWh
+        # unit = resp.get("power_unit") or ""
+        unit = "kwh"
+        t_unit = resp.get("total_energy_unit") or ""
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
@@ -96,7 +102,9 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "battery_discharge": item.get("value") or None,
+                        "battery_discharge": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
                     }
                 )
                 table.update({daystr: entry})
@@ -124,16 +132,26 @@ async def energy_daily(  # noqa: C901
                         entry.update(
                             {
                                 "date": daystr,
-                                "battery_discharge": item.get("value") or None,
+                                "battery_discharge": convertToKwh(
+                                    val=item.get("value") or None, unit=unit
+                                ),
                             }
                         )
                 entry.update(
                     {
                         "date": daystr,
-                        "ac_socket": resp.get("ac_out_put_total") or None,
-                        "battery_to_home": resp.get("battery_to_home_total") or None,
-                        "grid_to_battery": resp.get("grid_to_battery_total") or None,
-                        "3rd_party_pv_to_bat": resp.get("third_party_pv_to_bat") or None
+                        "ac_socket": convertToKwh(
+                            val=resp.get("ac_out_put_total") or None, unit=t_unit
+                        ),
+                        "battery_to_home": convertToKwh(
+                            val=resp.get("battery_to_home_total") or None, unit=t_unit
+                        ),
+                        "grid_to_battery": convertToKwh(
+                            val=resp.get("grid_to_battery_total") or None, unit=t_unit
+                        ),
+                        "3rd_party_pv_to_bat": convertToKwh(
+                            val=resp.get("third_party_pv_to_bat") or None, unit=t_unit
+                        )
                         if other_pv
                         else None,
                     }
@@ -151,22 +169,36 @@ async def energy_daily(  # noqa: C901
                 self.apisession.nickname,
             )
 
-    # Get home usage energy types if device is solarbank generation 2 or smart meter or smart plugs
+    # Get home usage energy types if device is solarbank generation 2, smart meter, smart plugs, solarbank_pps
     if (
         SolixDeviceType.SOLARBANK.value in devTypes
         and ((self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2
     ) or (
-        {SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} & devTypes
+        {
+            SolixDeviceType.SMARTMETER.value,
+            SolixDeviceType.SMARTPLUG.value,
+            SolixDeviceType.SOLARBANK_PPS.value,
+        }
+        & devTypes
     ):
         # get first data period from file or api
         justify_daytotals = bool(dayTotals)
         if fromFile:
-            resp = (
-                await self.apisession.loadFromFile(
-                    Path(self.testDir())
-                    / f"{API_FILEPREFIXES['energy_home_usage']}_{siteId}.json"
-                )
-            ).get("data", {})
+            # first try file with device SN
+            if not (
+                resp := (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['energy_home_usage']}_{deviceSn}_{siteId}.json"
+                    )
+                ).get("data", {})
+            ):
+                resp = (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['energy_home_usage']}_{siteId}.json"
+                    )
+                ).get("data", {})
         else:
             resp = await self.energy_analysis(
                 siteId=siteId,
@@ -179,6 +211,10 @@ async def energy_daily(  # noqa: C901
                 devType="home_usage",
             )
         items = resp.get("power") or []
+        # power unit is incorrectly wh, but values are kWh
+        # unit = resp.get("power_unit") or ""
+        unit = "kwh"
+        t_unit = resp.get("total_energy_unit") or ""
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
@@ -195,7 +231,9 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "home_usage": item.get("value") or None,
+                        "home_usage": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
                     }
                 )
                 table.update({daystr: entry})
@@ -223,16 +261,27 @@ async def energy_daily(  # noqa: C901
                         entry.update(
                             {
                                 "date": daystr,
-                                "home_usage": item.get("value") or None,
+                                "home_usage": convertToKwh(
+                                    val=item.get("value") or None, unit=unit
+                                ),
                             }
                         )
                 entry.update(
                     {
                         "date": daystr,
-                        "grid_to_home": resp.get("grid_to_home_total") or None,
-                        "smartplugs_total": (resp.get("smart_plug_info") or {}).get(
-                            "total_power"
+                        "grid_to_home": convertToKwh(
+                            val=resp.get("grid_to_home_total") or None, unit=t_unit
+                        ),
+                        "smartplugs_total": convertToKwh(
+                            val=(resp.get("smart_plug_info") or {}).get("total_power")
+                            or None,
+                            unit=t_unit,
+                        ),
+                        # reuse value from solarbank query if not provided in response
+                        "battery_to_home": convertToKwh(
+                            val=resp.get("battery_to_home_total"), unit=t_unit
                         )
+                        or entry.get("battery_to_home")
                         or None,
                     }
                 )
@@ -249,7 +298,9 @@ async def energy_daily(  # noqa: C901
                                 {
                                     "device_sn": plug.get("device_sn"),
                                     "alias": plug.get("device_name"),
-                                    "energy": plug.get("total_power"),
+                                    "energy": convertToKwh(
+                                        val=plug.get("total_power"), unit=unit
+                                    ),
                                 }
                                 for plug in plug_list
                             ]
@@ -290,6 +341,10 @@ async def energy_daily(  # noqa: C901
                 devType="grid",
             )
         items = resp.get("power") or []
+        # power unit is incorrectly wh, but values are kWh
+        # unit = resp.get("power_unit") or ""
+        unit = "kwh"
+        t_unit = resp.get("total_energy_unit") or ""
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
@@ -307,12 +362,15 @@ async def energy_daily(  # noqa: C901
                     {
                         "date": daystr,
                         # grid export is negative, convert to re-use as solar_to_grid value
-                        "solar_to_grid": item.get("value", "").replace("-", "", 1)
-                        or None,
+                        "solar_to_grid": convertToKwh(
+                            val=item.get("value", "").replace("-", "", 1) or None,
+                            unit=unit,
+                        ),
                     }
                 )
                 table.update({daystr: entry})
         items = resp.get("charge_trend") or []
+        c_unit = resp.get("charge_unit") or ""
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
@@ -329,7 +387,9 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "grid_to_home": item.get("value") or None,
+                        "grid_to_home": convertToKwh(
+                            val=item.get("value") or None, unit=c_unit
+                        ),
                     }
                 )
                 table.update({daystr: entry})
@@ -358,10 +418,11 @@ async def energy_daily(  # noqa: C901
                             {
                                 "date": daystr,
                                 # grid export is negative, convert to re-use as solar_to_grid value
-                                "solar_to_grid": item.get("value", "").replace(
-                                    "-", "", 1
-                                )
-                                or None,
+                                "solar_to_grid": convertToKwh(
+                                    val=item.get("value", "").replace("-", "", 1)
+                                    or None,
+                                    unit=unit,
+                                ),
                             }
                         )
                     item = next(iter(resp.get("charge_trend") or []), {})
@@ -369,14 +430,17 @@ async def energy_daily(  # noqa: C901
                         entry.update(
                             {
                                 "date": daystr,
-                                "grid_to_home": item.get("value") or None,
+                                "grid_to_home": convertToKwh(
+                                    val=item.get("value") or None, unit=c_unit
+                                ),
                             }
                         )
                 entry.update(
                     {
                         "date": daystr,
-                        "3rd_party_pv_to_grid": resp.get("third_party_pv_to_grid")
-                        or None
+                        "3rd_party_pv_to_grid": convertToKwh(
+                            val=resp.get("third_party_pv_to_grid") or None, unit=t_unit
+                        )
                         if other_pv
                         else None,
                     }
@@ -420,6 +484,10 @@ async def energy_daily(  # noqa: C901
                         devType=f"solar_production_{ch.replace('_', '')}",
                     )
                 items = resp.get("power") or []
+                # power unit is incorrectly wh, but values are kWh
+                # unit = resp.get("power_unit") or ""
+                unit = "kwh"
+                t_unit = resp.get("total_energy_unit") or ""
                 # for file usage ensure that last item is used if today is included
                 start = (
                     len(items) - 1
@@ -436,10 +504,9 @@ async def energy_daily(  # noqa: C901
                         entry.update(
                             {
                                 "date": daystr,
-                                f"solar_production_{ch.replace('_', '')}": item.get(
-                                    "value"
-                                )
-                                or None,
+                                f"solar_production_{ch.replace('_', '')}": convertToKwh(
+                                    val=item.get("value") or None, unit=unit
+                                ),
                             }
                         )
                         table.update({daystr: entry})
@@ -450,94 +517,301 @@ async def energy_daily(  # noqa: C901
                         ch.replace("_", ""),
                     )
 
-    # Always Add solar production which contains percentages
-    # get first data period from file or api
-    justify_daytotals = bool(dayTotals)
-    if fromFile:
-        resp = (
-            await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['energy_solar_production']}_{siteId}.json"
-            )
-        ).get("data", {})
-    else:
-        resp = await self.energy_analysis(
-            siteId=siteId,
-            deviceSn=deviceSn,
-            rangeType="week",
-            startDay=startDay,
-            endDay=startDay
-            if justify_daytotals
-            else startDay + timedelta(days=numDays - 1),
-            devType="solar_production",
-        )
-    items = resp.get("power") or []
-    # for file usage ensure that last item is used if today is included
-    start = (
-        len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
-    )
-    for idx, item in enumerate(items[start : start + numDays]):
+    # Add pps stats for solarbank_pps energies
+    if SolixDeviceType.SOLARBANK_PPS.value in devTypes:
+        # This has no useful daily totals, breakdown is in interval values
+        justify_daytotals = False
         if fromFile:
-            daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
-        else:
-            daystr = item.get("time")
-        if daystr:
-            entry = table.get(daystr, {"date": daystr})
-            entry.update(
-                {"date": daystr, "solar_production": item.get("value") or None}
-            )
-            table.update({daystr: entry})
-    # Solarbank charge and percentages are only received as total value for given interval. If requested, make daily queries for given interval
-    if justify_daytotals and table:
-        for day in [
-            startDay + timedelta(days=x)
-            for x in range(min(len(items), numDays) if fromFile else numDays)
-        ]:
-            daystr = day.strftime("%Y-%m-%d")
-            entry = table.get(daystr, {"date": daystr})
-            # update response only for real requests if not first day which was already queried
-            if not fromFile and day != startDay:
-                resp = await self.energy_analysis(
-                    siteId=siteId,
-                    deviceSn=deviceSn,
-                    rangeType="week",
-                    startDay=day,
-                    endDay=day,
-                    devType="solar_production",
-                )
-                # get first item from breakdown list for single day queries
-                item = next(iter(resp.get("power") or []), {})
-                if daystr == item.get("time"):
-                    entry.update(
-                        {
-                            "date": daystr,
-                            "solar_production": item.get("value") or None,
-                        }
+            # first try file with device SN
+            if not (
+                resp := (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['energy_pps']}_{deviceSn}_{siteId}.json"
                     )
-            entry.update(
-                {
-                    "date": daystr,
-                    "battery_charge": resp.get("charge_total") or None,
-                    "solar_to_grid": resp.get("solar_to_grid_total") or None,
-                    "solar_to_battery": resp.get("solar_to_battery_total") or None,
-                    "solar_to_home": resp.get("solar_to_home_total") or None,
-                    "battery_percentage": resp.get("charging_pre") or None,
-                    "solar_percentage": resp.get("electricity_pre") or None,
-                    "other_percentage": resp.get("others_pre") or None,
-                }
+                ).get("data", {})
+            ):
+                resp = (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['energy_pps']}_{siteId}.json"
+                    )
+                ).get("data", {})
+        else:
+            resp = await self.energy_analysis(
+                siteId=siteId,
+                deviceSn=deviceSn,
+                rangeType="week",
+                startDay=startDay,
+                endDay=startDay + timedelta(days=numDays - 1),
+                devType="pps",
             )
-            table.update({daystr: entry})
-            if showProgress:
-                self._logger.info(
-                    "Received api %s solar_production energy for %s",
-                    self.apisession.nickname,
-                    daystr,
-                )
-    if showProgress:
-        self._logger.info(
-            "Received api %s solar_production energy for period",
-            self.apisession.nickname,
+        items = resp.get("power") or []
+        # power unit is incorrectly wh, but values are kWh
+        # unit = resp.get("power_unit") or ""
+        unit = "kwh"
+        t_unit = resp.get("total_energy_unit") or ""
+        # for file usage ensure that last item is used if today is included
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
         )
+        for idx, item in enumerate(items[start : start + numDays]):
+            if fromFile:
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            else:
+                daystr = item.get("time")
+            if daystr:
+                entry = table.get(daystr, {"date": daystr})
+                rods = item.get("rods") or []
+                entry.update(
+                    {
+                        "date": daystr,
+                        "battery_charge": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
+                        # Extract charge breakdown from interval
+                        "grid_to_battery": convertToKwh(
+                            val=(
+                                (
+                                    str(
+                                        float(d.get("to") or 0)
+                                        - float(d.get("from") or 0)
+                                    )
+                                    if d.get("to")
+                                    else None
+                                )
+                                if (
+                                    d := (
+                                        [
+                                            d
+                                            for d in rods
+                                            if d.get("source_type") == "grid"
+                                        ]
+                                        or [{}]
+                                    )[0]
+                                )
+                                else None
+                            ),
+                            unit=unit,
+                        ),
+                        "solar_to_battery": convertToKwh(
+                            val=(
+                                (
+                                    str(
+                                        float(d.get("to") or 0)
+                                        - float(d.get("from") or 0)
+                                    )
+                                    if d.get("to")
+                                    else None
+                                )
+                                if (
+                                    d := (
+                                        [
+                                            d
+                                            for d in rods
+                                            if d.get("source_type") == "on-board-solar"
+                                        ]
+                                        or [{}]
+                                    )[0]
+                                )
+                                else None
+                            ),
+                            unit=unit,
+                        ),
+                        "3rd_party_pv_to_bat": convertToKwh(
+                            val=(
+                                (
+                                    str(
+                                        float(d.get("to") or 0)
+                                        - float(d.get("from") or 0)
+                                    )
+                                    if d.get("to")
+                                    else None
+                                )
+                                if (
+                                    d := (
+                                        [
+                                            d
+                                            for d in rods
+                                            if d.get("source_type") == "third-solar"
+                                        ]
+                                        or [{}]
+                                    )[0]
+                                )
+                                else None
+                            ),
+                            unit=unit,
+                        ),
+                    }
+                )
+                table.update({daystr: entry})
+        # Add total statistics to table if not device breakdown
+        if not deviceSn and (stats := resp.get("statistics")):
+            table["statistics"] = stats
+        # No additional useful data available in totals for now
+        if justify_daytotals and table:
+            for day in [
+                startDay + timedelta(days=x)
+                for x in range(min(len(items), numDays) if fromFile else numDays)
+            ]:
+                daystr = day.strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                # update response only for real requests if not first day which was already queried
+                if not fromFile and day != startDay:
+                    resp = await self.energy_analysis(
+                        siteId=siteId,
+                        deviceSn=deviceSn,
+                        rangeType="week",
+                        startDay=day,
+                        endDay=day,
+                        devType="pps",
+                    )
+                    # get first item from breakdown list for single day queries
+                    item = next(iter(resp.get("power") or []), {})
+                    if daystr == item.get("time"):
+                        entry.update(
+                            {
+                                "date": daystr,
+                                # add useful totals here
+                            }
+                        )
+                entry.update(
+                    {
+                        "date": daystr,
+                        # add useful totals here
+                    }
+                )
+                table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info(
+                        "Received api %s pps energy for %s",
+                        self.apisession.nickname,
+                        daystr,
+                    )
+        if showProgress:
+            self._logger.info(
+                "Received api %s pps energy for period",
+                self.apisession.nickname,
+            )
+    else:
+        # Always Add solar production which contains percentages if not solarbank_pps
+        # solarbank_pps does not provide percentages for now
+        # get first data period from file or api
+        justify_daytotals = bool(dayTotals)
+        if fromFile:
+            resp = (
+                await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['energy_solar_production']}_{siteId}.json"
+                )
+            ).get("data", {})
+        else:
+            resp = await self.energy_analysis(
+                siteId=siteId,
+                deviceSn=deviceSn,
+                rangeType="week",
+                startDay=startDay,
+                endDay=startDay
+                if justify_daytotals
+                else startDay + timedelta(days=numDays - 1),
+                devType="solar_production",
+            )
+        items = resp.get("power") or []
+        # power unit is incorrectly wh, but values are kWh
+        # unit = resp.get("power_unit") or ""
+        unit = "kwh"
+        t_unit = resp.get("total_energy_unit") or ""
+        # for file usage ensure that last item is used if today is included
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
+        for idx, item in enumerate(items[start : start + numDays]):
+            if fromFile:
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            else:
+                daystr = item.get("time")
+            if daystr:
+                entry = table.get(daystr, {"date": daystr})
+                entry.update(
+                    {
+                        "date": daystr,
+                        "solar_production": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
+                    }
+                )
+                table.update({daystr: entry})
+        # Solarbank charge and percentages are only received as total value for given interval. If requested, make daily queries for given interval
+        if justify_daytotals and table:
+            for day in [
+                startDay + timedelta(days=x)
+                for x in range(min(len(items), numDays) if fromFile else numDays)
+            ]:
+                daystr = day.strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                # update response only for real requests if not first day which was already queried
+                if not fromFile and day != startDay:
+                    resp = await self.energy_analysis(
+                        siteId=siteId,
+                        deviceSn=deviceSn,
+                        rangeType="week",
+                        startDay=day,
+                        endDay=day,
+                        devType="solar_production",
+                    )
+                    # get first item from breakdown list for single day queries
+                    item = next(iter(resp.get("power") or []), {})
+                    if daystr == item.get("time"):
+                        entry.update(
+                            {
+                                "date": daystr,
+                                "solar_production": convertToKwh(
+                                    val=item.get("value") or None, unit=unit
+                                ),
+                            }
+                        )
+                entry.update(
+                    {
+                        "date": daystr,
+                        "battery_charge": convertToKwh(
+                            val=resp.get("charge_total") or None, unit=t_unit
+                        ),
+                        "solar_to_grid": convertToKwh(
+                            val=resp.get("solar_to_grid_total") or None, unit=t_unit
+                        ),
+                        "solar_to_battery": convertToKwh(
+                            val=resp.get("solar_to_battery_total") or None, unit=t_unit
+                        ),
+                        "solar_to_home": convertToKwh(
+                            val=resp.get("solar_to_home_total") or None, unit=t_unit
+                        ),
+                        "battery_percentage": convertToKwh(
+                            val=resp.get("charging_pre") or None, unit=t_unit
+                        ),
+                        "solar_percentage": convertToKwh(
+                            val=resp.get("electricity_pre") or None, unit=t_unit
+                        ),
+                        "other_percentage": convertToKwh(
+                            val=resp.get("others_pre") or None, unit=t_unit
+                        ),
+                    }
+                )
+                table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info(
+                        "Received api %s solar_production energy for %s",
+                        self.apisession.nickname,
+                        daystr,
+                    )
+        if showProgress:
+            self._logger.info(
+                "Received api %s solar_production energy for period",
+                self.apisession.nickname,
+            )
     return table
 
 
@@ -557,7 +831,7 @@ async def energy_analysis(
     rangeType: "day" | "week" | "month | "year"
     startTime: optional start Date and time, day | week (YYYY-MM-DD), month (YYYY-MM) or year (YYYY)
     endTime: optional end Date and time
-    devType: "solar_production" | "solar_production_[pv1-pv4|microinverter]" | "solarbank" | "home_usage" | "grid"
+    devType: "solar_production" | "solar_production_[pv1-pv4|microinverter]" | "solarbank" | "home_usage" | "grid" | "pps"
     Example Data for solar_production:
     {'power': [{'time': '2023-10-01', 'value': '3.67'}, {'time': '2023-10-02', 'value': '3.29'}, {'time': '2023-10-03', 'value': '0.55'}],
     'charge_trend': None, 'charge_level': [], 'power_unit': 'wh', 'charge_total': '3.67', 'charge_unit': 'kwh', 'discharge_total': '3.11', 'discharge_unit': 'kwh',
@@ -584,7 +858,7 @@ async def energy_analysis(
         "device_sn": deviceSn,
         "device_type": devType
         if (
-            devType in ["solar_production", "solarbank", "home_usage", "grid"]
+            devType in ["solar_production", "solarbank", "home_usage", "grid", "pps"]
             or "solar_production_" in devType
         )
         else "solar_production",
@@ -925,6 +1199,117 @@ async def refresh_pv_forecast(
     site["energy_details"] = energy
     # extract the actual forecast for site
     self.extractSolarForecast(siteId=siteId)
+
+
+async def get_energy_offset(
+    self, siteId: str, offsetData: dict | None = None, fromFile: bool = False
+) -> dict:
+    """Get the offset of energy data from local time."""
+    # get existing offset data first to check if requery must be done
+    if not isinstance(offsetData, dict):
+        offsetData = {}
+        if site := self.sites.get(siteId, {}):
+            offsetData["energy_valid_time"] = site.get("energy_valid_time") or ""
+            offsetData["energy_offset_seconds"] = site.get("energy_offset_seconds")
+            offsetData["energy_offset_tz"] = site.get("energy_offset_tz")
+            offsetData["energy_offset_check"] = site.get("energy_offset_check")
+    # verify last runtime and avoid re-query in less than 20 minutes since no new values available in energy stats
+    if not (timestring := offsetData.get("energy_offset_check")) or (
+        datetime.now() - datetime.fromisoformat(timestring)
+    ) >= timedelta(minutes=20):
+        self._logger.debug(
+            "Updating api %s time offset from energy statistics of Solarbank_PPS site ID %s",
+            self.apisession.nickname,
+            siteId,
+        )
+        offset = timedelta(seconds=offsetData.get("energy_offset_seconds") or 0)
+        validtime = datetime.now() + offset
+        source = "pps"
+        # check for initial or updated min offset, using SOC value in pps data because that should never be 0 for a valid timestamp
+        future = ""
+        # check +/- 1 day to find last valid SOC timestamp in real data before invalid SOC entry of 0 %
+        for diff in [1, 0, -1] if offset.total_seconds() == 0 and not fromFile else [0]:
+            checkdate = validtime + timedelta(days=diff)
+            self._logger.debug(
+                "Checking api %s %s data of %s",
+                self.apisession.nickname,
+                source,
+                checkdate.strftime("%Y-%m-%d"),
+            )
+            if fromFile:
+                data = (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES[f'energy_{source}']}_today_{siteId}.json"
+                    )
+                ).get("data") or {}
+            else:
+                data = await self.energy_analysis(
+                    siteId=siteId,
+                    deviceSn="",
+                    rangeType="day",
+                    startDay=checkdate,
+                    endDay=checkdate,
+                    devType=source,
+                )
+            # generate list of SOC timestamps different from 0 and pick last one
+            if soclist := [
+                item
+                for item in (data.get("charge_level") or [])
+                if (item.get("value") or "0") != "0"
+            ]:
+                if soclist[-1].get("time"):
+                    last = datetime.strptime(
+                        checkdate.strftime("%Y-%m-%d") + soclist[-1].get("time"),
+                        "%Y-%m-%d%H:%M",
+                    )
+                    future: datetime = last + timedelta(minutes=20)
+                    break
+        # get min offset to first invalid timestamp to find best check time (smallest delay after new value from cloud)
+        if future:
+            offset = min(
+                # use default offset 2 days for first calculation
+                timedelta(days=2)
+                if offset.total_seconds() == 0
+                # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
+                or future - datetime.now() > offset + timedelta(minutes=21)
+                else offset,
+                # set offset few seconds before future invalid time if smaller than previous offset
+                future - datetime.now() - timedelta(seconds=5),
+            )
+            validtime = datetime.now() + offset
+            # reuse last valid data from timestamp check to get values
+            self._logger.debug(
+                "Found valid api %s %s entries until %s",
+                self.apisession.nickname,
+                source,
+                validtime.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+        # set last check time more into past to ensure each run verifies until offset no longer increases
+        if (
+            future
+            and not fromFile
+            and (
+                future - datetime.now() - timedelta(seconds=5) < offset
+                or offset.total_seconds == 0
+            )
+        ):
+            offsetData["energy_offset_check"] = (
+                datetime.now() - timedelta(minutes=20)
+            ).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            offsetData["energy_offset_check"] = datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        offsetData["energy_valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
+        offsetData["energy_offset_seconds"] = round(offset.total_seconds())
+        offsetData["energy_offset_tz"] = 1800 * round(
+            round(offsetData["energy_offset_seconds"]) / 1800
+        )
+        # Add total statistics to data
+        if stats := data.get("statistics"):
+            offsetData["statistics"] = stats
+    return offsetData
 
 
 async def device_pv_energy_daily(

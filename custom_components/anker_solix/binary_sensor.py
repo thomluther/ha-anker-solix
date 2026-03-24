@@ -135,6 +135,26 @@ DEVICE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
+    AnkerSolixBinarySensorDescription(
+        key="sub_pack_temp_alarm",
+        translation_key="sub_pack_temp_alarm",
+        json_key="sub_pack_temp_alarm",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="protection_status",
+        translation_key="protection_status",
+        json_key="protection_status",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        attrib_fn=lambda d: {
+            "charge_threshold": d.get("charge_protect_threshold"),
+            "discharge_threshold": d.get("discharge_protect_threshold"),
+        },
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
 ]
 
 SITE_SENSORS = [
@@ -356,17 +376,19 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
     _attr_has_entity_name = True
     _unrecorded_attributes = frozenset(
         {
+            "bt_mac",
+            "charge_threshold",
+            "discharge_threshold",
+            "network",
+            "network_code",
+            "ota_components",
+            "post_interval",
+            "rssi",
+            "site_admin",
             "wifi_ssid",
             "wifi_signal",
             "wireless_type",
             "wifi_mac",
-            "bt_mac",
-            "site_admin",
-            "rssi",
-            "ota_components",
-            "network",
-            "network_code",
-            "post_interval",
         }
     )
 

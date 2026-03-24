@@ -1066,6 +1066,171 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            (
+                {
+                    "power_factor": val,
+                }
+                if (val := d.get("power_factor"))
+                else {}
+            )
+            | (
+                {
+                    "voltage_l1l2": val,
+                }
+                if (val := d.get("voltage_l1l2"))
+                else {}
+            )
+            | (
+                {
+                    "voltage_l1l3": val,
+                }
+                if (val := d.get("voltage_l1l3"))
+                else {}
+            )
+            | (
+                {
+                    "voltage_l2l3": val,
+                }
+                if (val := d.get("voltage_l2l3"))
+                else {}
+            )
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="grid_power_signed_l1",
+        translation_key="grid_power_signed_l1",
+        json_key="grid_power_signed_l1",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("voltage_l1"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("current_l1"))
+                else {}
+            )
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="grid_power_signed_l2",
+        translation_key="grid_power_signed_l2",
+        json_key="grid_power_signed_l2",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("voltage_l2"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("current_l2"))
+                else {}
+            )
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="grid_power_signed_l3",
+        translation_key="grid_power_signed_l3",
+        json_key="grid_power_signed_l3",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            (
+                {
+                    "voltage": val,
+                }
+                if (val := d.get("voltage_l3"))
+                else {}
+            )
+            | (
+                {
+                    "current": val,
+                }
+                if (val := d.get("current_l3"))
+                else {}
+            )
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="system_output_power_signed_l1",
+        translation_key="system_output_power_signed_l1",
+        json_key="system_output_power_signed_l1",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            {
+                "current": val,
+            }
+            if (val := d.get("system_output_current_l1"))
+            else {}
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="system_output_power_signed_l2",
+        translation_key="system_output_power_signed_l2",
+        json_key="system_output_power_signed_l2",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            {
+                "current": val,
+            }
+            if (val := d.get("system_output_current_l2"))
+            else {}
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="system_output_power_signed_l3",
+        translation_key="system_output_power_signed_l3",
+        json_key="system_output_power_signed_l3",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            {
+                "current": val,
+            }
+            if (val := d.get("system_output_current_l3"))
+            else {}
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -1155,6 +1320,7 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=[status.name for status in SmartmeterStatus],
+        value_fn=lambda d, jk, _: d.get(jk),
         attrib_fn=lambda d, _: {"grid_status": d.get("grid_status")},
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
@@ -1200,6 +1366,37 @@ DEVICE_SENSORS = [
         ),
         mqtt=True,
     ),
+    AnkerSolixSensorDescription(
+        key="phase",
+        translation_key="phase",
+        json_key="phase",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        attrib_fn=lambda d, _: (
+            {
+                "main_ct_number": val,
+            }
+            if (val := d.get("main_ct_number"))
+            else {}
+        ) | (
+            {
+                "branch_ct_number": val,
+            }
+            if (val := d.get("branch_ct_number"))
+            else {}
+        ) | (
+            {
+                "main_branch_check_status": val,
+            }
+            if (val := d.get("main_branch_check_status"))
+            else {}
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+
+
+
+
     AnkerSolixSensorDescription(
         key="tag",
         translation_key="tag",
@@ -1386,6 +1583,294 @@ DEVICE_SENSORS = [
                 {SolixDeviceType.POWERPANEL.value, SolixDeviceType.HES.value} - s
                 and {ApiCategories.powerpanel_avg_power, ApiCategories.hes_avg_power}
                 - s
+            )
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_discharge_energy",
+        translation_key="daily_discharge_energy",
+        json_key="battery_discharge",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk) or items.get("solarbank_discharge")
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("battery_discharge"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_charge_energy",
+        translation_key="daily_charge_energy",
+        json_key="battery_charge",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk) or items.get("solarbank_charge")
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("battery_charge"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_solar_production",
+        translation_key="daily_solar_production",
+        json_key="solar_production",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: (
+            {
+                "date": d.get("energy_details", {}).get("today", {}).get("date"),
+                "last_period": d.get("energy_details", {})
+                .get("last_period", {})
+                .get("solar_production"),
+            }
+        ),
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_solar_to_home",
+        translation_key="daily_solar_to_home",
+        json_key="solar_to_home",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_to_home"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_solar_to_battery",
+        translation_key="daily_solar_to_battery",
+        json_key="solar_to_battery",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_to_battery"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_3rd_party_pv_to_bat",
+        translation_key="daily_3rd_party_pv_to_bat",
+        json_key="3rd_party_pv_to_bat",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("3rd_party_pv_to_bat"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_home_usage",
+        translation_key="daily_home_usage",
+        json_key="home_usage",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("home_usage"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_battery_to_home",
+        translation_key="daily_battery_to_home",
+        json_key="battery_to_home",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("battery_to_home"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_grid_import",
+        translation_key="daily_grid_import",
+        json_key="grid_import",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("grid_import"),
+        },
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and ({f"{d.get('type', '')!s}_energy"} - s)
+                and {SolixDeviceType.SMARTMETER.value} - s
+                and {ApiCategories.smartmeter_energy} - s
+            )
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_grid_to_home",
+        translation_key="daily_grid_to_home",
+        json_key="grid_to_home",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("grid_to_home"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_grid_to_battery",
+        translation_key="daily_grid_to_battery",
+        json_key="grid_to_battery",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("grid_to_battery"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_solar_to_grid",
+        translation_key="daily_solar_to_grid",
+        json_key="solar_to_grid",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_to_grid"),
+        },
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and ({f"{d.get('type', '')!s}_energy"} - s)
+                and {SolixDeviceType.SMARTMETER.value} - s
+                and {ApiCategories.smartmeter_energy} - s
             )
         ),
     ),
@@ -2616,13 +3101,13 @@ SITE_SENSORS = [
         # ensure backward compatibility to old key in json files
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk) or items.get("solarbank_discharge")
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
             "last_period": (
-                items := ((d.get("energy_details") or {}).get("last_period") or {})
+                items := d.get("energy_details", {}).get("last_period", {})
             ).get("battery_discharge")
             or items.get("solarbank_discharge"),
         },
@@ -2644,13 +3129,13 @@ SITE_SENSORS = [
         # ensure backward compatibility to old key in json files
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk) or items.get("solarbank_charge")
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
             "last_period": (
-                items := ((d.get("energy_details") or {}).get("last_period") or {})
+                items := d.get("energy_details", {}).get("last_period", {})
             ).get("battery_charge")
             or items.get("solarbank_charge"),
         },
@@ -2671,28 +3156,25 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: (
             {
-                "date": ((d.get("energy_details") or {}).get("today") or {}).get(
-                    "date"
-                ),
-                "last_period": (
-                    (d.get("energy_details") or {}).get("last_period") or {}
-                ).get("solar_production"),
+                "date": d.get("energy_details", {}).get("today", {}).get("date"),
+                "last_period": d.get("energy_details", {})
+                .get("last_period", {})
+                .get("solar_production"),
             }
             # Add hourly production data if solar forecast possible for system
             | (
                 {
                     "hourly_unit": (
-                        fc := (d.get("energy_details") or {}).get("pv_forecast_details")
-                        or {}
+                        fc := d.get("energy_details", {}).get("pv_forecast_details", {})
                     ).get("trend_unit"),
                     "produced_hourly": fc.get("produced_hourly"),
                 }
-                if "pv_forecast_details" in (d.get("energy_details") or {})
+                if "pv_forecast_details" in d.get("energy_details", {})
                 else {}
             )
         ),
@@ -2713,14 +3195,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_production_pv1"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_production_pv1"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2739,14 +3221,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_production_pv2"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_production_pv2"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2765,14 +3247,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_production_pv3"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_production_pv3"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2791,14 +3273,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_production_pv4"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_production_pv4"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2817,14 +3299,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_production_microinverter"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_production_microinverter"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2843,14 +3325,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_to_home"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_to_home"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2869,14 +3351,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_to_battery"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_to_battery"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2895,14 +3377,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("3rd_party_pv_to_bat"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("3rd_party_pv_to_bat"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2921,14 +3403,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("3rd_party_pv_to_grid"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("3rd_party_pv_to_grid"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2947,14 +3429,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("ac_socket"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("ac_socket"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2973,14 +3455,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("home_usage"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("home_usage"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -2999,14 +3481,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("battery_to_home"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("battery_to_home"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -3025,14 +3507,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("smartplugs_total"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("smartplugs_total"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -3053,14 +3535,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("grid_import"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("grid_import"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -3081,14 +3563,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("grid_to_home"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("grid_to_home"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -3107,14 +3589,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("grid_to_battery"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("grid_to_battery"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -3133,14 +3615,14 @@ SITE_SENSORS = [
         suggested_display_precision=2,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else items.get(jk)
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
-            "last_period": (
-                (d.get("energy_details") or {}).get("last_period") or {}
-            ).get("solar_to_grid"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("solar_to_grid"),
         },
         exclude_fn=lambda s, d: (
             not (
@@ -3159,15 +3641,15 @@ SITE_SENSORS = [
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else 100 * float(items.get(jk))
             if str(items.get(jk)).replace(".", "", 1).isdigit()
             else None
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
             "last_period": None
-            if not (items := (d.get("energy_details") or {}).get("last_period") or {})
+            if not (items := d.get("energy_details", {}).get("last_period", {}))
             else 100 * float(items.get("solar_percentage"))
             if str(items.get("solar_percentage")).replace(".", "", 1).isdigit()
             else None,
@@ -3187,15 +3669,15 @@ SITE_SENSORS = [
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else 100 * float(items.get(jk))
             if str(items.get(jk)).replace(".", "", 1).isdigit()
             else None
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
             "last_period": None
-            if not (items := (d.get("energy_details") or {}).get("last_period") or {})
+            if not (items := d.get("energy_details", {}).get("last_period", {}))
             else 100 * float(items.get("battery_percentage"))
             if str(items.get("battery_percentage")).replace(".", "", 1).isdigit()
             else None,
@@ -3215,15 +3697,15 @@ SITE_SENSORS = [
         suggested_display_precision=0,
         value_fn=lambda d, jk, _: (
             None
-            if not (items := (d.get("energy_details") or {}).get("today") or {})
+            if not (items := d.get("energy_details", {}).get("today", {}))
             else 100 * float(items.get(jk))
             if str(items.get(jk)).replace(".", "", 1).isdigit()
             else None
         ),
         attrib_fn=lambda d, _: {
-            "date": ((d.get("energy_details") or {}).get("today") or {}).get("date"),
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
             "last_period": None
-            if not (items := (d.get("energy_details") or {}).get("last_period") or {})
+            if not (items := d.get("energy_details", {}).get("last_period", {}))
             else 100 * float(items.get("other_percentage"))
             if str(items.get("other_percentage")).replace(".", "", 1).isdigit()
             else None,
@@ -3465,6 +3947,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "advantage",
             "avg_today",
             "avg_tomorrow",
+            "branch_ct_number",
             "bt_mac",
             "bytes_received",
             "bytes_sent",
@@ -3481,6 +3964,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "hour_end",
             "hourly_unit",
             "inverter_info",
+            "main_ct_number",
+            "main_branch_check_status",
             "message",
             "messages",
             "mode",
@@ -3492,6 +3977,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "provider",
             "poll_time",
             "port_status",
+            "power_factor",
             "price_calc",
             "price_time",
             "produced_hourly",
@@ -3517,6 +4003,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "trees",
             "tz_offset_sec",
             "voltage",
+            "voltage_l1l2",
+            "voltage_l1l3",
+            "voltage_l2l3",
         }
     )
 

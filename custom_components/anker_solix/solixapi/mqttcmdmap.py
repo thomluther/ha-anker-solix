@@ -112,7 +112,6 @@ class SolixMqttCommands:
     sb_ev_charger_switch: str = "sb_ev_charger_switch"  # Driven through cloud
     plug_schedule: str = "plug_schedule"
     plug_delayed_toggle: str = "plug_delayed_toggle"
-
     device_power_mode: str = "device_power_mode"
     plug_lock_switch: str = "plug_lock_switch"
     ev_charger_mode_select: str = "ev_charger_mode_select"
