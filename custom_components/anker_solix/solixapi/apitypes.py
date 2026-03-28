@@ -1379,7 +1379,9 @@ class SmartmeterStatus(StrEnum):
 class PowerdockStatus(StrEnum):
     """Str Enumeration for Anker Solix Power Dock status."""
 
-    # TODO(#MS) Update status description once known
+    idle = "32"
+    charging = "48"
+    discharging = "64"
     ok = "0"  # normal power dock state
     unknown = "unknown"
 

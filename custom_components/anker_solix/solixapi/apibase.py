@@ -599,6 +599,21 @@ class AnkerSolixBaseApi:
                                 "grid_to_battery_power",
                                 "home_demand",
                                 "home_demand_total",
+                                "home_demand_circuit_01",
+                                "home_demand_circuit_02",
+                                "home_demand_circuit_03",
+                                "home_demand_circuit_04",
+                                "home_demand_circuit_05",
+                                "home_demand_circuit_06",
+                                "home_demand_circuit_07",
+                                "home_demand_circuit_08",
+                                "home_demand_circuit_09",
+                                "home_demand_circuit_10",
+                                "home_demand_circuit_11",
+                                "home_demand_circuit_12",
+                                "dc_generator_plugged_in",
+                                "dc_generator_input_power",
+                                "power_dock_state_code_2",
                                 "generator_to_battery_power",  # HA missing
                                 "generator_to_home_power",  # HA missing
                                 "generator_power",  # HA missing

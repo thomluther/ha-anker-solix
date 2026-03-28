@@ -316,6 +316,13 @@
                     "off": "Déconnecté"
                 }
             },
+            "dc_generator_plugged_in": {
+                "name": "Générateur connecté",
+                "state": {
+                    "on": "Connecté",
+                    "off": "Déconnecté"
+                }
+            },
             "mqtt_connection": {
                 "name": "Connexion MQTT",
                 "state": {
@@ -761,6 +768,21 @@
                     }
                 }
             },
+            "power_dock_status": {
+                "name": "Statut Power Dock",
+                "state": {
+                    "idle": "Veille",
+                    "charging": "Charge",
+                    "discharging": "Décharge",
+                    "ok": "OK",
+                    "unknown": "Inconnue"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code statut"
+                    }
+                }
+            },
             "hes_station_role": {
                 "name": "Rôle de la station",
                 "state": {
@@ -952,6 +974,45 @@
             },
             "home_load_power": {
                 "name": "Demande domestique"
+            },
+            "dc_generator_input_power": {
+                "name": "Puissance d'entrée générateur"
+            },
+            "home_demand_circuit_01": {
+                "name": "Charge circuit 01"
+            },
+            "home_demand_circuit_02": {
+                "name": "Charge circuit 02"
+            },
+            "home_demand_circuit_03": {
+                "name": "Charge circuit 03"
+            },
+            "home_demand_circuit_04": {
+                "name": "Charge circuit 04"
+            },
+            "home_demand_circuit_05": {
+                "name": "Charge circuit 05"
+            },
+            "home_demand_circuit_06": {
+                "name": "Charge circuit 06"
+            },
+            "home_demand_circuit_07": {
+                "name": "Charge circuit 07"
+            },
+            "home_demand_circuit_08": {
+                "name": "Charge circuit 08"
+            },
+            "home_demand_circuit_09": {
+                "name": "Charge circuit 09"
+            },
+            "home_demand_circuit_10": {
+                "name": "Charge circuit 10"
+            },
+            "home_demand_circuit_11": {
+                "name": "Charge circuit 11"
+            },
+            "home_demand_circuit_12": {
+                "name": "Charge circuit 12"
             },
             "ac_generate_power": {
                 "name": "Alimentation AC"

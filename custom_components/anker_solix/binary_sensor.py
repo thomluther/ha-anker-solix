@@ -91,6 +91,19 @@ DEVICE_SENSORS = [
             not ({d.get("type")} - s) or not d.get("is_support_wired")
         ),
     ),
+    # AX170 Power Dock generator connection state.
+    AnkerSolixBinarySensorDescription(
+        key="dc_generator_plugged_in",
+        translation_key="dc_generator_plugged_in",
+        json_key="dc_generator_plugged_in",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=BinarySensorDeviceClass.PLUG,
+        value_fn=lambda d, jk: (
+            None if d.get(jk) is None else str(d.get(jk)).strip() in {"1", "true", "True"}
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
     AnkerSolixBinarySensorDescription(
         key="ota_update",
         translation_key="ota_update",

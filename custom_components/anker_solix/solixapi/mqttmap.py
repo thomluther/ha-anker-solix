@@ -2167,19 +2167,19 @@ _A17E1_040a = {
 _AX170_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
-    "a6": {NAME: "battery_soc_total"},  # Average SOC of all devices in system
+    "a6": {NAME: "battery_soc"},  # Average SOC of all devices in system
     "ab": {
-        NAME: "pv_power_total"
+        NAME: "photovoltaic_power"
     },  # Total PV power from all devices in system? Only verified with 1 E10 Module
     "ac": {
-        NAME: "battery_power"
+        NAME: "battery_power_signed"
     },  # Power draw from battery. Negative is charging, positive is discharging.
     "b5": {
-        NAME: "backup_soc_limit"
+        NAME: "power_cutoff"
     },  # Preset setting for Self Consumption reserve power. Battery will stay charged to this level unless discharged from grid fault. PV will charge battery.
     "b7": {NAME: "max_soc_limit?"},  # Maybe battery health??
     "b9": {
-        NAME: "main_breaker_limit?"
+        NAME: "main_breaker_limit"
     },  # It's 200 on tests, so its a good chance its the 200AMP?
     "bf": {NAME: "timestamp_0405_bf?"},
     "c0": {NAME: "timestamp_0405_c0?"},
@@ -2191,16 +2191,16 @@ _AX170_0405 = {
     "cc": {
         BYTES: {
             "00": {
-                NAME: "power_dock_state_code?",
+                NAME: "power_dock_state_code_1",
                 TYPE: DeviceHexDataTypes.ui.value,
             },  # Not very reliable, not sure what the setting is exactly.
             "01": {
-                NAME: "power_dock_state_code_2?",
+                NAME: "power_dock_state_code_2",
                 TYPE: DeviceHexDataTypes.ui.value,
             },  # 64 == discharging, 48 == charging, 32 charged -- more reliable..
         }
     },
-    "cd": {NAME: "home_demand_total?"},
+    "cd": {NAME: "home_demand_total"},
     "ce": {NAME: "dc_generator_plugged_in"},
     "d4": {NAME: "pv_power_3rd_party"},  # Power from external solar to home?
     "d6": {NAME: "dc_generator_input_power"},

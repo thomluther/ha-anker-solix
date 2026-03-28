@@ -316,6 +316,13 @@
                     "off": "Disconnected"
                 }
             },
+            "dc_generator_plugged_in": {
+                "name": "Generator connected",
+                "state": {
+                    "on": "Connected",
+                    "off": "Disconnected"
+                }
+            },
             "mqtt_connection": {
                 "name": "MQTT connection",
                 "state": {
@@ -761,6 +768,21 @@
                     }
                 }
             },
+            "power_dock_status": {
+                "name": "Power dock status",
+                "state": {
+                    "idle": "Idle",
+                    "charging": "Charging",
+                    "discharging": "Discharging",
+                    "ok": "OK",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status code"
+                    }
+                }
+            },
             "hes_station_role": {
                 "name": "Station role",
                 "state": {
@@ -952,6 +974,45 @@
             },
             "home_load_power": {
                 "name": "Home demand"
+            },
+            "dc_generator_input_power": {
+                "name": "Generator input power"
+            },
+            "home_demand_circuit_01": {
+                "name": "Circuit 01 load"
+            },
+            "home_demand_circuit_02": {
+                "name": "Circuit 02 load"
+            },
+            "home_demand_circuit_03": {
+                "name": "Circuit 03 load"
+            },
+            "home_demand_circuit_04": {
+                "name": "Circuit 04 load"
+            },
+            "home_demand_circuit_05": {
+                "name": "Circuit 05 load"
+            },
+            "home_demand_circuit_06": {
+                "name": "Circuit 06 load"
+            },
+            "home_demand_circuit_07": {
+                "name": "Circuit 07 load"
+            },
+            "home_demand_circuit_08": {
+                "name": "Circuit 08 load"
+            },
+            "home_demand_circuit_09": {
+                "name": "Circuit 09 load"
+            },
+            "home_demand_circuit_10": {
+                "name": "Circuit 10 load"
+            },
+            "home_demand_circuit_11": {
+                "name": "Circuit 11 load"
+            },
+            "home_demand_circuit_12": {
+                "name": "Circuit 12 load"
             },
             "ac_generate_power": {
                 "name": "AC power"

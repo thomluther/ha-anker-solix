@@ -13,8 +13,11 @@ coverage.xml
 
 
 # Home Assistant configuration
+config/
 config/*
 !config/configuration.yaml
 **/authcache
 **/exports
+
+
 

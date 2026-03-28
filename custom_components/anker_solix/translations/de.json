@@ -316,6 +316,13 @@
                     "off": "Getrennt"
                 }
             },
+            "dc_generator_plugged_in": {
+                "name": "Generator verbunden",
+                "state": {
+                    "on": "Verbunden",
+                    "off": "Getrennt"
+                }
+            },
             "mqtt_connection": {
                 "name": "MQTT Verbindung",
                 "state": {
@@ -761,6 +768,21 @@
                     }
                 }
             },
+            "power_dock_status": {
+                "name": "Power Dock Status",
+                "state": {
+                    "idle": "Leerlauf",
+                    "charging": "Laden",
+                    "discharging": "Entladen",
+                    "ok": "OK",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
             "hes_station_role": {
                 "name": "Stationsrolle",
                 "state": {
@@ -952,6 +974,45 @@
             },
             "home_load_power": {
                 "name": "Hausbedarf"
+            },
+            "dc_generator_input_power": {
+                "name": "Generator Eingangsleistung"
+            },
+            "home_demand_circuit_01": {
+                "name": "Stromkreis 01 Last"
+            },
+            "home_demand_circuit_02": {
+                "name": "Stromkreis 02 Last"
+            },
+            "home_demand_circuit_03": {
+                "name": "Stromkreis 03 Last"
+            },
+            "home_demand_circuit_04": {
+                "name": "Stromkreis 04 Last"
+            },
+            "home_demand_circuit_05": {
+                "name": "Stromkreis 05 Last"
+            },
+            "home_demand_circuit_06": {
+                "name": "Stromkreis 06 Last"
+            },
+            "home_demand_circuit_07": {
+                "name": "Stromkreis 07 Last"
+            },
+            "home_demand_circuit_08": {
+                "name": "Stromkreis 08 Last"
+            },
+            "home_demand_circuit_09": {
+                "name": "Stromkreis 09 Last"
+            },
+            "home_demand_circuit_10": {
+                "name": "Stromkreis 10 Last"
+            },
+            "home_demand_circuit_11": {
+                "name": "Stromkreis 11 Last"
+            },
+            "home_demand_circuit_12": {
+                "name": "Stromkreis 12 Last"
             },
             "ac_generate_power": {
                 "name": "AC Leistung"
