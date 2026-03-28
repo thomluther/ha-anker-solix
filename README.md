@@ -54,6 +54,7 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Solarbank 3 devices](#solarbank-3-devices)
    * [Solarbank Multisystem with Power Dock](#solarbank-multisystem-with-power-dock)
    * [Solarbank station controls](#solarbank-station-controls)
+   * [Solarbank PPS system](#solarbank-pps-systems)
    * [Electric Vehicle devices](#electric-vehicle-devices)
    * [Power Panels](#power-panels)
    * [Home Energy Systems (HES)](#home-energy-systems-hes)
@@ -134,12 +135,13 @@ Device type | Description
 `solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1) **(with MQTT monitoring & control)**<br>- A17C1: Solarbank 2 E1600 Pro **(with MQTT monitoring & control)**<br>- A17C3: Solarbank 2 E1600 Plus **(with MQTT monitoring & control)**<br>- A17C2: Solarbank 2 E1600 AC **(with MQTT monitoring & control)**<br>- A17C5: Solarbank 3 E2700 **(with MQTT monitoring & control)**
 `combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems **(with MQTT monitoring & control)**
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
-`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
+`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- A17X7US: Anker Smart Meter for US grids **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
-`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
+`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(Basic MQTT monitoring only)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
+`solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
-`vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the announced [Anker Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (🇩🇪).
+`vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the Anker Solix V1 EV Charger.
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
 
@@ -295,6 +297,14 @@ Following settings may require the hybrid approach:
 
 > [!IMPORTANT]
 > The Api query to change the AC output limit (max home load) on the station panel is unknown. Therefore this control may not fully work for single systems, altough the device itself will show the limit change being applied through MQTT. For Multisystems, the output limit therefore cannot be changed through the integration, since that is controlled through the cloud server with regular MQTT commands across all Solarbanks and the Power Dock. This control cannot be supported by the integration until someone will find the required Api query/parameters to change the output limit for Solarbank devices. More details are discussed in this [issue comment](https://github.com/thomluther/anker-solix-api/issues/216#issuecomment-3804889623) in case you want to contribute.
+
+
+### Solarbank PPS systems
+
+Solarbank PPS systems are Portable Power Stations that can be used in an automated way to reduce home energy consumption. These are currently F3000 devices that can be combined with a US Smart Meter into such a system type, targeting the US market, to act in similar way as Solarbank systems in the EU market. Additionally, the F3000 can be used as portable power station for camping and provide all capabilities of typical Anker PPS.
+The Solarbank PPS systems provide power consumption data in the cloud api, but not the typical controls as known for Solarbank systems. Energy data is available as well, including breakdown on PPS device level. Device control however can only be done through MQTT commands, which still have to be decoded and described.
+
+Integration version 3.5.4 added initial support for this new system type and the F3000 PPS devices. System owners need to explore and document cloud Api capabilities as well as MQTT controls for F3000 devices to further expand any system or device support.
 
 
 ### Electric Vehicle devices
