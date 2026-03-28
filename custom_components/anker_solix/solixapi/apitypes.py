@@ -1445,6 +1445,7 @@ class SolixNetworkStatus(StrEnum):
 
 class SolixWorkingStatus(StrEnum):
     """Str Enumeration for Anker Solix HES working status."""
+
     # TODO(X1): The proper description of those codes has to be confirmed
     standby = "0"
     running = "1"
@@ -1453,11 +1454,13 @@ class SolixWorkingStatus(StrEnum):
 
 class SolixMode(StrEnum):
     """Str Enumeration for Anker Solix HES mode."""
+
     # TODO(X1): The proper description of those codes has to be confirmed
     off = "0"
     on = "1"
     auto = "2"
     unknown = "unknown"
+
 
 class SolixSwitchMode(IntEnum):
     """Int Enumeration for generic Anker Solix switch modes."""
