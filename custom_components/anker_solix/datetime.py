@@ -61,8 +61,14 @@ DEVICE_DATETIMES = [
         translation_key="preset_manual_backup_start",
         json_key="preset_manual_backup_start",
         value_fn=lambda d, jk: (
-            datetime.fromtimestamp(d.get(jk)).astimezone()
-            if d.get(jk) is not None
+            datetime.fromtimestamp(int(v)).astimezone()
+            if (
+                v := str(d.get("timestamp_backup_start", "")) or str(d.get(jk, ""))
+                if d.get(MQTT_OVERLAY)
+                else str(d.get(jk, "")) or str(d.get("timestamp_backup_start", ""))
+            )
+            .replace(".", "", 1)
+            .isdigit()
             else None
         ),
         exclude_fn=lambda s, d: (
@@ -71,14 +77,21 @@ DEVICE_DATETIMES = [
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
         ),
+        mqtt=True,
     ),
     AnkerSolixDateTimeDescription(
         key="preset_manual_backup_end",
         translation_key="preset_manual_backup_end",
         json_key="preset_manual_backup_end",
         value_fn=lambda d, jk: (
-            datetime.fromtimestamp(d.get(jk)).astimezone()
-            if d.get(jk) is not None
+            datetime.fromtimestamp(int(v)).astimezone()
+            if (
+                v := str(d.get("timestamp_backup_end", "")) or str(d.get(jk, ""))
+                if d.get(MQTT_OVERLAY)
+                else str(d.get(jk, "")) or str(d.get("timestamp_backup_start", ""))
+            )
+            .replace(".", "", 1)
+            .isdigit()
             else None
         ),
         exclude_fn=lambda s, d: (
@@ -87,6 +100,7 @@ DEVICE_DATETIMES = [
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
         ),
+        mqtt=True,
     ),
 ]
 

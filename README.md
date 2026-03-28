@@ -135,7 +135,7 @@ Device type | Description
 `solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1) **(with MQTT monitoring & control)**<br>- A17C1: Solarbank 2 E1600 Pro **(with MQTT monitoring & control)**<br>- A17C3: Solarbank 2 E1600 Plus **(with MQTT monitoring & control)**<br>- A17C2: Solarbank 2 E1600 AC **(with MQTT monitoring & control)**<br>- A17C5: Solarbank 3 E2700 **(with MQTT monitoring & control)**
 `combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems **(with MQTT monitoring & control)**
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
-`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- A17X7US: Anker Smart Meter for US grids **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
+`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- A17X7US: Anker Smart Meter for US grid **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
 `pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(Basic MQTT monitoring only)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
 `solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
@@ -471,7 +471,7 @@ If you don't find any data for your owned devices although you enabled the MQTT 
 
 ## Attribution
 
-- [anker-solix-api library][anker-solix-api]
+- [Anker Solix Api library - Cloud Api and MQTT interface only (Inofficial)][anker-solix-api]
 - [solix2mqtt project](https://github.com/tomquist/solix2mqtt)
 - [Solaredge HA core integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/solaredge)
 - [ha-hoymiles-wifi custom integration](https://github.com/suaveolent/ha-hoymiles-wifi)
@@ -510,8 +510,11 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 - [Possibilities to integrate the Solarbank into your Energy Dashboard](https://github.com/thomluther/ha-anker-solix/discussions/16)
 - [Surplus charge automation for Solarbank E1600 (1st generation)](https://github.com/thomluther/ha-anker-solix/discussions/81)
 - [How to monitor Solarbank battery efficiency and health](https://github.com/thomluther/ha-anker-solix/discussions/109)
+- [Anker Solix BLE library - Local Bluetooth interface only (Inofficial)](https://github.com/flip-dots/SolixBLE)
+- [Anker Solix Official Integration for Home Assistant - Local Modbus interface devices only](https://github.com/anker-charging/ha-anker-solix-official)
 
-If you need more assistance on the topic, please have a look at the following external resources:
+
+If you need more assistance how to start with this integration for the Solarbank, please have a look at the following external resources:
 
 ### Blog-Posts
 

@@ -398,6 +398,9 @@ async def set_device_parm(
         {\"id\":1,\"is_selected\":1,\"soc\":10},
         {\"id\":2,\"is_selected\":0,\"soc\":5}],
     \"switch_0w\":1,\"enable_0w\":0,\"enable_0w_change\":false,\"feed-in_power_limit\":4500}"}
+
+    Example data for provided site_id with param_type "19" for power limit parameters:
+    {"param_data":"{\"power_limit":{\"limit\":4800,\"limit_real\":4800}}"}
     """
 
     data = {
@@ -411,6 +414,7 @@ async def set_device_parm(
     sb_info = (self.sites.get(siteId) or {}).get("solarbank_info") or {}
     if toFile:
         # Write updated response to file for testing purposes
+        filedata = None
         if paramType == SolixParmType.SOLARBANK_STATION.value:
             # get old settings from cache and modify for file as required
             filedata = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
@@ -430,7 +434,10 @@ async def set_device_parm(
                 filedata["switch_0w"] = setting
             if (setting := paramData.get("feed-in_power_limit")) is not None:
                 filedata["feed-in_power_limit"] = setting
-        else:
+        elif paramType in [
+            SolixParmType.SOLARBANK_SCHEDULE.value,
+            SolixParmType.SOLARBANK_2_SCHEDULE.value,
+        ]:
             filedata = paramData
         if filedata:
             if not await self.apisession.saveToFile(
@@ -490,7 +497,10 @@ async def set_device_parm(
                 if sb.get("site_id") == siteId and sb.get("station_sn") is not None
             ]:
                 await self.get_power_cutoff(deviceSn=sn)
-    else:
+    elif paramType in [
+        SolixParmType.SOLARBANK_SCHEDULE.value,
+        SolixParmType.SOLARBANK_2_SCHEDULE.value,
+    ]:
         # distinguish which schedule to query for updates
         if paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
             # Active SB1 schedule data should be queried like on details refresh

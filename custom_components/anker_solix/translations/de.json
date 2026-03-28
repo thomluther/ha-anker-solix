@@ -896,6 +896,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Erweiterungen"
                     }
                 }
             },
@@ -907,6 +910,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Erweiterungen"
                     }
                 }
             },
@@ -918,6 +924,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Erweiterungen"
                     }
                 }
             },
@@ -929,6 +938,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Erweiterungen"
                     }
                 }
             },
@@ -1070,6 +1082,19 @@
                     }
                 }
             },
+            "dc_charging_status": {
+                "name": "DC Ladezustand",
+                "state": {
+                    "inactive": "Inaktiv",
+                    "charging": "Aufladung",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
             "plant_status": {
                 "name": "Kraftwerkszustand",
                 "state": {
@@ -1077,6 +1102,19 @@
                     "off_grid": "Netzunabhängig",
                     "standby": "Bereitschaft",
                     "fault": "Fehler",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
+            "working_status": {
+                "name": "Arbeitszustand",
+                "state": {
+                    "standby": "Bereitschaft",
+                    "running": "Läuft",
                     "unknown": "Unbekannt"
                 },
                 "state_attributes": {

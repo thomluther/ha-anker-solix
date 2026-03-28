@@ -420,6 +420,15 @@ async def poll_sites(  # noqa: C901
                             charge_calc = power_in + grid_in - power_out
                         # allow negative values for the field being used as battery power
                         solarbank["charging_power"] = f"{charge_calc:.0f}"
+                        # adjust the new counters if required
+                        if "bat_charge_power" in solarbank:
+                            solarbank["bat_charge_power"] = (
+                                f"{max(batt_charge, charge_calc):.0f}"
+                            )
+                        if "bat_discharge_power" in solarbank:
+                            solarbank["bat_discharge_power"] = (
+                                f"{max(batt_discharge, charge_calc * -1):.0f}"
+                            )
                         # calculate correct totals, only used for cascaded SB1 systems
                         sb_total_charge_calc += charge_calc
                         if cascaded_system:
@@ -1237,7 +1246,9 @@ async def poll_device_details(  # noqa: C901
                     )
                     await api.get_device_attributes(
                         deviceSn=sn,
-                        attributes=["pv_power_limit", "switch_0w"],
+                        attributes=[
+                            "pv_power_limit"
+                        ],  # , "switch_0w" does not reflect station setting
                         fromFile=fromFile,
                     )
 

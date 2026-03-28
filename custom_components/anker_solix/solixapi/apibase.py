@@ -524,20 +524,20 @@ class AnkerSolixBaseApi:
                                 "exp_5_type",
                                 "wifi_name",
                                 "power_panel_sn",
-                                "pps_1_sn",
-                                "pps_2_sn",
-                                "pps_1_model",
-                                "pps_2_model",
-                                "toggle_to_delay_time",
-                                "toggle_to_elapsed_time",
-                                "light_off_start_time",
-                                "light_off_end_time",
-                                "week_start_time",
-                                "week_end_time",
-                                "weekend_start_time",
-                                "weekend_end_time",
-                                "load_balance_monitor_device",
-                                "solar_evcharge_monitor_device",
+                                "pps_1_sn",  # HA not used
+                                "pps_2_sn",  # HA not used
+                                "pps_1_model",  # HA not used
+                                "pps_2_model",  # HA not used
+                                "toggle_to_delay_time",  # HA missing, MQTT control not fully described
+                                "toggle_to_elapsed_time",  # HA missins, MQTT control not fully described
+                                "light_off_start_time",  # HA missing
+                                "light_off_end_time",  # HA missing
+                                "week_start_time",  # HA missing
+                                "week_end_time",  # HA missing
+                                "weekend_start_time",  # HA missing
+                                "weekend_end_time",  # HA missing
+                                "load_balance_monitor_device",  # HA not used
+                                "solar_evcharge_monitor_device",  # HA not used
                             ]
                             and value is not None
                         ):
@@ -570,7 +570,7 @@ class AnkerSolixBaseApi:
                                 "pv_2_power",
                                 "pv_3_power",
                                 "pv_4_power",
-                                "pv_power_3rd_party",
+                                "pv_power_3rd_party",  # HA not usable in system entity
                                 "pv_power_total",
                                 "dc_input_power",
                                 "dc_input_power_total",
@@ -599,12 +599,15 @@ class AnkerSolixBaseApi:
                                 "grid_to_battery_power",
                                 "home_demand",
                                 "home_demand_total",
+                                "generator_to_battery_power",  # HA missing
+                                "generator_to_home_power",  # HA missing
+                                "generator_power",  # HA missing
                                 "charge_priority_limit",
                                 "pv_limit",
-                                "pv_limit_solarbank_1",
-                                "pv_limit_solarbank_2",
-                                "pv_limit_solarbank_3",
-                                "pv_limit_solarbank_4",
+                                "pv_limit_solarbank_1",  # HA not used for combiner box values
+                                "pv_limit_solarbank_2",  # HA not used for combiner box values
+                                "pv_limit_solarbank_3",  # HA not used for combiner box values
+                                "pv_limit_solarbank_4",  # HA not used for combiner box values
                                 "ac_input_limit",
                                 "min_load",
                                 "max_load",
@@ -617,14 +620,14 @@ class AnkerSolixBaseApi:
                                 "system_output_power_signed_l2",
                                 "wifi_signal",
                                 "charging_power",
-                                "power_l1",
-                                "power_l2",
-                                "power_l3",
-                                "min_current_limit",
-                                "max_current_limit",
-                                "main_breaker_limit",
-                                "max_evcharge_current",
-                                "solar_evcharge_min_current",
+                                "power_l1",  # HA missing
+                                "power_l2",  # HA missing
+                                "power_l3",  # HA missing
+                                "min_current_limit",  # HA missing
+                                "max_current_limit",  # HA missing
+                                "main_breaker_limit",  # HA missing
+                                "max_evcharge_current",  # HA missing
+                                "solar_evcharge_min_current",  # HA missing
                                 "light_brightness",
                             ]
                             and str(value)
@@ -690,33 +693,39 @@ class AnkerSolixBaseApi:
                             .isdigit()
                         ):
                             device_mqtt[key] = f"{float(value):.3f}"
-                        elif key in [
-                            # energy keys with value that should be saved as rounded as 3 decimal float string
-                            "pv_yield",
-                            "charged_energy",
-                            "discharged_energy",
-                            "output_energy",
-                            "bypass_energy",
-                            "consumed_energy",
-                            "home_consumption",
-                            "grid_import_energy",
-                            "grid_export_energy",
-                            "charging_energy",
-                            "charging_energy_l1",
-                            "charging_energy_l2",
-                            "charging_energy_l3",
-                            "charged_energy_today",
-                            "discharged_energy_today",
-                            "pv_yield_today",
-                            "pv_consumption_today",
-                            "pv_charge_today",
-                            "pv_export_today",
-                            "battery_consumption_today",
-                            "grid_discharged_today",
-                            "grid_charged_today",
-                            "grid_consumption_today",
-                            "home_consumption_today",
-                        ]:
+                        elif (
+                            key
+                            in [
+                                # energy keys with value that should be saved as rounded as 3 decimal float string
+                                "pv_yield",  # aggregated
+                                "charged_energy",  # aggregated
+                                "discharged_energy",  # aggregated
+                                "output_energy",  # aggregated
+                                "bypass_energy",  # aggregated, HA not used
+                                "consumed_energy",  # aggregated
+                                "home_consumption",  # aggregated
+                                "grid_import_energy",  # aggregated
+                                "grid_export_energy",  # aggregated
+                                "charging_energy",  # HA missing
+                                "charging_energy_l1",  # HA missing
+                                "charging_energy_l2",  # HA missing
+                                "charging_energy_l3",  # HA missing
+                                "charged_energy_today",  # HA missing, how to merge to avoid decrease?
+                                "discharged_energy_today",  # HA missing, how to merge to avoid decrease?
+                                "pv_yield_today",  # HA missing, how to merge to avoid decrease?
+                                "pv_consumption_today",  # HA missing, how to merge to avoid decrease?
+                                "pv_charge_today",  # HA missing, how to merge to avoid decrease?
+                                "pv_export_today",  # HA missing, how to merge to avoid decrease?
+                                "battery_consumption_today",  # HA missing, how to merge to avoid decrease?
+                                "grid_discharged_today",  # HA missing, how to merge to avoid decrease?
+                                "grid_charged_today",  # HA missing, how to merge to avoid decrease?
+                                "grid_consumption_today",  # HA missing, how to merge to avoid decrease?
+                                "home_consumption_today",  # HA missing, how to merge to avoid decrease?
+                                "generator_energy_today",  # HA missing, how to merge to avoid decrease?
+                                "generator_charged_today",  # HA missing, how to merge to avoid decrease?
+                                "generator_consumed_today",  # HA missing, how to merge to avoid decrease?
+                            ]
+                        ):
                             # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
                             # 0 value should be ignored for aggregated, since that may reset energy counters if 0 values read on startup
                             if (
@@ -757,15 +766,15 @@ class AnkerSolixBaseApi:
                                 "usbc_3_switch",
                                 "usbc_4_switch",
                                 "usba_switch",
-                                "dc_12v_auto_on",
+                                "dc_12v_auto_on",  # missing MQTT control command
                                 "usage_mode",
-                                "energy_saving_mode",
+                                "energy_saving_mode",  # missing MQTT control command
                                 "allow_export_switch",
                                 "priority_discharge_switch",
                                 "grid_export_disabled",
                                 "display_mode",
                                 "display_switch",
-                                "display_status",
+                                "display_status",  # missing MQTT control command
                                 "display_timeout_seconds",
                                 "light_off_switch",
                                 "light_switch",
@@ -793,39 +802,41 @@ class AnkerSolixBaseApi:
                                 "utc_timestamp",
                                 "timestamp_backup_start",
                                 "timestamp_backup_end",
-                                "charging_start_timestamp",
-                                "tcp_timeout_seconds",
-                                "charging_duration_seconds",
-                                "charging_window_seconds",
-                                "plug_lock_switch",
-                                "plug_countdown_seconds",
-                                "start_countdown_seconds",
-                                "auto_start_switch",
-                                "auto_charge_restart_switch",
-                                "start_evcharge_switch",
-                                "random_delay_switch",
-                                "smart_touch_mode",
-                                "wipe_up_mode",
-                                "wipe_down_mode",
-                                "light_off_schedule_switch",
-                                "modbus_switch",
-                                "tcp_port",
-                                "ip_address",
-                                "load_balance_switch",
-                                "solar_evcharge_switch",
-                                "solar_evcharge_mode",
-                                "phase_operating_mode",
-                                "auto_phase_switch",
-                                "schedule_switch",
-                                "weekend_mode",
-                                "schedule_mode",
-                                "charging_mode",
-                                "ev_charger_status",
-                                "boost_status",
-                                "ocpp_connect_status",
-                                "cp_signal_status",
-                                "plug_status",
-                                "solar_evcharge_monitoring_mode",
+                                "charging_start_timestamp",  # HA missing
+                                "tcp_timeout_seconds",  # HA missing
+                                "charging_duration_seconds",  # HA missing
+                                "charging_window_seconds",  # HA not used
+                                "plug_lock_switch",  # HA missing
+                                "plug_countdown_seconds",  # HA missing
+                                "start_countdown_seconds",  # HA missing
+                                "auto_start_switch",  # HA missing
+                                "auto_charge_restart_switch",  # HA missing
+                                "start_evcharge_switch",  # HA missing
+                                "random_delay_switch",  # HA missing
+                                "smart_touch_mode",  # HA missing
+                                "wipe_up_mode",  # HA missing
+                                "wipe_down_mode",  # HA missing
+                                "light_off_schedule_switch",  # HA missing
+                                "modbus_switch",  # HA missing
+                                "tcp_port",  # HA missing
+                                "ip_address",  # HA missing
+                                "load_balance_switch",  # HA missing
+                                "solar_evcharge_switch",  # HA missing
+                                "solar_evcharge_mode",  # HA missing
+                                "phase_operating_mode",  # HA missing
+                                "auto_phase_switch",  # HA missing
+                                "schedule_switch",  # HA missing
+                                "weekend_mode",  # HA missing
+                                "schedule_mode",  # HA missing
+                                "charging_mode",  # HA missing
+                                "ev_charger_status",  # HA missing
+                                "boost_status",  # HA missing
+                                "ocpp_connect_status",  # HA missing
+                                "cp_signal_status",  # HA missing
+                                "plug_status",  # HA missing
+                                "solar_evcharge_monitoring_mode",  # HA not used
+                                "working_status",
+                                "mode",  # HA missing, meaning not clear
                             ]
                             and value is not None
                         ):

@@ -224,7 +224,7 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     "get_electric_plan_list": "charging_hes_svc/get_electric_utility_and_electric_plan_list",  # Energy plan if available for country & state combination, works with shared account
     "get_system_running_info": "charging_hes_svc/get_system_running_info",  # system runtime info, works with shared account
     "get_system_profit": "charging_hes_svc/get_system_profit_detail",  # works as member, {"siteId": siteId,"dateType": "year","start": "2025","end": ""} [day 2025-01-01, week, month 2025-01, year 2025], weekly syntax unklear
-    "energy_statistics": "charging_hes_svc/get_energy_statistics",  # Energy stats for HES, # source type [solar hes grid home]
+    "energy_statistics": "charging_hes_svc/get_energy_statistics",  # Energy stats for HES, # source type [solar hes grid home pps evCharger otherLoad]
     "get_monetary_units": "charging_hes_svc/get_world_monetary_unit",  # monetary unit list for system, works with shared account
     "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account. Shows installation location
     "get_wifi_info": "charging_hes_svc/get_wifi_info",  # get device wifi info, works with shared account
@@ -239,8 +239,10 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
 }
 
 """ Other endpoints neither implemented nor explored: 97 + 79 used => 176
+    'power_service/v1/get_message_sn_list',  # get list of devices providing messages
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
-    'power_service/v1/message_not_disturb',  # change do not disturb messages settings
+    'power_service/v1/message_not_disturb',  # change do not disturb messages settings {"start_time": int(timedelta(hours=5).total_seconds()/60), "end_time": int(timedelta(hours=19,minutes=45).total_seconds()/60),
+        "disturb_switch": True, "disturb_scenes": {"boost_charging": True, "paused_car_charging": True,"paused_charging": True,"restore_charging": True,"smart_charging": True,"start_charging": True,"stop_charging": True}
     'power_service/v1/read_message', # payload format unknown
     'power_service/v1/add_message',
     'power_service/v1/del_message',
@@ -784,6 +786,7 @@ class SolixParmType(Enum):
     SOLARBANK_AUTHORIZATIONS = "13"
     SOLARBANK_POWERDOCK = "16"  # get power dock SN
     SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
+    SOLARBANK_POWER_LIMIT = "19"  # cannot be queried, but only set. get_power_limit query will show active data
     # SOLARBANK_EV_CHARGER = "23" # EV Charger switch?
     SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
 
@@ -1440,6 +1443,22 @@ class SolixNetworkStatus(StrEnum):
     unknown = "unknown"
 
 
+class SolixWorkingStatus(StrEnum):
+    """Str Enumeration for Anker Solix HES working status."""
+    # TODO(X1): The proper description of those codes has to be confirmed
+    standby = "0"
+    running = "1"
+    unknown = "unknown"
+
+
+class SolixMode(StrEnum):
+    """Str Enumeration for Anker Solix HES mode."""
+    # TODO(X1): The proper description of those codes has to be confirmed
+    off = "0"
+    on = "1"
+    auto = "2"
+    unknown = "unknown"
+
 class SolixSwitchMode(IntEnum):
     """Int Enumeration for generic Anker Solix switch modes."""
 
@@ -1487,6 +1506,14 @@ class SolixPpsChargingStatus(StrEnum):
     solar = "1"
     input_power = "2"  # could be AC or DC input depending on device
     both = "3"
+    unknown = "unknown"
+
+
+class SolixPpsDcChargingStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS DC charging status."""
+
+    inactive = "0"
+    charging = "1"
     unknown = "unknown"
 
 

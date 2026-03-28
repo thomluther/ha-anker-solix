@@ -95,8 +95,10 @@ from .solixapi.apitypes import (
     SolixGridStatus,
     SolixParmType,
     SolixPlantStatus,
+    SolixPpsDcChargingStatus,
     SolixPpsPortStatus,
     SolixRoleStatus,
+    SolixWorkingStatus,
 )
 from .solixapi.helpers import get_enum_name
 
@@ -446,6 +448,7 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: (
             ({"device_sn": v} if (v := d.get("solarbank_1_sn")) else {})
             | ({"state_of_charge": v} if (v := d.get("solarbank_1_soc")) else {})
+            | ({"expansions": v} if (v := d.get("solarbank_1_exp_packs")) else {})
         ),
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_1_sn"))
@@ -463,6 +466,7 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: (
             ({"device_sn": v} if (v := d.get("solarbank_2_sn")) else {})
             | ({"state_of_charge": v} if (v := d.get("solarbank_2_soc")) else {})
+            | ({"expansions": v} if (v := d.get("solarbank_2_exp_packs")) else {})
         ),
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_2_sn"))
@@ -480,6 +484,7 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: (
             ({"device_sn": v} if (v := d.get("solarbank_3_sn")) else {})
             | ({"state_of_charge": v} if (v := d.get("solarbank_3_soc")) else {})
+            | ({"expansions": v} if (v := d.get("solarbank_3_exp_packs")) else {})
         ),
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_3_sn"))
@@ -497,6 +502,7 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: (
             ({"device_sn": v} if (v := d.get("solarbank_4_sn")) else {})
             | ({"state_of_charge": v} if (v := d.get("solarbank_4_soc")) else {})
+            | ({"expansions": v} if (v := d.get("solarbank_4_exp_packs")) else {})
         ),
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) and d.get("mqtt_data", {}).get("solarbank_4_sn"))
@@ -1372,31 +1378,31 @@ DEVICE_SENSORS = [
         json_key="phase",
         entity_category=EntityCategory.DIAGNOSTIC,
         attrib_fn=lambda d, _: (
-            {
-                "main_ct_number": val,
-            }
-            if (val := d.get("main_ct_number"))
-            else {}
-        ) | (
-            {
-                "branch_ct_number": val,
-            }
-            if (val := d.get("branch_ct_number"))
-            else {}
-        ) | (
-            {
-                "main_branch_check_status": val,
-            }
-            if (val := d.get("main_branch_check_status"))
-            else {}
+            (
+                {
+                    "main_ct_number": val,
+                }
+                if (val := d.get("main_ct_number"))
+                else {}
+            )
+            | (
+                {
+                    "branch_ct_number": val,
+                }
+                if (val := d.get("branch_ct_number"))
+                else {}
+            )
+            | (
+                {
+                    "main_branch_check_status": val,
+                }
+                if (val := d.get("main_branch_check_status"))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
-
-
-
-
     AnkerSolixSensorDescription(
         key="tag",
         translation_key="tag",
@@ -2209,6 +2215,19 @@ DEVICE_SENSORS = [
         mqtt=True,
     ),
     AnkerSolixSensorDescription(
+        key="dc_charging_status",
+        translation_key="dc_charging_status",
+        json_key="dc_charging_status",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=[status.name for status in SolixPpsDcChargingStatus],
+        value_fn=lambda d, jk, _: get_enum_name(SolixPpsDcChargingStatus, d.get(jk)),
+        attrib_fn=lambda d, _: {
+            "status": d.get("dc_charging_status"),
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
         key="main_battery_soc",
         translation_key="main_battery_soc",
         json_key="main_battery_soc",
@@ -2441,6 +2460,18 @@ DEVICE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d, jk, _: get_enum_name(SolixPlantStatus, d.get(jk)),
         attrib_fn=lambda d, _: {"status": d.get("plant_status")},
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="working_status",
+        translation_key="working_status",
+        json_key="working_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=[status.name for status in SolixWorkingStatus],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: get_enum_name(SolixWorkingStatus, d.get(jk)),
+        attrib_fn=lambda d, _: {"status": d.get("working_status")},
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -3956,6 +3987,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "device_name",
             "device_pn",
             "energy_ah",
+            "expansions"
             "fittings",
             "forecast",
             "forecast_24h",

@@ -896,6 +896,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Extensions"
                     }
                 }
             },
@@ -907,6 +910,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Extensions"
                     }
                 }
             },
@@ -918,6 +924,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Extensions"
                     }
                 }
             },
@@ -929,6 +938,9 @@
                     },
                     "state_of_charge": {
                         "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Extensions"
                     }
                 }
             },
@@ -1070,6 +1082,19 @@
                     }
                 }
             },
+            "dc_charging_status": {
+                "name": "État de charge CC",
+                "state": {
+                    "inactive": "Inactif",
+                    "charging": "Recharge",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
             "plant_status": {
                 "name": "État de la centrale électrique",
                 "state": {
@@ -1077,6 +1102,19 @@
                     "off_grid": "Hors réseau",
                     "standby": "Veille",
                     "fault": "Défaut",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
+            "working_status": {
+                "name": "État d'exécution",
+                "state": {
+                    "standby": "Veille",
+                    "running": "En marche",
                     "unknown": "Inconnu"
                 },
                 "state_attributes": {

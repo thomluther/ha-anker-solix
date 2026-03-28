@@ -994,6 +994,8 @@ class AnkerSolixApiExport:
                             "power_limit_option",
                             "power_limit_option_real",
                             "switch_0w",
+                            "ip_region",
+                            "regulation_code",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
@@ -1462,7 +1464,14 @@ class AnkerSolixApiExport:
                 # )
 
                 # get various daily energies since yesterday
-                for stat_type in ["solar", "hes", "home", "grid"]:
+                for stat_type in [
+                    "solar",
+                    "hes",
+                    "home",
+                    "grid",
+                    "evCharger",
+                    "otherLoad",
+                ]:
                     self._logger.info(
                         "Exporting HES site energy data for %s...",
                         stat_type.upper(),
@@ -1483,7 +1492,14 @@ class AnkerSolixApiExport:
                     )
 
                 # get various energies of today for last 5 min average values
-                for stat_type in ["solar", "hes", "home", "grid"]:
+                for stat_type in [
+                    "solar",
+                    "hes",
+                    "home",
+                    "grid",
+                    "evCharger",
+                    "otherLoad",
+                ]:
                     self._logger.info(
                         "Exporting HES site energy data of today for %s...",
                         stat_type.upper(),

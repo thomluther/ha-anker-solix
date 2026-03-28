@@ -648,6 +648,14 @@
                     "unknown": "mdi:battery-unknown"
                 }
             },
+            "dc_charging_status": {
+                "default": "mdi:battery-alert-variant",
+                "state": {
+                    "inactive": "mdi:battery-off",
+                    "charging": "mdi:battery-plus",
+                    "unknown": "mdi:battery-unknown"
+                }
+            },
             "plant_status": {
                 "default": "mdi:timeline-question",
                 "state": {
@@ -655,6 +663,14 @@
                     "off_grid": "mdi:transmission-tower-off",
                     "standby": "mdi:sleep",
                     "fault": "mdi:alert",
+                    "unknown": "mdi:timeline-question"
+                }
+            },
+            "working_status": {
+                "default": "mdi:timeline-question",
+                "state": {
+                    "standby": "mdi:timeline-clock",
+                    "running": "mdi:timeline-check",
                     "unknown": "mdi:timeline-question"
                 }
             },

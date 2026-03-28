@@ -739,7 +739,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             self._attr_options = list(options)
             self._attr_options.sort()
         elif mdev and (
-            self.entity_description.mqtt_cmd == SolixMqttCommands.sb_max_load
+            self.entity_description.mqtt_cmd
+            in [SolixMqttCommands.sb_max_load, SolixMqttCommands.sb_max_load_parallel]
             and isinstance(options := mdev.device.get("power_limit_option"), list)
         ):
             # Limit the options to subset as provided in Api device details (from power limit query)
@@ -759,14 +760,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         parm=self.entity_description.mqtt_cmd_parm,
                     ).keys()
                 )
-            number_sort = True
-        elif (
-            mdev
-            and self.entity_description.mqtt_cmd
-            == SolixMqttCommands.sb_max_load_parallel
-        ):
-            # TODO: Update options once SB Multisystem load limit change via Api is supported
-            self._attr_options = None
             number_sort = True
         elif self.entity_description.mqtt_cmd and mdev:
             # Get MQTT device options for supported control
@@ -1145,47 +1138,53 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 )
                 resp = None
                 with suppress(ValueError, TypeError):
-                    if stationSn := (
-                        self.coordinator_context
-                        if data.get("type") == SolixDeviceType.COMBINER_BOX.value
-                        else data.get("station_sn")
+                    if (
+                        stationSn := (
+                            self.coordinator_context
+                            if data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                            else data.get("station_sn")
+                        )
+                        is not None
                     ):
-                        # TODO: Multisystem Max load control via Api unknown at this point in time
-                        # Control all solarbank devices via individual MQTT device setting if they have a station
-                        for md in self.coordinator.client.get_mqtt_devices(
-                            siteId=data.get("site_id"),
-                            stationSn=stationSn,
-                            extraDeviceSn=self.coordinator_context,
-                            mqttControl=SolixMqttCommands.sb_max_load_parallel,
-                        ):
-                            resp = (resp or {}) | {
-                                f"mqtt_control_{md.sn}": await self._async_mqtt_option(
-                                    mdev=md,
-                                    option=option,
-                                    cmd=SolixMqttCommands.sb_max_load_parallel,
-                                )
-                            }
-                    elif data.get("type") == SolixDeviceType.SOLARBANK.value:
-                        # use Api command to modify station settings
-                        # TODO: Verify if Api option is reflected in mobile App station settings
+                        # Systems with Station support can be controlled through Api
                         resp = (
                             resp or {}
                         ) | await self.coordinator.client.api.set_power_limit(
                             siteId=data.get("site_id", ""),
-                            deviceSn=self.coordinator_context,
-                            ac_output=option
-                            if self._attribute_name == "max_load"
-                            else None,
+                            deviceSn=stationSn or self.coordinator_context,
+                            ac_output=option,
                             toFile=self.coordinator.client.testmode(),
                         )
-                    # ensure that each MQTT device uses the command as supported by its max load control
-                    if self._attribute_name == "max_load" and mdev:
-                        resp = (resp or {}) | {
-                            f"mqtt_control_{mdev.sn}": await self._async_mqtt_option(
-                                mdev=mdev,
-                                option=option,
+                        # MQTT control is not required, since managed through the cloud
+                        # Control all solarbank devices via individual MQTT device setting if they have a station
+                        # for md in self.coordinator.client.get_mqtt_devices(
+                        #     siteId=data.get("site_id"),
+                        #     stationSn=stationSn,
+                        #     extraDeviceSn=self.coordinator_context,
+                        #     mqttControl=SolixMqttCommands.sb_max_load_parallel,
+                        # ):
+                        #     resp = (resp or {}) | {
+                        #         f"mqtt_control_{md.sn}": await self._async_mqtt_option(
+                        #             mdev=md,
+                        #             option=option,
+                        #             cmd=SolixMqttCommands.sb_max_load_parallel,
+                        #         )
+                        #     }
+                    else:
+                        # ensure that MQTT device uses the command as supported by its max load control
+                        if self._attribute_name == "max_load" and mdev:
+                            resp = (resp or {}) | {
+                                f"mqtt_control_{mdev.sn}": await self._async_mqtt_option(
+                                    mdev=mdev,
+                                    option=option,
+                                )
+                            }
+                        if data.get("type") == SolixDeviceType.SOLARBANK.value:
+                            # Not station managed, update Api cache after MQTT command
+                            await self.coordinator.client.api.get_power_limit(
+                                siteId=data.get("site_id", ""),
+                                fromFile=self.coordinator.client.testmode(),
                             )
-                        }
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied limit setting:\n%s",
