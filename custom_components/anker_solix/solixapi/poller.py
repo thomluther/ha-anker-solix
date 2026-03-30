@@ -421,11 +421,11 @@ async def poll_sites(  # noqa: C901
                         # allow negative values for the field being used as battery power
                         solarbank["charging_power"] = f"{charge_calc:.0f}"
                         # adjust the new counters if required
-                        if "bat_charge_power" in solarbank:
+                        if solarbank.get("bat_charge_power"):
                             solarbank["bat_charge_power"] = (
                                 f"{max(batt_charge, charge_calc):.0f}"
                             )
-                        if "bat_discharge_power" in solarbank:
+                        if solarbank.get("bat_discharge_power"):
                             solarbank["bat_discharge_power"] = (
                                 f"{max(batt_discharge, charge_calc * -1):.0f}"
                             )
@@ -1246,9 +1246,10 @@ async def poll_device_details(  # noqa: C901
                     )
                     await api.get_device_attributes(
                         deviceSn=sn,
-                        attributes=[
-                            "pv_power_limit"
-                        ],  # , "switch_0w" does not reflect station setting
+                        # "enable_0w" does not reflect switch capability, so its misleading
+                        # "switch_0w" only reliable if not station managed
+                        attributes=["pv_power_limit"]
+                        + (["switch_0w"] if device.get("station_sn") is None else []),
                         fromFile=fromFile,
                     )
 

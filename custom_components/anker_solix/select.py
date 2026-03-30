@@ -1548,15 +1548,16 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 parm_map=parm_map,
                 toFile=self.coordinator.client.testmode(),
             )
-            if isinstance(resp, dict) and ALLOW_TESTMODE:
-                LOGGER.info(
-                    "%s: Applied MQTT command '%s' for '%s' change to '%s':\n%s",
-                    "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
-                    cmd,
-                    self.entity_id,
-                    option,
-                    json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
-                )
+            if isinstance(resp, dict):
+                if ALLOW_TESTMODE:
+                    LOGGER.info(
+                        "%s: Applied MQTT command '%s' for '%s' change to '%s':\n%s",
+                        "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
+                        cmd,
+                        self.entity_id,
+                        option,
+                        json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
+                    )
                 # copy the changed state(s) of the mock response into device cache to avoid flip back of entity until real state is received
                 for key, val in resp.items():
                     if key in mdev.mqttdata:

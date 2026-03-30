@@ -390,7 +390,7 @@ _A1763_0421 = {
     "a6": {
         BYTES: {
             "00": {
-                NAME: "output_power_total",  # Output power total
+                NAME: "output_power_total",  # Output power total (AC + DC)
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
@@ -530,6 +530,10 @@ _A1783_0421 = {
     },
     "a3": {
         BYTES: {
+            "00": {
+                NAME: "charging_status_a3_0?", # (0-3): Inactive (0), Solar (1), AC Input (2), Both (3)?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "04": {
                 NAME: "ac_input_limit_max?",  # Max supported charge limit, seems fix
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -593,12 +597,12 @@ _A1783_0421 = {
                 SIGNED: True,
                 TYPE: DeviceHexDataTypes.ui.value,
             },
-            "02": {
-                NAME: "battery_soc?",
+            "01": {
+                NAME: "charging_status_a5_1?", # (0-3): Inactive (0), Solar (1), AC Input (2), Both (3)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
-            "03": {
-                NAME: "battery_soh?",
+            "02": {
+                NAME: "battery_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
@@ -606,12 +610,24 @@ _A1783_0421 = {
     "a6": {
         BYTES: {
             "00": {
-                NAME: "output_power_total?",  # Output power total
+                NAME: "output_power_total",  # Output power total (AC + DC)
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
-                NAME: "ac_input_power?",  # Input power total charge
+                NAME: "ac_input_power",  # Input power total charge
                 TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "04": {
+                NAME: "dc_input_power_total",  # # DC input power (solar + car charging)
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                NAME: "unknown_a6_06?",  # tbd
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "08": {
+                NAME: "unknown_a6_08?",  # tbd
+                TYPE: DeviceHexDataTypes.ui.value,
             },
         },
     },
@@ -3172,6 +3188,7 @@ _PP_JSON = {
         "g2bp": {NAME: "grid_to_battery_power"},  # 2296 W
         "g2lp": {NAME: "grid_to_home_power"},  # 1409 W
         "lp": {NAME: "home_demand"},  # 1409 W
+        "mpp": {NAME: "micro_inverter_power"},  # 0 W
         # status
         "ws": {NAME: "working_status"},  # 0 = standby, 1 = running
         "m": {NAME: "mode"},  # (0 = off, 1 = on, 2 = auto)
@@ -3183,10 +3200,18 @@ _PP_JSON = {
             NAME: "plant_status"
         },
         "soc": {NAME: "battery_soc"},  # 62 %
+        "b1t": {NAME: "battery_1_temperature"},
         "bc": {NAME: "pps_count"},  # 2
         "bds": {
             NAME: "pps_{x}_data"
         },  # list with PPS data dict, eg {"sn": <pps_sn>,"soc":61,"power":-1148,"error":0}
+        "cp": {NAME: "charge_target_soc?"},  # %
+        "pu": {NAME: "power_usage_mode?"},
+        "mps": {NAME: "micro_power_setting?"},
+        "tu": {NAME: "msg_timestamp?"},
+        "tgp": {NAME: "grid_power_signed?"},
+        "tlp": {NAME: "home_demand?"},
+        "tpp": {NAME: "pv_power?"},
     },
 }
 
@@ -3619,6 +3644,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "a2": {NAME: "device_sn"},
             "a3": {NAME: "battery_soc"},
             "a4": {NAME: "405_unknown_1?"},
+            "a5": {NAME: "error_code"},
             "a6": {NAME: "sw_version", "values": 1},
             "a7": {NAME: "sw_controller", "values": 1},
             "a8": {NAME: "hw_version", "values": 1},

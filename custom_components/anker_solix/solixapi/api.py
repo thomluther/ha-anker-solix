@@ -1657,7 +1657,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
         If queried attributes are provided, these will be used to validate the actual settings. If omitted, no attribute change validation will be done.
         Example attributes input:
-        {"pv_power_limit": 3600, "ac_power_limit": 1200, "power_limit": 800}
+        {"pv_power_limit": 3600, "ac_power_limit": 1200, "switch_0w": 1}
         """
         # validate parameter
         if not isinstance(attributes, dict):
@@ -1854,8 +1854,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         ac_input: float | str | None = None,
         ac_output: float | str | None = None,
         pv_input: float | str | None = None,
-        # Grid export should be set through site station params for proper Api reflection
-        # This option may be required only for SB2 systems not managed by station settings yet
         grid_export: bool | int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
@@ -1879,6 +1877,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         )
         grid_export = bool(grid_export) if grid_export is not None else None
         query = []
+        attr_resp = {}
+        station_attr = {}
         # Prepare payload from parameters for proper device attributes
         # All device attributes not contained in get_power_limit response must be re-queried from get_device_attrs
         if ac_input is not None:
@@ -1887,34 +1887,51 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             data["pv_power_limit"] = pv_input
             query.append("pv_power_limit")
         if grid_export is not None:
-            data["switch_0w"] = 0 if grid_export else 1
-            query.append("switch_0w")
-        # process output limit via set_site_device_parm query type 19
-        if ac_output is not None and not isinstance(
-                await self.set_device_parm(
+            dev = self.devices.get(deviceSn, {})
+            if dev.get("station_sn") is None and dev.get("type") != SolixDeviceType.COMBINER_BOX.value:
+                # Grid export must be set via Api device attributes if not station managed (e.g. standalone Solarbank 2 systems)
+                data["switch_0w"] = 0 if grid_export else 1
+                query.append("switch_0w")
+            elif not isinstance(
+                # Combiner box or station managed devices must use Api station parameter settings
+                resp := await self.set_station_parm(
                     siteId=siteId,
-                    paramType=SolixParmType.SOLARBANK_POWER_LIMIT.value,
-                    paramData={
-                        "power_limit": {"limit": ac_output, "limit_real": ac_output}
-                    },
                     deviceSn=deviceSn,
+                    gridExport=grid_export,
                     toFile=toFile,
                 ),
                 dict,
             ):
                 return False
-        # update device attributes as required
-        attr_resp = None
-        if data and not isinstance(
-            attr_resp := await self.set_device_attributes(
+            elif "switch_0w" in (resp.get("param_data") or {}):
+                station_attr["switch_0w"] = resp["param_data"]["switch_0w"]
+        # process output limit via set_site_device_parm query type 19
+        if ac_output is not None and not isinstance(
+            await self.set_device_parm(
+                siteId=siteId,
+                paramType=SolixParmType.SOLARBANK_POWER_LIMIT.value,
+                paramData={
+                    "power_limit": {"limit": ac_output, "limit_real": ac_output}
+                },
                 deviceSn=deviceSn,
-                attributes=data,
-                query_attributes=query or None,
                 toFile=toFile,
             ),
             dict,
         ):
             return False
+        # update device attributes as required
+        if data:
+            if not isinstance(
+                resp := await self.set_device_attributes(
+                    deviceSn=deviceSn,
+                    attributes=data,
+                    query_attributes=query or None,
+                    toFile=toFile,
+                ),
+                dict,
+            ):
+                return False
+            attr_resp |= resp
         # Modify the updated attributes in the response and power limit file
         if toFile and (
             resp := await self.get_power_limit(siteId=siteId, fromFile=toFile)
@@ -1938,8 +1955,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     "data": resp,
                 },
             )
-        # query the actual limits and update cache
-        return {"device_attributes": attr_resp or {}} | await self.get_power_limit(
+        # query the actual limits and update power limit cache
+        return {"device_attributes": attr_resp or {}} | {"station_attributes": station_attr or {}} | await self.get_power_limit(
             siteId=siteId, fromFile=toFile
         )
 
