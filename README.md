@@ -26,6 +26,10 @@ This Home Assistant custom integration utilizes the [anker-solix Python library]
 
 Please refer to [supported sensors and devices](#supported-sensors-and-devices) for a list of supported Anker Solix devices.
 
+> [!IMPORTANT]
+> This project will NOT integrate another 3rd interface, since merging data from 2 interfaces is complex enough and this project is and remains cloud dependent. **The Api cloud is not optional, it is mandatory also for MQTT cloud usage**. If you need more robust local device interfaces and do not need system related data which is only available in the Api cloud, you need to look into the Solix BLE or Anker's Modbus projects which you can find under [Additional Resources](#additional-resources).
+
+
 ## Disclaimer:
 
 🚨 **This custom component is an independent project and is not affiliated with Anker. It has been developed to provide Home Assistant users with tools to integrate the devices of Anker Solix power systems into their smart home. Any trademarks or product names mentioned are the property of their respective owners.** 🚨
@@ -510,6 +514,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 - [Possibilities to integrate the Solarbank into your Energy Dashboard](https://github.com/thomluther/ha-anker-solix/discussions/16)
 - [Surplus charge automation for Solarbank E1600 (1st generation)](https://github.com/thomluther/ha-anker-solix/discussions/81)
 - [How to monitor Solarbank battery efficiency and health](https://github.com/thomluther/ha-anker-solix/discussions/109)
+- [Anker Solix Api exploration documentation](https://github.com/moag1000/anker-solix-api-exploration)
 - [Anker Solix BLE library - Local Bluetooth interface only (Inofficial)](https://github.com/flip-dots/SolixBLE)
 - [Anker Solix Official Integration for Home Assistant - Local Modbus interface devices only](https://github.com/anker-charging/ha-anker-solix-official)
 
