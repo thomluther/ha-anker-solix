@@ -766,6 +766,8 @@ class AnkerSolixBaseApi:
                                 "usbc_3_switch",
                                 "usbc_4_switch",
                                 "usba_switch",
+                                "ac_1_switch",
+                                "ac_2_switch",
                                 "dc_12v_auto_on",  # missing MQTT control command
                                 "usage_mode",
                                 "energy_saving_mode",  # missing MQTT control command

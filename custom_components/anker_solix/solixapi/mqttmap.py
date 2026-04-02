@@ -4212,6 +4212,125 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: only with status request command. Contains all settings and consumption data
         "0a00": _A2345_0a00,
     },
+    # Prime Charging Station 240W 8-in-1
+    "A91B2": {
+        "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
+        "0207": {
+            # AC outlet switch command. Same message type as A2345 USB port switch.
+            # port_select: 0=ac_1, 1=ac_2
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_1_port_switch,
+                SolixMqttCommands.ac_2_port_switch,
+            ],
+            SolixMqttCommands.ac_1_port_switch: CMD_USB_PORT_SWITCH
+            | {
+                "a2": {
+                    **CMD_USB_PORT_SWITCH["a2"],
+                    VALUE_DEFAULT: 0,
+                    VALUE_OPTIONS: {
+                        "ac_1_switch": 0,
+                        "ac_2_switch": 1,
+                    },
+                },
+                "a3": {
+                    **CMD_USB_PORT_SWITCH["a3"],
+                    STATE_NAME: "ac_1_switch",
+                },
+            },
+            SolixMqttCommands.ac_2_port_switch: CMD_USB_PORT_SWITCH
+            | {
+                "a2": {
+                    **CMD_USB_PORT_SWITCH["a2"],
+                    VALUE_DEFAULT: 1,
+                    VALUE_OPTIONS: {
+                        "ac_1_switch": 0,
+                        "ac_2_switch": 1,
+                    },
+                },
+                "a3": {
+                    **CMD_USB_PORT_SWITCH["a3"],
+                    STATE_NAME: "ac_2_switch",
+                },
+            },
+        },
+        # Special realtime trigger (no a2/a3 timeout params, same as A2345)
+        "020b": {
+            k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
+        },
+        # Port switch state notification (broadcast by device after 0207 command)
+        "0302": {
+            "a2": {NAME: "set_port_switch_select"},
+            "a3": {NAME: "set_port_switch"},
+            "fe": {NAME: "msg_timestamp"},
+        },
+        # Interval: ~1 second with realtime trigger. USB port consumption data (same layout as A2345).
+        "0303": _A2345_0303,
+        # Full device status including AC outlet switch states, sent on status request.
+        "0a00": {
+            "a2": {NAME: "sw_version", "values": 3},
+            # USB ports: a4=usbc_1 ... a9=usba_2 (same 8-byte structure as A2345 0a00)
+            "a4": {
+                BYTES: {
+                    "00": {NAME: "usbc_1_status", TYPE: DeviceHexDataTypes.ui.value},
+                    "01": {NAME: "usbc_1_voltage", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "03": {NAME: "usbc_1_current", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "05": {NAME: "usbc_1_power", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.01},
+                }
+            },
+            "a5": {
+                BYTES: {
+                    "00": {NAME: "usbc_2_status", TYPE: DeviceHexDataTypes.ui.value},
+                    "01": {NAME: "usbc_2_voltage", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "03": {NAME: "usbc_2_current", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "05": {NAME: "usbc_2_power", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.01},
+                }
+            },
+            "a6": {
+                BYTES: {
+                    "00": {NAME: "usbc_3_status", TYPE: DeviceHexDataTypes.ui.value},
+                    "01": {NAME: "usbc_3_voltage", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "03": {NAME: "usbc_3_current", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "05": {NAME: "usbc_3_power", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.01},
+                }
+            },
+            "a7": {
+                BYTES: {
+                    "00": {NAME: "usbc_4_status", TYPE: DeviceHexDataTypes.ui.value},
+                    "01": {NAME: "usbc_4_voltage", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "03": {NAME: "usbc_4_current", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "05": {NAME: "usbc_4_power", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.01},
+                }
+            },
+            "a8": {
+                BYTES: {
+                    "00": {NAME: "usba_1_status", TYPE: DeviceHexDataTypes.ui.value},
+                    "01": {NAME: "usba_1_voltage", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "03": {NAME: "usba_1_current", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "05": {NAME: "usba_1_power", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.01},
+                }
+            },
+            "a9": {
+                BYTES: {
+                    "00": {NAME: "usba_2_status", TYPE: DeviceHexDataTypes.ui.value},
+                    "01": {NAME: "usba_2_voltage", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "03": {NAME: "usba_2_current", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.001},
+                    "05": {NAME: "usba_2_power", TYPE: DeviceHexDataTypes.sile.value, FACTOR: 0.01},
+                }
+            },
+            # AC outlet switch states: byte "00" of f_value = 0 (off) or 1 (on)
+            "aa": {
+                BYTES: {
+                    "00": {NAME: "ac_1_switch", TYPE: DeviceHexDataTypes.ui.value},
+                },
+            },
+            "ab": {
+                BYTES: {
+                    "00": {NAME: "ac_2_switch", TYPE: DeviceHexDataTypes.ui.value},
+                },
+            },
+            "fe": {NAME: "msg_timestamp"},
+        },
+    },
     # Power Panel
     "A17B1": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages

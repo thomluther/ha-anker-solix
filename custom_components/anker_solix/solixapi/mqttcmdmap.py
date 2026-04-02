@@ -93,6 +93,8 @@ class SolixMqttCommands:
     usbc_3_port_switch: str = "usbc_3_port_switch"
     usbc_4_port_switch: str = "usbc_4_port_switch"
     usba_port_switch: str = "usba_port_switch"
+    ac_1_port_switch: str = "ac_1_port_switch"
+    ac_2_port_switch: str = "ac_2_port_switch"
     soc_limits: str = "soc_limits"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"

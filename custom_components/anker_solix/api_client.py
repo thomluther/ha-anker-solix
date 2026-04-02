@@ -794,6 +794,11 @@ class AnkerSolixApiClient:
                             ).create_device()
                         ):
                             self.mqtt_devices[sn] = mdev
+                    # Auto-send status request and realtime trigger for newly created MQTT devices
+                    for mdev in self.mqtt_devices.values():
+                        if mdev.device.get("mqtt_status_request"):
+                            await mdev.status_request()
+                        await mdev.realtime_trigger()
                     # Note: The method for update callback will be checked and set during coordinator updates
                 else:
                     _LOGGER.error(

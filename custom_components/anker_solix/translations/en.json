@@ -2147,6 +2147,12 @@
             "usba_switch": {
                 "name": "USB-A ports"
             },
+            "ac_1_switch": {
+                "name": "AC outlet 1"
+            },
+            "ac_2_switch": {
+                "name": "AC outlet 2"
+            },
             "allow_refresh": {
                 "name": "Api Usage",
                 "state_attributes": {

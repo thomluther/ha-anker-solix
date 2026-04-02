@@ -302,6 +302,24 @@ DEVICE_SWITCHES = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.usba_port_switch,
     ),
+    AnkerSolixSwitchDescription(
+        key="ac_1_switch",
+        translation_key="ac_1_switch",
+        json_key="ac_1_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.OUTLET,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_1_port_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="ac_2_switch",
+        translation_key="ac_2_switch",
+        json_key="ac_2_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.OUTLET,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_2_port_switch,
+    ),
 ]
 
 
