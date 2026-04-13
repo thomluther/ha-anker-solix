@@ -138,29 +138,33 @@ Following are screenshots from basic dashboard cards including sensors and most 
 
 ![System Dashboard][solarbank-2-system-dashboard-img]
 
-#### Light Theme examples of Solarbank E1600**
+#### Light Theme examples of Solarbank E1600
 
 ![Solarbank Dashboard Light Theme][solarbank-dashboard-light-img]
 
 Screenshots from other device types when using the system main account:
 
-#### Additional device preset entities only available in supported dual Solarbank E1600 systems**
+#### Additional device preset entities only available in supported dual Solarbank E1600 systems
 
 ![Dual Solarbank Entities][dual-solarbank-entities-img]
 
-#### Solarbank 2 E1600 Pro device**
+#### Solarbank 2 E1600 Pro device
 
 ![Solarbank 2 Pro Device][solarbank-2-pro-device-img]  ![Solarbank 2 Pro Device Diag][solarbank-2-pro-diag-img]
 
-#### Smart Meter device**
+#### Smart Meter device
 
 ![Smart Meter Device][smart-meter-device-img]
 
-#### Power Dock device**
+#### Power Dock device
 
 ![Power Dock Device][power-dock-device-img]
 
-#### Vehicle device**
+#### EV Charger dashboard example
+
+![EV Charger Device][ev-charger-dashboard-img]
+
+#### Vehicle device
 
 ![Vehicle Device][vehicle-device-img]
 
@@ -1924,6 +1928,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]
 [notification-img]: doc/notification.png
 [solarbank-dashboard-img]: doc/solarbank-dashboard.png
 [solarbank-dashboard-light-img]: doc/solarbank-dashboard-light.png
+[ev-charger-dashboard-img]: doc/ev-charger-dashboard.png
 [dual-solarbank-entities-img]:  doc/dual-solarbank-entities.png
 [system-dashboard-img]: doc/system-dashboard.png
 [schedule-markdown-img]: doc/schedule-markdown.png

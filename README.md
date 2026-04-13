@@ -130,6 +130,7 @@ Platform | Description
 `button` | Trigger device details refresh on demand
 `number` | Change values for certain entities
 `datetime` | Change date and time for certain entities
+`time` | Change time for certain entities
 `service` | Various Solarbank schedule or Api related services/actions
 
 Device type | Description
@@ -145,6 +146,7 @@ Device type | Description
 `solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
+`ev_charger` | Anker Solix EV charger devices:<br>- A5191: V1 Smart EV Charger **(MQTT monitoring & control)**
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the Anker Solix V1 EV Charger.
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
