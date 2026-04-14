@@ -75,7 +75,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self.sites[siteId] = {}
         self.sites[siteId]["site_details"] = site_details
 
-    def _update_dev(
+    def _update_dev(  # noqa: C901
         self,
         devData: dict,
         devType: str | None = None,
