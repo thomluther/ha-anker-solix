@@ -146,7 +146,7 @@ async def poll_sites(  # noqa: C901
             ]:
                 api._update_dev(
                     {
-                        "device_sn": sn,
+                        "device_sn": dev.get("device_sn"),
                         "device_pn": dev.get("device_model"),
                         "alias": dev.get("device_name"),
                         "status": dev.get("status"),
@@ -388,18 +388,9 @@ async def poll_sites(  # noqa: C901
                         batt_discharge = int(solarbank.get("bat_discharge_power") or 0)
                         # Fix for output power showing wrong values in multisystems, while new battery charge and discharge fields seem to be ok
                         if multisystem:
-                            # ceil output which must not be smaller than PV + discharge, considering no losses according to other cloud calculations
-                            if (batt_discharge + power_in) > power_out:
-                                power_out = batt_discharge + power_in
-                                solarbank["output_power"] = f"{power_out:.0f}"
-                            # cap output which must not be larger than PV +/- net battery power
-                            elif (
-                                0
-                                < (power_in - batt_charge + batt_discharge)
-                                < power_out
-                            ):
-                                power_out = power_in - batt_charge + batt_discharge
-                                solarbank["output_power"] = f"{power_out:.0f}"
+                            # calculate output which must PV + battery power, considering no losses according to other cloud calculations
+                            power_out = power_in - batt_charge + batt_discharge
+                            # solarbank["output_power"] = f"{power_out:.0f}" # output power should be fixed now
                             # breakdown of grid charge which is provided for all solarbanks
                             if grid_in > 0:
                                 # grid charge should be battery charge - pv charge
@@ -421,11 +412,11 @@ async def poll_sites(  # noqa: C901
                         # allow negative values for the field being used as battery power
                         solarbank["charging_power"] = f"{charge_calc:.0f}"
                         # adjust the new counters if required
-                        if solarbank.get("bat_charge_power"):
+                        if "bat_charge_power" in solarbank:
                             solarbank["bat_charge_power"] = (
                                 f"{max(batt_charge, charge_calc):.0f}"
                             )
-                        if solarbank.get("bat_discharge_power"):
+                        if "bat_discharge_power" in solarbank:
                             solarbank["bat_discharge_power"] = (
                                 f"{max(batt_discharge, charge_calc * -1):.0f}"
                             )
@@ -494,11 +485,14 @@ async def poll_sites(  # noqa: C901
                             "grid_to_battery_power": str(sb_grid_charge),
                             "pei_heating_power": solarbank.get("heating_power")
                             or sb_info.get("pei_heating_power"),
-                            "to_home_load": sb_info.get("to_home_load"),
+                            "to_home_load": solarbank.get("output_power")
+                            if multisystem
+                            else sb_info.get(
+                                "to_home_load"
+                            ),  # Wrong for multisystem (always first device only)
                             # demand only passed to device for proper SB2+ charge status update
                             "home_load_power": mysite.get("home_load_power"),
                         },
-                        devType=SolixDeviceType.SOLARBANK.value,
                         siteId=myid,
                         isAdmin=admin,
                     ):
@@ -545,6 +539,10 @@ async def poll_sites(  # noqa: C901
                     # In multisystem there should not be parallel charge and discharge of batteries, therefore (calculated) device values should reflect net total
                     mysite["solarbank_info"]["total_charging_power"] = (
                         f"{sb_total_charge_calc:.0f}"
+                    )
+                    # Correct home load, since that reflects only first solarbank home load value
+                    mysite["solarbank_info"]["to_home_load"] = (
+                        f"{sb_total_output_calc:.0f}"
                     )
                     # TODO(MULTISYSTEM): Adjust other totals as necessary once value examples are available
                     # adjust breakdown for multisystem if possible
@@ -624,7 +622,6 @@ async def poll_sites(  # noqa: C901
                                 ),
                                 "grid_status": grid_info.get("grid_status", ""),
                             },
-                            devType=SolixDeviceType.SMARTMETER.value,
                             siteId=myid,
                             isAdmin=admin,
                         ):
@@ -638,7 +635,6 @@ async def poll_sites(  # noqa: C901
                             smartplug["alias_name"] = smartplug.pop("device_name")
                         if sn := api._update_dev(
                             smartplug,
-                            devType=SolixDeviceType.SMARTPLUG.value,
                             siteId=myid,
                             isAdmin=admin,
                         ):
@@ -652,7 +648,6 @@ async def poll_sites(  # noqa: C901
                             pps["alias_name"] = pps.pop("device_name")
                         if sn := api._update_dev(
                             pps,
-                            devType=SolixDeviceType.PPS.value,
                             siteId=myid,
                             isAdmin=admin,
                         ):
@@ -688,7 +683,6 @@ async def poll_sites(  # noqa: C901
                         sbpps["to_home_load"] = sbpps.pop("home_load_power", "")
                         if sn := api._update_dev(
                             sbpps,
-                            devType=SolixDeviceType.SOLARBANK_PPS.value,
                             siteId=myid,
                             isAdmin=admin,
                         ):
@@ -760,7 +754,6 @@ async def poll_sites(  # noqa: C901
                         )
                     if sn := api._update_dev(
                         cb,
-                        devType=SolixDeviceType.COMBINER_BOX.value,
                         siteId=myid,
                         isAdmin=admin,
                     ):
@@ -777,7 +770,6 @@ async def poll_sites(  # noqa: C901
                         cp["bat_charge_power"] = cp.pop("power", "")
                         if sn := api._update_dev(
                             cp,
-                            devType=SolixDeviceType.EV_CHARGER.value,
                             siteId=myid,
                             isAdmin=admin,
                         ):
@@ -790,7 +782,6 @@ async def poll_sites(  # noqa: C901
                         solar.update({"alias_name": solar.pop("device_name")})
                     if sn := api._update_dev(
                         solar,
-                        devType=SolixDeviceType.INVERTER.value,
                         siteId=myid,
                         isAdmin=admin,
                     ):
@@ -803,7 +794,6 @@ async def poll_sites(  # noqa: C901
                         powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                     if sn := api._update_dev(
                         powerpanel,
-                        devType=SolixDeviceType.POWERPANEL.value,
                         siteId=myid,
                         isAdmin=admin,
                     ):
@@ -1368,16 +1358,25 @@ async def poll_device_energy(  # noqa: C901
             # they or their energy category is explicitly excluded or unused for site type
             query_types: set = set()
             query_sn: str = ""
+            parallel_sbs = []
             if site.get("site_type", "") == SolixDeviceType.SOLARBANK_PPS.value:
                 query_types.add(SolixDeviceType.SOLARBANK_PPS.value)
             else:
+                parallel_sbs = [
+                    item.get("device_sn")
+                    for item in (site.get("solarbank_info") or {}).get("solarbank_list")
+                    or []
+                    # exclude SB1 devices which are not tracked on device level
+                    if item.get("device_pn") != "A17C0"
+                ]
                 if (
                     (dev_list := site.get("solar_list") or [])
                     and isinstance(dev_list, list)
                     and (sn := dev_list[0].get("device_sn"))
                 ):
                     query_types.add(SolixDeviceType.INVERTER.value)
-                    query_sn = sn
+                    # skip SN to get total energies
+                    # query_sn = sn
                 if (
                     (dev_list := (site.get("grid_info") or {}).get("grid_list") or [])
                     and isinstance(dev_list, list)
@@ -1392,12 +1391,17 @@ async def poll_device_energy(  # noqa: C901
                         & exclude
                     ):
                         query_types.add(SolixDeviceType.SMARTMETER.value)
-                        query_sn = sn
+                        # skip SN to get total energies
+                        # query_sn = sn
                 if (
-                    plug_list := (site.get("smart_plug_info") or {}).get(
-                        "smartplug_list"
+                    (
+                        dev_list := (site.get("smart_plug_info") or {}).get(
+                            "smartplug_list"
+                        )
+                        or []
                     )
-                    or []
+                    and isinstance(dev_list, list)
+                    and (sn := dev_list[0].get("device_sn"))
                 ):
                     query_types.discard(SolixDeviceType.INVERTER.value)
                     if not (
@@ -1408,7 +1412,24 @@ async def poll_device_energy(  # noqa: C901
                         & exclude
                     ):
                         query_types.add(SolixDeviceType.SMARTPLUG.value)
-                        query_sn = plug_list[0].get("device_sn") or ""
+                        # skip SN to get total energies
+                        # query_sn = sn
+                if (
+                    (dev_list := (site.get("charging_pile_info") or {}).get("charging_pile_list") or [])
+                    and isinstance(dev_list, list)
+                    and (sn := dev_list[0].get("device_sn"))
+                ):
+                    query_types.discard(SolixDeviceType.INVERTER.value)
+                    if not (
+                        {
+                            SolixDeviceType.EV_CHARGER.value,
+                            ApiCategories.charger_energy,
+                        }
+                        & exclude
+                    ):
+                        query_types.add(SolixDeviceType.EV_CHARGER.value)
+                        # skip SN to get total energies
+                        # query_sn = sn
                 if (
                     (
                         dev_list := (site.get("solarbank_info") or {}).get(
@@ -1428,13 +1449,17 @@ async def poll_device_energy(  # noqa: C901
                         & exclude
                     ):
                         query_types.add(SolixDeviceType.SOLARBANK.value)
-                        query_sn = sn
-                        # Query also embedded inverter energy per channel if not excluded
-                        if not (
-                            {
-                                ApiCategories.solar_energy,
-                            }
-                            & exclude
+                        # skip SN to get total energies
+                        # query_sn = sn
+                        # Query also embedded inverter energy per channel if not excluded and site is tracking it
+                        if (
+                            not (
+                                {
+                                    ApiCategories.solar_energy,
+                                }
+                                & exclude
+                            )
+                            and len(parallel_sbs) == 1
                         ):
                             query_types.add(SolixDeviceType.INVERTER.value)
 
@@ -1504,15 +1529,54 @@ async def poll_device_energy(  # noqa: C901
                             "energy_last_period": plug.get("energy"),
                         }
                     )
-                # query breakdown for solarbank PPS devices if required
-                if (
-                    len(
-                        pps_list := (site.get("solarbank_pps_info") or {}).get(
-                            "pps_list"
+                # query breakdown for Solarbank devices if required
+                if len(parallel_sbs) > 1 and not (
+                    {
+                        SolixDeviceType.SOLARBANK.value,
+                        ApiCategories.solarbank_energy,
+                    }
+                    & exclude
+                ):
+                    for sn in parallel_sbs:
+                        # obtain previous energy details to check if yesterday must be queried as well
+                        energy = api.devices.get(sn, {}).get("energy_details") or {}
+                        data = await api.energy_daily(
+                            siteId=site_id,
+                            deviceSn=sn,
+                            startDay=datetime.fromisoformat(
+                                yesterday if both else today
+                            ),
+                            numDays=2 if both else 1,
+                            dayTotals=False,  # No device breakdown for daytotals available
+                            fromFile=fromFile,
                         )
-                        or []
-                    )
-                    > 1
+                        if fromFile:
+                            # get last date entries from file and replace date with yesterday and today for testing
+                            days = len(data)
+                            if days > 1:
+                                entry: dict = list(data.values())[days - 2]
+                                entry.update({"date": yesterday})
+                                energy["last_period"] = entry
+                            if days > 0:
+                                entry: dict = list(data.values())[days - 1]
+                                entry.update({"date": today})
+                                energy["today"] = entry
+                        else:
+                            energy["today"] = data.get(today) or {}
+                            if data.get(yesterday):
+                                energy["last_period"] = data.get(yesterday) or {}
+                        # save energy stats with device dictionary
+                        api._update_dev({"device_sn": sn, "energy_details": energy})
+                # query breakdown for Solarbank PPS devices if required
+                if len(
+                    pps_list := (site.get("solarbank_pps_info") or {}).get("pps_list")
+                    or []
+                ) > 1 and not (
+                    {
+                        SolixDeviceType.SOLARBANK_PPS.value,
+                        ApiCategories.solarbank_pps_energy,
+                    }
+                    & exclude
                 ):
                     # For more than 1 PPS, query energy breakdown per device and save with device
                     for dev in pps_list:

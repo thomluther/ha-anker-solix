@@ -36,9 +36,10 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Example screenshots](#example-screenshots)
 1. **[Anker account limitation and usage recommendations](#anker-account-limitation-and-usage-recommendations)**
     * [Previous work around to overcome parallel usage restriction](#previous-work-around-to-overcome-parallel-usage-restriction-of-owner-account-no-longer-required-since-august-2025)
-1. **[Data refresh configuration options](#data-refresh-configuration-options)**
-    * [Option considerations for Solarbank 2 systems](#option-considerations-for-solarbank-2-systems)
-    * [Default hub configuration options](#default-hub-configuration-options)
+1. **[Default hub configuration options](#default-hub-configuration-options)**
+    * [API configuration options](#api-configuration-options)
+    * [MQTT configuration options](#mqtt-configuration-options)
+1. **[Option considerations for Solarbank 2 systems](#option-considerations-for-solarbank-2-systems)**
 1. **[MQTT connection and integration](#mqtt-connection-and-integration)**
     * [Common MQTT options](#common-mqtt-options)
     * [Device specific MQTT options](#device-specific-mqtt-options)
@@ -201,12 +202,32 @@ A work around to overcome the previous account usage limitation had been impleme
 To simplify usage of this workaround, please see [Automation to send and clear sticky, actionable notifications to your smart phone based on Api switch setting](#automation-to-send-and-clear-sticky-actionable-notifications-to-your-smart-phone-based-on-api-switch-setting) for an example automation, which sends a sticky mobile notification when the Api switch was disabled, using actionable buttons to launch the Anker App directly from the notification. It provides also actionable buttons to re-enable the switch again and clear the sticky notification. This avoids forgetting to re-enable your data collection once you are finished with your tasks in the Anker mobile app.
 
 
-## Data refresh configuration options
+## Default hub configuration options
 
-The data in the cloud which can be retrieved via the Api is typically refreshed only once per minute at most. Most of the device types refresh cloud data only in 5 minute intervals. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further if no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the received data.
+The hub configuration options can be modified right after successful account authorization and before the first data collection is done. Api options, MQTT server options and excluded device types or energy statistic categories can be reviewed and changed as needed prior the initial data poll. You can adjust those options also later, after the hub was fully initialized with the initial data poll and entity creation, by using the Options menu item of the hub configuration.
+
+Starting with version 3.4.0 and introduction of new MQTT options, the hub options have been restructured and previous configurations have been migrated to the new structure. The default option view presents collapsed sections for Api and MQTT options and only the Exclusion categories are visible in the main option section. Per default, all energy categories are excluded since they may drive lots of additional Api queries initially and during the less frequent device details poll and may run into Api throttling for the energy statistics endpoint.
+
+**You need to remove them from the selected exclusions if you want to see daily energies in your system for related device types.**
+
+![Options][options-img]
+
+> [!IMPORTANT]
+> The listed categories in the options panel are **EXCLUDED**. Categories in the 'Excludable dropdown list' are **INCLUDED**. The display of the excluded categories above the dropdown may be misleading, but that is managed by HA core and cannot be changed by the integration.
 
 > [!NOTE]
-> The solarbank seems to be the only Anker system device category that provides valid timestamp data (inverter or power panel data timestamps are not updated by the cloud).
+> A modification of hub options which adds more exclusion categories or disables the MQTT connection will completely remove the affected devices and their entities from HA and re-register the devices again with remaining entities as necessary. This avoids manual HA cleanup for entities that are no longer provided by the integration. It has the disadvantage however, that customized entity deactivation, activation or visibility may need to be re-applied because re-registration will typically create the entities with their integration defined default activation and visibility setting.
+
+### Api configuration options
+
+Following are the default Api options:
+
+![Api Options][options-api-img]
+
+The data in the cloud which can be retrieved via the Api is typically refreshed only once per minute at most. Most of the device types refresh cloud data only in 5 minute intervals through regular MQTT messages. Therefore, it is recommended to leave the integration refresh interval set to the default minimum of 60 seconds, or increase it even further if no frequent updates are required. Refresh intervals are configurable from 30-600 seconds, but **less than 60 seconds will not provide more actual data and just cause unnecessary Api traffic.** Version 1.1.0 of the integration introduced a new system sensor showing the timestamp of the delivered Solarbank data to the cloud, which can help you to understand the age of the received data.
+
+> [!NOTE]
+> The solarbank seems to be the only Anker system device category that provides valid timestamp data (inverter, Power Panel or HES data timestamps are not updated by the cloud).
 
 During each Api refresh interval, the power sensor values of the systems and their devices will be refreshed, along with the actual system configuration and available end devices. There are more end device details available showing their actual settings, like power cut-off, auto-upgrade, schedule, system energy statistics etc. However, those details require much more Api queries and therefore are refreshed less frequently. The device details refresh interval can be configured as a multiplier of the normal data refresh interval. With the default options of the configured account, the device details refresh will run every 10 minutes, which is typically by far sufficient. If a device details update is required on demand, each end device has a button that can be used for such a one-time refresh. However, the button will re-trigger the device details refresh only when the last refresh was more than 60 seconds ago and there is no device refresh ongoing to avoid unnecessary Api traffic.
 
@@ -215,25 +236,29 @@ To prevent too many requests in a short amount of time, a configurable request d
 The default request timeout was reduced from 30 seconds to 10 seconds in version 3.3.0, since a single retry was implemented upon timeout or http errors which may indicate a temporary issue. Since version 3.3.1, you can also configure the request timeout between 5-60 seconds. Typically the Anker cloud servers responds in less than a second once the request could be submitted, and the default timeout of 10 seconds is sufficient. But there are also DNS timeout errors seen from various people which may depend on local or wide area network routing capabilities, which may sometimes require longer timeouts.
 
 The cloud Api also enforces a request limit. This request limit is applied by the cloud and is independent of the used account. It is enforced per IP address and endpoint within the last ~minute. Originally this limit was ~25 requests for most endpoints. As of Feb. 2025, this endpoint limit was significantly reduced by Anker to 10-12 requests per IP and minute for frequently used endpoints. Every Api client you use in your home behind the same router IP will count towards that cloud limit, like running Anker Solix HA integration clients, Anker mobile app devices etc. The mobile App may appear only unresponsive or not showing data or charts when the endpoint limit is temporarily exceeded, but in the HA integration logs you will see errors as following:
+
 ```text
 2025-02-28 16:54:34.343 ERROR (MainThread) [custom_components.anker_solix] Api Request Error: 429, message='Too Many Requests', url='https://ankerpower-api-eu.anker.com/power_service/v1/site/energy_analysis'
 2025-02-28 16:54:34.344 ERROR (MainThread) [custom_components.anker_solix] Response Text: {"error_msg":"Request too soon. Your actions have been recorded."}
 ```
+
 If those errors occur during setup or reload of the configuration entry, you may see your configuration entry flagged with error `429: Too many requests`. Upon such errors, some or all entities may become unknown, unavailable or show stale data until further Api requests are permitted. To avoid hitting the request limit, starting with release 2.5.5 a new endpoint throttling capability was implemented to the Api client session. A default endpoint limit of 10 will be used for the throttle, which can be adjusted as required. With release 2.5.7 the throttling is no longer activate for each endpoint, but activated only upon first `429: Too many requests` error. This avoids throttling loops for endpoints that may have a higher limit. Setting the endpoint limit to 0 will disable and reset the active throttling and provide the former client session behavior.
 
 > [!NOTE]
 > In order to avoid that potential endpoint throttling loops occurs during (re)load of the configuration or re-activation of the Api refresh switch, while doing the initial data poll for entity creation, the initial poll of energy details is now deferred to the next data refresh cycle. This ensures fast configuration (re)loads and avoids that this process may be elongated for minute(s). This change however has the disadvantage, that energy entity creation will be delayed by one or more minutes. **So be calm and allow the integration a few minutes after restart or Api refresh re-activation to poll initial energy data and create or reactivate the corresponding entities.**
 
 > [!IMPORTANT]
-> The endpoint limit throttle is applied only for a single Api session. Other Api clients may query the same endpoints within same minute and therefore the integration may still exceed the endpoint limit. If you create multiple Anker configuration hub entries, you need to distribute the allowed endpoint limit (10) accordingly across all hub entries since their Api requests can run in parallel. Another client like your Anker app using another account will contribute to the limit as well if that is connected to the cloud through your same router IP address.
+> The endpoint limit throttle is applied only for a single Api session. Other Api clients like the mobile App may query the same endpoints within same minute and therefore the integration may still exceed the endpoint limit. If you create multiple Anker configuration hub entries, you need to distribute the allowed endpoint limit (10) accordingly across all hub entries since their Api requests can run in parallel. Another client like your Anker app using another account will contribute to the limit as well if that is connected to the cloud through your same router IP address.
 
 Due to the enforced Anker Cloud Api endpoint limit, it is recommended to exclude the energy categories from your hub configuration entry if you want to avoid such request errors or the throttling delays, which aim to avoid exceeding the endpoint limit for larger or multiple systems configurations. The daily energy entities require by far the most queries to the same endpoint, and therefore may cause one or more minute throttle delays for data refreshes even in small system configurations.
 Furthermore, all energy statistic entities are excluded from new configuration entries per default. They may increase the required Api requests significantly as shown in the discussion post [Api request overview](https://github.com/thomluther/ha-anker-solix/discussions/32). Desired energy statistics can be re-enabled by removing them from the exclusion list in the configuration options.
 
 Furthermore there may be request errors when you configured more than one Anker hub (or use the Anker app in parallel) in case multiple Api requests are done in parallel from same IP address, even if that is for different accounts or systems. This is typically logged with error code 21105 as shown in following example:
+
 ```text
 [custom_components.anker_solix] (21105) Anker Api Error: Failed to request. 2024-09-26 08:59:39.442 ERROR (MainThread) [custom_components.anker_solix] Response Text: {"code":21105,"msg":"Failed to request.","trace_id":"<trace_id>"}
 ```
+
 Request errors may cause entities to become unavailable, or even cause the configuration (re)load to fail. You cannot avoid parallel requests of multiple clients by changing the hub configuration options. Starting with release 2.5.5, some enhancements have been implemented to better tolerate multiple hub configuration entries and parallel request errors:
   * Added a request retry capability to the Api client session for return codes that can be classified as 'Api busy error', such as code 21105. A single retry will be attempted for the request after a random delay of 2-5 seconds, which should mask parallel request errors in most cases. A warning will be logged for the retry attempt to allow monitoring for their frequency.
   * If more than one Anker hub configuration entry is created, the integration will try to stagger their individual data refresh polls:
@@ -244,11 +269,26 @@ All the above enhancements should better tolerate multiple hub configuration ent
 
 With release 2.6.0 there have been added diagnostic entities to the account device to show the last refresh timestamp as well as the duration in the attributes.
 Those entities however are disabled by default and must be enabled if you want more insights on the integration refresh intervals and runtimes. They may help to recognize throttling loops or interval staggering according to their update history.
+
 ![Api refresh sensors][api-refresh-sensors-img]![Api refresh history][api-refresh-history-img]
 
-The configuration workflow was completely reworked since version 1.2.0. Configuration options can now already be modified right after successful account authorization and before the first data collection is done. Excluded device types, details categories or energy statistics can be reviewed and changed as needed prior the initial data poll. Device types of no interest can be excluded completely. Exclusion of energy categories and specific system or solarbank categories may help to further reduce the number of required Api requests and customize the presented entities of the integration.
+### MQTT configuration options
 
-### Option considerations for Solarbank 2 systems
+Starting with integration 3.6.0, the default MQTT options have been modified to enable the MQTT server connection per default.
+
+Following are the default MQTT options:
+
+![MQTT Options][options-mqtt-img]
+
+The MQTT server connection itself does not lead to more backend traffic, but the integration will subscribe to eligible device topics on the Anker MQTT server and receive their published messages and data. Be aware that some devices send regular messages while others do not, and also the regular message data varies per device model. Many devices may need either a real time and/or status request trigger to publish any message. But those triggers may also be sent by the Anker mobile App and received by the integration while it is subscribed to the MQTT device topics. However, device messages may stop a few minutes after the App has closed the connection to your system or device, and MQTT based entity data may become stale.
+
+> [!IMPORTANT]
+> The integration does NOT implement automated MQTT triggers in general, since the messaging behavior is completely different per device model and it may lead to unnecessary backend traffic. If MQTT triggers are required to obtain the desired data for your device, you have to automate the triggers individually in your HA automation.
+
+More MQTT configuration and usage details are provided in [MQTT connection and integration](#mqtt-connection-and-integration).
+
+
+## Option considerations for Solarbank 2 systems
 
 Anker changed the device data publish intervals with Solarbank 2 power systems. While Solarbank 1 devices publish their MQTT data every 60 seconds to the Api cloud, Solarbank 2 systems seem to use different intervals for MQTT data publishing:
    - Default interval is **~5 minutes**: After ~60 seconds, the cloud considered the last values obsolete at initial product release. That resulted in no longer returning valid values upon refresh requests (only 0 values), until new MQTT data has been received again from the devices. There was a change implemented in the cloud around 25. July 2024 to provide always the last known data upon Api refresh requests. This eliminated the missing value problem for shared accounts in the Anker mobile app or 0 values in any api client responses.
@@ -259,36 +299,20 @@ In consequence, before the cloud change in July 2024, the HA integration typical
 > [!NOTE]
 > The cloud change in July 2024 did not change the cloud data update frequency for Solarbank 2 systems. It only avoids that the cloud considers older device data as obsolete, but always responds with last known data instead. It has the same effect as the new 'Skip invalid data responses' option that was implemented to the integration.
 
-### Default hub configuration options
-
-Starting with version 3.4.0 and introduction of new MQTT options, the hub options have been restructured and previous configurations have been migrated to the new structure. The default option view presents collapsed sections for Api and MQTT options and only the Exclusion categories are visible in the main option section. Per default, all energy categories are excluded since they may drive lots of additional Api queries during the less frequent device details poll and run into Api throttling for the energy statistics endpoint. You need to remove them from the exclusion if you want to see daily energies in your system for related device types.
-
-![Options][options-img]
-
-> [!IMPORTANT]
-> The listed categories in the options panel are **EXCLUDED**. Categories in the 'Excludable dropdown list' are **INCLUDED**. The display of the excluded categories above the dropdown may be misleading, but that is managed by HA core and cannot be changed by the integration.
-
-> [!NOTE]
-> A change in the hub options that added more exclusions or disables the MQTT connection will completely remove the affected devices and re-register them with remaining entities as necessary. This avoids manual cleanup in HA of entities no longer provided by the integration. It has the disadvantage however, that customized entity deactivation or activation maybe has to be re-applied because re-registration will typically create the entities with their integration defined default activation setting.
-
-The Api options as explained in [Data refresh configuration options](#data-refresh-configuration-options) come with following default settings:
-
-![Api Options][options-api-img]
-
-The MQTT options as explained in [MQTT connection and integration](#mqtt-connection-and-integration) come with following default settings:
-
-![MQTT Options][options-mqtt-img]
-
 
 ## MQTT connection and integration
 
 Since version 3.4.0, the integration implemented hybrid support of MQTT data beside cloud Api data. Version 3.5.0 added support for MQTT based device control entities. The MQTT server connection is optional and can be enabled in your hub configuration options. With usage of the MQTT server connection, all eligible and owned devices of your Anker account are subscribed for MQTT messages from the Anker cloud MQTT server. That means, the integration can receive any MQTT message published from those devices to the MQTT server. But the connection can also be used to publish MQTT commands from the integration to the MQTT cloud server, which are subscribed by your devices to allow their remote control. The cloud MQTT server connection gives the integration the same capabilities that the Anker mobile app provides to monitor and manage devices remotely via the MQTT connection.
 
-However, since MQTT messages and commands are encoded and may differ for each device model, they have to be decoded and described first before your specific device model can be supported. For already described device models and message types, you may see additional device entities being created by the integration, or existing entities may get additional attributes. While additional attributes will immediately appear during a state update, additional entities are only created during the Api update interval in case new devices or entities are being discovered. So you have to expect that MQTT entities will be created with a delay of at least 1 minute.
+However, since MQTT messages and commands are encoded and may differ for each device model, they have to be decoded and described first before your specific device model can be supported. For already described device models and message types, you may see additional device entities being created by the integration, or existing entities may get additional attributes. While additional attributes will immediately appear during a state update, additional entities are only created during the Api update interval in case new devices or entities are being discovered.
+
+> [!IMPORTANT]
+> You have to expect that device MQTT entities will be created with a delay of at least 1 minute after an initial hub configuration or reconfiguration, and after the first MQTT message was received for the corresponding device.
+
 Devices also publish different types of MQTT messages at different intervals and the MQTT data delivery has a 'Push' characteristic compared to the 'Pull' characteristic of cloud Api data. MQTT based entities and attributes are updated immediately as published device MQTT messages with corresponding data are received by the integration. Since many MQTT messages can be published in a short amount of time by multiple devices in your account, the integration delays the centralized states update by 2 seconds. This allows data consolidation of multiple messages in short time frames and limits the HA workload for processing state updates of all hub entities. That means in case of real time messages published by an active device real time data trigger, you can follow the updates in HA immediately with a maximum delay of 2 seconds.
 
 > [!NOTE]
-> MQTT based entities or attributes may appear only after a certain delay of one or more minutes after the MQTT server connection was started or the integration hub configuration was (re-) loaded. If the entities were existing previously, they may appear 'unavailable' until their MQTT data has been published and received again. Specific MQTT data may even require to activate the device real time data trigger, and affected entities may remain 'unavailable' or become stale if no real time trigger is active for the device. This heavily depends on which regular messages are sent by the device and whether they have a regular message publish interval at all. Some devices may send MQTT messages only once requested per command or real time trigger.
+> MQTT based entities or attributes may appear only after a certain delay of one or more minutes after the MQTT server connection was started or the integration hub configuration was (re-) loaded. If the entities were existing previously, they may appear 'unavailable' until their MQTT data has been published and received again. Specific MQTT data may even require to activate the device real time data trigger, and affected entities may remain 'unavailable' or become stale if no real time trigger is active for the device. This heavily depends on the device type and which regular messages they publish at all. Some devices may send MQTT messages only once requested per command or real time trigger.
 
 There are different types of MQTT messages, reported at different intervals and with different content. Not every created entity will be updated with each message. Furthermore, there are also special messages which are only sent if the device is triggered to publish real time data. These are typically sent in 3-5 second intervals, but only while the real time trigger is active for the device. If the device provides standard MQTT messages without trigger, they are typically sent in 60-300 seconds intervals, but some types are also sent irregularly upon changes, like network signal messages if provided by the device. Standard messages may contain the same, different or a subset of data contained in real time data messages. This varies per device model. Be aware that data delivery to the integration heavily depends on the state and accuracy of the MQTT message decoding and description in the [Api library](https://github.com/thomluther/anker-solix-api). If there is an incorrect value description, the value representation in the integration may be wrong! But this problem cannot be fixed by the integration or library maintainer. For problem analysis, you need to make familiar with the Api library and the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to verify live messages sent by your owned device and see how the value decoding is actually described and how it must be changed or fixed to utilize the correct message fields or value conversions for your device model.
 
@@ -328,7 +352,7 @@ While an MQTT overlay may have the benefit of providing most current data for yo
 If you want to maintain a holistic data view, the MQTT overlay should remain disabled. Also with Api data preference you can benefit from real time data triggers or status requests, since the cloud servers receive the same device messages for their recording backend, and the regular Api data polls may then receive more frequent holistic data updates during the normal Api refresh cycles.
 
 > [!IMPORTANT]
-> The Api refresh cycle can be configured in the hub options, the minimum however remains at 30 seconds. Upon reduction of your default Api refresh interval, you should consider increasing the details refresh multiplier accordingly, since that is just a multiplier for the refresh interval and drives lots of Api queries that provide data which are not changed frequently. See [API data refresh configuration options](#data-refresh-configuration-options) for more details.
+> The Api refresh cycle can be configured in the hub options, the minimum however remains at 30 seconds. Upon reduction of your default Api refresh interval, you should consider increasing the details refresh multiplier accordingly, since that is just a multiplier for the refresh interval and drives lots of Api queries that provide data which are not changed frequently. See [API configuration options](#api-configuration-options) for more details.
 
 At the end, you have to test the best overlay setting for each of your Anker Solix devices according to your preferences. Therefore the MQTT overlay is customizable per device. However, be aware that future integration or Api library updates may change how individual entity values appear or are merged with an active MQTT overlay. So the data appearance behavior for your specific device may change with new integration versions.
 
@@ -352,7 +376,7 @@ Depending on how devices publish their data in regular messages, you may need th
 > For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data.
 
 > [!NOTE]
-> Anker has various implementations of the real time trigger capability depending on the device type. While newer devices seem to repeat the message publish cycles by themselves, older device types like the Solarbank 1 seem to get triggered by the cloud with regular status requests to the device. That means the cloud may driving the real time trigger functionality for the timeout duration. However, it was also identified, that the cloud driven real time trigger depends on the actual device state. So there is no guarantee, that you get regular real time data from such devices upon a real time trigger command. However, those devices may fully support the [MQTT status request](#device-status-requests) command, which should be automated preferably at your customized automation trigger interval.
+> Anker has various implementations of the real time trigger capability depending on the device type. While newer devices seem to repeat the message publish cycles by themselves, older device types like the Solarbank 1 seem to get triggered by the cloud with regular status requests to the device. That means the cloud may drive the real time trigger functionality for the timeout duration. However, it was also identified, that the cloud driven real time trigger depends on the actual device state. So there is no guarantee, that you get regular real time data from such devices upon a real time trigger command. However, those devices may fully support the [MQTT status request](#device-status-requests) command, which should be automated preferably at your customized automation trigger interval.
 
 
 ### Device status requests
@@ -363,6 +387,59 @@ Integration version 3.4.1 added another diagnostic button for a single MQTT stat
 > Anker has no consistent implementation across their Solix devices whether they publish all status messages upon a single status request. Especially Solarbank 2 and later, as well as Multisystem constellations have many extra status messages that are only published while the **real time trigger** is active. These are messages with expansion battery details, or messages that consolidate actual states from all coupled devices with the overall data values.
 
 Depending on which message(s) the various devices publish upon a status request, you may see that some of your MQTT based entity states will not refresh. However, if all relevant entities are being refreshed with a status request, that should be the preferred button for any of your customized automation, since you have more control about the extra MQTT data traffic. For example, if you need to get state updates only every 30 or 15 seconds, you can control that with the status request button and the frequency when and how often your automation triggers. The real time trigger button instead does not allow to control the message traffic or frequency.
+
+### Example automation for regular status requests
+
+Following is an example automation to trigger real time data every 15 minutes. This will trigger the device to publish real time data messages every 3-5 seconds until the configured MQTT real time trigger timeout is expired (default 5 minutes). If you want permanent real time data, you would have to change the automation interval to 5 minutes. The conditions in your automation should verify the state of the device and whether real time data make sense at all, to avoid useless data traffic.
+
+If your device does publish/update all required data with a status request trigger instead, automate that button preferably. A single MQTT message per trigger causes much less traffic to the backend infrastructure and you can repeat the update at your desired automation trigger interval.
+
+<details>
+<summary><b>Expand to see automation code</b><br><br></summary>
+
+```yaml
+description: "Anker Solix Device Real time trigger every 15 minutes"
+mode: single
+triggers:
+  - trigger: time_pattern
+    minutes: /15
+conditions:
+  - condition: state
+    alias: Check that hub is connected to MQTT server
+    entity_id: binary_sensor.tho_de_mqtt_connection
+    state:
+      - "on"
+  - condition: state
+    alias: Check that device is connected to Wifi
+    entity_id: binary_sensor.sb_e1600_2_pro_wifi_connection
+    state:
+      - "on"
+  - condition: not
+    alias: Check that trigger button is not unavailable
+    conditions:
+      - condition: state
+        entity_id: button.sb_e1600_2_pro_mqtt_realtime_data
+        state:
+          - unavailable
+  - condition: not
+    alias: Check if device has a condition to provide data updates
+    condition: not
+    conditions:
+      - condition: state
+        entity_id: sensor.sb_e1600_2_pro_mode
+        state:
+          - unavailable
+          - unknown
+          - standby
+
+actions:
+  - action: button.press
+    metadata: {}
+    data: {}
+    target:
+      entity_id: button.sb_e1600_2_pro_mqtt_realtime_data
+```
+</details>
 
 
 ## Switching between different Anker Power accounts

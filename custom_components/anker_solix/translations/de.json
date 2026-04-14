@@ -31,6 +31,7 @@
                 "vehicle": "Fahrzeuge",
                 "ev_charger": "EV Ladestationen",
                 "charger": "Power Ladestationen",
+                "charger_energy": "Ladestation Energiestatistik",
                 "generator": "Generator",
                 "home_backup": "Heimsicherung"
             }
@@ -279,6 +280,9 @@
             },
             "mqtt_status_request": {
                 "name": "MQTT Statusabfrage"
+            },
+            "restart_device": {
+                "name": "Geräteneustart"
             }
         },
         "binary_sensor": {
@@ -485,6 +489,13 @@
                     "on": "Verbunden",
                     "off": "Getrennt"
                 }
+            },
+            "plug_status": {
+                "name": "Ladekabelstatus",
+                "state": {
+                    "on": "Eingesteckt",
+                    "off": "Getrennt"
+                }
             }
         },
         "datetime": {
@@ -558,6 +569,15 @@
             },
             "dc_output_timeout": {
                 "name": "Zeitüberschreitung DC"
+            },
+            "main_breaker_limit": {
+                "name": "Hauptsicherungslimit"
+            },
+            "max_evcharge_current": {
+                "name": "Max EV Ladestrom"
+            },
+            "solar_evcharge_min_current": {
+                "name": "Min EV Solar Ladestrom"
             }
         },
         "select": {
@@ -666,7 +686,7 @@
                 }
             },
             "light_mode": {
-                "name": "Licht Modus",
+                "name": "LED Modus",
                 "state": {
                     "normal": "Normal",
                     "mood": "Stimmungslicht",
@@ -701,6 +721,87 @@
                 "state": {
                     "normal": "Normal",
                     "smart": "Smart"
+                }
+            },
+            "max_evcharge_current": {
+                "name": "Max EV Ladestrom"
+            },
+            "solar_evcharge_min_current": {
+                "name": "Min EV Solar Ladestrom"
+            },
+            "light_brightness": {
+                "name": "LED Helligkeit"
+            },
+            "wipe_up_mode": {
+                "name": "Wischgeste hoch",
+                "state": {
+                    "off": "Aus",
+                    "start_charge": "Start",
+                    "stop_charge": "Stop",
+                    "boost_charge": "Schnellladen",
+                    "unknown": "Unbekannt"
+                }
+            },
+            "wipe_down_mode": {
+                "name": "Wischgeste runter",
+                "state": {
+                    "off": "Aus",
+                    "start_charge": "Start",
+                    "stop_charge": "Stop",
+                    "boost_charge": "Schnellladen",
+                    "unknown": "Unbekannt"
+                }
+            },
+            "smart_touch_mode": {
+                "name": "Smart-Touch Modus",
+                "state": {
+                    "simple": "Einfach",
+                    "anti_mistouch": "Anti-Fehler",
+                    "unknown": "Unbekannt"
+                }
+            },
+            "ev_charger_mode": {
+                "name": "Ladestation Modus",
+                "state": {
+                    "start_charge": "Starte Ladevorgang",
+                    "wait_start": "Warte auf Start",
+                    "wait_plug": "Warte auf Stecker",
+                    "stop_charge": "Stop",
+                    "skip_delay": "Überspringe Verzögerung",
+                    "boost_charge": "Schnellladen",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "plug_countdown": {
+                        "name": "Stecker Wartezeit"
+                    },
+                    "start_countdown": {
+                        "name": "Startverzögerung"
+                    }
+                }
+            },
+            "solar_evcharge_mode": {
+                "name": "Solar Lademodus",
+                "state": {
+                    "solar_grid": "Solar + Netz",
+                    "solar_only": "Nur Solar",
+                    "unknown": "Unbekannt"
+                }
+            },
+            "schedule_mode": {
+                "name": "Ladezeitplanmodus",
+                "state": {
+                    "normal": "Normal",
+                    "smart": "Smart",
+                    "unknown": "Unbekannt"
+                }
+            },
+            "weekend_mode": {
+                "name": "Ladezeitplan Wochenenden",
+                "state": {
+                    "same": "Gleich",
+                    "different": "Unterschiedlich",
+                    "unknown": "Unbekannt"
                 }
             },
             "vehicle_brand": {
@@ -882,17 +983,17 @@
             "ac_output_power_total": {
                 "name": "AC Ausgangsleistung gesamt"
             },
-            "ac_output_power_signed_total": {
-                "name": "AC Ausgangsleistung gesamt"
+            "device_output_power_signed_total": {
+                "name": "Geräteleistung gesamt"
             },
-            "solarbank_ac_output_power_signed_total": {
-                "name": "SB Ausgangsleistung gesamt"
-            },
-            "solarbank_1_ac_output_power_signed": {
-                "name": "SB 1 AC Leistung",
+            "device_1_ac_output_power_signed": {
+                "name": "Gerät 1 AC Leistung",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Seriennummer"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -902,11 +1003,14 @@
                     }
                 }
             },
-            "solarbank_2_ac_output_power_signed": {
-                "name": "SB 2 AC Leistung",
+            "device_2_ac_output_power_signed": {
+                "name": "Gerät 2 AC Leistung",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Seriennummer"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -916,11 +1020,14 @@
                     }
                 }
             },
-            "solarbank_3_ac_output_power_signed": {
-                "name": "SB 3 AC Leistung",
+            "device_3_ac_output_power_signed": {
+                "name": "Gerät 3 AC Leistung",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Seriennummer"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -930,11 +1037,48 @@
                     }
                 }
             },
-            "solarbank_4_ac_output_power_signed": {
-                "name": "SB 4 AC Leistung",
+            "device_4_ac_output_power_signed": {
+                "name": "Gerät 4 AC Leistung",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Seriennummer"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Erweiterungen"
+                    }
+                }
+            },
+            "device_5_ac_output_power_signed": {
+                "name": "Gerät 5 AC Leistung",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Erweiterungen"
+                    }
+                }
+            },
+            "device_6_ac_output_power_signed": {
+                "name": "Gerät 6 AC Leistung",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -994,6 +1138,9 @@
                         "name": "Modus"
                     }
                 }
+            },
+            "state_of_charge_total": {
+                "name": "Gesamtladestand"
             },
             "state_of_charge": {
                 "name": "Ladestand",
@@ -1462,6 +1609,9 @@
             "home_load_power_avg": {
                 "name": "Hausbedarf ⌀"
             },
+            "ev_charge_power_avg": {
+                "name": "Fahrzeug Ladeleistung ⌀"
+            },
             "grid_to_home_power_avg": {
                 "name": "Netzbezug ⌀"
             },
@@ -1730,6 +1880,17 @@
                     },
                     "last_period": {
                         "name": "Letzte Periode"
+                    }
+                }
+            },
+            "daily_ev_charge": {
+                "name": "Tägliche Fahrzeugladung",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
                     }
                 }
             },
@@ -2082,6 +2243,166 @@
             },
             "exp_5_temperature": {
                 "name": "Erw. 5 Temperatur"
+            },
+            "ip_address": {
+                "name": "IP Adresse",
+                "state_attributes": {
+                    "tcp_port": {
+                        "name": "TCP Port"
+                    },
+                    "tcp_timeout_seconds": {
+                        "name": "TCP Zeitüberschreitung Sek"
+                    }
+                }
+            },
+            "phase_operating_mode": {
+                "name": "Phasenbetriebsmodus",
+                "state": {
+                    "automatic": "Automatisch",
+                    "one_phase": "Einphasig",
+                    "three_phase": "Dreiphasig"
+                },
+                "state_attributes": {
+                    "max_ampere": {
+                        "name": "Max Ampere"
+                    },
+                    "min_ampere": {
+                        "name": "Min Ampere"
+                    }
+                }
+            },
+            "ocpp_connect_status": {
+                "name": "OCPP Verbindung",
+                "state": {
+                    "disconnected": "Getrennt",
+                    "connecting": "Verbinden",
+                    "connected": "Verbunden",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
+            "cp_signal_status": {
+                "name": "CP Signal",
+                "state": {
+                    "a_12v": "A 12V",
+                    "b1_9v": "B1 9V",
+                    "b2_9v": "B2 9V",
+                    "c1_6v": "C1 6V",
+                    "c2_6v": "C2 6V",
+                    "error": "Fehler",
+                    "d1_3v": "D1 3V",
+                    "d2_3v": "D2 3V",
+                    "e_0v": "E 0V",
+                    "f_minus_12v": "F -12V"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
+            "ev_charger_status": {
+                "name": "EV-Ladestation Zustand",
+                "state": {
+                    "standby": "Bereitschaft",
+                    "preparing": "Vorbereitung",
+                    "charging": "Aufladung",
+                    "charger_paused": "Pausiert Ladestation",
+                    "vehicle_paused": "Pausiert Fahrzeug",
+                    "completed": "Abgeschlossen",
+                    "reserving": "Reservierung",
+                    "disabled": "Deaktiviert",
+                    "error": "Fehler"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    }
+                }
+            },
+            "power_l1": {
+                "name": "Leistung L1",
+                "state_attributes": {
+                    "current": {
+                        "name": "Ampere"
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
+            },
+            "power_l2": {
+                "name": "Leistung L2",
+                "state_attributes": {
+                    "current": {
+                        "name": "Ampere"
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
+            },
+            "power_l3": {
+                "name": "Leistung L3",
+                "state_attributes": {
+                    "current": {
+                        "name": "Ampere"
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
+            },
+            "charging_start_timestamp": {
+                "name": "Aufladestart",
+                "state_attributes": {
+                    "duration": {
+                        "name": "Dauer"
+                    }
+                }
+            },
+            "charging_energy": {
+                "name": "Aufladeenergie",
+                "state_attributes": {
+                    "energy_l1": {
+                        "name": "Energie L1"
+                    },
+                    "energy_l2": {
+                        "name": "Energie L2"
+                    },
+                    "energy_l3": {
+                        "name": "Energie L3"
+                    }
+                }
+            },
+            "total_ev_charge": {
+                "name": "Gesamtladung",
+                "state_attributes": {
+                    "charge_count": {
+                        "name": "Gesamtanzahl"
+                    },
+                    "total_duration": {
+                        "name": "Gesamtdauer"
+                    }
+                }
+            },
+            "total_charge_cost": {
+                "name": "Gesamtkosten"
+            },
+            "total_saving": {
+                "name": "Gesamte Einsparung",
+                "state_attributes": {
+                    "co2_saving": {
+                        "name": "CO2 Einsparung"
+                    },
+                    "total_km": {
+                        "name": "Gesamtdistanz km"
+                    }
+                }
             }
         },
         "switch": {
@@ -2147,6 +2468,42 @@
             "usba_switch": {
                 "name": "USB-A Ports"
             },
+            "ac_1_switch": {
+                "name": "Steckdose 1"
+            },
+            "ac_2_switch": {
+                "name": "Steckdose 2"
+            },
+            "plug_lock_switch": {
+                "name": "Steckerverriegelung"
+            },
+            "auto_start_switch": {
+                "name": "Automatischer Ladestart"
+            },
+            "auto_charge_restart_switch": {
+                "name": "Automatischer Ladeneustart"
+            },
+            "random_delay_switch": {
+                "name": "Verzögerter Ladestart"
+            },
+            "modbus_switch": {
+                "name": "Modbus TCP"
+            },
+            "light_off_schedule_switch": {
+                "name": "LED Abschaltzeitplan"
+            },
+            "load_balance_switch": {
+                "name": "Lastausgleich"
+            },
+            "solar_evcharge_switch": {
+                "name": "Solarladung"
+            },
+            "auto_phase_switch": {
+                "name": "Auto Phasenumschaltung"
+            },
+            "charge_schedule_switch": {
+                "name": "Ladezeitplan"
+            },
             "allow_refresh": {
                 "name": "Api Nutzung",
                 "state_attributes": {
@@ -2160,6 +2517,26 @@
             },
             "default_vehicle": {
                 "name": "Standardfahrzeug"
+            }
+        },
+        "time":{
+            "light_off_start_time": {
+                "name": "LED Abschaltung Start"
+            },
+            "light_off_end_time": {
+                "name": "LED Abschaltung Ende"
+            },
+            "week_start_time": {
+                "name": "Ladezeitplan Start"
+            },
+            "week_end_time": {
+                "name": "Ladezeitplan Ende"
+            },
+            "weekend_start_time": {
+                "name": "Ladezeitplan WE Start"
+            },
+            "weekend_end_time": {
+                "name": "Ladezeitplan WE Ende"
             }
         }
     },

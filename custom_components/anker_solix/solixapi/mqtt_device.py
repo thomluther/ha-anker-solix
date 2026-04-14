@@ -27,6 +27,7 @@ from .mqttcmdmap import (
     VALUE_MIN,
     VALUE_MIN_STATE,
     VALUE_OPTIONS,
+    VALUE_OPTIONS_STATE,
     VALUE_STATE,
     VALUE_STEP,
     SolixMqttCommands,
@@ -136,6 +137,7 @@ class SolixMqttDevice:
                                         VALUE_STEP,
                                         VALUE_STATE,
                                         VALUE_OPTIONS,
+                                        VALUE_OPTIONS_STATE,
                                         VALUE_DEFAULT,
                                         STATE_CONVERTER,
                                         STATE_NAME,
@@ -209,6 +211,21 @@ class SolixMqttDevice:
                                                 descriptors,
                                             ],
                                         }
+                                    if (
+                                        state_name := descriptors.get(
+                                            VALUE_OPTIONS_STATE
+                                        )
+                                    ) is not None:
+                                        desc = self.dynamic_descriptions.get(
+                                            state_name, {}
+                                        )
+                                        self.dynamic_descriptions[state_name] = {
+                                            "key": VALUE_OPTIONS,
+                                            "desc": [
+                                                *desc.get("desc", []),
+                                                descriptors,
+                                            ],
+                                        }
                         control["parameters"] = parameters
                         # check if control is a switch with only "on" and "off" in single required option
                         control["is_switch"] = bool(
@@ -231,34 +248,44 @@ class SolixMqttDevice:
                             str(descriptors or {}),
                         )
 
-    def update_device(self, device: dict) -> None:
+    def update_device(
+        self, device: dict, dynamic_descriptions: dict | None = None
+    ) -> None:
         """Define callback for Api device updates."""
         if isinstance(device, dict) and device.get("device_sn") == self.sn:
             # Validate device type or accept any if not defined
+            if not isinstance(dynamic_descriptions, dict):
+                dynamic_descriptions = {}
             if (pn := device.get("device_pn")) in self.models or not self.models:
                 self.pn = pn
                 self.device = device
                 self.mqttdata = device.get("mqtt_data", {})
                 # update dynamic descriptions and controls if state values are changed
-                for state_name, d in self.dynamic_descriptions.items():
-                    if (state := self.mqttdata.get(state_name)) is not None and str(
-                        state
-                    ) != str(d.get("last_value")):
-                        key = d["key"]
-                        if (
-                            key in [VALUE_MIN, VALUE_MAX, VALUE_STEP]
-                            and str(state)
-                            .replace("-", "", 1)
-                            .replace(".", "", 1)
-                            .isdigit()
-                        ):
-                            # update all dependent parameter descriptors
-                            for desc in d.get("desc", []):
+                # prefer provided description states if any
+                merged = self.mqttdata | dynamic_descriptions
+                for state_name, dd in self.dynamic_descriptions.items():
+                    if (
+                        (state := merged.get(state_name)) is not None
+                        and str(state) != str(dd.get("last_value"))
+                        and (key := dd.get("key"))
+                        in [VALUE_MIN, VALUE_MAX, VALUE_STEP, VALUE_OPTIONS]
+                    ):
+                        # update all dependent parameter descriptors
+                        for desc in dd.get("desc", []):
+                            if key == VALUE_OPTIONS:
+                                if isinstance(state, dict | list):
+                                    desc[key] = state
+                            elif (
+                                str(state)
+                                .replace("-", "", 1)
+                                .replace(".", "", 1)
+                                .isdigit()
+                            ):
                                 desc[key] = round_by_factor(
                                     float(state), desc.get(VALUE_STEP, 1)
                                 )
-                            # save applied state
-                            d["last_value"] = state
+                        # save applied state
+                        dd["last_value"] = state
             else:
                 self._logger.error(
                     "Device %s (%s) is not in supported models %s for MQTT control",
@@ -440,7 +467,7 @@ class SolixMqttDevice:
         # if value is string make further conversions to get the actual value
         if desc.get(STATE_NAME, "").endswith("_time"):
             # special case for fields indicating (seconds), minutes, hours per byte
-            value = value if isinstance(convert_time(value), bytes) else None
+            value = convert_time(hextime) if isinstance(hextime := convert_time(value), bytes) else None
         # lookup state if value is string
         elif (
             isinstance(value, str)
@@ -631,11 +658,20 @@ class SolixMqttDevice:
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
-                        state_fields[state_name] = (
+                        state_value = (
                             converter(fieldvalue, None)
                             if callable(converter)
                             else fieldvalue
                         )
+                        # special case to cut mocked time string to length of state string
+                        if (
+                            par.endswith("_time")
+                            and isinstance(state_value, str)
+                            and (length := len(self.mqttdata.get(state_name, ""))) > 0
+                        ):
+                            state_fields[state_name] = state_value[:length]
+                        else:
+                            state_fields[state_name] = state_value
                     # generate generic user description and provided string value or field value
                     user_parms[par] = val if isinstance(val, str) else fieldvalue
                     # mark required parameter as defined
@@ -703,7 +739,6 @@ class SolixMqttDevice:
             ):
                 resp = state_fields
                 # add mock states for fields with depending values
-
                 if toFile:
                     self._filedata.update(resp)
         return resp

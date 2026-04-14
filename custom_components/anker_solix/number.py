@@ -22,6 +22,7 @@ from homeassistant.const import (
     PERCENTAGE,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
+    UnitOfElectricCurrent,
     UnitOfEnergy,
     UnitOfEnergyDistance,
     UnitOfPower,
@@ -68,6 +69,7 @@ class AnkerSolixNumberDescription(
     mqtt: bool = False
     mqtt_cmd: str | None = None
     mqtt_cmd_parm: str | None = None
+    dynamic_options: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
@@ -218,6 +220,40 @@ DEVICE_NUMBERS = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.sb_disable_grid_export_switch,
         mqtt_cmd_parm="set_grid_export_limit",
+    ),
+    AnkerSolixNumberDescription(
+        key="main_breaker_limit",
+        translation_key="main_breaker_limit",
+        json_key="main_breaker_limit",
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.main_breaker_limit,
+    ),
+    AnkerSolixNumberDescription(
+        key="max_evcharge_current",
+        translation_key="max_evcharge_current",
+        json_key="max_evcharge_current",
+        mode=NumberMode.SLIDER,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_max_charge_current,
+        # Dynamic limit changes based on reported data
+        dynamic_options=True,
+    ),
+    AnkerSolixNumberDescription(
+        key="solar_evcharge_min_current",
+        translation_key="solar_evcharge_min_current",
+        json_key="solar_evcharge_min_current",
+        mode=NumberMode.SLIDER,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_solar_charging,
+        mqtt_cmd_parm="set_solar_evcharge_min_current",
+        # Dynamic limit changes based on reported data
+        dynamic_options=True,
     ),
 ]
 
@@ -468,42 +504,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             if self.entity_description.mqtt_cmd and (
                 mdev := self.coordinator.client.get_mqtt_device(context)
             ):
-                # first get parameter description
-                if self.entity_description.mqtt_cmd_parm:
-                    desc = mdev.get_cmd_parms(
-                        cmd=self.entity_description.mqtt_cmd, all=True
-                    ).get(self.entity_description.mqtt_cmd_parm, {})
-                else:
-                    desc = next(
-                        iter(
-                            mdev.get_cmd_parms(
-                                cmd=self.entity_description.mqtt_cmd
-                            ).values()
-                        ),
-                        {},
-                    )
-                # define number range from control description
-                if self._attribute_name in ["ac_output_timeout", "dc_output_timeout"]:
-                    # convert seconds to minutes
-                    self.native_min_value = (
-                        round(num / 60)
-                        if isinstance(num := desc.get(VALUE_MIN), float | int)
-                        else None
-                    )
-                    self.native_max_value = (
-                        round(num / 60)
-                        if isinstance(num := desc.get(VALUE_MAX), float | int)
-                        else None
-                    )
-                    self.native_step = (
-                        round(num / 60)
-                        if isinstance(num := desc.get(VALUE_STEP), float | int)
-                        else None
-                    )
-                else:
-                    self.native_min_value = desc.get(VALUE_MIN)
-                    self.native_max_value = desc.get(VALUE_MAX)
-                    self.native_step = desc.get(VALUE_STEP)
+                self._options_update(mdev=mdev)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -524,6 +525,41 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
         self._native_value = None
         self._assumed_state = False
         self.update_state_value()
+
+    def _options_update(self, mdev: SolixMqttDevice) -> None:
+        """Handle number options update from MQTT control descriptions."""
+        # first get MQTT control parameter description
+        if self.entity_description.mqtt_cmd_parm:
+            desc = mdev.get_cmd_parms(
+                cmd=self.entity_description.mqtt_cmd, all=True
+            ).get(self.entity_description.mqtt_cmd_parm, {})
+        else:
+            desc = next(
+                iter(mdev.get_cmd_parms(cmd=self.entity_description.mqtt_cmd).values()),
+                {},
+            )
+        # define number range from control description
+        if self._attribute_name in ["ac_output_timeout", "dc_output_timeout"]:
+            # convert seconds to minutes for easier usage in HA
+            self.native_min_value = (
+                round(num / 60)
+                if isinstance(num := desc.get(VALUE_MIN), float | int)
+                else None
+            )
+            self.native_max_value = (
+                round(num / 60)
+                if isinstance(num := desc.get(VALUE_MAX), float | int)
+                else None
+            )
+            self.native_step = (
+                round(num / 60)
+                if isinstance(num := desc.get(VALUE_STEP), float | int)
+                else None
+            )
+        else:
+            self.native_min_value = desc.get(VALUE_MIN)
+            self.native_max_value = desc.get(VALUE_MAX)
+            self.native_step = desc.get(VALUE_STEP)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -582,6 +618,12 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     api_prio=not mdev.device.get(MQTT_OVERLAY),
                     fromFile=self.coordinator.client.testmode(),
                 )
+                # check if dynamic option update is needed
+                if (
+                    self.entity_description.dynamic_options
+                    and self._native_value is not None
+                ):
+                    self._options_update(mdev=mdev)
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
                 self._native_value = self.entity_description.value_fn(data, key)
@@ -1026,6 +1068,8 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             cmd = self.entity_description.mqtt_cmd
         if not isinstance(parm, str):
             parm = self.entity_description.mqtt_cmd_parm
+        if not isinstance(parm_map, dict):
+            parm_map = {}
         try:
             resp = await mdev.run_command(
                 cmd=cmd,
@@ -1038,11 +1082,15 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 if ALLOW_TESTMODE:
                     LOGGER.info(
                         "%s: Applied MQTT command '%s' for '%s' change to '%s':\n%s",
-                        "TESTMODE" if self.coordinator.client.testmode() else "LIVEMODE",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
                         cmd,
                         self.entity_id,
                         str(value),
-                        json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
                     )
                 # copy the changed state(s) of the mock response into device cache to avoid flip back of entity until real state is received
                 for key, val in resp.items():
@@ -1062,6 +1110,21 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 self.entity_id,
                 cmd,
                 str(err),
+            )
+        if not isinstance(resp, dict):
+            cmd_parm = f"{cmd!s}{(' with parm ' + str(parm)) if parm else ''}"
+            alias = mdev.device.get("alias") or ""
+            raise ServiceValidationError(
+                f"'{cmd_parm}' for {self.coordinator.client.api.apisession.nickname} device "
+                f"{alias} ({self.coordinator_context}) failed",
+                translation_domain=DOMAIN,
+                translation_key="mqtt_command_failed",
+                translation_placeholders={
+                    "command": cmd_parm,
+                    "coordinator": self.coordinator.client.api.apisession.nickname,
+                    "device_alias": alias,
+                    "device_sn": self.coordinator_context,
+                },
             )
         return resp
 

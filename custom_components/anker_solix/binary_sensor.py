@@ -155,6 +155,14 @@ DEVICE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
+    AnkerSolixBinarySensorDescription(
+        key="plug_status",
+        translation_key="plug_status",
+        json_key="plug_status",
+        device_class=BinarySensorDeviceClass.PLUG,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
 ]
 
 SITE_SENSORS = [

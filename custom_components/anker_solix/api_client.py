@@ -82,6 +82,7 @@ API_CATEGORIES: list = [
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
+    ApiCategories.charger_energy,
     ApiCategories.powerpanel_energy,
     ApiCategories.powerpanel_avg_power,
     ApiCategories.hes_energy,
@@ -99,6 +100,7 @@ DEFAULT_EXCLUDE_CATEGORIES: list = [
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
+    ApiCategories.charger_energy,
     ApiCategories.powerpanel_energy,
     ApiCategories.hes_energy,
 ]

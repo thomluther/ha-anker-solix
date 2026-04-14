@@ -42,6 +42,7 @@ PLATFORMS: list[Platform] = [
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.TIME,
 ]
 TESTMODE: Final[str] = "testmode"
 TESTFOLDER: Final[str] = "testfolder"
@@ -73,7 +74,7 @@ TEST_NUMBERVARIANCE: Final[bool] = False
 # True will create all entities per device type for testing even if no values available
 CREATE_ALL_ENTITIES: Final[bool] = False
 # True will enable MQTT usage per default
-DEFAULT_MQTT_USAGE: Final[bool] = False
+DEFAULT_MQTT_USAGE: Final[bool] = True
 
 SERVICE_GET_SYSTEM_INFO: Final[str] = "get_system_info"
 SERVICE_GET_DEVICE_INFO: Final[str] = "get_device_info"
@@ -250,13 +251,7 @@ SOLIX_WEEKDAY_SCHEMA: vol.Schema = vol.All(
                 VALID_PLAN,
                 EXTRA_PLAN_AC,
                 EXTRA_PLAN_SB3,
-                msg=f"not in {
-                    [
-                        field.default
-                        for field in fields(SolarbankRatePlan)
-                        if field.default
-                    ]
-                }",
+                msg=f"not in {[field.default for field in fields(SolarbankRatePlan) if field.default]}",
             ),
             vol.Optional(
                 WEEK_DAYS,

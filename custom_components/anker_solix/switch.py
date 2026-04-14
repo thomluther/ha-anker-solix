@@ -103,6 +103,8 @@ DEVICE_SWITCHES = [
         key="auto_upgrade",
         translation_key="auto_upgrade",
         json_key="auto_upgrade",
+        device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSwitchDescription(
@@ -301,6 +303,133 @@ DEVICE_SWITCHES = [
         device_class=SwitchDeviceClass.SWITCH,
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.usba_port_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="ac_1_switch",
+        translation_key="ac_1_switch",
+        json_key="ac_1_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.OUTLET,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_1_port_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="ac_2_switch",
+        translation_key="ac_2_switch",
+        json_key="ac_2_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.OUTLET,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_2_port_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="plug_lock_switch",
+        translation_key="plug_lock_switch",
+        json_key="plug_lock_switch",
+        # On (1), Off (2) !
+        value_fn=lambda d, jk: (
+            {1: True, 2: False}.get(int(v)) if (v := d.get(jk)) is not None else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.plug_lock_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="auto_start_switch",
+        translation_key="auto_start_switch",
+        json_key="auto_start_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_auto_start_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="auto_charge_restart_switch",
+        translation_key="auto_charge_restart_switch",
+        json_key="auto_charge_restart_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_auto_charge_restart_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="random_delay_switch",
+        translation_key="random_delay_switch",
+        json_key="random_delay_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_random_delay_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="modbus_switch",
+        translation_key="modbus_switch",
+        json_key="modbus_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.modbus_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="light_off_schedule_switch",
+        translation_key="light_off_schedule_switch",
+        json_key="light_off_schedule_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.light_off_schedule,
+        mqtt_cmd_parm="set_light_off_schedule_switch",
+    ),
+    AnkerSolixSwitchDescription(
+        key="load_balance_switch",
+        translation_key="load_balance_switch",
+        json_key="load_balance_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_load_balancing,
+        mqtt_cmd_parm="set_load_balance_switch",
+    ),
+    AnkerSolixSwitchDescription(
+        key="solar_evcharge_switch",
+        translation_key="solar_evcharge_switch",
+        json_key="solar_evcharge_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_solar_charging,
+        mqtt_cmd_parm="set_solar_evcharge_switch",
+    ),
+    AnkerSolixSwitchDescription(
+        key="auto_phase_switch",
+        translation_key="auto_phase_switch",
+        json_key="auto_phase_switch",
+        device_class=SwitchDeviceClass.SWITCH,
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and d.get("mqtt_data", {}).get("installed_phases", 0) >= 3
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_solar_charging,
+        mqtt_cmd_parm="set_auto_phase_switch",
+    ),
+    AnkerSolixSwitchDescription(
+        key="charge_schedule_switch",
+        translation_key="charge_schedule_switch",
+        json_key="schedule_switch",
+        device_class=SwitchDeviceClass.SWITCH,
+        # on (1), off (2) !!!
+        value_fn=lambda d, jk: (
+            {1: True, 2: False}.get(int(v)) if (v := d.get(jk)) is not None else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_settings,
+        mqtt_cmd_parm="set_schedule_switch",
     ),
 ]
 
@@ -816,13 +945,20 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 "enabled" if enable else "disabled",
                 self.entity_description.mqtt_cmd,
             )
-            await self._async_mqtt_toggle(mdev=mdev, enable=enable)
+            # First handle special value toggles that do not support "off" and "on" options
+            if self._attribute_name == "<enter_key_name>":
+                await self._async_mqtt_toggle(
+                    mdev=mdev, value="enable" if enable else "disable"
+                )
+            else:
+                await self._async_mqtt_toggle(mdev=mdev, enable=enable)
 
     async def _async_mqtt_toggle(
         self,
         mdev: SolixMqttDevice,
-        enable: bool,
+        enable: bool | None = None,
         cmd: str | None = None,
+        value: Any | None = None,
         parm: str | None = None,
         parm_map: dict | None = None,
     ) -> dict | None:
@@ -832,12 +968,19 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             cmd = self.entity_description.mqtt_cmd
         if not isinstance(parm, str):
             parm = self.entity_description.mqtt_cmd_parm
+        if not isinstance(parm_map, dict):
+            parm_map = {}
         try:
-            cmdvalue = enable ^ self.entity_description.inverted
+            if enable is not None:
+                cmdvalue = (
+                    "on" if (enable ^ self.entity_description.inverted) else "off"
+                )
+            else:
+                cmdvalue = value
             resp = await mdev.run_command(
                 cmd=cmd,
                 parm=parm,
-                value=1 if cmdvalue else 0,
+                value=cmdvalue,
                 parm_map=parm_map,
                 toFile=self.coordinator.client.testmode(),
             )
@@ -873,6 +1016,21 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 self.entity_id,
                 cmd,
                 str(err),
+            )
+        if not isinstance(resp, dict):
+            cmd_parm = f"{cmd!s}{(' with parm ' + str(parm)) if parm else ''}"
+            alias = mdev.device.get("alias") or ""
+            raise ServiceValidationError(
+                f"'{cmd_parm}' for {self.coordinator.client.api.apisession.nickname} device "
+                f"{alias} ({self.coordinator_context}) failed",
+                translation_domain=DOMAIN,
+                translation_key="mqtt_command_failed",
+                translation_placeholders={
+                    "command": cmd_parm,
+                    "coordinator": self.coordinator.client.api.apisession.nickname,
+                    "device_alias": alias,
+                    "device_sn": self.coordinator_context,
+                },
             )
         return resp
 

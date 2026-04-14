@@ -106,26 +106,49 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 if value := devData.get("owner_user_id"):
                     device["owner_user_id"] = value
             calc_capacity = False  # Flag whether capacity may need recalculation
+            update_main = False  # Flag whether main_sn must be updated for sub devices
+            site_id = device.get("site_id", "")
             for key, value in devData.items():
                 try:
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     if key in ["product_code", "device_pn"] and value:
                         device.update({"device_pn": str(value)})
+                        # try to get capacity from category definitions
+                        if (
+                            hasattr(SolixDeviceCapacity, str(value))
+                            and "battery_capacity" not in device
+                        ):
+                            # get battery capacity from known PNs
+                            device["battery_capacity"] = str(
+                                getattr(SolixDeviceCapacity, str(value))
+                            )
+                            calc_capacity = True
                         # try to get type for standalone device from category definitions if not defined yet
-                        if hasattr(SolixDeviceCategory, str(value)):
+                        if (
+                            hasattr(SolixDeviceCategory, str(value))
+                            and "type" not in device
+                        ):
                             dev_type = str(
                                 getattr(SolixDeviceCategory, str(value))
                             ).split("_")
-                            if "type" not in device:
-                                device.update({"type": dev_type[0]})
+                            if dev_type[-1].isdigit():
+                                gen = int(dev_type.pop(-1))
+                            else:
+                                gen = None
+                            device["type"] = "_".join(dev_type)
                             # update generation if specified in device type definitions
-                            if len(dev_type) > 1:
-                                device.update({"generation": int(dev_type[1])})
-                        # define virtual powerpanel capacity from one F3800
-                        if str(value) == "A17B1" and hasattr(
-                            SolixDeviceCapacity, "A1790"
-                        ):
-                            device["battery_capacity"] = str(SolixDeviceCapacity.A1790)
+                            if gen:
+                                device["generation"] = gen
+                        # Update main and sub device structure
+                        if site_id and (t := device.get("type")):
+                            if t == SolixDeviceType.PPS.value:
+                                device["is_subdevice"] = True
+                            elif (t == SolixDeviceType.POWERPANEL.value) and device.get(
+                                "main_sn"
+                            ) != sn:
+                                device["main_sn"] = sn
+                                device["is_primary"] = True
+                                update_main = True
                     elif key == "alias_name" and value:
                         device.update({"alias": str(value)})
                     elif key == "status":
@@ -147,6 +170,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             "state_of_charge"
                         ) != value.get("state_of_charge")
                         device[key] = value
+                    elif key == "batCount" and str(value).isdigit():
+                        calc_capacity |= device.get(key) != int(value)
+                        device[key] = int(value)
                     # Examples for boolean key values
                     elif key == "auto_upgrade":
                         device.update({key: bool(value)})
@@ -156,38 +182,95 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         key == "wifi_name" and value
                     ):
                         device.update({key: str(value)})
+                    # check that main device is defined for all sub devices
+                    if update_main or (
+                        device.get("is_subdevice") and not device.get("main_sn")
+                    ):
+                        site_devs = [
+                            d
+                            for d in self.devices.values()
+                            if site_id == d.get("site_id")
+                        ]
+                        if main_sn := (
+                            [d for d in site_devs if d.get("is_primary")] or [{}]
+                        )[0].get("main_sn"):
+                            for dev in [d for d in site_devs if d.get("is_subdevice")]:
+                                dev["main_sn"] = main_sn
                     # generate extra values when certain conditions are met
                     if calc_capacity:
-                        # generate battery values
-                        # assume calculated cap for one F3800 since real capacity cannot be determined
-                        cap = device.get("battery_capacity")
-                        soc = (devData.get("average_power") or {}).get(
-                            "state_of_charge"
-                        ) or (device.get("average_power") or {}).get("state_of_charge")
-                        # Calculate remaining energy in Wh and add values
+                        # init calculated fields with 0 if not existing
+                        if "battery_capacity" not in device:
+                            device["battery_capacity"] = "0"
+                        # generate battery values for main device only when soc updated or PPS capacity triggered
+                        is_primary = bool(device.get("is_primary"))
                         if (
-                            cap
-                            and soc
-                            and str(cap).isdigit()
-                            and str(soc).replace(".", "", 1).isdigit()
-                        ):
-                            # Get optional customized capacity for correct energy calculation if adjusted externally
-                            custom_cap = (
-                                custom_cap
-                                if (
-                                    custom_cap := (device.get("customized") or {}).get(
-                                        "battery_capacity"
+                            not (cap := device.get("battery_capacity")) or calc_capacity
+                        ) and is_primary:
+                            # refresh (customized) capacity of sub devices in system
+                            cap = 0
+                            for dev in [
+                                d
+                                for d in self.devices.values()
+                                if d.get("main_sn") == sn
+                                and d.get("is_subdevice")
+                                and str(d.get("battery_capacity")).isdigit()
+                            ]:
+                                # consider customized capacity for calculation
+                                cap += (
+                                    int(c)
+                                    if (
+                                        c := (dev.get("customized") or {}).get(
+                                            "battery_capacity"
+                                        )
                                     )
+                                    and str(c).isdigit()
+                                    else int(dev.get("battery_capacity"))
                                 )
-                                and str(custom_cap).isdigit()
-                                else cap
+                            if cap == 0:
+                                # add 1 F3800 base capacity as minimum if no PPS found with site relation
+                                cap = SolixDeviceCapacity.A1790
+                        device["battery_capacity"] = str(cap)
+                        soc = (
+                            devData.get("battery_soc")
+                            or devData.get("average_power", {}).get("state_of_charge")
+                            or device.get("battery_soc")
+                            or device.get("average_power", {}).get("state_of_charge")
+                        )
+                        custom_cap = (
+                            int(c)
+                            if (
+                                c := device.get("customized", {}).get(
+                                    "battery_capacity"
+                                )
                             )
-                            device.update(
-                                {
-                                    "battery_capacity": str(cap),
-                                    "battery_energy": f"{int(custom_cap) * int(soc) / 100:.0f}",
-                                }
-                            )
+                            and str(c).isdigit()
+                            else int(device.get("battery_capacity", 0))
+                        )
+                        device["battery_energy"] = str(
+                            int(int(custom_cap) * int(soc) / 100)
+                        )
+                        # get primary device to update energy values as well
+                        if not is_primary:
+                            prim_dev = (
+                                [d for d in site_devs if d.get("is_primary")] or [{}]
+                            )[0]
+                            soc = prim_dev.get("battery_soc") or prim_dev.get(
+                                "average_power", {}
+                            ).get("state_of_charge")
+                            if soc and str(soc).isdigit():
+                                custom_cap = (
+                                    int(c)
+                                    if (
+                                        c := prim_dev.get("customized", {}).get(
+                                            "battery_capacity"
+                                        )
+                                    )
+                                    and str(c).isdigit()
+                                    else int(prim_dev.get("battery_capacity", 0))
+                                )
+                                prim_dev["battery_energy"] = str(
+                                    int(int(custom_cap) * int(soc) / 100)
+                                )
                         calc_capacity = False
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
@@ -301,6 +384,24 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         self._update_account(
                             {"products": await self.get_products(fromFile=fromFile)}
                         )
+                    # Add any missing site device to cache
+                    for dev in [
+                        d
+                        for d in mysite.get("site_info", {}).get("site_device_list")
+                        or []
+                        if (sn := d.get("device_sn")) and sn not in self._site_devices
+                    ]:
+                        self._update_dev(
+                            {
+                                "device_sn": dev.get("device_sn"),
+                                "device_pn": dev.get("device_model"),
+                                "alias": dev.get("device_name"),
+                                "status": dev.get("status"),
+                            },
+                            siteId=myid,
+                            isAdmin=admin,
+                        )
+                        self._site_devices.add(sn)
                     # query scene info if not provided in site Data
                     if not (scene := siteData):
                         self._logger.debug(
@@ -321,7 +422,6 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             )
                         if sn := self._update_dev(
                             powerpanel,
-                            devType=SolixDeviceType.POWERPANEL.value,
                             siteId=myid,
                             isAdmin=admin,
                         ):

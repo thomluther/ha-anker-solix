@@ -18,6 +18,7 @@ from .apitypes import (
     SmartmeterStatus,
     SolarbankAiemsRuntimeStatus,
     SolarbankDeviceMetrics,
+    SolarbankParallelTypes,
     SolarbankPpsStatus,
     SolarbankRatePlan,
     SolarbankStatus,
@@ -117,7 +118,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     def _update_dev(  # noqa: C901
         self,
         devData: dict,
-        devType: str | None = None,
         siteId: str | None = None,
         isAdmin: bool | None = None,
     ) -> str | None:
@@ -128,8 +128,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if sn := devData.pop("device_sn", None):
             device: dict = self.devices.get(sn) or {}  # lookup old device info if any
             device["device_sn"] = str(sn)
-            if devType:
-                device["type"] = devType.lower()
             if siteId:
                 device["site_id"] = str(siteId)
             if isAdmin is not None:
@@ -177,16 +175,18 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         ):
                             calc_capacity = True
                         # try to get type for standalone device from category definitions if not defined yet
-                        if hasattr(SolixDeviceCategory, str(value)):
+                        if hasattr(SolixDeviceCategory, str(value)) and "type" not in device:
                             dev_type = str(
                                 getattr(SolixDeviceCategory, str(value))
                             ).split("_")
-                            # update generation if specified in device type definitions
-                            if len(dev_type) > 1 and str(dev_type[-1:][0]).isdigit():
-                                device["generation"] = int(dev_type[-1:][0])
-                                device["type"] = "_".join(dev_type[:-1])
+                            if dev_type[-1].isdigit():
+                                gen = int(dev_type.pop(-1))
                             else:
-                                device["type"] = "_".join(dev_type)
+                                gen = None
+                            device["type"] = "_".join(dev_type)
+                            # update generation if specified in device type definitions
+                            if gen:
+                                device["generation"] = gen
                     elif key == "device_name" and value:
                         device["name"] = str(value)
                     elif key == "alias_name" and value:
@@ -1817,6 +1817,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             self._site_devices.add(station_sn)
         # copy initial site schedule from solarbank device
         schedule = self.devices.get(station_sn or "", {}).get("schedule")
+        p_type = str(data.get("parallel_type")).lower()
+        copy_limits = p_type in [
+            SolarbankParallelTypes.single.value,
+            SolarbankParallelTypes.diy.value,
+        ]
         # update device details for solarbanks in device dict
         for device in data.get("device_info") or []:
             if sn := device.get("device_sn"):
@@ -1825,18 +1830,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 self._update_dev(
                     {
                         "device_sn": sn,
-                        "power_limit": device.get("power_limit")
-                        or (
-                            data.get("power_limit")
-                            if data.get("parallel_type") == "Single"
-                            else 0
-                        ),
+                        # Use the device or total power limit key for proper control, depending on parallel type
+                        f"{'all_' if p_type == SolarbankParallelTypes.diy.value else ''}power_limit": device.get(
+                            "power_limit"
+                        )
+                        or (data.get("legal_power_limit") if copy_limits else 0),
                         "power_limit_option": device.get("power_limit_option")
-                        or (
-                            data.get("power_limit_option")
-                            if data.get("parallel_type") == "Single"
-                            else None
-                        ),
+                        or (data.get("power_limit_option") if copy_limits else None),
                         "power_limit_option_real": device.get("power_limit_option_real")
                         or None,
                         "ac_input_limit": device.get("ac_input_limit") or 0,
@@ -1888,7 +1888,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             query.append("pv_power_limit")
         if grid_export is not None:
             dev = self.devices.get(deviceSn, {})
-            if dev.get("station_sn") is None and dev.get("type") != SolixDeviceType.COMBINER_BOX.value:
+            if (
+                dev.get("station_sn") is None
+                and dev.get("type") != SolixDeviceType.COMBINER_BOX.value
+            ):
                 # Grid export must be set via Api device attributes if not station managed (e.g. standalone Solarbank 2 systems)
                 data["switch_0w"] = 0 if grid_export else 1
                 query.append("switch_0w")
@@ -1956,8 +1959,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 },
             )
         # query the actual limits and update power limit cache
-        return {"device_attributes": attr_resp or {}} | {"station_attributes": station_attr or {}} | await self.get_power_limit(
-            siteId=siteId, fromFile=toFile
+        return (
+            {"device_attributes": attr_resp or {}}
+            | {"station_attributes": station_attr or {}}
+            | await self.get_power_limit(siteId=siteId, fromFile=toFile)
         )
 
     async def get_ota_info(

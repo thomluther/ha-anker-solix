@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 # Define supported Models for this class
 MODELS = {
-    "A1722",  # SOLIX C300
-    "A1723",  # SOLIX C300X
+    "A1722",  # SOLIX C300 AC
+    "A1723",  # SOLIX C300X AC
     "A1725",  #  SOLIX C200(X)
     "A1726",  # SOLIX C300 DC
     "A1727",  #  SOLIX C200 DC

@@ -13,6 +13,7 @@ from homeassistant.const import (
     CONF_COUNTRY_CODE,
     CONF_DELAY_TIME,
     CONF_EXCLUDE,
+    CONF_NAME,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_TIMEOUT,
@@ -156,7 +157,10 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ):
                         errors[CONF_USERNAME] = "duplicate_devices"
                         placeholders[CONF_USERNAME] = str(account_user)
-                        placeholders[SHARED_ACCOUNT] = str(cfg_entry.title)
+                        placeholders[SHARED_ACCOUNT] = str(
+                            cfg_entry.data.get("username")
+                        )
+                        placeholders[CONF_NAME] = str(cfg_entry.title)
                     else:
                         self._data = user_input
                         # add some fixed configuration data
@@ -254,7 +258,10 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ):
                         errors[CONF_USERNAME] = "duplicate_devices"
                         placeholders[CONF_USERNAME] = str(account_user)
-                        placeholders[SHARED_ACCOUNT] = str(cfg_entry.title)
+                        placeholders[SHARED_ACCOUNT] = str(
+                            cfg_entry.data.get("username")
+                        )
+                        placeholders[CONF_NAME] = str(cfg_entry.title)
                     else:
                         # ensure removal of existing devices prior reload
                         await async_check_and_remove_devices(

@@ -37,6 +37,9 @@
             },
             "mqtt_status_request": {
                 "default": "mdi:arrow-decision"
+            },
+            "restart_device": {
+                "default": "mdi:power"
             }
         },
         "binary_sensor": {
@@ -123,6 +126,13 @@
                     "on": "mdi:car-connected",
                     "off": "mdi:car-outline"
                 }
+            },
+            "plug_status": {
+                "default": "mdi:car-off",
+                "state": {
+                    "off": "mdi:power-plug-off",
+                    "on": "mdi:power-plug-battery"
+                }
             }
         },
         "datetime": {
@@ -172,6 +182,15 @@
             },
             "dc_output_timeout": {
                 "default": "mdi:clock-end"
+            },
+            "main_breaker_limit": {
+                "default": "mdi:alert-outline"
+            },
+            "max_evcharge_current": {
+                "default": "mdi:arrow-collapse-up"
+            },
+            "solar_evcharge_min_current": {
+                "default": "mdi:arrow-collapse-down"
             }
         },
         "select": {
@@ -275,6 +294,53 @@
                     "smart": "mdi:flash-auto"
                 }
             },
+            "max_evcharge_current": {
+                "default": "mdi:arrow-collapse-up"
+            },
+            "solar_evcharge_min_current": {
+                "default": "mdi:arrow-collapse-down"
+            },
+            "light_brightness": {
+                "default": "mdi:lightbulb",
+                "state": {
+                    "0": "mdi:lightbulb-off-outline",
+                    "10": "mdi:lightbulb-on-10",
+                    "20": "mdi:lightbulb-on-20",
+                    "30": "mdi:lightbulb-on-30",
+                    "40": "mdi:lightbulb-on-40",
+                    "50": "mdi:lightbulb-on-50",
+                    "60": "mdi:lightbulb-on-60",
+                    "70": "mdi:lightbulb-on-70",
+                    "80": "mdi:lightbulb-on-80",
+                    "90": "mdi:lightbulb-on-90",
+                    "100": "mdi:lightbulb-on"
+                }
+            },
+            "wipe_up_mode": {
+                "default": "mdi:gesture-swipe-up"
+            },
+            "wipe_down_mode": {
+                "default": "mdi:gesture-swipe-down"
+            },
+            "smart_touch_mode": {
+                "default": "mdi:gesture-swipe"
+            },
+            "ev_charger_mode": {
+                "default": "mdi:car-electric"
+            },
+            "solar_evcharge_mode": {
+                "default": "mdi:solar-power"
+            },
+            "schedule_mode": {
+                "default": "mdi:clock-outline"
+            },
+            "weekend_mode": {
+                "default": "mdi:calendar-weekend",
+                "state": {
+                    "same": "mdi:calendar-week",
+                    "different": "mdi:calendar-weekend"
+                }
+            },
             "vehicle_brand": {
                 "default": "mdi:car-info"
             },
@@ -346,22 +412,25 @@
             "ac_output_power_total": {
                 "default": "mdi:home-battery-outline"
             },
-            "ac_output_power_signed_total": {
+            "device_output_power_signed_total": {
                 "default": "mdi:home-battery-outline"
             },
-            "solarbank_ac_output_power_signed_total": {
+            "device_1_ac_output_power_signed": {
                 "default": "mdi:home-battery-outline"
             },
-            "solarbank_1_ac_output_power_signed": {
+            "device_2_ac_output_power_signed": {
                 "default": "mdi:home-battery-outline"
             },
-            "solarbank_2_ac_output_power_signed": {
+            "device_3_ac_output_power_signed": {
                 "default": "mdi:home-battery-outline"
             },
-            "solarbank_3_ac_output_power_signed": {
+            "device_4_ac_output_power_signed": {
                 "default": "mdi:home-battery-outline"
             },
-            "solarbank_4_ac_output_power_signed": {
+            "device_5_ac_output_power_signed": {
+                "default": "mdi:home-battery-outline"
+            },
+            "device_6_ac_output_power_signed": {
                 "default": "mdi:home-battery-outline"
             },
             "ac_to_home_load": {
@@ -498,6 +567,9 @@
             "home_load_power_avg": {
                 "default": "mdi:home-lightning-bolt"
             },
+            "ev_charge_power_avg": {
+                "default": "mdi:car-electric"
+            },
             "grid_to_home_power_avg": {
                 "default": "mdi:home-import-outline"
             },
@@ -563,6 +635,9 @@
             },
             "daily_solar_to_grid": {
                 "default": "mdi:transmission-tower-import"
+            },
+            "daily_ev_charge": {
+                "default": "mdi:car-electric"
             },
             "daily_solar_share": {
                 "default": "mdi:percent-circle"
@@ -792,6 +867,54 @@
             },
             "remaining_time_hours": {
                 "default": "mdi:timelapse"
+            },
+            "ip_address": {
+                "default": "mdi:ip"
+            },
+            "phase_operating_mode": {
+                "default": "mdi:help-circle",
+                "state": {
+                    "automatic": "mdi:star-four-points-circle",
+                    "one_phase": "mdi:numeric-1-circle",
+                    "three_phase": "mdi:numeric-3-circle"
+                }
+            },
+            "ocpp_connect_status": {
+                "default": "mdi:cloud-question-outline",
+                "state": {
+                    "disconnected": "mdi:cloud-off-outline",
+                    "connecting": "mdi:cloud-refresh-variant-outline",
+                    "connected": "mdi:cloud-check-variant-outline"
+                }
+            },
+            "cp_signal_status": {
+                "default": "mdi:state-machine"
+            },
+            "ev_charger_status": {
+                "default": "mdi:help-circle-outline",
+                "state": {
+                    "standby": "mdi:sleep",
+                    "preparing": "mdi:sync-circle",
+                    "charging": "mdi:car-electric",
+                    "charger_paused": "mdi:home-clock-outline",
+                    "vehicle_paused": "mdi:car-clock",
+                    "completed": "mdi:checkbox-marked-circle",
+                    "reserving": "mdi:pencil-circle-outline",
+                    "disabled": "mdi:close-circle-outline",
+                    "error": "mdi:alert-circle-outline"
+                }
+            },
+            "charging_start_timestamp": {
+                "default": "mdi:clock-start"
+            },
+            "charging_energy": {
+                "default": "mdi:car-battery"
+            },
+            "total_charge_cost": {
+                "default": "mdi:cash-multiple"
+            },
+            "total_saving": {
+                "default": "mdi:hand-coin"
             }
         },
         "switch": {
@@ -880,6 +1003,44 @@
             "usba_switch": {
                 "default": "mdi:usb-port"
             },
+            "plug_lock_switch": {
+                "default": "mdi:lock-question",
+                "state": {
+                    "on": "mdi:lock",
+                    "off": "mdi:lock-open-variant"
+                }
+            },
+            "auto_start_switch": {
+                "default": "mdi:flash-auto"
+            },
+            "auto_charge_restart_switch": {
+                "default": "mdi:refresh-auto"
+            },
+            "random_delay_switch": {
+                "default": "mdi:clock-start"
+            },
+            "modbus_switch": {
+                "default": "mdi:router-network-wireless"
+            },
+            "light_off_schedule_switch": {
+                "default": "mdi:lightbulb-night-outline"
+            },
+            "load_balance_switch": {
+                "default": "mdi:arrow-decision-auto"
+            },
+            "solar_evcharge_switch": {
+                "default": "mdi:solar-power"
+            },
+            "auto_phase_switch": {
+                "default": "mdi:arrow-decision-auto-outline"
+            },
+            "charge_schedule_switch": {
+                "default": "mdi:clock-remove-outline",
+                "state": {
+                    "on": "mdi:clock-outline",
+                    "off": "mdi:clock-remove-outline"
+                }
+            },
             "allow_refresh": {
                 "default": "mdi:sync-alert",
                 "state": {
@@ -893,6 +1054,26 @@
                     "on": "mdi:car-select",
                     "off": "mdi:car"
                 }
+            }
+        },
+        "time":{
+            "light_off_start_time": {
+                "default": "mdi:clock-start"
+            },
+            "light_off_end_time": {
+                "default": "mdi:clock-end"
+            },
+            "week_start_time": {
+                "default": "mdi:clock-start"
+            },
+            "week_end_time": {
+                "default": "mdi:clock-end"
+            },
+            "weekend_start_time": {
+                "default": "mdi:clock-start"
+            },
+            "weekend_end_time": {
+                "default": "mdi:clock-end"
             }
         }
     },

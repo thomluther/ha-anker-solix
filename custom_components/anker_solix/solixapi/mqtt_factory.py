@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from .apitypes import SolixDeviceType
 from .mqtt_charger import MODELS as CHARGER_MODELS, SolixMqttDeviceCharger
 from .mqtt_device import SolixMqttDevice
+from .mqtt_generator import MODELS as GENERATOR_MODELS, SolixMqttDeviceGenerator
 from .mqtt_pps import MODELS as PPS_MODELS, SolixMqttDevicePps
 from .mqtt_solarbank import MODELS as SB_MODELS, SolixMqttDeviceSolarbank
 from .mqtt_various import MODELS as VAR_MODELS, SolixMqttDeviceVarious
@@ -44,6 +45,8 @@ class SolixMqttDeviceFactory:
             if pn in SOLIXMQTTMAP:
                 if category == SolixDeviceType.PPS.value and pn in PPS_MODELS:
                     return SolixMqttDevicePps(self.api, self.device_sn)
+                if category == SolixDeviceType.GENERATOR.value and pn in GENERATOR_MODELS:
+                    return SolixMqttDeviceGenerator(self.api, self.device_sn)
                 if (
                     category
                     in [

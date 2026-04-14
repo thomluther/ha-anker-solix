@@ -15,7 +15,9 @@ from .mqttcmdmap import (
     FACTOR,
     LENGTH,
     NAME,
+    OFFSET,
     SIGNED,
+    STATE_NAME,
     TYPE,
     VALUE_DEFAULT,
     VALUE_DIVIDER,
@@ -348,11 +350,13 @@ class DeviceHexDataField:
         self,
         hexdata: bytearray | bytes,
         fieldtype: bytearray | bytes,
-        fieldmap: dict,
+        fieldmap: dict | list,
         values: dict | None = None,
     ) -> dict[str, Any]:
         """Return a dictionary with extracted values based on provided hexdata, fieldtype and mapping."""
         values = values or {}
+        if not hexdata:
+            return values
         match fieldtype:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, string (Base type), use only printable part
@@ -472,30 +476,44 @@ class DeviceHexDataField:
                 # A single bitmap field can be used for various named settings, therefore it should be a list for differentiation
                 # Each named bitmap setting must describe a "mask" integer to indicate which bit(s) are relevant for the named setting, e.g. mask 0x64 => 0100 0000
                 # The masked value will be shifted so that mask LSB is rightmost bit (1), therefore value of 1 is typically on, 0 is off.
-                for key, bitlist in fieldmap.get(BYTES, {}).items():
-                    pos = int(key)
-                    if isinstance(bitlist, list):
-                        for bitmap in bitlist:
-                            if (
-                                (mask := bitmap.get("mask", 0))
-                                and (name := bitmap.get(NAME, ""))
-                                and len(self.f_value) > pos
-                            ):
-                                value = self.f_value[pos]
-                                # shift mask and value right until LSB of mask is one, then get bit value according to mask
-                                while (mask & 1) == 0:
-                                    mask >>= 1
-                                    value >>= 1
-                                values[name] = value & mask
-                    else:
-                        # extract found dictionary description like DeviceHexDataTypes.strb
-                        values.update(
-                            self.extract_value(
-                                hexdata=self.f_value[pos:],
-                                fieldtype=DeviceHexDataTypes.strb.value,
-                                fieldmap={key: bitlist},
-                            )
+                flds = fieldmap.get(BYTES, {})
+                if isinstance(flds, list):
+                    # extract relative fieldmap list like DeviceHexDataTypes.strb
+                    values.update(
+                        self.extract_value(
+                            hexdata=self.f_value,
+                            fieldtype=DeviceHexDataTypes.strb.value,
+                            fieldmap=flds,
                         )
+                    )
+                else:
+                    # fix bytemap position from mapping
+                    for key, bytemap in flds.items():
+                        pos = int(key)
+                        if isinstance(bytemap, list):
+                            # individual bit description for byte field
+                            for bitmap in bytemap:
+                                if (
+                                    (mask := bitmap.get("mask", 0))
+                                    and (name := bitmap.get(NAME, ""))
+                                    and len(self.f_value) > pos
+                                ):
+                                    value = self.f_value[pos]
+                                    # shift mask and value right until LSB of mask is one, then get bit value according to mask
+                                    while (mask & 1) == 0:
+                                        mask >>= 1
+                                        value >>= 1
+                                    values[name] = value & mask
+                            pos += 1
+                        else:
+                            # extract found fieldmap description like DeviceHexDataTypes.strb
+                            values.update(
+                                self.extract_value(
+                                    hexdata=self.f_value[pos:],
+                                    fieldtype=DeviceHexDataTypes.strb.value,
+                                    fieldmap={key: bytemap},
+                                )
+                            )
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 if len(hexdata) == 4 and (name := fieldmap.get(NAME, "")):
@@ -506,15 +524,28 @@ class DeviceHexDataField:
                     values[name] = 0 if value == 0 else value
             case DeviceHexDataTypes.strb.value:
                 # 06 can be many bytes, mix of Str and Byte values
-                # mapping must specify start byte string ("00"-"len-1") for fields, field description needs TYPE,
+                # A mapping must specify start byte string ("00"-"len-1") for fields, field description needs TYPE,
                 # with a DeviceHexDataTypes base type for value conversion (ui=1, sile=2, sfle=4 bytes).
                 # The optional LENGTH with int for byte count can be specified (default is 0 if no base type used),
                 # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
                 # FACTOR can be specified optionally for value conversion
-                for key, bytemap in (fieldmap.get(BYTES, {}) or fieldmap).items():
-                    pos = int(key)
+                # A list of fieldmaps can be provided with flexible byte positions from the beginning of the fields
+                # The listed fieldmaps are used sequentially, a byte offset can be specified in relation to actual field start position
+                # The offset is only required if there are byte field gaps without description
+                pos = 0
+                flds = fieldmap.get(BYTES, fieldmap) if isinstance(fieldmap, dict) else fieldmap
+                for key, bytemap in (
+                    enumerate(flds) if isinstance(flds, list) else flds.items()
+                ):
+                    if isinstance(key, int):
+                        # relative byte position last position
+                        pos += int(bytemap.get(OFFSET, 0))
+                    else:
+                        pos = int(key)
+                    # break field decoding if hexvalue shorter than description
+                    if pos >= len(self.f_value):
+                        break
                     ftype = bytemap.get(TYPE, DeviceHexDataTypes.unk.value)
-                    length = bytemap.get(LENGTH, 0)
                     # set default length based on fixed types
                     if ftype == DeviceHexDataTypes.ui.value:
                         length = 1
@@ -522,12 +553,15 @@ class DeviceHexDataField:
                         length = 2
                     elif ftype == DeviceHexDataTypes.sfle.value:
                         length = 4
+                    else:
+                        length = bytemap.get(LENGTH, 0)
                     if length == 0:
                         # first byte is length of bytes following for field
                         length = int.from_bytes(self.f_value[pos : pos + 1])
+                        pos += 1
                         values.update(
                             self.extract_value(
-                                hexdata=self.f_value[pos + 1 : pos + length + 1],
+                                hexdata=self.f_value[pos : pos + length],
                                 fieldtype=bytemap.get(
                                     TYPE, DeviceHexDataTypes.unk.value
                                 ),
@@ -544,6 +578,7 @@ class DeviceHexDataField:
                                 fieldmap=bytemap,
                             )
                         )
+                    pos += length
             case DeviceHexDataTypes.json.value:
                 # Use Json Data class for extraction
                 values.update(
@@ -615,7 +650,7 @@ class DeviceHexDataField:
         if not isinstance(desc, dict):
             desc = {}
         options = desc.get(VALUE_OPTIONS, {})
-        if desc.get(NAME, "").endswith("_time"):
+        if (desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
             # special case for time strings HH:MM[:SS], convert to bytes already
             fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
         elif isinstance(value, str | int | float):

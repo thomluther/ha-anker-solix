@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import time
 import json
 from typing import Any
 
-from homeassistant.components.datetime import DateTimeEntity, DateTimeEntityDescription
+from homeassistant.components.time import TimeEntity, TimeEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EXCLUDE
 from homeassistant.core import HomeAssistant, callback
@@ -38,16 +38,20 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import SolixDeviceType
+from .solixapi.mqtt_device import SolixMqttDevice
+from .solixapi.mqttcmdmap import SolixMqttCommands
 
 
 @dataclass(frozen=True)
-class AnkerSolixDateTimeDescription(
-    DateTimeEntityDescription, AnkerSolixEntityRequiredKeyMixin
+class AnkerSolixTimeDescription(
+    TimeEntityDescription, AnkerSolixEntityRequiredKeyMixin
 ):
-    """DateTime entity description with optional keys."""
+    """Time entity description with optional keys."""
 
     force_creation: bool = False
     mqtt: bool = False
+    mqtt_cmd: str | None = None
+    mqtt_cmd_parm: str | None = None
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
@@ -55,60 +59,86 @@ class AnkerSolixDateTimeDescription(
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
-DEVICE_DATETIMES = [
-    AnkerSolixDateTimeDescription(
-        key="preset_manual_backup_start",
-        translation_key="preset_manual_backup_start",
-        json_key="preset_manual_backup_start",
+DEVICE_TIMES = [
+    AnkerSolixTimeDescription(
+        key="light_off_start_time",
+        translation_key="light_off_start_time",
+        json_key="light_off_start_time",
         value_fn=lambda d, jk: (
-            datetime.fromtimestamp(int(v)).astimezone()
-            if (
-                v := str(d.get("timestamp_backup_start", "")) or str(d.get(jk, ""))
-                if d.get(MQTT_OVERLAY)
-                else str(d.get(jk, "")) or str(d.get("timestamp_backup_start", ""))
-            )
-            .replace(".", "", 1)
-            .isdigit()
-            else None
+            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),
-        exclude_fn=lambda s, d: (
-            not (
-                {d.get("type")} - s
-                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
-            )
-        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
+        mqtt_cmd=SolixMqttCommands.light_off_schedule,
+        mqtt_cmd_parm="set_light_off_start_time",
     ),
-    AnkerSolixDateTimeDescription(
-        key="preset_manual_backup_end",
-        translation_key="preset_manual_backup_end",
-        json_key="preset_manual_backup_end",
+    AnkerSolixTimeDescription(
+        key="light_off_end_time",
+        translation_key="light_off_end_time",
+        json_key="light_off_end_time",
         value_fn=lambda d, jk: (
-            datetime.fromtimestamp(int(v)).astimezone()
-            if (
-                v := str(d.get("timestamp_backup_end", "")) or str(d.get(jk, ""))
-                if d.get(MQTT_OVERLAY)
-                else str(d.get(jk, "")) or str(d.get("timestamp_backup_start", ""))
-            )
-            .replace(".", "", 1)
-            .isdigit()
-            else None
+            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),
-        exclude_fn=lambda s, d: (
-            not (
-                {d.get("type")} - s
-                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
-            )
-        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
+        mqtt_cmd=SolixMqttCommands.light_off_schedule,
+        mqtt_cmd_parm="set_light_off_end_time",
+    ),
+    AnkerSolixTimeDescription(
+        key="week_start_time",
+        translation_key="week_start_time",
+        json_key="week_start_time",
+        value_fn=lambda d, jk: (
+            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
+        mqtt_cmd_parm="set_week_start_time",
+    ),
+    AnkerSolixTimeDescription(
+        key="week_end_time",
+        translation_key="week_end_time",
+        json_key="week_end_time",
+        value_fn=lambda d, jk: (
+            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
+        mqtt_cmd_parm="set_week_end_time",
+    ),
+    AnkerSolixTimeDescription(
+        key="weekend_start_time",
+        translation_key="weekend_start_time",
+        json_key="weekend_start_time",
+        value_fn=lambda d, jk: (
+            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
+        mqtt_cmd_parm="set_weekend_start_time",
+    ),
+    AnkerSolixTimeDescription(
+        key="weekend_end_time",
+        translation_key="weekend_end_time",
+        json_key="weekend_end_time",
+        value_fn=lambda d, jk: (
+            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
+        mqtt_cmd_parm="set_weekend_end_time",
     ),
 ]
 
-SITE_DATETIMES = []
+SITE_TIMES = []
 
-ACCOUNT_DATETIMES = []
+ACCOUNT_TIMES = []
 
-VEHICLE_DATETIMES = []
+VEHICLE_TIMES = []
 
 
 async def async_setup_entry(
@@ -116,7 +146,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up datetime platform."""
+    """Set up time platform."""
 
     coordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
@@ -130,19 +160,19 @@ async def async_setup_entry(
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
-                entity_list = SITE_DATETIMES
+                entity_list = SITE_TIMES
             elif data_type == SolixDeviceType.ACCOUNT.value:
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
-                entity_list = ACCOUNT_DATETIMES
+                entity_list = ACCOUNT_TIMES
             elif data_type == SolixDeviceType.VEHICLE.value:
                 # vehicle entry in data
                 entity_type = AnkerSolixEntityType.VEHICLE
-                entity_list = VEHICLE_DATETIMES
+                entity_list = VEHICLE_TIMES
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
-                entity_list = DEVICE_DATETIMES
+                entity_list = DEVICE_TIMES
                 # get MQTT device combined values for creation of entities
                 if mdev := coordinator.client.get_mqtt_device(sn=context):
                     mdata = mdev.get_combined_cache(
@@ -171,27 +201,25 @@ async def async_setup_entry(
                     )
                 )
             ):
-                entity = AnkerSolixDateTime(
-                    coordinator, description, context, entity_type
-                )
+                entity = AnkerSolixTime(coordinator, description, context, entity_type)
                 entities.append(entity)
 
     # create the entities from the list
     async_add_entities(entities)
 
 
-class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
-    """anker_solix datetime class."""
+class AnkerSolixTime(CoordinatorEntity, TimeEntity):
+    """anker_solix time class."""
 
     coordinator: AnkerSolixDataUpdateCoordinator
-    entity_description: AnkerSolixDateTimeDescription
+    entity_description: AnkerSolixTimeDescription
     _attr_has_entity_name = True
     _unrecorded_attributes = frozenset()
 
     def __init__(
         self,
         coordinator: AnkerSolixDataUpdateCoordinator,
-        description: AnkerSolixDateTimeDescription,
+        description: AnkerSolixTimeDescription,
         context: str,
         entity_type: str,
     ) -> None:
@@ -307,11 +335,11 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
         # Mark availability based on value
         self._attr_available = self._native_value is not None
 
-    async def async_set_value(self, value: datetime) -> None:
+    async def async_set_value(self, value: time) -> None:
         """Set the value of the entity.
 
         Args:
-            value (datetime): The value to set.
+            value (time): The value to set.
 
         """
         if (
@@ -319,12 +347,13 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             and self.coordinator_context in self.coordinator.data
             and self._native_value is not None
         ):
-            data = self.coordinator.data.get(self.coordinator_context) or {}
-            if self.coordinator.client.testmode() and self._attribute_name not in [
-                "preset_manual_backup_start",
-                "preset_manual_backup_end",
-            ]:
-                # Raise alert to frontend
+            # data = self.coordinator.data.get(self.coordinator_context) or {}
+            # Raise alert to frontend if change not allowed in testmode
+            if (
+                self.coordinator.client.testmode()
+                and not self.entity_description.mqtt_cmd
+                # and self._attribute_name != "" # Exclude Api entites that can be changed in testmode
+            ):
                 raise ServiceValidationError(
                     f"{self.entity_id} cannot be used while configuration is running in testmode",
                     translation_domain=DOMAIN,
@@ -338,57 +367,146 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                 return
             # Wait until client cache is valid before applying any api change
             await self.coordinator.client.validate_cache()
-            if (
-                self._attribute_name
-                in [
-                    "preset_manual_backup_start",
-                    "preset_manual_backup_end",
-                ]
-                and isinstance(value, datetime)
-                and (
-                    data.get("type") == SolixDeviceType.COMBINER_BOX.value
-                    or (data.get("generation") or 0) >= 2
+            mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
+            # Trigger Api calls depending on changed entity
+            if self._attribute_name == "":
+                # Insert Api commands here once required
+                LOGGER.debug(
+                    "'%s' change to '%s' will be applied",
+                    self.entity_id,
+                    str(value),
                 )
-            ):
-                LOGGER.debug("%s change to %s will be applied", self.entity_id, value)
-                siteId = data.get("site_id") or ""
                 resp = None
-                # Note: Each field change in UI triggers value update. To avoid to many Api requests are sent for start and end time changes,
-                # those changes will only be done in the Api cache and the backup switch will be disabled. Just when the backup switch entity
-                # is enabled, the cached start and end times will be sent to the Api for enabling backup option (similar to App behavior)
-                # Attention: Times in cache may be updated by regular schedule refresh from Api prior the backup switch is being activated
-                if self._attribute_name == "preset_manual_backup_start":
-                    resp = await self.coordinator.client.api.set_sb2_ac_charge(
-                        siteId=siteId,
-                        deviceSn=self.coordinator_context,
-                        backup_start=value,
-                        backup_switch=False,
-                        # Use test schedule to ensure change is done in cache only
-                        test_schedule=data.get("schedule") or {},
-                        toFile=self.coordinator.client.testmode(),
-                    )
-                elif self._attribute_name == "preset_manual_backup_end":
-                    resp = await self.coordinator.client.api.set_sb2_ac_charge(
-                        siteId=siteId,
-                        deviceSn=self.coordinator_context,
-                        backup_end=value,
-                        backup_switch=False,
-                        # Use test schedule to ensure change is done in cache only
-                        test_schedule=data.get("schedule") or {},
-                        toFile=self.coordinator.client.testmode(),
-                    )
                 if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
-                        "%s: Applied schedule for %s change to %s:\n%s",
+                        "%s: Applied settings for '%s' change to '%s':\n%s",
                         "TESTMODE"
                         if self.coordinator.client.testmode()
                         else "LIVEMODE",
                         self.entity_id,
-                        value,
+                        str(value),
+                        json.dumps(
+                            resp,
+                            indent=2 if len(json.dumps(resp)) < 200 else None,
+                        ),
+                    )
+            # Trigger MQTT commands depending on changed entity
+            elif self.entity_description.mqtt_cmd and mdev:
+                LOGGER.debug(
+                    "'%s' change to '%s' will be applied via MQTT command '%s'",
+                    self.entity_id,
+                    str(value),
+                    self.entity_description.mqtt_cmd,
+                )
+                await self._async_mqtt_time(mdev=mdev, value=value)
+
+            # trigger coordinator update with api dictionary data
+            await self.coordinator.async_refresh_data_from_apidict()
+
+    async def _async_mqtt_time(
+        self,
+        mdev: SolixMqttDevice,
+        value: str | time,
+        cmd: str | None = None,
+        parm: str | None = None,
+        parm_map: dict | None = None,
+    ) -> dict | None:
+        """Use MQTT device control to modify time setting."""
+        resp = None
+        if not isinstance(cmd, str):
+            cmd = self.entity_description.mqtt_cmd
+        if not isinstance(parm, str):
+            parm = self.entity_description.mqtt_cmd_parm
+        if not isinstance(parm_map, dict):
+            parm_map = {}
+        try:
+            if isinstance(value, time):
+                cmdvalue = value.isoformat()
+            else:
+                cmdvalue = str(value)
+            # Use helper methods for certain MQTT commands that require special handling
+            if self._attribute_name in [
+                "week_start_time",
+                "week_end_time",
+                "weekend_start_time",
+                "weekend_end_time",
+            ]:
+                # change dependend times and weekend mode upon time changes
+                resp = await mdev.set_ev_charger_schedule(
+                    week_start_time=parm_map.get(self.entity_description.mqtt_cmd_parm)
+                    or cmdvalue
+                    if self._attribute_name == "week_start_time"
+                    else None,
+                    week_end_time=parm_map.get(self.entity_description.mqtt_cmd_parm)
+                    or cmdvalue
+                    if self._attribute_name == "week_end_time"
+                    else None,
+                    weekend_start_time=parm_map.get(
+                        self.entity_description.mqtt_cmd_parm
+                    )
+                    or cmdvalue
+                    if self._attribute_name == "weekend_start_time"
+                    else None,
+                    weekend_end_time=parm_map.get(self.entity_description.mqtt_cmd_parm)
+                    or cmdvalue
+                    if self._attribute_name == "weekend_end_time"
+                    else None,
+                    toFile=self.coordinator.client.testmode(),
+                )
+            else:
+                resp = await mdev.run_command(
+                    cmd=cmd,
+                    parm=parm,
+                    value=cmdvalue,
+                    parm_map=parm_map,
+                    toFile=self.coordinator.client.testmode(),
+                )
+            if isinstance(resp, dict):
+                if ALLOW_TESTMODE:
+                    LOGGER.info(
+                        "%s: Applied MQTT command '%s' for '%s' change to '%s':\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
+                        cmd,
+                        self.entity_id,
+                        str(value),
                         json.dumps(
                             resp, indent=2 if len(json.dumps(resp)) < 200 else None
                         ),
                     )
-        # trigger coordinator update with api dictionary data
-        await self.coordinator.async_refresh_data_from_apidict()
-        self._assumed_state = True
+                # copy the changed state(s) of the mock response into device cache to avoid flip back of entity until real state is received
+                for key, val in resp.items():
+                    if key in mdev.mqttdata:
+                        mdev.mqttdata[key] = val
+                # trigger status request to get updated MQTT message
+                await mdev.status_request(toFile=self.coordinator.client.testmode())
+            else:
+                LOGGER.error(
+                    "'%s' could not be changed via MQTT command '%s'",
+                    self.entity_id,
+                    cmd,
+                )
+        except (ValueError, TypeError) as err:
+            LOGGER.error(
+                "'%s' could not be changed via MQTT command '%s':\n%s",
+                self.entity_id,
+                cmd,
+                str(err),
+            )
+        if not isinstance(resp, dict):
+            cmd_parm = f"{cmd!s}{(' with parm ' + str(parm)) if parm else ''}"
+            alias = mdev.device.get("alias") or ""
+            raise ServiceValidationError(
+                f"'{cmd_parm}' for {self.coordinator.client.api.apisession.nickname} device "
+                f"{alias} ({self.coordinator_context}) failed",
+                translation_domain=DOMAIN,
+                translation_key="mqtt_command_failed",
+                translation_placeholders={
+                    "command": cmd_parm,
+                    "coordinator": self.coordinator.client.api.apisession.nickname,
+                    "device_alias": alias,
+                    "device_sn": self.coordinator_context,
+                },
+            )
+        return resp

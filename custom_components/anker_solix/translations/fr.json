@@ -31,6 +31,7 @@
                 "vehicle": "Véhicules",
                 "ev_charger": "Chargeur de véhicule électrique",
                 "charger": "Chargeur électrique",
+                "charger_energy": "Statistiques énergétiques du chargeur",
                 "generator": "Générateur",
                 "home_backup": "Sauvegarde à domicile"
             }
@@ -279,6 +280,9 @@
             },
             "mqtt_status_request": {
                 "name": "Demande d'état MQTT"
+            },
+            "restart_device": {
+                "name": "Redémarrer l'appareil"
             }
         },
         "binary_sensor": {
@@ -485,6 +489,13 @@
                     "on": "Connecté",
                     "off": "Déconnecté"
                 }
+            },
+            "plug_status": {
+                "name": "État de la prise",
+                "state": {
+                    "on": "Branché",
+                    "off": "Débranché"
+                }
             }
         },
         "datetime": {
@@ -558,6 +569,15 @@
             },
             "dc_output_timeout": {
                 "name": "Temporisation sortie CC"
+            },
+            "main_breaker_limit": {
+                "name": "Limite du disjoncteur principal"
+            },
+            "max_evcharge_current": {
+                "name": "EV courant de charge maximal"
+            },
+            "solar_evcharge_min_current": {
+                "name": "EV courant de charge solaire minimal"
             }
         },
         "select": {
@@ -666,7 +686,7 @@
                 }
             },
             "light_mode": {
-                "name": "Mode clair",
+                "name": "Mode LED",
                 "state": {
                     "normal": "Normal",
                     "mood": "Éclairage d'ambiance",
@@ -701,6 +721,87 @@
                 "state": {
                     "normal": "Normal",
                     "smart": "Intelligent"
+                }
+            },
+            "max_evcharge_current": {
+                "name": "EV courant de charge maximal"
+            },
+            "solar_evcharge_min_current": {
+                "name": "EV courant de charge solaire minimal"
+            },
+            "light_brightness": {
+                "name": "Intensité LED"
+            },
+            "wipe_up_mode": {
+                "name": "Geste de balayage haut",
+                "state": {
+                    "off": "Désactivé",
+                    "start_charge": "Charge de démarrage",
+                    "stop_charge": "Arrête",
+                    "boost_charge": "Charge rapide",
+                    "unknown": "Inconnu"
+                }
+            },
+            "wipe_down_mode": {
+                "name": "Geste de balayage bas",
+                "state": {
+                    "off": "Désactivé",
+                    "start_charge": "Charge de démarrage",
+                    "stop_charge": "Arrête",
+                    "boost_charge": "Charge rapide",
+                    "unknown": "Inconnu"
+                }
+            },
+            "smart_touch_mode": {
+                "name": "Mode Smart Touch",
+                "state": {
+                    "simple": "Simple",
+                    "anti_mistouch": "Anti-faux-pas",
+                    "unknown": "Inconnu"
+                }
+            },
+            "ev_charger_mode": {
+                "name": "Mode chargeur",
+                "state": {
+                    "start_charge": "Début de la recharge",
+                    "wait_start": "Attendre le début",
+                    "wait_plug": "Attendre le connecteur",
+                    "stop_charge": "Arrête",
+                    "skip_delay": "Ignorer le délai",
+                    "boost_charge": "Charge rapide",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "plug_countdown": {
+                        "name": "Compte à rebours"
+                    },
+                    "start_countdown": {
+                        "name": "Retard du début"
+                    }
+                }
+            },
+            "solar_evcharge_mode": {
+                "name": "Charge solaire",
+                "state": {
+                    "solar_grid": "Solaire + réseau",
+                    "solar_only": "Solaire seulement",
+                    "unknown": "Inconnu"
+                }
+            },
+            "schedule_mode": {
+                "name": "Horaire de chargement mode",
+                "state": {
+                    "normal": "Normal",
+                    "smart": "Intelligent",
+                    "unknown": "Inconnu"
+                }
+            },
+            "weekend_mode": {
+                "name": "Horaire de chargement mode WE",
+                "state": {
+                    "same": "Idem",
+                    "different": "Différent",
+                    "unknown": "Inconnu"
                 }
             },
             "vehicle_brand": {
@@ -882,17 +983,17 @@
             "ac_output_power_total": {
                 "name": "Puissance de sortie CA totale"
             },
-            "ac_output_power_signed_total": {
-                "name": "Puissance de sortie CA totale"
+            "device_output_power_signed_total": {
+                "name": "Puissance totale de l'appareil"
             },
-            "solarbank_ac_output_power_signed_total": {
-                "name": "SB puissance CA totale"
-            },
-            "solarbank_1_ac_output_power_signed": {
-                "name": "SB 1 puissance CA",
+            "device_1_ac_output_power_signed": {
+                "name": "Appareil 1 puissance CA",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Numéro de série"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -902,11 +1003,14 @@
                     }
                 }
             },
-            "solarbank_2_ac_output_power_signed": {
-                "name": "SB 2 puissance CA",
+            "device_2_ac_output_power_signed": {
+                "name": "Appareil 2 puissance CA",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Numéro de série"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -916,11 +1020,14 @@
                     }
                 }
             },
-            "solarbank_3_ac_output_power_signed": {
-                "name": "SB 3 puissance CA",
+            "device_3_ac_output_power_signed": {
+                "name": "Appareil 3 puissance CA",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Numéro de série"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -930,11 +1037,48 @@
                     }
                 }
             },
-            "solarbank_4_ac_output_power_signed": {
-                "name": "SB 4 puissance CA",
+            "device_4_ac_output_power_signed": {
+                "name": "Appareil 4 puissance CA",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Numéro de série"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Extensions"
+                    }
+                }
+            },
+            "device_5_ac_output_power_signed": {
+                "name": "Appareil 5 puissance CA",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Numéro de série"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
+                    },
+                    "state_of_charge": {
+                        "name": "SOC %"
+                    },
+                    "expansions": {
+                        "name": "Extensions"
+                    }
+                }
+            },
+            "device_6_ac_output_power_signed": {
+                "name": "Appareil 6 puissance CA",
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Numéro de série"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
                     },
                     "state_of_charge": {
                         "name": "SOC %"
@@ -994,6 +1138,9 @@
                         "name": "Mode"
                     }
                 }
+            },
+            "state_of_charge_total": {
+                "name": "État de charge total"
             },
             "state_of_charge": {
                 "name": "État de charge",
@@ -1462,6 +1609,9 @@
             "home_load_power_avg": {
                 "name": "Demande domestique ⌀"
             },
+            "ev_charge_power_avg": {
+                "name": "Puissance de charge EV ⌀"
+            },
             "grid_to_home_power_avg": {
                 "name": "Achat sur le réseau ⌀"
             },
@@ -1724,6 +1874,17 @@
             },
             "daily_solar_to_grid": {
                 "name": "Exportation journalière du réseau",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_ev_charge": {
+                "name": "Charge journalière de l'EV",
                 "state_attributes": {
                     "date": {
                         "name": "Date"
@@ -2082,6 +2243,166 @@
             },
             "exp_5_temperature": {
                 "name": "Exp. 5 température"
+            },
+            "ip_address": {
+                "name": "Adresse IP",
+                "state_attributes": {
+                    "tcp_port": {
+                        "name": "Port TCP"
+                    },
+                    "tcp_timeout_seconds": {
+                        "name": "Délai d'attente TCP"
+                    }
+                }
+            },
+            "phase_operating_mode": {
+                "name": "Mode de phasé",
+                "state": {
+                    "automatic": "Automatique",
+                    "one_phase": "Monophasé",
+                    "three_phase": "Triphasé"
+                },
+                "state_attributes": {
+                    "max_ampere": {
+                        "name": "Ampérage max"
+                    },
+                    "min_ampere": {
+                        "name": "Ampérage min"
+                    }
+                }
+            },
+            "ocpp_connect_status": {
+                "name": "Connexion OCPP",
+                "state": {
+                    "disconnected": "Déconnecté",
+                    "connecting": "Connexion",
+                    "connected": "Connecté",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
+            "cp_signal_status": {
+                "name": "Signal CP",
+                "state": {
+                    "a_12v": "A 12V",
+                    "b1_9v": "B1 9V",
+                    "b2_9v": "B2 9V",
+                    "c1_6v": "C1 6V",
+                    "c2_6v": "C2 6V",
+                    "error": "Error",
+                    "d1_3v": "D1 3V",
+                    "d2_3v": "D2 3V",
+                    "e_0v": "E 0V",
+                    "f_minus_12v": "F -12V"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
+            "ev_charger_status": {
+                "name": "État du chargeur VE",
+                "state": {
+                    "standby": "Veille",
+                    "preparing": "Préparation",
+                    "charging": "Recharge",
+                    "charger_paused": "Mis en pause par le chargeur",
+                    "vehicle_paused": "Mis en pause par un véhicule",
+                    "completed": "Terminé",
+                    "reserving": "Réservation",
+                    "disabled": "Désactivé",
+                    "error": "Erreur"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
+            "power_l1": {
+                "name": "Puissance L1",
+                "state_attributes": {
+                    "current": {
+                        "name": "Ampère"
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
+            },
+            "power_l2": {
+                "name": "Puissance L2",
+                "state_attributes": {
+                    "current": {
+                        "name": "Ampère"
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
+            },
+            "power_l3": {
+                "name": "Puissance L3",
+                "state_attributes": {
+                    "current": {
+                        "name": "Ampère"
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
+            },
+            "charging_start_timestamp": {
+                "name": "Début de charge",
+                "state_attributes": {
+                    "duration": {
+                        "name": "Durée"
+                    }
+                }
+            },
+            "charging_energy": {
+                "name": "Énergie de charge",
+                "state_attributes": {
+                    "energy_l1": {
+                        "name": "Énergie L1"
+                    },
+                    "energy_l2": {
+                        "name": "Énergie L2"
+                    },
+                    "energy_l3": {
+                        "name": "Énergie L3"
+                    }
+                }
+            },
+            "total_ev_charge": {
+                "name": "Charge VE totale",
+                "state_attributes": {
+                    "charge_count": {
+                        "name": "Total des charges"
+                    },
+                    "total_duration": {
+                        "name": "Durée totale"
+                    }
+                }
+            },
+            "total_charge_cost": {
+                "name": "Coût total de charge"
+            },
+            "total_saving": {
+                "name": "Économie totale",
+                "state_attributes": {
+                    "co2_saving": {
+                        "name": "Économie de CO2"
+                    },
+                    "total_km": {
+                        "name": "Distance totale km"
+                    }
+                }
             }
         },
         "switch": {
@@ -2147,6 +2468,42 @@
             "usba_switch": {
                 "name": "Ports USB-A"
             },
+            "ac_1_switch": {
+                "name": "Prise 1"
+            },
+            "ac_2_switch": {
+                "name": "Prise 2"
+            },
+            "plug_lock_switch": {
+                "name": "Verrou de prise"
+            },
+            "auto_start_switch": {
+                "name": "Démarrage automatique de la charge"
+            },
+            "auto_charge_restart_switch": {
+                "name": "Redémarrage automatique de la charge"
+            },
+            "random_delay_switch": {
+                "name": "Départ différé"
+            },
+            "modbus_switch": {
+                "name": "Modbus TCP"
+            },
+            "light_off_schedule_switch": {
+                "name": "LED hors programme"
+            },
+            "load_balance_switch": {
+                "name": "Répartition de charge"
+            },
+            "solar_evcharge_switch": {
+                "name": "Recharge solaire"
+            },
+            "auto_phase_switch": {
+                "name": "Commutateur de phase automatique"
+            },
+            "charge_schedule_switch": {
+                "name": "Recharge horaire"
+            },
             "allow_refresh": {
                 "name": "Utilisation de l'API",
                 "state_attributes": {
@@ -2160,6 +2517,26 @@
             },
             "default_vehicle": {
                 "name": "Véhicule par défaut"
+            }
+        },
+        "time":{
+            "light_off_start_time": {
+                "name": "LED éteinte début"
+            },
+            "light_off_end_time": {
+                "name": "LED éteinte fin"
+            },
+            "week_start_time": {
+                "name": "Horaire de chargement début"
+            },
+            "week_end_time": {
+                "name": "Horaire de chargement fin"
+            },
+            "weekend_start_time": {
+                "name": "Horaire de chargement WE début"
+            },
+            "weekend_end_time": {
+                "name": "Horaire de chargement WE fin"
             }
         }
     },
