@@ -97,26 +97,34 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 
 - The used Api library is by no means an official Api and is very limited as there is no documentation at all
 - The Api library or the login can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in the underlying Api library
-- The Api library was validated against both Anker cloud servers (EU and COM). Assignment of countries to either of the two servers however is unknown and depending on the selected country for your account. Upon wrong server assignment for your registered country, the Api may login but show no valid systems, devices or sensors in the integration. You need to open an issue to correct your country assignment in the Api library.
+- The Api library was validated against both Anker cloud servers (EU and COM). Assignment of countries to either of the two servers however is unknown and depending on the selected country for your account when you created your power system or assigned your devices.
+  - Upon wrong server assignment for your registered country, the Api may login but show no valid systems, devices or sensors in the integration.
+  - You need to open an issue to correct your country assignment in the Api library.
+  - Avoid switching countries for your account. If you assigned devices while connected to different cloud servers (EU and COM), you may split your account devices across different servers which cannot be managed through a single account.
 - The integration sensors and entities being provided depend on whether an Anker owner account or member account is used with the integration
-- Devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While device Wifi is disconnected, the reported data in the cloud may be stale. You can use the cloud state sensor of the end device to verify the device cloud connection state and recognize potentially stale data.
-- MQTT data updates depend on the publish cycle of device messages. Most messages are not published regularly, but only while the real time trigger is active for the device. Therefore MQTT data may get stale, if messages are no longer published.
-  - You may use the MQTT data timestamp as indicator when the last data update was received. However, this does not mean that all MQTT data were updated (it depends on the device and published message)
+- Devices may loose Wifi connection from time to time and will not be able to send data to the cloud. While device Wifi is disconnected, the reported data in the cloud may be stale.
+  - The integration cannot validate whether the cloud provided data are valid or outdated.
+  - You can use the cloud state sensor of the end device to verify the device cloud connection state and recognize potentially stale data.
+- MQTT data updates depend on the publish cycle of device messages.
+  - Most messages are not published regularly, but only while the real time trigger is active for the device or a status request was sent.
+  - The frequency of regular MQTT messages also determines the data update cycle in the cloud, since the cloud receives all device updates from the MQTT server as well
+  - Therefore MQTT data may get stale, if messages are no longer published.
+  - You may use the MQTT data timestamp as indicator when the last data update was received. However, this does not mean that all MQTT data were updated (it depends on the device, the published message and whether the message is described for proper data extraction)
 - If you overlay MQTT data and particular MQTT data get stale due to missing messages, the entity may not longer refresh even if the Api may provide updated data
   - You may need to automate MQTT status requests or real time triggers for the device, if certain entities no longer refresh
   - Be aware of [additional overhead](#mqtt-managed-devices) when automating 24x7 real time trigger for your devices
 - The integration can support only Solix power devices which are defined in a power system via the Anker mobile app. While it may present also standalone devices that are not defined in a system, those standalone devices are not manageable through the cloud Api servers.
+- Starting with version 3.4.0, stand alone and system integrated devices can also be monitored through an optional MQTT server connection. Starting with version 3.5.0, Solix devices can also be controlled via the optional MQTT server connection.
+  - However, it depends on the decoding and description of the MQTT messages and controls for each device model whether the integration can provide useful data and implement control entities for the device
 - Dynamic tariff and price forecast is only supported for the generic Nordpool provider. Other providers typically require registration through the mobile App and will not be supported by this integration.
 - Dynamic price forecast calculations for other providers than Nordpool may be wrong, since neither the provided price unit is clear, nor whether the provider prices include fees and taxes.
-- Starting with version 3.4.0, such stand alone device can be monitored through an optional MQTT server connection. However, it depends on the decoding and description of the MQTT messages for each device model whether the integration can provide useful data
-- Starting with version 3.5.0, Solix devices can also be controlled via the optional MQTT server connection. However, it depends on the decoding and description of the MQTT messages and controls for each device model whether the integration can implement control entities for the device
 - Further devices may be added in future once examples of Api response data or MQTT message and control descriptions can be provided to the developer.
 
 > [!NOTE]
 > To export randomized example data of your Anker power system configuration, please refer to the [anker-solix Python library][anker-solix-api] and the tool [export_system.py](https://github.com/thomluther/anker-solix-api#export_systempy). A new [HA service/action to export anonymized Api response data](INFO.md#export-systems-action) was added to the integration to simplify data collection in a downloadable zip file. You can open a new [issue as feature request](https://github.com/thomluther/ha-anker-solix/issues) and upload the zip file with the exported json files, together with a short description of your setup. You should enable the MQTT messages export option before exporting the configuration. To catch most values, the export should be run when the device is actually using many input and output channels including battery charge or discharge consumption to get meaningful data.
 
 > [!IMPORTANT]
-> The HA service/action only works if you have a valid hub configuration. Otherwise the Export System action may not be registered to HA and there may not be a functional Api target entity either for the export.
+> The HA service/action only works if you have a valid hub configuration. Otherwise, the Export System action may not be registered to HA and there won't be a selectable Api target entity either for the export action.
 
 ## Supported sensors and devices
 
@@ -263,7 +271,6 @@ Version 3.5.0 added device control via optional MQTT connection. This is impleme
 
 > [!IMPORTANT]
 > Following limitations apply:
-- The output limit control via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls).
 - Dynamic price forecast support remains limited to the Nordpool provider only. **Other price providers may show wrong price calculations**, see [Dynamic price provider selection](#dynamic-price-provider-selection).
 
 
@@ -295,22 +302,17 @@ Version 3.5.0 added device control via optional MQTT connection and merged indiv
 Device controls via station controls have been implemented by Anker to manage Solarbank devices that may support Multisystem configurations (with or without Power Dock). The station provides the capability to manage a system or device control in a central place, that may have to be applied to one or more devices in parallel. The station control settings that you can find in the mobile app typically must be changed through the cloud Api, while the individual devices settings on the device details panel typically reflect the MQTT values (if it is an MQTT control). If a device control is managed centrally by the station, it is typically greyed out on the device panel, but you can still see the active setting based on MQTT data of the device. As it turned out, some of the station controls cannot be managed by the Api alone, if the cloud does not distribute the required MQTT commands to the dependent devices. On the other hand, if only the device MQTT commands are distributed by a client, the settings on the station panel will not change, and the cloud may not be aware of station control changes. Various controls shown on the station panel require various (hybrid) Api and/or MQTT control. This hybrid control is now implemented in the integration if the MQTT connection is enabled. Otherwise you may not see those MQTT dependent controls anyway.
 
 Following settings may require the hybrid approach:
-- SOC reserve (min SOC) - same for all Solarbank devices in Multisystems, must also be set on Power Dock device
+- SOC reserve (min SOC) - same for all Solarbank devices in Multisystems, must also be set on Power Dock device if available
 - PV input limit - individual per Solarbank
 - AC input limit (AC charge limit) - individual per Solarbank
-- AC output limit (max home load) - overall limit across all Solarbank devices in system, must also be set on Power Dock device
-  - This control has limited support through the integration
-  - It may work for single solarbank systems (but station display does not change)
-  - It is not changeable for Multisystems
-- Grid export switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device
-  - Grid export limit 100-100000 W - same for all Solarbank devices in Multisystems, must also be set on Power Dock device (requires FW that supports the limit setting)
-- 3rd party PV switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device and is typically cloud driven
+- AC output limit (max home load) - overall limit across all Solarbank devices in system, must also be set on Power Dock device if available
+- Grid export switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device if available
+  - Grid export limit 100-100000 W - same for all Solarbank devices in Multisystems, must also be set on Power Dock device if available (requires FW that supports the limit setting)
+  - Even if switch and limit changes through the Api are applied, the change is not reflected properly in the App (may be an App caching issue for that particular page)
+- 3rd party PV switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device if available and is typically cloud driven
   - This will not be implemented to the integration, since it depends on FW and is typically a one time system configuration setting that does not need automation
 - EV charger enablement switch - same for all Solarbank devices in Multisystems, must also be set on Power Dock device and is typically cloud driven
   - This will not be implemented to the integration, since it depends on FW and is typically a one time system configuration setting that does not need automation
-
-> [!IMPORTANT]
-> The Api query to change the AC output limit (max home load) on the station panel is unknown. Therefore this control may not fully work for single systems, although the device itself will show the limit change being applied through MQTT. For Multisystems, the output limit therefore cannot be changed through the integration, since that is controlled through the cloud server with regular MQTT commands across all Solarbanks and the Power Dock. This control cannot be supported by the integration until someone will find the required Api query/parameters to change the output limit for Solarbank devices. More details are discussed in this [issue comment](https://github.com/thomluther/anker-solix-api/issues/216#issuecomment-3804889623) in case you want to contribute.
 
 
 ### Solarbank PPS systems
@@ -323,9 +325,9 @@ Integration version 3.5.4 added initial support for this new system type and the
 
 ### EV charger devices
 
-The Solix V1 EV charger has some unique device characteristics. It can be used individually within a dedicated system, added to Solarbank Power Dock systems or to HES X1 systems. Additionally, this device has the unique feature so allow device sharing with other Anker Solix accounts, which enables them to control most of the device features and settings without granting those device members full access to the whole system where the charger belongs to. For example, if system members also get a dedicated member access to the EV charger device, those family members can control the EV charging with their own Anker account.
+The Solix V1 EV charger has some unique device characteristics. It can be used individually within a dedicated system, added to Solarbank Power Dock systems or to HES X1 systems. Additionally, this device has the unique feature to allow device sharing with other Anker Solix accounts, which enables them to control most of the device features and settings without granting those device members full access to the whole system where the charger belongs to. For example, if system members also get a dedicated member access to the EV charger device, those family members can control the EV charging features with their own Anker account.
 
-Integration version 3.6.0 added full support for the V1 EV charger, independent of its system integration type. The EV charger controls and most of the device metrics are only available through the MQTT server connection. Also EV charger member accounts have full control capabilities through the MQTT connection. The Api connection may only provide some total device statistics, as well as daily energy statistics as available in the Api cloud for the system that includes the EV charger.
+Integration version 3.6.0 added full support for the V1 EV charger, independent of its system integration type. The EV charger controls, as well as most of the device metrics, are only available through the MQTT server connection. Also EV charger member accounts have full control capabilities through the MQTT connection. The Api connection may only provide some total device statistics, as well as daily energy statistics as available in the Api cloud for the system that includes the EV charger.
 
 No regular MQTT messages seem to be provided by the EV charger, and triggering or automating the real time data and/or status requests buttons may be required to obtain actual device information. Both message types provide different information:
   - Real time data messages contain updated consumption data, but they make sense only if charging is in progress. Otherwise they should not be triggered since they are wasting backend resources if triggered permanently
@@ -338,34 +340,34 @@ The operational mode of the EV charger is controlled in the mobile App by using 
 - `boost_charge`
 
 Following temporary states may be shown as well, but cannot be used in actions for EV charger mode control:
-- `wait_start` is waiting for the random start delay to expire
-- `wait_plug` is waiting for the EV charging cable to be plugged in after starting a charge
+- `wait_start` is waiting for the random start countdown
+- `wait_plug` is waiting for the EV charging cable to be plugged in after starting a charge (120 seconds)
 
-The countdowns of these wait states are available as attributes of the control entity. The available entity options are adopted dynamically, depending on the state. If you automate operational mode changes, you need to implement conditions to check that the desired mode you want to activate is available in the entity options, otherwise your automation action step may fail due to invalid select option of the entity.
+The countdowns of these wait states are available as attributes of the control entity. The available entity options are adopted dynamically, depending on the state and other MQTT data. If you automate operational mode changes, you need to implement conditions to check that the desired mode you want to activate is available in the entity options. Otherwise your automation action step may fail due to invalid select option of the entity.
 
 > [!NOTE]
-> The random delay switch is created for all charger variants, but since the variant and its supported features cannot be recognized through the known MQTT data, enabling the random start delay switch may or may not work. This option is just required for specific country regulations, e.g. for UK. If you don't see this option in your mobile App, don't use it with the integration either, since you could not modify it without the integration.
+> The random delay switch is created for all charger variants, but since the variant and its supported features cannot be recognized through the known MQTT data, enabling the random start delay switch may or may not work. A random charger start delay is just required for specific country regulations, e.g. for UK. If you don't see this option in your mobile App, don't use it with the integration either, since you could not modify it without the integration.
 
-The auto phase switch control is only available if 3 phases are connected to the EV charger, which is recognized by the integration via voltage values on all 3 phases.
+The auto phase switch control is only available for 3 phase EV charger variants. This is recognized by the integration via voltage values on all 3 phases.
 
 All metrics of the active charging session are recorded in device entities and attributes. Completed charging session statistics are **NOT supported by the integration** and won't be implemented. You can use the entity history data in HA to gain more insights of previous charger statistics if required, or use the mobile App statistic review.
 
 
 ### Electric Vehicle devices
 
-Anker announced its [Solix V1 EV Charger](https://www.ankersolix.com/de/smart-ev-ladegeraet-solix-v1) (DE) which can be used as stand alone system or being integrated into the X1 HES system as well as into the Solarbank Multisystem (by 4Q 2025). The EV Charger device can be shared amongst Anker cloud users, while each user can define/create its own virtual electric vehicle, or even multiple of them (up to 5 vehicles per account). The vehicles are used to manage EV charging by individual users, even if they are not the owner of the system to which the EV Charger device belongs to. Each user will need to create its own vehicle(s) to create and manage charge orders for the V1. The integration currently does **NOT** support the vehicle creation itself, but it creates a virtual device for each existing EV under the user account and it can modify various vehicle attributes and show all entities that belong to the vehicle. The user vehicle can also be deleted by removing the vehicle device from the integration hub.
+The Anker EV Charger device can be shared amongst Anker cloud users, while each user can define/create its own virtual electric vehicle, or even multiple of them (up to 5 vehicles per account). The vehicles are used to manage EV charging by individual users, even if they are not the owner of the system to which the EV Charger device belongs to. Each user may need to create its own vehicle(s) to create and manage charge orders for the V1. The integration currently does **NOT** support the vehicle creation itself, but it creates a virtual device for each existing EV under the user account and it can modify various vehicle attributes and show all entities that belong to the vehicle. The user vehicle can also be deleted by removing the vehicle device from the integration hub.
 
 > [!TIP]
-> The integration will automatically discover added and remove vehicles under the user account during the regular device details refresh cycle (10 minutes per default). An immediate vehicle refresh can also be triggered manually by a corresponding button of the account device.
+> The integration will automatically discover added and removed vehicles under the user account during the regular device details refresh cycle (10 minutes per default). An immediate vehicle refresh can also be triggered manually by a corresponding button of the account device.
 
 
 ### Power Panels
 
-Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800 power stations attached to the Power Panel are not tracked as system devices. Actual power consumption data in the cloud api was not discovered yet and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
+Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800(P) power stations attached to the Power Panel are not tracked as system devices. Actual power consumption data in the cloud api was not discovered yet and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
 
-Integration version 3.1.0 added a [customizable battery capacity](INFO.md#battery-capacity) to the Powerpanel device. Since the assigned F3800 PPS cannot be determined via Api queries, the capacity is assumed with a single F3800 device without expansion batteries. You can adjust the capacity to your installation to let the integration calculate the estimated remaining battery energy based on the actual SOC. See [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for a better understanding how such virtual entities are being used.
+Integration version 3.1.0 added a [customizable battery capacity](INFO.md#battery-capacity) to the Powerpanel device. Since the assigned(P) F3800 PPS cannot be determined via Api queries, the capacity is assumed with a single F3800 device without expansion batteries. You can adjust the capacity to your installation to let the integration calculate the estimated remaining battery energy based on the actual SOC. See [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for a better understanding how such virtual entities are being used.
 
-Power Panel owners need to explore and document cloud Api capabilities to further expand any Power Panel system or device support. Please refer to issue [Add F3800/BP3800 Equipment when connected to Home Power Panel](https://github.com/thomluther/anker-solix-api/issues/117) for contribution.
+Power Panel owners need to explore and document cloud Api capabilities to further expand any Power Panel system or device support. Please refer to discussion [Power Panel Data](https://github.com/thomluther/ha-anker-solix/discussions/447) for contribution.
 
 Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) for F3800(P) device that are typically attached to power panels.
 
@@ -400,7 +402,7 @@ You can also explore the Anker Solix cloud Api directly within your HA instance 
 The same applies to [MQTT managed devices](#mqtt-managed-devices), since decoding and description/interpretation of values requires real time monitoring of the messages under various conditions while comparing the decoded values with App data.
 
 > [!IMPORTANT]
-> While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or provide power values or much other details from standalone devices which are not defined to a Power System, typically since the do not require a holistic system view with a group of devices and the Api cloud does not track or provide energy statistics for those devices either. The real time data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their real time values but only for the time they are triggered by an owner account in the App. Such data can only be integrated via the optional MQTT server connection.
+> While the integration may show standalone devices that you can manage with your Anker account, the cloud Api used by the integration does **NOT** contain or provide power values or much other details from standalone devices which are not defined to a Power System, typically since they do not require a holistic system view with a group of devices and the Api cloud does not track or provide energy statistics for those devices either. The real time data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their real time values but only for the time they are triggered by an owner account in the App. Such data can only be integrated via the optional MQTT server connection, but the published messages must be described first by device owners, see [MQTT managed devices](#mqtt-managed-devices).
 
 
 ## MQTT managed devices
