@@ -521,9 +521,8 @@ If you don't find any data for your owned devices although you enabled the MQTT 
 
 ## Showing Your Appreciation
 
+If you like this project, please give it a star on [GitHub][anker-solix]. If you want to show your appreciation for the countless hours spent to enhance and maintain it, I would be happy for a 🍵coffee ☕ or if you become a [sponsor 💖](https://github.com/sponsors/thomluther).
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)][buy-me-coffee]
-
-If you like this project, please give it a star on [GitHub][anker-solix]
 ***
 
 [anker-solix]: https://github.com/thomluther/ha-anker-solix
