@@ -117,6 +117,7 @@ class AnkerSolixPicturePath:
     A25X7: str = str(Path(IMAGEPATH) / "Charger_wireless_A25X7_pub.png")
     A2687: str = str(Path(IMAGEPATH) / "Charger_160W_A2687.png")
     A91B2: str = str(Path(IMAGEPATH) / "Charger_240W_A91B2_pub.png")
+    AS200: str = str(Path(IMAGEPATH) / "Alternator_Charger_AS200.png")
 
     A110A: str = str(Path(IMAGEPATH) / "Prime_Powerbank_26k_A110A.png")
     A110B: str = str(Path(IMAGEPATH) / "Prime_Powerbank_20k_A110B.png")

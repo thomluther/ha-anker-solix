@@ -846,7 +846,7 @@ class AnkerSolixApiExport:
                     if item.get("site_id") == siteId
                     and (
                         item.get("type") == api.SolixDeviceType.SOLARBANK_PPS.value
-                        # ignore SB1 since they are not trackked for device energy breakdown
+                        # ignore SB1 since they are not tracked for device energy breakdown
                         or (
                             item.get("type") == api.SolixDeviceType.SOLARBANK.value
                             and item.get("generation", 2) >= 2

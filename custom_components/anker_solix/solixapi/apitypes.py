@@ -148,13 +148,13 @@ API_ENDPOINTS: Final[dict] = {
     "get_device_charge_order_stats": "power_service/v1/app/order/get_charge_order_stats",  # works as member, date_type[week month year all], show EV_charger stats, {"device_sn":deviceSn,"date_type":"all","start_date":"","end_date":""}))
     "get_device_charge_order_stats_list": "power_service/v1/app/order/get_charge_order_stats_list",  # works as member, date_type[week month year all], order_Status unknown, {"device_sn":deviceSn,"order_status":1,"date_type":"all","start_date":"","end_date":"","page":0,"page_size":10}
     "get_ocpp_endpoint_list": "power_service/v1/app/get_ocpp_endpoint_list",  # lists ocpp endpoints used by Anker, including source number per endpoint
-    "get_device_ocpp_info": "power_service/v1/app/get_ocpp_info",  # works as member also for empty device SN, {"device_sn": deviceSn}, list device endpoint source number, default 0 if nothing found explicetly? (Useful only for EV charger devices)
+    "get_device_ocpp_info": "power_service/v1/app/get_ocpp_info",  # works as member also for empty device SN, {"device_sn": deviceSn}, list device endpoint source number, default 0 if nothing found explicitly? (Useful only for EV charger devices)
     "get_vehicle_brands": "power_service/v1/app/get_brand_list",  # get vehicle brand list
     "get_vehicle_brand_models": "power_service/v1/app/get_models",  # get model list for given brand, {"brand_name": "BMW"}
-    "get_vehicle_model_years": "power_service/v1/app/get_model_years",  # get prodictive year list for given model, {"brand_name": "BMW", "model_name": "iX3"}
+    "get_vehicle_model_years": "power_service/v1/app/get_model_years",  # get productive year list for given model, {"brand_name": "BMW", "model_name": "iX3"}
     "get_vehicle_year_attributes": "power_service/v1/app/get_model_list",  # get attributes for model and productive year, {"brand_name": "BMW", "model_name": "iX3", "productive_year": 2023}
     "get_user_vehicles": "power_service/v1/app/vehicle/get_vehicle_list",  # list of vehicles with details for account
-    "get_user_vehicle_details": "power_service/v1/app/vehicle/get_vehicle_detail",  # deteils for given vehicle id, {"vehicle_id": vehicleId}
+    "get_user_vehicle_details": "power_service/v1/app/vehicle/get_vehicle_detail",  # details for given vehicle id, {"vehicle_id": vehicleId}
     "vehicle_add": "power_service/v1/app/vehicle/add_vehicle",  # add vehicles to account, {"user_vehicle_info": [{"vehicle_name": "MyCar","brand": "Audi","model": "eTron","productive_year": 2024}]}
     "vehicle_update": "power_service/v1/app/vehicle/update_vehicle",  # update any vehicle detail, {"vehicle_id": vehicleId, "vehicle_name": "MyCar","brand": "Audi","model": "eTron","productive_year": 2024, "battery_capacity": 80, "ac_max_charging_power": 11, "energy_consumption_per_100km": 18}
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
@@ -734,6 +734,7 @@ AX1S0  Power Dock Pro                           Residential Storage System
 AX170  Power Dock                               Home Backup System
 A17E1  Anker SOLIX E10                          Home Backup System
 A7320  SOLIX Smart Generator 5500               Smart Generator
+AS200  Alternator Charger                       Charger
 ----------------------------------------------------------------------------------------------------
 """
 
@@ -1145,6 +1146,7 @@ class SolixDeviceCategory:
     A2687: str = SolixDeviceType.CHARGER.value  # Anker 160W Prime Charger
     A25X7: str = SolixDeviceType.CHARGER.value  # Prime Wireless Charger
     A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
+    AS200: str = SolixDeviceType.CHARGER.value  # Alternator Charger
     # Power Bank
     A110A: str = (
         SolixDeviceType.POWERBANK.value

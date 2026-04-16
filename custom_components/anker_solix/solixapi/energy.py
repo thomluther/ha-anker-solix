@@ -55,14 +55,24 @@ async def energy_daily(  # noqa: C901
             "show_third_party_pv_panel"
         )
     )
+    # get single solarbank device to check various energy types supported for query
+    sb2s = [
+        item
+        for item in (self.devices.values())
+        if item.get("site_id") == siteId
+        and item.get("type") == SolixDeviceType.SOLARBANK.value
+        and item.get("generation", 0) >= 2
+    ]
+    if not deviceSn and len(sb2s) == 1:
+        # assign single SB gen 2 or later to verify which PV channels to query
+        sb2 = sb2s[0]
+    else:
+        sb2 = {}
 
     # first get solarbank export
     if SolixDeviceType.SOLARBANK.value in devTypes:
         # get first data period from file or api
-        justify_daytotals = bool(
-            dayTotals
-            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2
-        )
+        justify_daytotals = bool(dayTotals and sb2s)
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(
@@ -170,10 +180,7 @@ async def energy_daily(  # noqa: C901
             )
 
     # Get home usage energy types if device is solarbank generation 2, smart meter, smart plugs, solarbank_pps
-    if (
-        SolixDeviceType.SOLARBANK.value in devTypes
-        and ((self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2
-    ) or (
+    if (SolixDeviceType.SOLARBANK.value in devTypes and sb2s) or (
         {
             SolixDeviceType.SMARTMETER.value,
             SolixDeviceType.SMARTPLUG.value,
@@ -462,11 +469,7 @@ async def energy_daily(  # noqa: C901
     if SolixDeviceType.INVERTER.value in devTypes:
         for ch in ["pv" + str(num) for num in range(1, 5)] + ["micro_inverter"]:
             # query only if provided device SN has solar power values in cache
-            if (
-                f"solar_power_{ch.replace('pv', '')}"
-                in (dev := self.devices.get(deviceSn) or {})
-                or f"{ch}_power" in dev
-            ):
+            if f"solar_power_{ch.replace('pv', '')}" in sb2 or f"{ch}_power" in sb2:
                 if fromFile:
                     resp = (
                         await self.apisession.loadFromFile(
