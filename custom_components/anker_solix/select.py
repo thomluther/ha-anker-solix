@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -230,13 +231,14 @@ DEVICE_SELECTS = [
         exclude_fn=lambda s, d: (
             not (
                 # (
-                ({d.get("type")} - s) and "all_power_limit" not in d
+                ({d.get("type")} - s)
+                and "all_power_limit" not in d
                 #     & {
                 #         SolixDeviceType.SOLARBANK.value,
                 #         SolixDeviceType.COMBINER_BOX.value,
                 #     }
                 # )
-                # and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+                and not d.get("station_sn")
             )
         ),
         mqtt=True,
@@ -882,11 +884,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     ).keys()
                 )
             else:
-                # update mdev command options
+                # update mdev command description options
                 mdev.update_device(
                     device=mdev.device,
                     dynamic_descriptions={
-                        f"max_load{'_parallel' if self.entity_description.mqtt_cmd == SolixMqttCommands.sb_max_load_parallel else ''}_options": self._attr_options
+                        f"max_load{'_parallel' if self.entity_description.mqtt_cmd == SolixMqttCommands.sb_max_load_parallel else ''}_options": [
+                            int(x) for x in self._attr_options
+                        ]
                     },
                 )
             number_sort = True
@@ -1034,6 +1038,30 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             ):
                 self._attr_options = mdev.ev_charger_mode_options()
                 self._attr_options.sort()
+        elif self.entity_description.mqtt_cmd == SolixMqttCommands.sb_max_load:
+            # Limit the options to active setting if control is not changeable
+            data = (self.coordinator.data or {}).get(self.coordinator_context) or {}
+            if not data.get("station_sn") and data.get("generation", 0) < 3:
+                # MQTT command required for control, limit options if no mdev available
+                if (
+                    mdev := self.coordinator.client.get_mqtt_device(
+                        self.coordinator_context
+                    )
+                ) and isinstance(
+                    options := mdev.device.get("power_limit_option"), list
+                ):
+                    # Limit the options to subset as provided in Api device details (from power limit query)
+                    # [{'limit': 350, 'limit_real': 350}, {'limit': 600, 'limit_real': 600}, {'limit': 800, 'limit_real': 800}]
+                    self._attr_options = [
+                        str(d.get("limit"))
+                        for d in options
+                        if isinstance(d, dict)
+                        for key, item in d.items()
+                        if key == "limit"
+                    ]
+                    number_sort = True
+                else:
+                    self._attr_options = [self._attr_current_option]
         elif self.entity_description.dynamic_options:
             if mdev := self.coordinator.client.get_mqtt_device(
                 self.coordinator_context
@@ -1307,24 +1335,15 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 )
                 resp = None
                 with suppress(ValueError, TypeError):
-                    if (
-                        stationSn := (
-                            self.coordinator_context
-                            if data.get("type") == SolixDeviceType.COMBINER_BOX.value
-                            else data.get("station_sn")
-                        )
-                        is not None
-                    ):
-                        # Systems with Station support can be controlled through Api
-                        resp = (
-                            resp or {}
-                        ) | await self.coordinator.client.api.set_power_limit(
-                            siteId=data.get("site_id", ""),
-                            deviceSn=stationSn or self.coordinator_context,
-                            ac_output=option,
-                            toFile=self.coordinator.client.testmode(),
-                        )
-                        # MQTT control is not required, since managed through the cloud
+                    # Systems with Station support can be controlled through Api alone, otherwise MQTT command is required
+                    # Note: A cloud change mid April 2026 reports station support for SB2 although max load cannot be controlled via station parm
+                    stationSn = (
+                        self.coordinator_context
+                        if data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                        else data.get("station_sn")
+                    )
+                    if stationSn or data.get("generation", 0) >= 3:
+                        # MQTT control is not required for station managed devices
                         # Control all solarbank devices via individual MQTT device setting if they have a station
                         # for md in self.coordinator.client.get_mqtt_devices(
                         #     siteId=data.get("site_id"),
@@ -1339,21 +1358,30 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         #             cmd=SolixMqttCommands.sb_max_load_parallel,
                         #         )
                         #     }
-                    else:
+                        pass
+                    elif self._attribute_name == "max_load" and mdev:
+                        # MQTT command required to change device setting
                         # ensure that MQTT device uses the command as supported by its max load control
-                        if self._attribute_name == "max_load" and mdev:
-                            resp = (resp or {}) | {
-                                f"mqtt_control_{mdev.sn}": await self._async_mqtt_option(
-                                    mdev=mdev,
-                                    option=option,
-                                )
-                            }
-                        if data.get("type") == SolixDeviceType.SOLARBANK.value:
-                            # Not station managed, update Api cache after MQTT command
-                            await self.coordinator.client.api.get_power_limit(
-                                siteId=data.get("site_id", ""),
-                                fromFile=self.coordinator.client.testmode(),
+                        resp = (resp or {}) | {
+                            f"mqtt_control_{mdev.sn}": await self._async_mqtt_option(
+                                mdev=mdev,
+                                option=option,
                             )
+                        }
+                        if resp:
+                            await asyncio.sleep(
+                                2
+                            )  # ensure that MQTT command is processed before Api cache update
+                    # Run Api command to update Api cache, also for test mode
+                    resp = (resp or {}) | (
+                        await self.coordinator.client.api.set_power_limit(
+                            siteId=data.get("site_id", ""),
+                            deviceSn=stationSn or self.coordinator_context,
+                            ac_output=option,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                        or {}
+                    )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied limit setting:\n%s",
@@ -1365,7 +1393,11 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 indent=2 if len(json.dumps(resp)) < 200 else None,
                             ),
                         )
-
+                    # trigger status request to get updated MQTT status if Api was used
+                    if resp and mdev:
+                        await mdev.status_request(
+                            toFile=self.coordinator.client.testmode()
+                        )
             elif self._attribute_name in [
                 "preset_ac_input_limit",
                 "preset_pv_input_limit",

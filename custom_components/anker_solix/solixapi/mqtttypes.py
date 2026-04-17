@@ -551,7 +551,7 @@ class DeviceHexDataField:
                         length = 1
                     elif ftype == DeviceHexDataTypes.sile.value:
                         length = 2
-                    elif ftype == DeviceHexDataTypes.sfle.value:
+                    elif ftype in [DeviceHexDataTypes.sfle.value, DeviceHexDataTypes.var.value]:
                         length = 4
                     else:
                         length = bytemap.get(LENGTH, 0)

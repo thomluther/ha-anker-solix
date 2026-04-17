@@ -120,6 +120,7 @@ class SolixMqttCommands:
     sb_ev_charger_switch: str = "sb_ev_charger_switch"  # Driven through cloud
     plug_schedule: str = "plug_schedule"
     plug_delayed_toggle: str = "plug_delayed_toggle"
+    device_switch: str = "device_switch"
     device_power_mode: str = "device_power_mode"
     plug_lock_switch: str = "plug_lock_switch"
     ev_charger_mode_select: str = "ev_charger_mode_select"
@@ -513,6 +514,16 @@ CMD_SOC_LIMITS_V2 = CMD_COMMON_V2 | {
         STATE_NAME: "power_cutoff",
         VALUE_OPTIONS: [1, 5, 10, 15, 20],
         VALUE_STATE: "power_cutoff",
+    },
+}
+
+CMD_DEVICE_SWITCH = CMD_COMMON_V2 | {
+    # Command: device power switch
+    COMMAND_NAME: SolixMqttCommands.device_switch,
+    "ac": {
+        NAME: "set_device_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }
 

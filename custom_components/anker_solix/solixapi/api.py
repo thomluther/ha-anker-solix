@@ -175,7 +175,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         ):
                             calc_capacity = True
                         # try to get type for standalone device from category definitions if not defined yet
-                        if hasattr(SolixDeviceCategory, str(value)) and "type" not in device:
+                        if (
+                            hasattr(SolixDeviceCategory, str(value))
+                            and "type" not in device
+                        ):
                             dev_type = str(
                                 getattr(SolixDeviceCategory, str(value))
                             ).split("_")
@@ -1909,19 +1912,32 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             elif "switch_0w" in (resp.get("param_data") or {}):
                 station_attr["switch_0w"] = resp["param_data"]["switch_0w"]
         # process output limit via set_site_device_parm query type 19
-        if ac_output is not None and not isinstance(
-            await self.set_device_parm(
-                siteId=siteId,
-                paramType=SolixParmType.SOLARBANK_POWER_LIMIT.value,
-                paramData={
-                    "power_limit": {"limit": ac_output, "limit_real": ac_output}
-                },
-                deviceSn=deviceSn,
-                toFile=toFile,
-            ),
-            dict,
-        ):
-            return False
+        if ac_output is not None:
+            dev = self.devices.get(deviceSn, {})
+            # Ensure query type 19 is supported by system
+            # Systems with Station support can be controlled through Api alone, otherwise an MQTT command is required additionally to toggle the device
+            # Note: A cloud change mid April 2026 reports station support for SB2 although max load cannot be controlled via station parm
+            if (
+                dev.get("type") == SolixDeviceType.COMBINER_BOX.value
+                or dev.get("station_sn")
+                or dev.get("generation", 0) >= 3
+            ):
+                if not isinstance(
+                    await self.set_device_parm(
+                        siteId=siteId,
+                        paramType=SolixParmType.SOLARBANK_POWER_LIMIT.value,
+                        paramData={
+                            "power_limit": {"limit": ac_output, "limit_real": ac_output}
+                        },
+                        deviceSn=deviceSn,
+                        toFile=toFile,
+                    ),
+                    dict,
+                ):
+                    return False
+            # For file testing, allow modification in the power limit file to sync Api mock data with required MQTT command
+            elif not toFile:
+                return False
         # update device attributes as required
         if data:
             if not isinstance(

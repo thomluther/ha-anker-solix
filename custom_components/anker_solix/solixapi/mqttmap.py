@@ -17,6 +17,7 @@ from .mqttcmdmap import (
     CMD_DC_OUTPUT_TIMEOUT_SEC,
     CMD_DEVICE_MAX_LOAD,
     CMD_DEVICE_POWER_MODE,
+    CMD_DEVICE_SWITCH,
     CMD_DEVICE_TIMEOUT_MIN,
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
@@ -2960,6 +2961,62 @@ _A2345_0a00 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+_AS200_0421 = {
+    "a2": {
+        BYTES: {
+            "01": {
+                NAME: "device_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "20": {
+                NAME: "device_pn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a3": {
+        BYTES: {
+            "08": {
+                NAME: "dc_output_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a4": {
+        BYTES: {
+            "00": {NAME: "charging_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "05": {
+                NAME: "battery_voltage_limit",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+            },
+            "07": {
+                NAME: "active_power_limit",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "09": {
+                NAME: "power_limit",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a6": {
+        BYTES: {
+            "18": {NAME: "battery_voltage", TYPE: DeviceHexDataTypes.sile.value},
+        }
+    },
+    "fd": {
+        BYTES: {
+            "00": {NAME: "fd_timestamp?", TYPE: DeviceHexDataTypes.str.value, LENGTH: 14},
+        }
+    },
+    "fe": {
+        BYTES: {
+            "00": {NAME: "fe_timestamp?", TYPE: DeviceHexDataTypes.var.value, SIGNED: False},
+        }
+    },
+}
+
 _PLUG_TIMER_STATUS = {
     BYTES: {
         "00": {
@@ -4890,6 +4947,21 @@ SOLIXMQTTMAP: Final[dict] = {
             },
             "fe": {NAME: "msg_timestamp"},
         },
+    },
+    # Alternator charger
+    "AS200": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        "0103": {
+            # command group
+            COMMAND_LIST: [
+                SolixMqttCommands.device_switch,  # field ac
+            ],
+            SolixMqttCommands.device_switch: CMD_DEVICE_SWITCH,  # Off (0), On (1)
+        },
+        # status message, interval ???
+        "0421": _AS200_0421,
+        # Interval: Unknown, same content as 0421
+        "0900": _AS200_0421,
     },
     # Power Panel
     "A17B1": {
