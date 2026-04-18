@@ -520,6 +520,108 @@ async def energy_daily(  # noqa: C901
                         ch.replace("_", ""),
                     )
 
+    # Add ev_charger stats for used energies
+    if SolixDeviceType.EV_CHARGER.value in devTypes:
+        # This has no useful daily totals, breakdown is in interval values
+        justify_daytotals = False
+        if fromFile:
+            # first try file with device SN
+            if not (
+                resp := (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['energy_ev_charger']}_{deviceSn}_{siteId}.json"
+                    )
+                ).get("data", {})
+            ):
+                resp = (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['energy_ev_charger']}_{siteId}.json"
+                    )
+                ).get("data", {})
+        else:
+            resp = await self.energy_analysis(
+                siteId=siteId,
+                deviceSn=deviceSn,
+                rangeType="week",
+                startDay=startDay,
+                endDay=startDay + timedelta(days=numDays - 1),
+                devType="ev_charger",
+            )
+        items = resp.get("power") or []
+        # power unit is incorrectly wh, but values are kWh
+        # unit = resp.get("power_unit") or ""
+        unit = "kwh"
+        t_unit = resp.get("total_energy_unit") or ""
+        # for file usage ensure that last item is used if today is included
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
+        for idx, item in enumerate(items[start : start + numDays]):
+            if fromFile:
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            else:
+                daystr = item.get("time")
+            if daystr:
+                entry = table.get(daystr, {"date": daystr})
+                entry.update(
+                    {
+                        "date": daystr,
+                        "ev_charge": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
+                    }
+                )
+                table.update({daystr: entry})
+        # No additional useful data available in totals for now
+        if justify_daytotals and table:
+            for day in [
+                startDay + timedelta(days=x)
+                for x in range(min(len(items), numDays) if fromFile else numDays)
+            ]:
+                daystr = day.strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                # update response only for real requests if not first day which was already queried
+                if not fromFile and day != startDay:
+                    resp = await self.energy_analysis(
+                        siteId=siteId,
+                        deviceSn=deviceSn,
+                        rangeType="week",
+                        startDay=day,
+                        endDay=day,
+                        devType="ev_charge",
+                    )
+                    # get first item from breakdown list for single day queries
+                    item = next(iter(resp.get("power") or []), {})
+                    if daystr == item.get("time"):
+                        entry.update(
+                            {
+                                "date": daystr,
+                                # add useful totals here
+                            }
+                        )
+                entry.update(
+                    {
+                        "date": daystr,
+                        # add useful totals here
+                    }
+                )
+                table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info(
+                        "Received api %s pps energy for %s",
+                        self.apisession.nickname,
+                        daystr,
+                    )
+        if showProgress:
+            self._logger.info(
+                "Received api %s pps energy for period",
+                self.apisession.nickname,
+            )
+
     # Add pps stats for solarbank_pps energies
     if SolixDeviceType.SOLARBANK_PPS.value in devTypes:
         # This has no useful daily totals, breakdown is in interval values
@@ -670,108 +772,6 @@ async def energy_daily(  # noqa: C901
                         startDay=day,
                         endDay=day,
                         devType="pps",
-                    )
-                    # get first item from breakdown list for single day queries
-                    item = next(iter(resp.get("power") or []), {})
-                    if daystr == item.get("time"):
-                        entry.update(
-                            {
-                                "date": daystr,
-                                # add useful totals here
-                            }
-                        )
-                entry.update(
-                    {
-                        "date": daystr,
-                        # add useful totals here
-                    }
-                )
-                table.update({daystr: entry})
-                if showProgress:
-                    self._logger.info(
-                        "Received api %s pps energy for %s",
-                        self.apisession.nickname,
-                        daystr,
-                    )
-        if showProgress:
-            self._logger.info(
-                "Received api %s pps energy for period",
-                self.apisession.nickname,
-            )
-
-    # Add ev_charger stats for used energies
-    if SolixDeviceType.EV_CHARGER.value in devTypes:
-        # This has no useful daily totals, breakdown is in interval values
-        justify_daytotals = False
-        if fromFile:
-            # first try file with device SN
-            if not (
-                resp := (
-                    await self.apisession.loadFromFile(
-                        Path(self.testDir())
-                        / f"{API_FILEPREFIXES['energy_ev_charger']}_{deviceSn}_{siteId}.json"
-                    )
-                ).get("data", {})
-            ):
-                resp = (
-                    await self.apisession.loadFromFile(
-                        Path(self.testDir())
-                        / f"{API_FILEPREFIXES['energy_ev_charger']}_{siteId}.json"
-                    )
-                ).get("data", {})
-        else:
-            resp = await self.energy_analysis(
-                siteId=siteId,
-                deviceSn=deviceSn,
-                rangeType="week",
-                startDay=startDay,
-                endDay=startDay + timedelta(days=numDays - 1),
-                devType="ev_charger",
-            )
-        items = resp.get("power") or []
-        # power unit is incorrectly wh, but values are kWh
-        # unit = resp.get("power_unit") or ""
-        unit = "kwh"
-        t_unit = resp.get("total_energy_unit") or ""
-        # for file usage ensure that last item is used if today is included
-        start = (
-            len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
-            else 0
-        )
-        for idx, item in enumerate(items[start : start + numDays]):
-            if fromFile:
-                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
-            else:
-                daystr = item.get("time")
-            if daystr:
-                entry = table.get(daystr, {"date": daystr})
-                entry.update(
-                    {
-                        "date": daystr,
-                        "ev_charge": convertToKwh(
-                            val=item.get("value") or None, unit=unit
-                        ),
-                    }
-                )
-                table.update({daystr: entry})
-        # No additional useful data available in totals for now
-        if justify_daytotals and table:
-            for day in [
-                startDay + timedelta(days=x)
-                for x in range(min(len(items), numDays) if fromFile else numDays)
-            ]:
-                daystr = day.strftime("%Y-%m-%d")
-                entry = table.get(daystr, {"date": daystr})
-                # update response only for real requests if not first day which was already queried
-                if not fromFile and day != startDay:
-                    resp = await self.energy_analysis(
-                        siteId=siteId,
-                        deviceSn=deviceSn,
-                        rangeType="week",
-                        startDay=day,
-                        endDay=day,
-                        devType="ev_charge",
                     )
                     # get first item from breakdown list for single day queries
                     item = next(iter(resp.get("power") or []), {})
