@@ -127,6 +127,42 @@ _PPS_VERSIONS_0830 = {
     },
 }
 
+_A1725_0405 = {
+    # C200 DC param info (A1725/A1727)
+    TOPIC: "param_info",
+    "a1": {NAME: "device_pn"},  # Device PN identifier
+    "a3": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},  # Remaining runtime
+    "a4": {NAME: "usbc_1_power"},  # USB-C1 output power
+    "a5": {NAME: "usbc_2_power"},  # USB-C2 output power
+    "a6": {NAME: "usbc_3_power", SIGNED: True},  # USB-C3 bidirectional power (input when charging, output when discharging)
+    "a8": {NAME: "usba_1_power"},  # USB-A1 output power
+    "a9": {NAME: "usba_2_power"},  # USB-A2 output power
+    "ab": {NAME: "photovoltaic_power"},  # Solar input power (W)
+    "ac": {NAME: "dc_input_power_total"},  # Total input power (solar + C3 input when charging)
+    "ad": {NAME: "dc_output_power_total"},  # Total USB output power
+    "b5": {NAME: "temperature", SIGNED: True},  # In Celsius
+    "b6": {NAME: "charging_status"},  # Power state: 0=idle, 1=discharge, 2=charge
+    "b7": {NAME: "battery_soc"},  # Battery state of charge (%)
+    "b9": {NAME: "usbc_1_status"},  # USB-C1 top status: Inactive (0), Discharging (1)
+    "ba": {NAME: "usbc_2_status"},  # USB-C2 middle status: Inactive (0), Discharging (1)
+    "bb": {NAME: "usbc_3_status"},  # USB-C3 bottom status: Inactive (0), Discharging (1), Charging (2)
+    "bd": {NAME: "usba_1_status"},  # USB-A1 top status: Inactive (0), Discharging (1)
+    "be": {NAME: "usba_2_status"},  # USB-A2 bottom status: Inactive (0), Discharging (1)
+    "c3": {NAME: "device_sn"},
+    "c7": {NAME: "display_mode"},  # Display: On (1) or Off (0)
+    "c9": {NAME: "temp_unit_fahrenheit"},  # Temperature unit: Celsius (0), Fahrenheit (1)
+    "ca": {NAME: "display_switch"},  # Off (0) or On (1)
+    "cd": {NAME: "charging_status"},  # Inactive (0), Solar (1)
+    "fe": {NAME: "msg_timestamp"},  # Message timestamp
+}
+
+_A1725_0401 = {
+    # C200 DC param info (A1725/A1727) - settings
+    TOPIC: "param_info",
+    "a1": {NAME: "device_pn"},  # Device PN identifier
+    "a4": {NAME: "display_switch"},  # Off (0) or On (1)
+}
+
 _A1722_0405 = {
     # C300 AC param info
     TOPIC: "param_info",
@@ -3842,6 +3878,19 @@ SOLIXMQTTMAP: Final[dict] = {
         "0404": _A1728_0404,  # Interval: Irregular, triggered on app action, no fixed interval
         "0405": _A1728_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
         "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
+    },
+    # PPS C200 (A1725/A1727)
+    "A1725": {
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0401": _A1725_0401,  # Interval: Irregular, triggered on app/device actions
+        "0405": _A1725_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
+    },
+    "A1727": {
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0401": _A1725_0401,  # Interval: Irregular, triggered on app/device actions
+        "0405": _A1725_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
