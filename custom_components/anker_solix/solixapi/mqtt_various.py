@@ -17,6 +17,12 @@ if TYPE_CHECKING:
 # Define supported Models for this class
 MODELS = {
     "A17X8",  # Smartplug
+    "A17A0",  # Powered Cooler 30
+    "A17A1",  # Powered Cooler 40
+    "A17A2",  # Powered Cooler 50
+    "A17A3",  # SOLIX Everfrost 2 23L
+    "A17A4",  # SOLIX Everfrost 2 40L
+    "A17A5",  # SOLIX Everfrost 2 58L
 }
 # Define possible controls per Model
 # Those commands are only supported once also described for a message type in the model mapping (except realtime trigger)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timedelta
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -512,12 +513,12 @@ class AnkerSolixBaseApi:
                                     "power_panel_sn",  # not used in monitor or HA
                                     "toggle_to_delay_time",  # HA missing, MQTT control not fully described
                                     "toggle_to_elapsed_time",  # HA missins, MQTT control not fully described
-                                    "light_off_start_time",  # HA missing
-                                    "light_off_end_time",  # HA missing
-                                    "week_start_time",  # HA missing
-                                    "week_end_time",  # HA missing
-                                    "weekend_start_time",  # HA missing
-                                    "weekend_end_time",  # HA missing
+                                    "light_off_start_time",
+                                    "light_off_end_time",
+                                    "week_start_time",
+                                    "week_end_time",
+                                    "weekend_start_time",
+                                    "weekend_end_time",
                                     "load_balance_monitor_device",  # not used in HA
                                     "solar_evcharge_monitor_device",  # not used in HA
                                     "load_balance_setting_d5",  # Unknown control parameter state value
@@ -543,40 +544,24 @@ class AnkerSolixBaseApi:
                                 "battery_soc_total",
                                 "main_battery_soc",
                                 "max_soc",
+                                "backup_soc",
                                 "temperature",
                                 "photovoltaic_power",
                                 "pv_power_3rd_party",
                                 "pv_power_total",
-                                "dc_input_power",
-                                "dc_input_power_total",
-                                "dc_output_power_total",
-                                "output_power",
-                                "output_power_total",
-                                "output_power_signed_total",
                                 "battery_power_signed",
                                 "battery_power_signed_total",
                                 "bat_charge_power",
                                 "bat_discharge_power",
                                 "battery_to_grid_power",
                                 "battery_to_home_power",
-                                "ac_input_power",
-                                "ac_input_power_total",
-                                "ac_output_power",
-                                "ac_output_power_total",
-                                "ac_output_power_signed",
                                 "device_output_power_signed_total",
                                 "ac_socket_power",
-                                "grid_power_signed",
-                                "grid_power_signed_l1",
-                                "grid_power_signed_l2",
-                                "grid_power_signed_l3",
                                 "heating_power",
                                 "grid_to_battery_power",
-                                "home_demand",
-                                "home_demand_total",
-                                "generator_to_battery_power",  # HA missing
-                                "generator_to_home_power",  # HA missing
-                                "generator_power",  # HA missing
+                                "generator_to_battery_power",
+                                "generator_to_home_power",
+                                "generator_power",
                                 "charge_priority_limit",
                                 "pv_limit",
                                 "ac_input_limit",
@@ -608,6 +593,21 @@ class AnkerSolixBaseApi:
                                 key.startswith(("device_", "pv_"))
                                 and (key.endswith(("_power", "_power_signed", "_soc")))
                             )
+                            or (
+                                key.startswith(
+                                    (
+                                        "charge_power",
+                                        "grid_power",
+                                        "ac_input_power",
+                                        "ac_output_power",
+                                        "dc_input_power",
+                                        "dc_output_power",
+                                        "output_power",
+                                        "home_demand",
+                                    )
+                                )
+                                and not key.endswith(("_switch", "_mode"))
+                            )
                         ) and str(value).replace("-", "", 1).replace(
                             ".", "", 1
                         ).isdigit():
@@ -628,8 +628,8 @@ class AnkerSolixBaseApi:
                             ]
                             or str(key).startswith(
                                 (
-                                    "home_demand_circuit_",
                                     "voltage_",
+                                    "charge_voltage_",
                                     "current_",
                                     "system_output_current_",
                                 )
@@ -673,37 +673,36 @@ class AnkerSolixBaseApi:
                                 ]:
                                     calc_efficiency = True
                         elif (
-                            (
-                                key
-                                in [
-                                    # keys with value being saved unchanged
-                                    "topics",
-                                    "error_code",
-                                    "dc_12v_auto_on",  # missing MQTT control command
-                                    "grid_export_disabled",
-                                    "temp_unit_fahrenheit",
-                                    "tcp_port",  # HA missing
-                                    "ip_address",  # HA missing
-                                    "mode",  # HA missing, HES meaning not clear
-                                    "dc_generator_plugged_in",  # HA missing, generator monitoring not fully described
-                                ]
-                                or (
-                                    str(key).endswith(
-                                        (
-                                            "_status",
-                                            "_mode",
-                                            "_switch",
-                                            "_seconds",
-                                            "_minutes",
-                                            "_hours",
-                                            "_timestamp",
-                                            "_packs",
-                                        )
+                            key
+                            in [
+                                # keys with value being saved unchanged
+                                "topics",
+                                "error_code",
+                                "dc_12v_auto_on",  # missing MQTT control command
+                                "grid_export_disabled",
+                                "temp_unit_fahrenheit",
+                                "tcp_port",
+                                "ip_address",
+                                "mode",  # HA missing, HES meaning not clear
+                                "generator_plug_status",
+                                "car_battery_type",
+                                "car_battery_voltage_type",
+                            ]
+                            or (
+                                str(key).endswith(
+                                    (
+                                        "_status",
+                                        "_mode",
+                                        "_switch",
+                                        "_seconds",
+                                        "_minutes",
+                                        "_hours",
+                                        "_timestamp",
+                                        "_packs",
                                     )
                                 )
                             )
-                            and value is not None
-                        ):
+                        ) and value is not None:
                             device_mqtt[key] = value
                             # determine EV charger model 3 phase capability
                             if key == "charging_duration_seconds":
@@ -1525,10 +1524,22 @@ class AnkerSolixBaseApi:
             for platform in await self.get_product_platforms_list(fromFile=fromFile):
                 plat_name = platform.get("name") or ""
                 for prod in platform.get("products") or []:
+                    custom_fields = json.loads(prod.get("custom_fields") or "{}")
                     products[prod.get("product_code") or ""] = {
                         "name": str(prod.get("name") or "").strip(),
                         "platform": str(plat_name).strip(),
                         # "img_url": prod.get("img_url"),
+                        "product_codes": {
+                            pc: {
+                                "p_code": pc,
+                                "sku": item.get("sku"),
+                                "custom_fields": custom_fields | json.loads(
+                                    item.get("custom_fields") or "{}"
+                                ),
+                            }
+                            for item in (prod.get("p_codes") or [])
+                            if (pc := item.get("p_code"))
+                        },
                     }
             self._logger.debug(
                 "Getting api %s HES product list",

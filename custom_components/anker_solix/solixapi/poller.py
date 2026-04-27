@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from .apitypes import (
+    PRODUCT_CODES,
     ApiCategories,
     SolarbankStatus,
     SolarbankUsageMode,
@@ -130,14 +131,16 @@ async def poll_sites(  # noqa: C901
                     }
                 )
             # Get product list once for device names if no admin and save it in account cache
-            if (
-                not admin
-                and "products" not in api.account
-                and ({ApiCategories.account_info} - exclude)
-            ):
-                api._update_account(
-                    {"products": await api.get_products(fromFile=fromFile)}
-                )
+            if "products" not in api.account:
+                if not admin and ({ApiCategories.account_info} - exclude):
+                    api._update_account(
+                        {"products": await api.get_products(fromFile=fromFile)}
+                    )
+                else:
+                    # Used defined codes for required device feature identification
+                    api._update_account(
+                        {"products": PRODUCT_CODES}
+                    )
             # Add any missing site device to cache
             for dev in [
                 d
@@ -1415,7 +1418,12 @@ async def poll_device_energy(  # noqa: C901
                         # skip SN to get total energies
                         # query_sn = sn
                 if (
-                    (dev_list := (site.get("charging_pile_info") or {}).get("charging_pile_list") or [])
+                    (
+                        dev_list := (site.get("charging_pile_info") or {}).get(
+                            "charging_pile_list"
+                        )
+                        or []
+                    )
                     and isinstance(dev_list, list)
                     and (sn := dev_list[0].get("device_sn"))
                 ):

@@ -76,7 +76,7 @@ async def get_device_load(
         # The home_load_data is provided as string instead of object...Convert into object for proper handling
         # It must be converted back to a string when passing this as input to set home load
         string_data = (resp.get("data") or {}).get("home_load_data") or {}
-        if isinstance(string_data, str):
+        if string_data and isinstance(string_data, str):
             resp["data"].update({"home_load_data": json.loads(string_data)})
         data = resp.get("data") or {}
         # update schedule also for all device serials found in schedule
@@ -225,7 +225,8 @@ async def get_device_parm(
     {"param_data":"{\"AE100\":\"7X297LBE75Z0BU4LE\",
         \"id_img\":\"https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png\"}"}
     Example data for provided site_id with param_type 18:
-    {"param_data": {"soc_list": [{"id": 1,"is_selected": 1,"soc": 10},{"id": 2,"is_selected": 0,"soc": 5}],"switch_0w": 0,"enable_0w": 0,"enable_0w_change":false,"feed-in_power_limit":0}
+    {"param_data": {"soc_list": [{"id": 1,"is_selected": 1,"soc": 10},{"id": 2,"is_selected": 0,"soc": 5}],"switch_0w": 0,"enable_0w": 0,"enable_0w_change":false,"feed-in_power_limit":0,
+        "feed_times":null,"charge_upper_limit": 100,"discharge_lower_limit": 0,"backup_reserve": 50,"backup_reserve_switch": 0,"cmd_type": 0}
     Example data for provided site_id with param_type 23:
     {"param_data": "{\"switch\": 0}"}
     Example data for provided site_id with param_type 26:
@@ -336,6 +337,16 @@ async def get_device_parm(
                         "grid_export_limit": str(
                             paramData.get("feed-in_power_limit", "")
                         ),
+                        "charge_upper_limit": str(
+                            paramData.get("charge_upper_limit", "")
+                        ),
+                        "discharge_lower_limit": str(
+                            paramData.get("discharge_lower_limit", "")
+                        ),
+                        "backup_reserve": str(paramData.get("backup_reserve", "")),
+                        "backup_reserve_switch": bool(
+                            paramData.get("backup_reserve_switch", "")
+                        ),
                     }
                 )
             # update physical station device if in use (this cannot be done by power_limit query in site details poller if update triggered by param change)
@@ -355,6 +366,16 @@ async def get_device_parm(
                 )
                 station["grid_export_limit"] = str(
                     paramData.get("feed-in_power_limit", "")
+                )
+                station["charge_upper_limit"] = str(
+                    paramData.get("charge_upper_limit", "")
+                )
+                station["discharge_lower_limit"] = str(
+                    paramData.get("discharge_lower_limit", "")
+                )
+                station["backup_reserve"] = str(paramData.get("backup_reserve", ""))
+                station["backup_reserve_switch"] = bool(
+                    paramData.get("backup_reserve_switch", "")
                 )
                 self._update_dev(station)
     return data
@@ -1416,6 +1437,7 @@ async def set_sb2_home_load(  # noqa: C901
     siteId: str,
     deviceSn: str,
     preset: int | None = None,
+    charging_type: int | None = None,
     usage_mode: int | None = None,
     plan_name: str | None = None,
     set_slot: Solarbank2Timeslot | None = None,
@@ -1445,20 +1467,24 @@ async def set_sb2_home_load(  # noqa: C901
         "mode_type": 3,
         "custom_rate_plan": [
             {"index": 0,"week": [0,6],"ranges": [
-                {"start_time": "00:00","end_time": "24:00","power": 110}]},
+                {"start_time": "00:00","end_time": "24:00","power": 110,"charging_type": 0}]},
             {"index": 1,"week": [1,2,3,4,5],"ranges": [
-                {"start_time": "00:00","end_time": "08:00","power": 100},
-                {"start_time": "08:00","end_time": "22:00","power": 120},
-                {"start_time": "22:00","end_time": "24:00","power": 90}]}],
+                {"start_time": "00:00","end_time": "08:00","power": 100,"charging_type": 0},
+                {"start_time": "08:00","end_time": "22:00","power": 120,"charging_type": 0},
+                {"start_time": "22:00","end_time": "24:00","power": 90,"charging_type": 0}]}],
         "blend_plan": null,
         "manual_backup": null,
         "use_time": null,
         "default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
     """
-    # fast quit if nothing to change
     preset = (
         int(preset)
         if str(preset).isdigit() or isinstance(preset, int | float)
+        else None
+    )
+    charging_type = (
+        int(charging_type)
+        if str(charging_type).isdigit() or isinstance(charging_type, int | float)
         else None
     )
     # Validate if selected mode is possible
@@ -1469,8 +1495,10 @@ async def set_sb2_home_load(  # noqa: C901
         and SolarbankUsageMode(usage_mode).name in usage_mode_options
         else None
     )
+    # fast quit if nothing to change
     if (
         preset is None
+        and charging_type is None
         and usage_mode is None
         and set_slot is None
         and insert_slot is None
@@ -1604,7 +1632,7 @@ async def set_sb2_home_load(  # noqa: C901
     matched_days = set()
     index = None
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs} and (
-        preset is not None or set_slot or insert_slot
+        preset is not None or charging_type is not None or set_slot or insert_slot
     ):
         if not delete_plan:
             for idx, rate in enumerate(rate_plan):
@@ -1675,7 +1703,7 @@ async def set_sb2_home_load(  # noqa: C901
 
     # update individual values in current slot or insert SolarbankTimeslot and adjust adjacent slots
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs} and (
-        preset is not None or pending_insert
+        preset is not None or charging_type is not None or pending_insert
     ):
         now_time = now.time().replace(microsecond=0)
         last_time = datetime.strptime("00:00", "%H:%M").time()
@@ -1696,6 +1724,9 @@ async def set_sb2_home_load(  # noqa: C901
                 ).time()
                 # check slot timings to update current, or insert new and modify adjacent slots
                 insert: dict = {}
+                # Workaround to avoid None data for new field
+                if slot.get("charging_type", "") is None:
+                    slot["charging_type"] = 0
 
                 # Check if parameter update required for current time but it falls into gap of no defined slot.
                 # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications (required for allday usage)
@@ -1740,6 +1771,14 @@ async def set_sb2_home_load(  # noqa: C901
                             ),
                         }
                     )
+                    if "charging_type" in insert or charging_type is not None:
+                        insert.update(
+                            {
+                                "charging_type": int(
+                                    charging_type or insert.get("charging_type") or 0
+                                )
+                            }
+                        )
 
                     # if gap is before current slot, insert now
                     if now_time < start_time:
@@ -1790,6 +1829,15 @@ async def set_sb2_home_load(  # noqa: C901
                                 ),
                             }
                         )
+                    if insert_slot.charging_type is None and not overwrite:
+                        insert_slot.charging_type = insert.get("charging_type")
+                    if insert_slot.charging_type is not None or (
+                        overwrite and "charging_type" in insert
+                    ):
+                        insert.update(
+                            {"charging_type": int(insert_slot.charging_type or 0)}
+                        )
+
                     # insert slot before current slot if not last
                     if insert_slot.start_time.time() <= start_time:
                         new_ranges.append(insert)
@@ -1885,6 +1933,9 @@ async def set_sb2_home_load(  # noqa: C901
                                 ),
                             }
                         )
+                    # adjust charging type
+                    if charging_type is not None:
+                        slot.update({"charging_type": int(charging_type)})
                     # clear flag for pending parameter update for actual time
                     if start_time <= now_time < end_time:
                         pending_now_update = False
@@ -1920,7 +1971,7 @@ async def set_sb2_home_load(  # noqa: C901
     # If no rate plan or new ranges exists or new slot to be set, set defaults or given set_slot parameters
     if (
         (not new_rate_plan or not new_ranges)
-        and (set_slot or preset is not None)
+        and (set_slot or preset is not None or charging_type is not None)
         and not delete_plan
         and rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}
     ):
@@ -1930,6 +1981,7 @@ async def set_sb2_home_load(  # noqa: C901
                 start_time=datetime.strptime("00:00", "%H:%M"),
                 end_time=datetime.strptime("23:59", "%H:%M"),
                 appliance_load=preset,
+                charging_type=charging_type,
             )
         slot = {
             "start_time": datetime.strftime(set_slot.start_time, "%H:%M"),
@@ -1939,6 +1991,7 @@ async def set_sb2_home_load(  # noqa: C901
             "power": SolixDefaults.PRESET_DEF
             if set_slot.appliance_load is None
             else set_slot.appliance_load,
+            "charging_type": int(set_slot.charging_type or 0),
         }
         new_ranges.append(slot)
 

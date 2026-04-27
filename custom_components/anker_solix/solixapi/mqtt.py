@@ -19,14 +19,7 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .mqttcmdmap import (
-    COMMAND_LIST,
-    COMMAND_NAME,
-    NAME,
-    TYPE,
-    VALUE_FOLLOWS,
-    SolixMqttCommands,
-)
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, NAME, TYPE, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
@@ -129,7 +122,7 @@ class AnkerSolixMqttSession:
             else 0
         ).strftime("%Y-%m-%d %H:%M:%S")
         # extract message payload
-        payload = json.loads(message.get("payload") or "")
+        payload = json.loads(message.get("payload") or "[]")
         # Third party models not included in payload
         if not (model := payload.get("pn") if isinstance(payload, dict) else None):
             # extract model from received topic
@@ -513,7 +506,7 @@ class AnkerSolixMqttSession:
             )
             # Set userdata for client
             self.client.user_data_set(self.subscriptions)
-            # self.client.connect_timeout = 10
+            self.client.connect_timeout = 15
             # Set callbacks for client
             self.client.on_connect = self.on_connect
             self.client.on_message = self.on_message
@@ -1052,7 +1045,7 @@ def generate_mqtt_command(
                         hexdata.add_timestamp_field(fieldtype=desc.get(TYPE))
                 else:
                     # compose command field based on description
-                    value = parameters.get(desc.get(VALUE_FOLLOWS) or name)
+                    value = parameters.get(name)
                     hexdata.update_field(
                         DeviceHexDataField().update(
                             value=value,

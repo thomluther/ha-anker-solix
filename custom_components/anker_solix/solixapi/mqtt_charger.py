@@ -24,6 +24,7 @@ MODELS = {
     "A2687",  #  160W Prime Charger
     "A91B2",  #  240W Charging Station
     "A5191",  #  V1 EV Charger
+    "AS200",  #  Alternator Charger
 }
 
 # Define possible controls per Model
@@ -57,6 +58,12 @@ FEATURES = {
     SolixMqttCommands.swipe_up_mode_select: MODELS,
     SolixMqttCommands.swipe_down_mode_select: MODELS,
     SolixMqttCommands.modbus_switch: MODELS,
+    SolixMqttCommands.modbus_switch: MODELS,
+    SolixMqttCommands.car_battery_type: MODELS,
+    SolixMqttCommands.battery_charge_limits: MODELS,
+    SolixMqttCommands.device_switch: MODELS,
+    SolixMqttCommands.device_timeout_minutes: MODELS,
+    SolixMqttCommands.temp_unit_switch: MODELS,
 }
 
 

@@ -821,7 +821,7 @@ class AnkerSolixClientSession:
         try:
             if Path(filename).is_file():
                 async with aiofiles.open(filename, encoding="utf-8") as file:
-                    data = json.loads(await file.read())
+                    data = json.loads(await file.read() or "{}")
                     self._logger.debug("Loaded JSON from file %s:", masked_filename)
                     self._logger.debug(
                         "Data: %s",

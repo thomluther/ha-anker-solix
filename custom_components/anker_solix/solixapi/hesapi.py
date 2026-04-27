@@ -19,6 +19,7 @@ from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
+    PRODUCT_CODES,
     ApiCategories,
     SolixDeviceCapacity,
     SolixDeviceCategory,
@@ -28,7 +29,7 @@ from .apitypes import (
     SolixSiteType,
 )
 from .errors import AnkerSolixError
-from .helpers import convertToKwh
+from .helpers import convertToKwh, get_solix_product_code
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -92,11 +93,14 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
 
         if sn := devData.pop("device_sn", None):
             device: dict = self.devices.get(sn, {})  # lookup old device info if any
-            device.update({"device_sn": str(sn)})
+            device["device_sn"] = str(sn)
+            # extract device product code once from SN
+            if "device_code" not in device:
+                device["device_code"] = get_solix_product_code(device["device_sn"])
             if devType:
-                device.update({"type": devType.lower()})
+                device["type"] = devType.lower()
             if siteId:
-                device.update({"site_id": str(siteId)})
+                device["site_id"] = str(siteId)
             if isAdmin is not None:
                 # always update admin flag if passed as parameter
                 device["is_admin"] = isAdmin
@@ -382,12 +386,14 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             }
                         )
                     # Get product list once for device names and save it in account cache
-                    if "products" not in self.account and (
-                        {ApiCategories.account_info} - exclude
-                    ):
-                        self._update_account(
-                            {"products": await self.get_products(fromFile=fromFile)}
-                        )
+                    if "products" not in self.account:
+                        if {ApiCategories.account_info} - exclude:
+                            self._update_account(
+                                {"products": await self.get_products(fromFile=fromFile)}
+                            )
+                        else:
+                            # Used defined codes for required device feature identification
+                            self._update_account({"products": PRODUCT_CODES})
                     # Add any missing site device to cache
                     for dev in [
                         d

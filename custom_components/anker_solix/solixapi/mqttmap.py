@@ -11,6 +11,7 @@ from .mqttcmdmap import (
     CMD_AC_OUTPUT_MODE,
     CMD_AC_OUTPUT_SWITCH,
     CMD_AC_PORT_SWITCH,
+    CMD_BATTERY_CHARGE_LIMITS,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
@@ -62,6 +63,7 @@ from .mqttcmdmap import (
     CMD_SWIPE_DOWN_MODE,
     CMD_SWIPE_UP_MODE,
     CMD_TEMP_UNIT,
+    CMD_TEMP_UNIT_V2,
     CMD_TIMER_REQUEST,
     CMD_USB_PORT_SWITCH,
     COMMAND_LIST,
@@ -72,16 +74,19 @@ from .mqttcmdmap import (
     NAME,
     OFFSET,
     SIGNED,
+    STATE_CONVERTER,
     STATE_NAME,
     # TIMESTAMP_FE_NOTYPE,
     TOPIC,
     TYPE,
     VALUE_DEFAULT,
+    VALUE_FOLLOWS,
     VALUE_MAX,
     VALUE_MAX_STATE,
     VALUE_MIN,
     VALUE_OPTIONS,
     VALUE_OPTIONS_STATE,
+    VALUE_STATE,
     VALUE_STEP,
     SolixMqttCommands,
 )
@@ -154,6 +159,50 @@ _A1722_0405 = {
     "cf": {
         NAME: "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+    "fe": {NAME: "msg_timestamp"},  # Message timestamp
+}
+
+_A1725_0401 = {
+    # C200 DC param info (A1725/A1727/A1729) - settings
+    TOPIC: "param_info",
+    "a1": {NAME: "device_pn"},  # Device PN identifier
+    "a4": {NAME: "display_switch"},  # Off (0) or On (1)
+}
+
+_A1725_0405 = {
+    # C200 DC param info (A1725/A1727)
+    TOPIC: "param_info",
+    "a1": {NAME: "device_pn"},  # Device PN identifier
+    "a3": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},  # Remaining runtime
+    "a4": {NAME: "usbc_1_power"},  # USB-C top output power
+    "a5": {NAME: "usbc_2_power"},  # USB-C middle output power
+    "a6": {NAME: "usbc_3_power"},  # USB-C bottom input/output power
+    "a8": {NAME: "usba_1_power"},  # USB-A top output power
+    "a9": {NAME: "usba_2_power"},  # USB-A bottom output power
+    "ab": {NAME: "photovoltaic_power"},  # Solar input power (W)
+    "ac": {NAME: "dc_input_power_total"},  # Total input power (solar + C3 input when charging)
+    "ad": {NAME: "dc_output_power_total"},  # Total USB output power
+    "af": {NAME: "battery_soc_ah", FACTOR: 0.001},  # Battery SOC (Ah)
+    "b5": {NAME: "temperature", SIGNED: True},  # In Celsius
+    "b6": {NAME: "charging_status"},  # Power state: 0=idle, 1=discharge, 2=charge
+    "b7": {NAME: "battery_soc"},  # Battery state of charge (%)
+    "b8": {NAME: "battery_soh"},  # Battery health
+    "b9": {NAME: "usbc_1_status"},  # USB-C1 top status: Inactive (0), Discharging (1)
+    "ba": {NAME: "usbc_2_status"},  # USB-C2 middle status: Inactive (0), Discharging (1)
+    "bb": {NAME: "usbc_3_status"},  # USB-C3 bottom status: Inactive (0), Discharging (1), Charging (2)
+    "bd": {NAME: "usba_1_status"},  # USB-A1 top status: Inactive (0), Discharging (1)
+    "be": {NAME: "usba_2_status"},  # USB-A2 bottom status: Inactive (0), Discharging (1)
+    "c3": {NAME: "device_sn"},
+    "c4": {
+        NAME: "device_timeout_minutes"
+    },  # Device timeout: never, 30, 60, 120, 240, 360, 720, 1440 minutes
+    "c5": {
+        NAME: "display_timeout_seconds"
+    },  # Display timeout: 20, 30, 60, 300, 1800 seconds
+    "c7": {NAME: "display_mode"},  # Brightness: Low (1), Medium (2), High (3)
+    "c9": {NAME: "temp_unit_fahrenheit"},  # Temperature unit: Celsius (0), Fahrenheit (1)
+    "ca": {NAME: "display_switch"},  # Off (0) or On (1)
+    "cd": {NAME: "charging_status"},  # Inactive (0), Solar (1)
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
 
@@ -243,6 +292,14 @@ _A1728_0405 = {
         }
     },
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
+}
+
+_A1729_0405 = _A1725_0405 | {
+    # C200X DC param info (A1729)
+    # A1729 matches the C200 DC telemetry layout, but cd is only the solar input
+    # status. Keep b6 as the overall charging_status because C3 charging reports
+    # b6=2 while cd remains 0.
+    "cd": {NAME: "solar_input_status"},  # Inactive (0), Solar (1)
 }
 
 _A1761_0405 = {
@@ -2198,9 +2255,9 @@ _AX170_0405 = {
         NAME: "battery_power_signed_total"
     },  # Power draw from battery. Negative is charging, positive is discharging.
     "b5": {
-        NAME: "backup_soc_limit"
+        NAME: "backup_soc"
     },  # Minimum Self Consumption reserve %, Not overall reserve. Battery will stay above this level, unless grid fault.
-    "b7": {NAME: "max_soc_limit?"},  # Maybe battery health??
+    "b7": {NAME: "max_soc?"},  # Maybe battery health??
     "b9": {
         NAME: "main_breaker_limit?"
     },  # It's 200 on tests, so its a good chance its the 200AMP?
@@ -2224,9 +2281,9 @@ _AX170_0405 = {
         }
     },
     "cd": {NAME: "home_demand_total"},
-    "ce": {NAME: "dc_generator_plugged_in"},
+    "ce": {NAME: "generator_plug_status"},
     "d4": {NAME: "pv_power_3rd_party"},  # Power from external solar to home?
-    "d6": {NAME: "dc_generator_power"},  # Power from external DC generator
+    "d6": {NAME: "generator_power"},  # Power from external DC generator
     "dd": {NAME: "display_timeout_seconds"},
     "de": {
         NAME: "max_load_limit_total?"
@@ -2976,43 +3033,123 @@ _AS200_0421 = {
     },
     "a3": {
         BYTES: {
-            "08": {
-                NAME: "dc_output_power",
+            "04": {
+                NAME: "bat_charge_power",  # car battery charging power
                 TYPE: DeviceHexDataTypes.sile.value,
             },
+            # "08": {
+            #     NAME: "output_power",  # reverse charging power?
+            #     TYPE: DeviceHexDataTypes.sile.value,
+            # },
         }
     },
     "a4": {
         BYTES: {
-            "00": {NAME: "charging_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "00": {NAME: "device_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "02": {
+                NAME: "car_battery_type",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # 0=LiFePO4, 1=Lead Acid
+            "03": {
+                NAME: "car_battery_voltage_type",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # 0=12V, 1=24V
             "05": {
-                NAME: "battery_voltage_limit",
+                NAME: "charge_voltage_limit",
                 TYPE: DeviceHexDataTypes.sile.value,
                 FACTOR: 0.1,
             },
             "07": {
-                NAME: "active_power_limit",
+                NAME: "charge_power_limit",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "09": {
-                NAME: "power_limit",
+                NAME: "output_power_limit",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
+            "11": {
+                NAME: "active_device_timeout_minutes",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            # active device auto-off timeout (minutes): 0 (Never), 720–1440 min in 30 min steps
+            "13": {
+                NAME: "temp_unit_fahrenheit",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # Celsius (0) or Fahrenheit (1)
+            "14": {
+                NAME: "device_timeout_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # Timeout (0) or Off (1)
+            "16": {
+                NAME: "device_timeout_minutes",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },  # Device auto-off timeout control (minutes): 720–1440 min in 30 min steps
         }
     },
     "a6": {
         BYTES: {
-            "18": {NAME: "battery_voltage", TYPE: DeviceHexDataTypes.sile.value},
+            "02": {
+                NAME: "temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "06": {
+                NAME: "charge_power_limit_min",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "08": {
+                NAME: "charge_power_limit_max",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "10": {
+                NAME: "output_power_limit_min",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "12": {
+                NAME: "output_power_limit_max",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "14": {
+                NAME: "charge_voltage_limit_min",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+            },
+            "16": {
+                NAME: "charge_voltage_limit_max",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+            },
+            "18": {
+                NAME: "battery_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+            },
+        }
+    },
+    "a7": {
+        BYTES: {
+            "11": {
+                NAME: "pps_sn?",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
         }
     },
     "fd": {
         BYTES: {
-            "00": {NAME: "fd_timestamp?", TYPE: DeviceHexDataTypes.str.value, LENGTH: 14},
+            "00": {
+                NAME: "utc_timestamp",
+                TYPE: DeviceHexDataTypes.str.value,
+                LENGTH: 13,
+            },
         }
     },
     "fe": {
         BYTES: {
-            "00": {NAME: "fe_timestamp?", TYPE: DeviceHexDataTypes.var.value, SIGNED: False},
+            "00": {
+                NAME: "message_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+            },
         }
     },
 }
@@ -3795,6 +3932,17 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
     },
+    # SOLIX C200(X) A1725
+    "A1725": {
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0401": _A1725_0401,  # Interval: Irregular, triggered on app/device actions
+        "0405": _A1725_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
+    },
     # PPS C300 DC
     "A1726": {
         "0043": CMD_DC_OUTPUT_TIMEOUT_SEC  # DC output timeout: Custom Range 0-86100 seconds
@@ -3812,12 +3960,24 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
             },
         },
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0401": _A1728_0401,  # Interval: Irregular, triggered on app/device actions, no fixed interval
         "0404": _A1728_0404,  # Interval: Irregular, triggered on app action, no fixed interval
         "0405": _A1728_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
         "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
+    },
+    # SOLIX C200 DC A1727
+    "A1727": {
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0401": _A1725_0401,  # Interval: Irregular, triggered on app/device actions
+        "0405": _A1725_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
     },
     # PPS C300X DC
     "A1728": {
@@ -3836,11 +3996,24 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
             },
         },
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0401": _A1728_0401,  # Interval: Irregular, triggered on app/device actions, no fixed interval
         "0404": _A1728_0404,  # Interval: Irregular, triggered on app action, no fixed interval
         "0405": _A1728_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
+        "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
+    },
+    # SOLIX C200X DC A1729
+    "A1729": {
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0401": _A1725_0401,  # Interval: Irregular, triggered on app/device actions
+        "0405": _A1729_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
         "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
     },
     # PPS C1000(X) + B1000 Extension
@@ -4682,6 +4855,20 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: ~300 seconds
         "0500": _DOCK_0500,
     },
+
+    # Power Cooler Everfrost 2 40L
+    "A17A4": {
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
+        "0889": {
+            "a2": {NAME: "setting_0889_a2"},
+            "a3": {NAME: "setting_0889_a3"},
+            "a4": {NAME: "setting_0889_a4"},
+            "a5": {NAME: "setting_0889_a5"},
+            "a6": {NAME: "setting_0889_a6"},
+        },
+    },
+
     # Prime Charger 250W
     "A2345": {
         "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
@@ -4954,13 +5141,90 @@ SOLIXMQTTMAP: Final[dict] = {
         "0103": {
             # command group
             COMMAND_LIST: [
+                SolixMqttCommands.car_battery_type,  # field a3, aa
+                SolixMqttCommands.battery_charge_limits,  # field a5, b4
                 SolixMqttCommands.device_switch,  # field ac
+                SolixMqttCommands.device_timeout_minutes,  # field ae, bb, bc
+                SolixMqttCommands.temp_unit_switch,  # field b2
+                SolixMqttCommands.device_power_mode,  # field b8
             ],
+            SolixMqttCommands.car_battery_type: CMD_COMMON_V2
+            | {
+                "a3": {
+                    NAME: "set_car_battery_type",  # LiFePO4 (0), Lead Acid (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "car_battery_type",
+                    VALUE_OPTIONS: {"li_fe_po": 0, "lead_acid": 1},
+                    VALUE_STATE: "car_battery_type",
+                },
+                "aa": {
+                    NAME: "set_car_battery_voltage_type",  # 12V (0), 24V (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "car_battery_voltage_type",
+                    VALUE_OPTIONS: {"12_v": 0, "24_v": 1},
+                    VALUE_STATE: "car_battery_voltage_type",
+                },
+            },
+            SolixMqttCommands.battery_charge_limits: CMD_BATTERY_CHARGE_LIMITS,
             SolixMqttCommands.device_switch: CMD_DEVICE_SWITCH,  # Off (0), On (1)
+            SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
+            | {
+                "ae": {
+                    NAME: "set_active_device_timeout_minutes",  # applied setting, 720–1440, step 30 if switch off(1), otherwise 0
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "active_device_timeout_minutes",
+                    VALUE_FOLLOWS: "set_device_timeout_minutes",  # follow state to ensure converter cache has all dependent states
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        (
+                            0
+                            if cache.get(
+                                "set_device_timeout_switch",
+                                cache.get("device_timeout_switch"),
+                            )
+                            else cache.get(
+                                "set_device_timeout_minutes",
+                                cache.get("device_timeout_minutes"),
+                            )
+                        )
+                        if value is not None
+                        else state
+                    ),  # Smart setting represented with state 2
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 1440,
+                    VALUE_STEP: 30,
+                },
+                "bb": {
+                    NAME: "set_device_timeout_minutes",  # control setting, 720–1440 step 30
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "device_timeout_minutes",
+                    VALUE_STATE: "device_timeout_minutes",
+                    VALUE_MIN: 720,
+                    VALUE_MAX: 1440,
+                    VALUE_STEP: 30,
+                },
+                "bc": {
+                    NAME: "set_device_timeout_switch",  # on (0), off (1) = No timeout !
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "device_timeout_switch",
+                    VALUE_OPTIONS: {"off": 1, "on": 0},
+                    VALUE_STATE: "device_timeout_switch",
+                },
+            },
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Off (0), On (1)
+            SolixMqttCommands.device_power_mode: CMD_COMMON_V2
+            | {
+                # Command: Device shutdown, needs physical power on button afterwards
+                "b8": {
+                    NAME: "set_device_power_mode",  # Shutdown(1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_OPTIONS: {"shutdown": 1},
+                    VALUE_DEFAULT: 1,
+                },
+            },
         },
-        # status message, interval ???
+        # status message, every 3 seconds but only if realtime trigger active
         "0421": _AS200_0421,
-        # Interval: Unknown, same content as 0421
+        # Interval: ~every 5 minutes, same content as 0421
         "0900": _AS200_0421,
     },
     # Power Panel

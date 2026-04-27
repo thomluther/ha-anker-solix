@@ -1368,10 +1368,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 option=option,
                             )
                         }
-                        if resp:
-                            await asyncio.sleep(
-                                2
-                            )  # ensure that MQTT command is processed before Api cache update
+                        # if resp:
+                        #     # ensure that MQTT command is processed before Api cache update
+                        #     await asyncio.sleep(2)
                     # Run Api command to update Api cache, also for test mode
                     resp = (resp or {}) | (
                         await self.coordinator.client.api.set_power_limit(

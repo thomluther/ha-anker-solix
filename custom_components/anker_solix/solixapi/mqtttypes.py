@@ -21,6 +21,7 @@ from .mqttcmdmap import (
     TYPE,
     VALUE_DEFAULT,
     VALUE_DIVIDER,
+    VALUE_FOLLOWS,
     VALUE_MAX,
     VALUE_MIN,
     VALUE_OPTIONS,
@@ -533,7 +534,11 @@ class DeviceHexDataField:
                 # The listed fieldmaps are used sequentially, a byte offset can be specified in relation to actual field start position
                 # The offset is only required if there are byte field gaps without description
                 pos = 0
-                flds = fieldmap.get(BYTES, fieldmap) if isinstance(fieldmap, dict) else fieldmap
+                flds = (
+                    fieldmap.get(BYTES, fieldmap)
+                    if isinstance(fieldmap, dict)
+                    else fieldmap
+                )
                 for key, bytemap in (
                     enumerate(flds) if isinstance(flds, list) else flds.items()
                 ):
@@ -551,7 +556,10 @@ class DeviceHexDataField:
                         length = 1
                     elif ftype == DeviceHexDataTypes.sile.value:
                         length = 2
-                    elif ftype in [DeviceHexDataTypes.sfle.value, DeviceHexDataTypes.var.value]:
+                    elif ftype in [
+                        DeviceHexDataTypes.sfle.value,
+                        DeviceHexDataTypes.var.value,
+                    ]:
                         length = 4
                     else:
                         length = bytemap.get(LENGTH, 0)
@@ -649,16 +657,17 @@ class DeviceHexDataField:
             fieldtype = self.f_type
         if not isinstance(desc, dict):
             desc = {}
-        options = desc.get(VALUE_OPTIONS, {})
+        # Ignore options for fields following, since their value was already updated during validation
+        options = {} if desc.get(VALUE_FOLLOWS) else desc.get(VALUE_OPTIONS, {})
         if (desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
             # special case for time strings HH:MM[:SS], convert to bytes already
             fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
         elif isinstance(value, str | int | float):
-            # for provided default or state values without value validation descriptions, use value as is
+            # for provided default, state or follow values without value validation descriptions, use value as is
             if not (options or VALUE_MIN in desc or VALUE_MAX in desc):
                 options = (
                     [value]
-                    if VALUE_STATE in desc
+                    if VALUE_STATE in desc or VALUE_FOLLOWS in desc
                     else [desc.get(VALUE_DEFAULT)]
                     if VALUE_DEFAULT in desc
                     else options

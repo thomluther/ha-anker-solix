@@ -39,13 +39,14 @@ from .apitypes import (
     SolixPriceProvider,
     SolixVehicle,
 )
+from .helpers import get_solix_product_code
 from .mqtt import AnkerSolixMqttSession
 from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.6.0.0"
+VERSION: str = "3.6.2.0"
 
 
 class AnkerSolixApiExport:
@@ -690,6 +691,16 @@ class AnkerSolixApiExport:
                     "token": ((response or {}).get("data") or {}).get("token", "")
                 },
             )
+            self._logger.info("Exporting extender system OTA info...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_extender_system_pn_ota"],
+                filename=f"{API_FILEPREFIXES['get_extender_system_pn_ota']}.json",
+            )
+            self._logger.info("Exporting extender system list...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_extender_system_list"],
+                filename=f"{API_FILEPREFIXES['get_extender_system_list']}.json",
+            )
 
             # loop through all found sites
             for siteId, site in self.api_power.sites.items():
@@ -783,6 +794,12 @@ class AnkerSolixApiExport:
                     "20",
                     "23",
                     "26",
+                    "27",
+                    "28",
+                    "29",
+                    "30",
+                    "31",
+                    "33",
                 ]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
@@ -802,7 +819,7 @@ class AnkerSolixApiExport:
                     "home_usage",
                     "grid",
                     "pps",
-                    "ev_charger"
+                    "ev_charger",
                 ]:
                     self._logger.info(
                         "Exporting site energy data for %s...",
@@ -1702,10 +1719,28 @@ class AnkerSolixApiExport:
         randomstr = self._randomdata.get(val, "")
         # generate new random string
         if not randomstr and val and key != "device_name":
-            if "_sn" in key or "Sn" in key or key == "sn":
-                randomstr = "".join(
-                    random.choices(string.ascii_uppercase + string.digits, k=len(val))
-                )
+            if "_sn" in key or "Sn" in key or key in ["sn", "err_msg"]:
+                # err_msg could be the real SN or empty
+                # avoid randomizing product code in SN
+                # 16-digit SN: characters 4-6 (index 3-5, 3 characters)
+                # 17-digit SN: characters 4-7 (index 3-6, 4 characters)
+                if code := get_solix_product_code(val):
+                    randomstr = "".join(
+                        [
+                            random.choices(string.ascii_uppercase + string.digits, k=3),
+                            code,
+                            random.choices(
+                                string.ascii_uppercase + string.digits,
+                                k=len(val) - len(code) - 3,
+                            ),
+                        ]
+                    )
+                else:
+                    randomstr = "".join(
+                        random.choices(
+                            string.ascii_uppercase + string.digits, k=len(val)
+                        )
+                    )
             elif "bt_ble_" in key or "_mac" in key:
                 # Handle values with and without ':'
                 temp = val.replace(":", "")
@@ -1798,6 +1833,7 @@ class AnkerSolixApiExport:
                         "email",
                         "_password",
                         "_mac",
+                        "err_msg",
                     ]
                 )
                 or k == "sn"

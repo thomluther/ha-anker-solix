@@ -354,11 +354,27 @@ class SolixMqttDevice:
                 start = desc.get(VALUE_MIN, 0)
                 stop = desc.get(VALUE_MAX, 0)
                 step = desc.get(VALUE_STEP, 1)
+                # get required factor to use range with int
+                factor = 10 ** max(
+                    0, f"{step:.15f}".rstrip("0").rstrip(".")[::-1].find(".")
+                )
                 if (
                     start < stop
-                    and len(rng := range(start, stop + step, step)) <= limit
+                    and len(
+                        rng := range(
+                            round(start * factor),
+                            round((stop + step) * factor),
+                            round(step * factor),
+                        )
+                    )
+                    <= limit
                 ):
-                    options = rng
+                    # limit last number to stop value
+                    options = (
+                        [round_by_factor(min(v / factor, stop), step) for v in rng]
+                        if factor != 1
+                        else [min(v, stop) for v in rng]
+                    )
             if isinstance(options, dict):
                 return options
             if isinstance(options, list | range):
@@ -467,7 +483,11 @@ class SolixMqttDevice:
         # if value is string make further conversions to get the actual value
         if desc.get(STATE_NAME, "").endswith("_time"):
             # special case for fields indicating (seconds), minutes, hours per byte
-            value = convert_time(hextime) if isinstance(hextime := convert_time(value), bytes) else None
+            value = (
+                convert_time(hextime)
+                if isinstance(hextime := convert_time(value), bytes)
+                else None
+            )
         # lookup state if value is string
         elif (
             isinstance(value, str)
@@ -659,7 +679,7 @@ class SolixMqttDevice:
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_value = (
-                            converter(fieldvalue, None)
+                            converter(fieldvalue, None, self.mqttdata | parameters)
                             if callable(converter)
                             else fieldvalue
                         )
@@ -676,25 +696,11 @@ class SolixMqttDevice:
                     user_parms[par] = val if isinstance(val, str) else fieldvalue
                     # mark required parameter as defined
                     req_parms.discard(par)
-            # add command parameters that may need current state value or follow another parameter
+            # add command parameters that may need current state value
             for par, desc in self.get_cmd_parms(
-                cmd=cmd, state_parms=True, follow_parms=True
+                cmd=cmd, state_parms=True, follow_parms=False
             ).items():
-                if (step := desc.get(VALUE_STEP)) is None:
-                    step = 1
-                if follows := desc.get(VALUE_FOLLOWS):
-                    # get only mock state for follow parameter if they have a state, command generator will lookup value from other parameter
-                    if (
-                        (state_name := desc.get(STATE_NAME))
-                        and isinstance(options := desc.get(VALUE_OPTIONS), dict)
-                        and (state := options.get(parameters.get(follows, "")))
-                        is not None
-                    ):
-                        converter = desc.get(STATE_CONVERTER)
-                        state_fields[state_name] = (
-                            converter(state, None) if callable(converter) else state
-                        )
-                elif (
+                if (
                     par not in parameters
                     and (
                         state := self.get_status(fromFile=True).get(
@@ -705,19 +711,47 @@ class SolixMqttDevice:
                 ):
                     # convert state to number format if valid number
                     if str(state).replace("-", "", 1).replace(".", "", 1).isdigit():
-                        parameters[par] = round_by_factor(float(state), step)
+                        parameters[par] = round_by_factor(
+                            float(state), desc.get(VALUE_STEP, 1)
+                        )
                     else:
                         parameters[par] = state
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_fields[state_name] = (
-                            converter(parameters[par], None)
+                            converter(parameters[par], None, self.mqttdata | parameters)
                             if callable(converter)
                             else parameters[par]
                         )
                     # mark required parameter as defined
                     req_parms.discard(par)
+            # finally add command parameters that follow another parameter and convert their state
+            for par, desc in self.get_cmd_parms(cmd=cmd, follow_parms=True).items():
+                if par not in parameters:
+                    follows = desc.get(VALUE_FOLLOWS, "")
+                    converter = desc.get(STATE_CONVERTER)
+                    if isinstance(options := desc.get(VALUE_OPTIONS), dict):
+                        # get follow state from option map
+                        state = options.get(parameters.get(follows, ""))
+                    else:
+                        # get follow value from converter
+                        state = parameters.get(follows, "")
+                    state = (
+                        converter(state, None, self.mqttdata | parameters)
+                        if callable(converter)
+                        else state
+                    )
+                    # convert state to number format if valid number
+                    if str(state).replace("-", "", 1).replace(".", "", 1).isdigit():
+                        parameters[par] = round_by_factor(
+                            float(state), desc.get(VALUE_STEP, 1)
+                        )
+                    else:
+                        parameters[par] = state
+                    # Mock state
+                    if state_name := desc.get(STATE_NAME):
+                        state_fields[state_name] = parameters[par]
             # check if all required parameters are specified
             if req_parms:
                 self._logger.error(

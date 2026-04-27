@@ -40,7 +40,7 @@ STATE_NAME: Final[str] = (
     "state_name"  # extracted value name that represents the current state of the control
 )
 STATE_CONVERTER: Final[str] = (
-    "state_converter"  # optional lambda function to convert the setting value into expected state and vice versa
+    "state_converter"  # optional lambda function (value, state, cache) to convert the setting value into expected state and vice versa
 )
 VALUE_MIN: Final[str] = "value_min"  # min value of a range
 VALUE_MAX: Final[str] = "value_max"  # max value of a range
@@ -144,6 +144,8 @@ class SolixMqttCommands:
     )
     ev_solar_charging: str = "ev_solar_charging"  # complex command with switches
     ac_dc_mode_select: str = "ac_dc_mode_select"
+    car_battery_type: str = "car_battery_type"
+    battery_charge_limits: str = "battery_charge_limits"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -247,6 +249,17 @@ CMD_TEMP_UNIT = CMD_COMMON | {
     # Command: Set temperature unit
     COMMAND_NAME: SolixMqttCommands.temp_unit_switch,
     "a2": {
+        NAME: "set_temp_unit_fahrenheit",  # Celsius (0) | Fahrenheit (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "temp_unit_fahrenheit",
+        VALUE_OPTIONS: {"celsius": 0, "fahrenheit": 1},
+    },
+}
+
+CMD_TEMP_UNIT_V2 = CMD_COMMON_V2 | {
+    # Command: Set temperature unit
+    COMMAND_NAME: SolixMqttCommands.temp_unit_switch,
+    "b2": {
         NAME: "set_temp_unit_fahrenheit",  # Celsius (0) | Fahrenheit (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "temp_unit_fahrenheit",
@@ -522,6 +535,7 @@ CMD_DEVICE_SWITCH = CMD_COMMON_V2 | {
     COMMAND_NAME: SolixMqttCommands.device_switch,
     "ac": {
         NAME: "set_device_switch",
+        STATE_NAME: "device_switch",
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
@@ -1231,63 +1245,66 @@ CMD_EV_LOAD_BALANCING = CMD_COMMON | {
     },
 }
 
-CMD_EV_SOLAR_CHARGING = CMD_COMMON | {
-    # Command: EV Charger solar charge settings
-    COMMAND_NAME: SolixMqttCommands.ev_solar_charging,
-    "a2": {
-        NAME: "set_solar_evcharge_switch",  # Off (0), On (1)
-        TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "solar_evcharge_switch",
-        VALUE_STATE: "solar_evcharge_switch",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-    "a3": {
-        NAME: "set_solar_evcharge_mode",  # solar & grid (0), solar only (1)
-        TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "solar_evcharge_mode",
-        VALUE_STATE: "solar_evcharge_mode",
-        VALUE_OPTIONS: {"solar_grid": 0, "solar_only": 1},
-    },
-    "a4": {
-        NAME: "set_solar_evcharge_min_current",  # 6 - rated limit (32 A), step 1 A
-        TYPE: DeviceHexDataTypes.sile.value,
-        STATE_NAME: "solar_evcharge_min_current",
-        VALUE_STATE: "solar_evcharge_min_current",
-        VALUE_MIN: 6,
-        VALUE_MIN_STATE: "min_current_limit",
-        VALUE_MAX: 16,
-        VALUE_MAX_STATE: "max_current_limit",
-        VALUE_STEP: 1,
-    },
-    "a5": {
-        NAME: "set_phase_operating_mode?",  # auto (0) / one phase(1) / 3 phase(3)- not seen yet ?
-        TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "phase_operating_mode",
-        VALUE_STATE: "phase_operating_mode",
-        VALUE_OPTIONS: {"automatic":0, "one_phase": 1},
-    },
-    "a6": {
-        NAME: "set_solar_evcharge_monitoring_mode",
-        TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "solar_evcharge_monitoring_mode",
-        VALUE_STATE: "solar_evcharge_monitoring_mode",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-    "a7": {
-        NAME: "set_auto_phase_switch",  # Off (0), On (1)
-        TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "auto_phase_switch",
-        VALUE_STATE: "auto_phase_switch",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-    "a8": {
-        NAME: "set_solar_evcharge_monitor_device",  # device SN
-        TYPE: DeviceHexDataTypes.str.value,
-        LENGTH: 16,
-        STATE_NAME: "solar_evcharge_monitor_device",
-        VALUE_STATE: "solar_evcharge_monitor_device",
-    },
-}
+CMD_EV_SOLAR_CHARGING = (
+    CMD_COMMON
+    | {
+        # Command: EV Charger solar charge settings
+        COMMAND_NAME: SolixMqttCommands.ev_solar_charging,
+        "a2": {
+            NAME: "set_solar_evcharge_switch",  # Off (0), On (1)
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "solar_evcharge_switch",
+            VALUE_STATE: "solar_evcharge_switch",
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+        },
+        "a3": {
+            NAME: "set_solar_evcharge_mode",  # solar & grid (0), solar only (1)
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "solar_evcharge_mode",
+            VALUE_STATE: "solar_evcharge_mode",
+            VALUE_OPTIONS: {"solar_grid": 0, "solar_only": 1},
+        },
+        "a4": {
+            NAME: "set_solar_evcharge_min_current",  # 6 - rated limit (32 A), step 1 A
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "solar_evcharge_min_current",
+            VALUE_STATE: "solar_evcharge_min_current",
+            VALUE_MIN: 6,
+            VALUE_MIN_STATE: "min_current_limit",
+            VALUE_MAX: 16,
+            VALUE_MAX_STATE: "max_current_limit",
+            VALUE_STEP: 1,
+        },
+        "a5": {
+            NAME: "set_phase_operating_mode?",  # auto (0) / one phase(1) / 3 phase(3)- not seen yet ?
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "phase_operating_mode",
+            VALUE_STATE: "phase_operating_mode",
+            VALUE_OPTIONS: {"automatic": 0, "one_phase": 1},
+        },
+        "a6": {
+            NAME: "set_solar_evcharge_monitoring_mode",
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "solar_evcharge_monitoring_mode",
+            VALUE_STATE: "solar_evcharge_monitoring_mode",
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+        },
+        "a7": {
+            NAME: "set_auto_phase_switch",  # Off (0), On (1)
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "auto_phase_switch",
+            VALUE_STATE: "auto_phase_switch",
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+        },
+        "a8": {
+            NAME: "set_solar_evcharge_monitor_device",  # device SN
+            TYPE: DeviceHexDataTypes.str.value,
+            LENGTH: 16,
+            STATE_NAME: "solar_evcharge_monitor_device",
+            VALUE_STATE: "solar_evcharge_monitor_device",
+        },
+    }
+)
 
 CMD_EV_CHARGER_SCHEDULE_SETTINGS = CMD_COMMON | {
     COMMAND_NAME: SolixMqttCommands.ev_charger_schedule_settings,
@@ -1355,3 +1372,34 @@ CMD_AC_DC_MODE = CMD_COMMON | {
         VALUE_OPTIONS: {"dc": 1, "ac": 3},
     },
 }
+
+CMD_BATTERY_CHARGE_LIMITS = (
+    CMD_COMMON_V2
+    | {
+        # Command: Alternator charger charging limits
+        COMMAND_NAME: SolixMqttCommands.battery_charge_limits,
+        "a5": {
+            NAME: "set_charge_power_limit",  # 300-800 W, step 100W
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "charge_power_limit",
+            VALUE_MIN: 500,
+            VALUE_MIN_STATE: "charge_power_limit_min",
+            VALUE_MAX: 800,
+            VALUE_MAX_STATE: "charge_power_limit_max",
+            VALUE_STEP: 100,
+            VALUE_STATE: "charge_power_limit",
+        },
+        "b4": {
+            NAME: "set_charge_voltage_limit",  # 12.0V to 13.8V in 0.1V step, depends on set type?
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "charge_voltage_limit",
+            VALUE_MIN: 12.0,
+            VALUE_MIN_STATE: "charge_voltage_limit_min",
+            VALUE_MAX: 13.8,
+            VALUE_MAX_STATE: "charge_voltage_limit_max",
+            VALUE_STEP: 0.1,
+            VALUE_DIVIDER: 0.1,
+            VALUE_STATE: "charge_voltage_limit",
+        },
+    }
+)

@@ -18,27 +18,27 @@ if TYPE_CHECKING:
 MODELS = {
     "A1722",  # SOLIX C300 AC
     "A1723",  # SOLIX C300X AC
-    "A1725",  #  SOLIX C200(X)
+    "A1725",  # SOLIX C200(X)
     "A1726",  # SOLIX C300 DC
-    "A1727",  #  SOLIX C200 DC
+    "A1727",  # SOLIX C200 DC
     "A1728",  # SOLIX C300X DC
     "A1729",  # SOLIX C200X DC
-    "A1753",  #  SOLIX C800
-    "A1754",  #  SOLIX C800 Plus
-    "A1755",  #  SOLIX C800X
-    "A1761",  #  SOLIX C1000(X)
-    "A1762",  #  Portable Power Station 1000
-    "A1763",  #  SOLIX C1000 Gen 2
-    "A1765",  #  SOLIX C1000X Gen 2
-    "A1770",  #  F1200 (Bluetooth)
-    "A1771",  #  F1200 (Bluetooth and WLAN)
-    "A1772",  #  SOLIX F1500
-    "A1780",  #  767 PowerHouse (SOLIX F2000)
+    "A1753",  # SOLIX C800
+    "A1754",  # SOLIX C800 Plus
+    "A1755",  # SOLIX C800X
+    "A1761",  # SOLIX C1000(X)
+    "A1762",  # Portable Power Station 1000
+    "A1763",  # SOLIX C1000 Gen 2
+    "A1765",  # SOLIX C1000X Gen 2
+    "A1770",  # F1200 (Bluetooth)
+    "A1771",  # F1200 (Bluetooth and WLAN)
+    "A1772",  # SOLIX F1500
+    "A1780",  # 767 PowerHouse (SOLIX F2000)
     "A1780P",  # 767 Power House (SOLIX F2000) with WLAN
-    "A1781",  #  SOLIX F2600
-    "A1782",  #  SOLIX F3000
-    "A1783",  #  SOLIX C2000 Gen 2
-    "A1790",  #  SOLIX F3800
+    "A1781",  # SOLIX F2600
+    "A1782",  # SOLIX F3000
+    "A1783",  # SOLIX C2000 Gen 2
+    "A1790",  # SOLIX F3800
     "A1790P",  # SOLIX F3800 Plus
 }
 

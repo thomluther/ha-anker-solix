@@ -62,7 +62,7 @@ class SolixMqttDeviceFactory:
                     and pn in CHARGER_MODELS
                 ):
                     return SolixMqttDeviceCharger(self.api, self.device_sn)
-                if category == SolixDeviceType.SMARTPLUG.value and pn in VAR_MODELS:
+                if category in [SolixDeviceType.SMARTPLUG.value, SolixDeviceType.POWERCOOLER.value] and pn in VAR_MODELS:
                     return SolixMqttDeviceVarious(self.api, self.device_sn)
             # return default MQTT device supporting only the realtime trigger control
             return SolixMqttDevice(self.api, self.device_sn)
