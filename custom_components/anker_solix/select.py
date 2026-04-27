@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+#import asyncio
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
