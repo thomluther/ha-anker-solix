@@ -36,10 +36,10 @@ MODELS = {
     "A1780",  # 767 PowerHouse (SOLIX F2000)
     "A1780P",  # 767 Power House (SOLIX F2000) with WLAN
     "A1781",  # SOLIX F2600
-    "A1782",  # SOLIX F3000
+    "A1782",  # SOLIX F3000 Solarbank PPS
     "A1783",  # SOLIX C2000 Gen 2
-    "A1790",  # SOLIX F3800
-    "A1790P",  # SOLIX F3800 Plus
+    "A1790",  # SOLIX F3800 Power Panel PPS
+    "A1790P",  # SOLIX F3800 Plus Power Panel PPS
 }
 
 # Define possible controls per Model

@@ -245,6 +245,7 @@ class AnkerSolixApiExport:
                     "Saved api %s original testfolder",
                     self.client.nickname,
                 )
+                self.api_power.clearCaches()
                 await self.api_power.update_sites(fromFile=True)
                 await self.api_power.update_device_details(fromFile=True)
                 await self.api_power.update_site_details(fromFile=True)
@@ -307,6 +308,7 @@ class AnkerSolixApiExport:
                 )
 
                 # restore real client cache data for re-use of sites and devices in other Api services
+                self.api_power.clearCaches()
                 self.api_power.account = old_account
                 self.api_power.sites = old_sites
                 self.api_power.devices = old_devices
@@ -1727,13 +1729,15 @@ class AnkerSolixApiExport:
                 if code := get_solix_product_code(val):
                     randomstr = "".join(
                         [
-                            random.choices(string.ascii_uppercase + string.digits, k=3),
+                            *random.choices(
+                                string.ascii_uppercase + string.digits, k=3
+                            ),
                             code,
-                            random.choices(
+                            *random.choices(
                                 string.ascii_uppercase + string.digits,
                                 k=len(val) - len(code) - 3,
                             ),
-                        ]
+                        ],
                     )
                 else:
                     randomstr = "".join(

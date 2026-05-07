@@ -283,6 +283,9 @@
             },
             "restart_device": {
                 "name": "Redémarrer l'appareil"
+            },
+            "shutdown_device": {
+                "name": "Éteindre l'appareil"
             }
         },
         "binary_sensor": {
@@ -496,6 +499,13 @@
                     "on": "Branché",
                     "off": "Débranché"
                 }
+            },
+            "generator_plug_status": {
+                "name": "Bouchon de générateur",
+                "state": {
+                    "on": "Branché",
+                    "off": "Débranché"
+                }
             }
         },
         "datetime": {
@@ -578,6 +588,12 @@
             },
             "solar_evcharge_min_current": {
                 "name": "EV courant de charge solaire minimal"
+            },
+            "device_timeout": {
+                "name": "Délai d'inactivité de l'appareil"
+            },
+            "charge_voltage_limit": {
+                "name": "Limite de tension de charge"
             }
         },
         "select": {
@@ -677,6 +693,9 @@
             },
             "max_soc": {
                 "name": "SOC max"
+            },
+            "backup_soc": {
+                "name": "SOC sauvegarde"
             },
             "temp_unit": {
                 "name": "Unité de température",
@@ -804,6 +823,25 @@
                     "unknown": "Inconnu"
                 }
             },
+            "car_battery_type": {
+                "name": "Type de batterie",
+                "state": {
+                    "li_fe_po": "LFP",
+                    "lead_acid": "Plomb-acide",
+                    "unknown": "Inconnu"
+                }
+            },
+            "car_battery_voltage_type": {
+                "name": "Tension de la batterie",
+                "state": {
+                    "12_v": "12 V",
+                    "24_v": "24 V",
+                    "unknown": "Inconnu"
+                }
+            },
+            "charge_power_limit": {
+                "name": "Limite de puissance de charge"
+            },
             "vehicle_brand": {
                 "name": "1. Marque"
             },
@@ -893,9 +931,15 @@
             "other_solar_power": {
                 "name": "Tierce partie solaire"
             },
+            "solar_power_total": {
+                "name": "Puissance solaire totale"
+            },
             "input_power": {
                 "name": "Puissance solaire",
                 "state_attributes": {
+                    "pv_voltage": {
+                        "name": "Volt"
+                    },
                     "pv_1_voltage": {
                         "name": "PV 1 Volt"
                     },
@@ -956,6 +1000,72 @@
                     }
                 }
             },
+            "device_1_pv_power": {
+                "name": "Appareil 1 puissance solaire",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "Solaire PV 1",
+                        "pv_2_power": "Solaire PV 2",
+                        "pv_3_power": "Solaire PV 3",
+                        "pv_4_power": "Solaire PV 4"
+                    }
+                }
+            },
+            "device_2_pv_power": {
+                "name": "Appareil 2 puissance solaire",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "Solaire PV 1",
+                        "pv_2_power": "Solaire PV 2",
+                        "pv_3_power": "Solaire PV 3",
+                        "pv_4_power": "Solaire PV 4"
+                    }
+                }
+            },
+            "device_3_pv_power": {
+                "name": "Appareil 3 puissance solaire",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "Solaire PV 1",
+                        "pv_2_power": "Solaire PV 2",
+                        "pv_3_power": "Solaire PV 3",
+                        "pv_4_power": "Solaire PV 4"
+                    }
+                }
+            },
+            "device_4_pv_power": {
+                "name": "Appareil 4 puissance solaire",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "Solaire PV 1",
+                        "pv_2_power": "Solaire PV 2",
+                        "pv_3_power": "Solaire PV 3",
+                        "pv_4_power": "Solaire PV 4"
+                    }
+                }
+            },
+            "device_5_pv_power": {
+                "name": "Appareil 5 puissance solaire",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "Solaire PV 1",
+                        "pv_2_power": "Solaire PV 2",
+                        "pv_3_power": "Solaire PV 3",
+                        "pv_4_power": "Solaire PV 4"
+                    }
+                }
+            },
+            "device_6_pv_power": {
+                "name": "Appareil 6 puissance solaire",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "Solaire PV 1",
+                        "pv_2_power": "Solaire PV 2",
+                        "pv_3_power": "Solaire PV 3",
+                        "pv_4_power": "Solaire PV 4"
+                    }
+                }
+            },
             "dc_input_power": {
                 "name": "Puissance d'entrée CC"
             },
@@ -969,7 +1079,12 @@
                 "name": "Puissance d'entrée CA totale"
             },
             "dc_output_power": {
-                "name": "Puissance de sortie CC"
+                "name": "Puissance de sortie CC",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
             },
             "dc_output_power_total": {
                 "name": "Puissance de sortie CC totale"
@@ -978,7 +1093,12 @@
                 "name": "Puissance de sortie totale"
             },
             "ac_output_power": {
-                "name": "Puissance de sortie CA"
+                "name": "Puissance de sortie CA",
+                "state_attributes": {
+                    "ac_frequency": {
+                        "name": "Fréquence CA"
+                    }
+                }
             },
             "ac_output_power_total": {
                 "name": "Puissance de sortie CA totale"
@@ -1097,6 +1217,42 @@
             "home_load_power": {
                 "name": "Demande domestique"
             },
+            "home_demand_circuit_01": {
+                "name": "Circuit 1"
+            },
+            "home_demand_circuit_02": {
+                "name": "Circuit 2"
+            },
+            "home_demand_circuit_03": {
+                "name": "Circuit 3"
+            },
+            "home_demand_circuit_04": {
+                "name": "Circuit 4"
+            },
+            "home_demand_circuit_05": {
+                "name": "Circuit 5"
+            },
+            "home_demand_circuit_06": {
+                "name": "Circuit 6"
+            },
+            "home_demand_circuit_07": {
+                "name": "Circuit 7"
+            },
+            "home_demand_circuit_08": {
+                "name": "Circuit 8"
+            },
+            "home_demand_circuit_09": {
+                "name": "Circuit 9"
+            },
+            "home_demand_circuit_10": {
+                "name": "Circuit 10"
+            },
+            "home_demand_circuit_11": {
+                "name": "Circuit 11"
+            },
+            "home_demand_circuit_12": {
+                "name": "Circuit 12"
+            },
             "ac_generate_power": {
                 "name": "Alimentation AC"
             },
@@ -1105,6 +1261,15 @@
             },
             "grid_to_battery_power": {
                 "name": "Charge du réseau"
+            },
+            "generator_power": {
+                "name": "Puissance du générateur"
+            },
+            "generator_to_home_power": {
+                "name": "Puissance domestique produite"
+            },
+            "generator_to_battery_power": {
+                "name": "Puissance produite par la batterie"
             },
             "micro_inverter_power_limit": {
                 "name": "Limite de l'onduleur"
@@ -1218,6 +1383,7 @@
                 "name": "État de la batterie",
                 "state": {
                     "standby": "Veille",
+                    "inactive": "Inactif",
                     "charging": "Recharge",
                     "discharging": "Décharge",
                     "sleep": "Sommeil",
@@ -1234,6 +1400,7 @@
                 "state": {
                     "inactive": "Inactif",
                     "charging": "Recharge",
+                    "discharging": "Décharge",
                     "unknown": "Inconnu"
                 },
                 "state_attributes": {
@@ -2321,6 +2488,15 @@
                 "state_attributes": {
                     "status": {
                         "name": "Code d'état"
+                    },
+                    "rated_kw": {
+                        "name": "Puissance nominale kW"
+                    },
+                    "rated_a": {
+                        "name": "Courant nominal A"
+                    },
+                    "standard": {
+                        "name": "Standard"
                     }
                 }
             },
@@ -2403,6 +2579,9 @@
                         "name": "Distance totale km"
                     }
                 }
+            },
+            "battery_voltage": {
+                "name": "Tension de la batterie"
             }
         },
         "switch": {
@@ -2514,6 +2693,12 @@
                         "name": "Demandes de la dernière heure"
                     }
                 }
+            },
+            "device_switch": {
+                "name": "Mise hors tension de l'appareil"
+            },
+            "device_timeout_switch": {
+                "name": "Activer le délai d'expiration"
             },
             "default_vehicle": {
                 "name": "Véhicule par défaut"

@@ -64,6 +64,7 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Electric Vehicle devices](#electric-vehicle-devices)
    * [Power Panels](#power-panels)
    * [Home Energy Systems (HES)](#home-energy-systems-hes)
+   * [Home Backup Systems](#home-backup-systems)
    * [Other devices](#other-devices)
 1. **[MQTT managed devices](#mqtt-managed-devices)**
 1. **[Installation via HACS (recommended)](#installation-via-hacs-recommended)**
@@ -151,12 +152,13 @@ Device type | Description
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- A17X7US: Anker Smart Meter for US grid **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
-`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(Basic MQTT monitoring only)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
+`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1725/A1727/A1729: C200(X) (DC) Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(Basic MQTT monitoring only)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
 `solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
-`powerpanel` | Anker Solix Power Panels configured in the system **(basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
+`powerpanel` | Anker Solix Power Panels configured in the system **(basic Api & MQTT monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
-`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(MQTT monitoring & partial control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & partial control)**
+`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(MQTT monitoring & partial control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & partial control)**<br>- AS200: Alternator Charger **(MQTT monitoring & control for car battery charging, reverse charging is missing completely)**
 `ev_charger` | Anker Solix EV charger devices:<br>- A5191: V1 Smart EV Charger **(MQTT monitoring & control)**
+`home_backup` | Anker Solix Home Backup devices:<br>- A17E1: Solix E10 (US market) **(Basic MQTT monitoring)**<br>- AX170: Power Dock for Solix E10 (US market) **(Basic MQTT monitoring)**
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the Anker Solix V1 EV Charger.
 
 For more details on the Anker Solix device hierarchy and how the integration will represent them in Home Assistant, please refer to the discussion article [Integration device hierarchy and device attribute information](https://github.com/thomluther/ha-anker-solix/discussions/239).
@@ -391,6 +393,16 @@ Version 3.5.2 added experimental [device MQTT data](#mqtt-managed-devices) for X
 
 > [!TIP]
 > If you prefer local integration of your X1 devices, please refer to the generic [HA Modbus integration](https://www.home-assistant.io/integrations/modbus/) and the [Anker X1 Modbus specification](https://support.ankersolix.com/de/s/download-preview?urlname=Anker-SOLIX-X1-Series-Modbus-Protocol). Modbus will NOT be covered by this project, and you need to configure the Modbus integration in YAML, including each sensor definition according to the documented modbus registers. Examples are shown by user [@Freacly](https://github.com/Freacly) in this [issue](https://github.com/thomluther/ha-anker-solix/issues/429#issuecomment-3810556184).
+
+
+### Home Backup Systems
+
+Anker released new device types for the US market that fall into this new [Home Backup system](https://www.ankersolix.com/whole-home-backup-power-solution) type category. This is primarily the Anker Solix E10 device and also the Power Dock AX170, which connects multiple E10 devices. These systems can also be extended with an Anker power generator, like the [Anker Solix Smart Generator 5500 (Tri-Fuel)](https://www.ankersolix.com/products/smart-generator-5500). The system type aims as self pluggable, DIY friendly but scalable home device installation that can backup the whole house. The main E10 device has no battery by itself, but acts as inverter and controller for up to 5 expansion batteries of 6 kWh each. A power dock system can combine multiple E10 devices into a single system while also monitoring up to 12 smart branch power circuits. Both system types can be combined with a smart meter, for automated power consumption and storage according to the actual home demand.
+
+> [!IMPORTANT]
+> Currently there are NO known Api queries to obtain Home Backup system type related data from the cloud. That means neither the system energies, nor the system constellation can be queried. Furthermore, power dock systems have a weird setup where the E10 devices are not tracked as system devices and they seem to use a local MQTT broker on the power dock for local only communication. They may not be subscribed to the Anker cloud MQTT server at all and their data is all proxied through the power dock, which is managed through MQTT and cloud Api. Therefore, no MQTT data can be received from E10 devices in power dock systems, nor will they receive MQTT commands for status requests or real time data triggers. For these reasons, the data that can be provided for those systems/devices is limited and there is NO control capability at all at this point in time.
+
+The power dock publishes MQTT messages received from the connected devices as embedded messages. However, data extraction and handling of embedded MQTT messages that belong to another device has not been implemented yet into the Api library. This is planned for future release, once being able to utilize such read only MQTT data in the Api library and the HA integration. For data decoding and description, or Api exploration to find system related data, you can contribute in [#274](https://github.com/thomluther/anker-solix-api/issues/274).
 
 
 ### Other devices

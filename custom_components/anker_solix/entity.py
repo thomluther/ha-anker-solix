@@ -38,11 +38,12 @@ class AnkerSolixPicturePath:
     A17B1: str = str(Path(IMAGEPATH) / "Power_Panel_A17B1.png")
 
     A17C0: str = str(Path(IMAGEPATH) / "Solarbank_E1600_pub.png")
+    A17Y0: str = str(Path(IMAGEPATH) / "Fitting_A17Y0_pub.png")
     A17C1: str = str(Path(IMAGEPATH) / "Solarbank_2_pro_A17C1_pub.png")
     A17C2: str = str(Path(IMAGEPATH) / "Solarbank_2_A17C2_pub.png")
     A17C3: str = str(Path(IMAGEPATH) / "Solarbank_2_plus_A17C3_pub.png")
     A17C5: str = str(Path(IMAGEPATH) / "Solarbank_3_pro_A17C5_pub.png")
-    A17Y0: str = str(Path(IMAGEPATH) / "Fitting_A17Y0_pub.png")
+    A17E2: str = str(Path(IMAGEPATH) / "Solarbank_Max_AC_A17E2_pub.png")
 
     A5140: str = str(Path(IMAGEPATH) / "MI60_A5140_pub.png")
     A5143: str = str(Path(IMAGEPATH) / "MI80_A5143_pub.png")
@@ -50,6 +51,7 @@ class AnkerSolixPicturePath:
     A17X7: str = str(Path(IMAGEPATH) / "Smartmeter_A17X7_pub.png")
     A17X7US: str = str(Path(IMAGEPATH) / "Smartmeter_A17X7US.png")
     AE1R0: str = str(Path(IMAGEPATH) / "Smartmeter_AE1R0_pub.png")
+    AE1X0: str = str(Path(IMAGEPATH) / "Smartmeter_AE1X0_pub.png")
     SHEM3: str = str(Path(IMAGEPATH) / "Shelly_Pro_3EM.png")
     SHEMP3: str = str(Path(IMAGEPATH) / "Shelly_Pro_3EM.png")
 

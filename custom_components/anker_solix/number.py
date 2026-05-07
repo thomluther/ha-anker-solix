@@ -23,6 +23,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfElectricCurrent,
+    UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfEnergyDistance,
     UnitOfPower,
@@ -70,6 +71,7 @@ class AnkerSolixNumberDescription(
     mqtt_cmd: str | None = None
     mqtt_cmd_parm: str | None = None
     dynamic_options: bool = False
+    ignore_opt_count: bool | None = None
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
@@ -255,6 +257,30 @@ DEVICE_NUMBERS = [
         # Dynamic limit changes based on reported data
         dynamic_options=True,
     ),
+    AnkerSolixNumberDescription(
+        # Charger timeout, requires also parameter
+        key="device_timeout",
+        translation_key="device_timeout",
+        json_key="device_timeout_minutes",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.device_timeout_minutes,
+        mqtt_cmd_parm="set_device_timeout_minutes",
+    ),
+    AnkerSolixNumberDescription(
+        key="charge_voltage_limit",
+        translation_key="charge_voltage_limit",
+        json_key="charge_voltage_limit",
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.battery_charge_limits,
+        mqtt_cmd_parm="set_charge_voltage_limit",
+        # Dynamic limit changes based on reported data
+        dynamic_options=True,
+        ignore_opt_count=True,
+    ),
 ]
 
 SITE_NUMBERS = [
@@ -426,7 +452,7 @@ async def async_setup_entry(
                                     mdev.get_cmd_parm_option_map(
                                         cmd=desc.mqtt_cmd,
                                         parm=desc.mqtt_cmd_parm,
-                                        limit=20,
+                                        limit=0 if desc.ignore_opt_count else 20,
                                     )
                                     or not mdev.cmd_is_number(
                                         cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm

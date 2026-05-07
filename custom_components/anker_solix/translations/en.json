@@ -283,6 +283,9 @@
             },
             "restart_device": {
                 "name": "Restart device"
+            },
+            "shutdown_device": {
+                "name": "Shutdown device"
             }
         },
         "binary_sensor": {
@@ -496,6 +499,13 @@
                     "on": "Plugged",
                     "off": "Unplugged"
                 }
+            },
+            "generator_plug_status": {
+                "name": "Generator plug",
+                "state": {
+                    "on": "Plugged",
+                    "off": "Unplugged"
+                }
             }
         },
         "datetime": {
@@ -578,6 +588,12 @@
             },
             "solar_evcharge_min_current": {
                 "name": "Min EV solar charge current"
+            },
+            "device_timeout": {
+                "name": "Device timeout"
+            },
+            "charge_voltage_limit": {
+                "name": "Charge voltage limit"
             }
         },
         "select": {
@@ -677,6 +693,9 @@
             },
             "max_soc": {
                 "name": "SOC max"
+            },
+            "backup_soc": {
+                "name": "SOC backup"
             },
             "temp_unit": {
                 "name": "Temperature unit",
@@ -804,6 +823,25 @@
                     "unknown": "Unknown"
                 }
             },
+            "car_battery_type": {
+                "name": "Battery type",
+                "state": {
+                    "li_fe_po": "LFP",
+                    "lead_acid": "Lead Acid",
+                    "unknown": "Unknown"
+                }
+            },
+            "car_battery_voltage_type": {
+                "name": "Battery voltage",
+                "state": {
+                    "12_v": "12 V",
+                    "24_v": "24 V",
+                    "unknown": "Unknown"
+                }
+            },
+            "charge_power_limit": {
+                "name": "Charge power limit"
+            },
             "vehicle_brand": {
                 "name": "1. Brand"
             },
@@ -893,9 +931,15 @@
             "other_solar_power": {
                 "name": "Solar 3rd party"
             },
+            "solar_power_total": {
+                "name": "Solar power total"
+            },
             "input_power": {
                 "name": "Solar power",
                 "state_attributes": {
+                    "pv_voltage": {
+                        "name": "Volt"
+                    },
                     "pv_1_voltage": {
                         "name": "PV 1 Volt"
                     },
@@ -956,6 +1000,72 @@
                     }
                 }
             },
+            "device_1_pv_power": {
+                "name": "Device 1 PV power",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "PV 1 power",
+                        "pv_2_power": "PV 2 power",
+                        "pv_3_power": "PV 3 power",
+                        "pv_4_power": "PV 4 power"
+                    }
+                }
+            },
+            "device_2_pv_power": {
+                "name": "Device 2 PV power",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "PV 1 power",
+                        "pv_2_power": "PV 2 power",
+                        "pv_3_power": "PV 3 power",
+                        "pv_4_power": "PV 4 power"
+                    }
+                }
+            },
+            "device_3_pv_power": {
+                "name": "Device 3 PV power",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "PV 1 power",
+                        "pv_2_power": "PV 2 power",
+                        "pv_3_power": "PV 3 power",
+                        "pv_4_power": "PV 4 power"
+                    }
+                }
+            },
+            "device_4_pv_power": {
+                "name": "Device 4 PV power",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "PV 1 power",
+                        "pv_2_power": "PV 2 power",
+                        "pv_3_power": "PV 3 power",
+                        "pv_4_power": "PV 4 power"
+                    }
+                }
+            },
+            "device_5_pv_power": {
+                "name": "Device 5 PV power",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "PV 1 power",
+                        "pv_2_power": "PV 2 power",
+                        "pv_3_power": "PV 3 power",
+                        "pv_4_power": "PV 4 power"
+                    }
+                }
+            },
+            "device_6_pv_power": {
+                "name": "Device 6 PV power",
+                "state_attributes": {
+                    "name": {
+                        "pv_1_power": "PV 1 power",
+                        "pv_2_power": "PV 2 power",
+                        "pv_3_power": "PV 3 power",
+                        "pv_4_power": "PV 4 power"
+                    }
+                }
+            },
             "dc_input_power": {
                 "name": "DC input power"
             },
@@ -969,7 +1079,12 @@
                 "name": "AC input power_total"
             },
             "dc_output_power": {
-                "name": "DC output power"
+                "name": "DC output power",
+                "state_attributes": {
+                    "voltage": {
+                        "name": "Volt"
+                    }
+                }
             },
             "dc_output_power_total": {
                 "name": "DC output power total"
@@ -978,7 +1093,12 @@
                 "name": "Output power total"
             },
             "ac_output_power": {
-                "name": "AC output power"
+                "name": "AC output power",
+                "state_attributes": {
+                    "ac_frequency": {
+                        "name": "AC frequency"
+                    }
+                }
             },
             "ac_output_power_total": {
                 "name": "AC output power total"
@@ -1097,6 +1217,42 @@
             "home_load_power": {
                 "name": "Home demand"
             },
+            "home_demand_circuit_01": {
+                "name": "Circuit 1"
+            },
+            "home_demand_circuit_02": {
+                "name": "Circuit 2"
+            },
+            "home_demand_circuit_03": {
+                "name": "Circuit 3"
+            },
+            "home_demand_circuit_04": {
+                "name": "Circuit 4"
+            },
+            "home_demand_circuit_05": {
+                "name": "Circuit 5"
+            },
+            "home_demand_circuit_06": {
+                "name": "Circuit 6"
+            },
+            "home_demand_circuit_07": {
+                "name": "Circuit 7"
+            },
+            "home_demand_circuit_08": {
+                "name": "Circuit 8"
+            },
+            "home_demand_circuit_09": {
+                "name": "Circuit 9"
+            },
+            "home_demand_circuit_10": {
+                "name": "Circuit 10"
+            },
+            "home_demand_circuit_11": {
+                "name": "Circuit 11"
+            },
+            "home_demand_circuit_12": {
+                "name": "Circuit 12"
+            },
             "ac_generate_power": {
                 "name": "AC power"
             },
@@ -1105,6 +1261,15 @@
             },
             "grid_to_battery_power": {
                 "name": "Grid charge"
+            },
+            "generator_power": {
+                "name": "Generated power"
+            },
+            "generator_to_home_power": {
+                "name": "Generated home power"
+            },
+            "generator_to_battery_power": {
+                "name": "Generated battery power"
             },
             "micro_inverter_power_limit": {
                 "name": "Inverter limit"
@@ -1174,7 +1339,7 @@
                 "name": "Energy delivered"
             },
             "solar_energy": {
-                "name": "Energy generated"
+                "name": "Energy produced"
             },
             "consumed_energy": {
                 "name": "Energy consumed"
@@ -1218,6 +1383,7 @@
                 "name": "Battery status",
                 "state": {
                     "standby": "Standby",
+                    "inactive": "Inactive",
                     "charging": "Charging",
                     "discharging": "Discharging",
                     "sleep": "Sleep",
@@ -1234,6 +1400,7 @@
                 "state": {
                     "inactive": "Inactive",
                     "charging": "Charging",
+                    "discharging": "Discharging",
                     "unknown": "Unknown"
                 },
                 "state_attributes": {
@@ -2321,6 +2488,15 @@
                 "state_attributes": {
                     "status": {
                         "name": "Status code"
+                    },
+                    "rated_kw": {
+                        "name": "Rated power kW"
+                    },
+                    "rated_a": {
+                        "name": "Rated current A"
+                    },
+                    "standard": {
+                        "name": "Standard"
                     }
                 }
             },
@@ -2403,6 +2579,9 @@
                         "name": "Total distance km"
                     }
                 }
+            },
+            "battery_voltage": {
+                "name": "Battery voltage"
             }
         },
         "switch": {
@@ -2514,6 +2693,12 @@
                         "name": "Requests last hour"
                     }
                 }
+            },
+            "device_switch": {
+                "name": "Device power on"
+            },
+            "device_timeout_switch": {
+                "name": "Enable timeout"
             },
             "default_vehicle": {
                 "name": "Default vehicle"

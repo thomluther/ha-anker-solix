@@ -115,11 +115,14 @@ DEVICE_SWITCHES = [
         force_creation_fn=lambda d, jk: jk in d and d.get("cascaded"),
     ),
     AnkerSolixSwitchDescription(
+        # This SB1 entity may not be supported in cascaded systems and is created only if the schedule field indicates visibility
         key="preset_discharge_priority",
         translation_key="preset_discharge_priority",
         json_key="preset_discharge_priority",
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        force_creation_fn=lambda d, jk: jk in d and d.get("cascaded"),
+        force_creation_fn=lambda d, jk: (
+            jk in d and (d.get("schedule") or {}).get("is_show_priority_discharge")
+        ),
     ),
     AnkerSolixSwitchDescription(
         key="preset_backup_option",
@@ -430,6 +433,28 @@ DEVICE_SWITCHES = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.ev_charger_schedule_settings,
         mqtt_cmd_parm="set_schedule_switch",
+    ),
+    AnkerSolixSwitchDescription(
+        key="device_switch",
+        translation_key="device_switch",
+        json_key="device_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.device_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="device_timeout_switch",
+        translation_key="device_timeout_switch",
+        json_key="device_timeout_switch",
+        # on (0), off (1) !!!
+        value_fn=lambda d, jk: not v if (v := d.get(jk)) is not None else None,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.device_timeout_minutes,
+        mqtt_cmd_parm="set_device_timeout_switch",
     ),
 ]
 

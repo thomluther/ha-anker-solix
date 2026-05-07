@@ -690,6 +690,25 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         """Get the last 5 min average power from energy statistics.
 
         Example data:
+        {"totalEnergy": "1.17","totalEnergyUnit": "KWh","totalImportedEnergy": "0.26","totalImportedEnergyUnit": "KWh","totalExportedEnergy": "1.17",
+            "totalExportedEnergyUnit": "KWh","power": [
+                {"time": "00:00","powerInfos": [{"type": "hes","value": "-0.00"},{"type": "hes","value": "0.01"}]},
+                {"time": "00:05","powerInfos": [{"type": "hes","value": "-0.01"},{"type": "hes","value": "0.01"}]},
+                ...
+                {"time": "23:55","powerInfos": [{"type": "hes","value": "0.00"},{"type": "hes","value": "0.00"}]}],
+            "powerUnit": "KW","chargeLevel": [
+                {"value": "23","time": "00:00"},
+                {"value": "23","time": "00:05"},
+                ...
+                {"value": "0","time": "23:55"}],
+            "energy": [
+                {"value": "1.17","negValue": "0","rods": [
+                    {"from": "0","to": "1.17","sourceType": "hes"}]}],
+            "energyUnit": "KWh",
+            "aggregates": [
+                {"title": "Photovoltaic power supply","value": "0.13","unit": "KWh","type": "solar","percent": "50%","imported": true},
+                {"title": "Grid power consumption","value": "0.13","unit": "KWh","type": "grid","percent": "50%","imported": true}],
+            "hasDiesel": false}
         """
         # get existing data first from device details to check if requery must be done
         avg_data = next(
@@ -834,7 +853,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 if avg_data["valid_time"] == old_valid:
                     # Skip remaining queries if valid time did not change
                     return avg_data
-                avg_data["power_unit"] = data.get("powerUnit")
+                if unit := data.get("powerUnit"):
+                    avg_data["power_unit"] = str(unit).lower().replace("w","W")
                 # extract power values only if offset to last valid SOC entry was found
                 if offset.total_seconds() != 0 and (
                     powerlist := [

@@ -6,6 +6,7 @@ from typing import Final
 from .apitypes import DeviceHexDataTypes
 
 # common mapping keys to be used for status and command descriptions
+EMBEDDED: Final[str] = "embedded"  # name of the json field that contains the embedded message hex data
 NAME: Final[str] = "name"  # name of the data field, also used for message descriptions
 TYPE: Final[str] = (
     "type"  # type the data field relevant for de/encoding, must be a byte as defined in DeviceHexDataTypes

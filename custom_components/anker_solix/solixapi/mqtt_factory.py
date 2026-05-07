@@ -43,9 +43,16 @@ class SolixMqttDeviceFactory:
             pn = self.device_data.get("device_pn") or ""
             # TODO: Update factory when new device categories and criteria are implemented
             if pn in SOLIXMQTTMAP:
-                if category == SolixDeviceType.PPS.value and pn in PPS_MODELS:
+                if (
+                    category
+                    in [SolixDeviceType.PPS.value, SolixDeviceType.SOLARBANK_PPS.value]
+                    and pn in PPS_MODELS
+                ):
                     return SolixMqttDevicePps(self.api, self.device_sn)
-                if category == SolixDeviceType.GENERATOR.value and pn in GENERATOR_MODELS:
+                if (
+                    category == SolixDeviceType.GENERATOR.value
+                    and pn in GENERATOR_MODELS
+                ):
                     return SolixMqttDeviceGenerator(self.api, self.device_sn)
                 if (
                     category
@@ -62,7 +69,14 @@ class SolixMqttDeviceFactory:
                     and pn in CHARGER_MODELS
                 ):
                     return SolixMqttDeviceCharger(self.api, self.device_sn)
-                if category in [SolixDeviceType.SMARTPLUG.value, SolixDeviceType.POWERCOOLER.value] and pn in VAR_MODELS:
+                if (
+                    category
+                    in [
+                        SolixDeviceType.SMARTPLUG.value,
+                        SolixDeviceType.POWERCOOLER.value,
+                    ]
+                    and pn in VAR_MODELS
+                ):
                     return SolixMqttDeviceVarious(self.api, self.device_sn)
             # return default MQTT device supporting only the realtime trigger control
             return SolixMqttDevice(self.api, self.device_sn)

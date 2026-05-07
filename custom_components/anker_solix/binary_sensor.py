@@ -125,6 +125,7 @@ DEVICE_SENSORS = [
         ),
     ),
     AnkerSolixBinarySensorDescription(
+        # Smart Plug entity
         key="auto_switch",
         translation_key="auto_switch",
         json_key="auto_switch",
@@ -133,7 +134,9 @@ DEVICE_SENSORS = [
             "running_time": d.get("running_time"),
         },
         entity_category=EntityCategory.DIAGNOSTIC,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s & {SolixDeviceType.SMARTPLUG.value})
+        ),
     ),
     AnkerSolixBinarySensorDescription(
         key="sub_pack_temp_alarm",
@@ -159,6 +162,14 @@ DEVICE_SENSORS = [
         key="plug_status",
         translation_key="plug_status",
         json_key="plug_status",
+        device_class=BinarySensorDeviceClass.PLUG,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="generator_plug_status",
+        translation_key="generator_plug_status",
+        json_key="generator_plug_status",
         device_class=BinarySensorDeviceClass.PLUG,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,

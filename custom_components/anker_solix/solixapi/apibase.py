@@ -557,6 +557,7 @@ class AnkerSolixBaseApi:
                                 "battery_to_home_power",
                                 "device_output_power_signed_total",
                                 "ac_socket_power",
+                                "ac_frequency",
                                 "heating_power",
                                 "grid_to_battery_power",
                                 "generator_to_battery_power",
@@ -615,6 +616,28 @@ class AnkerSolixBaseApi:
                             # trigger device capacity calculation with SOC updates
                             if key in ["battery_soc", "main_battery_soc"]:
                                 calc_capacity = True
+                            # calculate device PV total if not included in MQTT data
+                            if any(
+                                key == f"device_{x}_pv_1_power"
+                                and f"device_{x}_pv_power" not in values
+                                for x in range(1, 7)
+                            ):
+                                if (
+                                    str(
+                                        idx := (key.split("_")[1:2] or ["0"])[0]
+                                    ).isdigit()
+                                    and int(idx) > 0
+                                ):
+                                    # accumulate all PV channels
+                                    pv_power = 0
+                                    for i in range(1, 5):
+                                        pv_power += float(
+                                            values.get(f"device_{idx}_pv_{i}_power")
+                                            or 0
+                                        )
+                                    device_mqtt[f"device_{idx}_pv_power"] = (
+                                        f"{pv_power:.0f}"
+                                    )
                         elif (
                             key
                             in [
@@ -926,7 +949,7 @@ class AnkerSolixBaseApi:
                                 api = self.powerpanelApi
                             else:
                                 api = self
-                            api._update_dev({"device_sn": sn, "battery_capacity": cap})  # noqa: SLF001
+                            api._update_dev({"device_sn": sn, "battery_capacity": cap})
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed
@@ -1533,9 +1556,8 @@ class AnkerSolixBaseApi:
                             pc: {
                                 "p_code": pc,
                                 "sku": item.get("sku"),
-                                "custom_fields": custom_fields | json.loads(
-                                    item.get("custom_fields") or "{}"
-                                ),
+                                "custom_fields": custom_fields
+                                | json.loads(item.get("custom_fields") or "{}"),
                             }
                             for item in (prod.get("p_codes") or [])
                             if (pc := item.get("p_code"))

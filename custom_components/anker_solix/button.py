@@ -81,7 +81,6 @@ DEVICE_BUTTONS = [
         key="mqtt_realtime_trigger",
         translation_key="mqtt_realtime_trigger",
         json_key="",
-        value_fn=lambda d, jk: True,
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
         mqtt=True,
@@ -91,7 +90,6 @@ DEVICE_BUTTONS = [
         key="mqtt_status_request",
         translation_key="mqtt_status_request",
         json_key="mqtt_status_request",
-        value_fn=lambda d, jk: True,  # Ignore whether commnd is described / supported
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
         mqtt=True,
@@ -99,9 +97,9 @@ DEVICE_BUTTONS = [
     AnkerSolixButtonDescription(
         key="restart_device",
         translation_key="restart_device",
+        # json key must be available in MQTT cmd options to create and use the button
         json_key="restart",
         device_class=ButtonDeviceClass.RESTART,
-        value_fn=lambda d, jk: True,  # Ignore whether commnd is described / supported
         entity_category=EntityCategory.DIAGNOSTIC,
         # create button only after MQTT data is available
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
@@ -109,6 +107,20 @@ DEVICE_BUTTONS = [
         mqtt_cmd=SolixMqttCommands.device_power_mode,
         mqtt_cmd_parm="set_device_power_mode",
     ),
+    # NOTE: Shutdown not enabled for now due to required physical device access afterwards
+    # AnkerSolixButtonDescription(
+    #     key="shutdown_device",
+    #     translation_key="shutdown_device",
+    #     # json key must be available in MQTT cmd options to create and use the button
+    #     # NOTE: Shutdown may require physical power on at the device
+    #     json_key="shutdown",
+    #     entity_category=EntityCategory.DIAGNOSTIC,
+    #     # create button only after MQTT data is available
+    #     exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
+    #     mqtt=True,
+    #     mqtt_cmd=SolixMqttCommands.device_power_mode,
+    #     mqtt_cmd_parm="set_device_power_mode",
+    # ),
 ]
 
 SITE_BUTTONS = []
@@ -186,7 +198,14 @@ async def async_setup_entry(
                         or (
                             desc.mqtt
                             and mdev
-                            and (not desc.mqtt_cmd or desc.mqtt_cmd in mdev.controls)
+                            # Buttons with an MQTT command should only be created if the json key is in the control options
+                            and (
+                                not desc.mqtt_cmd
+                                or desc.json_key
+                                in mdev.get_cmd_parm_option_map(
+                                    cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                                )
+                            )
                         )
                         # filter API only entities
                         or (

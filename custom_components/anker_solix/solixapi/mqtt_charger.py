@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from .apitypes import SolixEvChargerMode, SolixEvChargerStatus, SolixScheduleWeekendMode
 from .helpers import get_enum_name
 from .mqtt_device import SolixMqttDevice
-from .mqttcmdmap import SolixMqttCommands
+from .mqttcmdmap import VALUE_OPTIONS, SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -75,6 +75,24 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
         self.models = MODELS
         self.features = FEATURES
         super().__init__(api_instance=api_instance, device_sn=device_sn)
+        # remove controls or parameters that are not supported based on product code features
+        # Update EV Charger V1 devices
+        if self.pn == "A5191" and (
+            features := self.device.get("device_code_features", {})
+        ):
+            if features.get("phase") == "single":
+                # remove auto phase switching if three phase not supported
+                self.controls.get(SolixMqttCommands.ev_solar_charging, {}).get(
+                    "parameters", {}
+                ).get("set_auto_phase_switch", {}).update(
+                    {VALUE_OPTIONS: {}, "is_switch": False}
+                )
+            if features.get("delay_start") is False:
+                # remove random delay switch if not supported
+                self.controls.pop(SolixMqttCommands.ev_random_delay_switch, None)
+            if features.get("gunType") == "cable":
+                # Remove plug lock control for cabled versions
+                self.controls.pop(SolixMqttCommands.plug_lock_switch, None)
 
     def ev_charger_mode_state(self) -> str | None:
         """Get the EV charger operational mode based on its status."""

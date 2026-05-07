@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-#import asyncio
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -447,6 +446,16 @@ DEVICE_SELECTS = [
         mqtt_cmd_parm="set_max_soc",
     ),
     AnkerSolixSelectDescription(
+        key="backup_soc",
+        translation_key="backup_soc",
+        json_key="backup_soc",
+        unit_of_measurement=PERCENTAGE,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        # TODO: define commands once known, mark as Api cmd for now to create entity to show state if available
+        api_cmd=True,
+    ),
+    AnkerSolixSelectDescription(
         key="max_evcharge_current",
         translation_key="max_evcharge_current",
         json_key="max_evcharge_current",
@@ -561,6 +570,39 @@ DEVICE_SELECTS = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
         mqtt_cmd_parm="set_weekend_mode",
+    ),
+    AnkerSolixSelectDescription(
+        key="car_battery_type",
+        translation_key="car_battery_type",
+        json_key="car_battery_type",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.car_battery_type,
+        mqtt_cmd_parm="set_car_battery_type",
+    ),
+    AnkerSolixSelectDescription(
+        key="car_battery_voltage_type",
+        translation_key="car_battery_voltage_type",
+        json_key="car_battery_voltage_type",
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.car_battery_type,
+        mqtt_cmd_parm="set_car_battery_voltage_type",
+    ),
+    AnkerSolixSelectDescription(
+        key="charge_power_limit",
+        translation_key="charge_power_limit",
+        json_key="charge_power_limit",
+        value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        unit_of_measurement=UnitOfPower.WATT,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.battery_charge_limits,
+        mqtt_cmd_parm="set_charge_power_limit",
+        # Dynamic limit changes based on reported data
+        dynamic_options=True,
     ),
 ]
 
@@ -1334,6 +1376,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     option,
                 )
                 resp = None
+                skip_mqtt_status = False
                 with suppress(ValueError, TypeError):
                     # Systems with Station support can be controlled through Api alone, otherwise MQTT command is required
                     # Note: A cloud change mid April 2026 reports station support for SB2 although max load cannot be controlled via station parm
@@ -1368,9 +1411,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 option=option,
                             )
                         }
-                        # if resp:
-                        #     # ensure that MQTT command is processed before Api cache update
-                        #     await asyncio.sleep(2)
+                        skip_mqtt_status = True
                     # Run Api command to update Api cache, also for test mode
                     resp = (resp or {}) | (
                         await self.coordinator.client.api.set_power_limit(
@@ -1393,7 +1434,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             ),
                         )
                     # trigger status request to get updated MQTT status if Api was used
-                    if resp and mdev:
+                    if resp and mdev and not skip_mqtt_status:
                         await mdev.status_request(
                             toFile=self.coordinator.client.testmode()
                         )

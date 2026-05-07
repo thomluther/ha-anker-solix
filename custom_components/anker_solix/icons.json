@@ -40,6 +40,9 @@
             },
             "restart_device": {
                 "default": "mdi:power"
+            },
+            "shutdown_device": {
+                "default": "mdi:power-plug-off"
             }
         },
         "binary_sensor": {
@@ -133,6 +136,13 @@
                     "off": "mdi:power-plug-off",
                     "on": "mdi:power-plug-battery"
                 }
+            },
+            "dc_generator_plug_status": {
+                "default": "mdi:help-box-outline",
+                "state": {
+                    "off": "mdi:power-plug-off",
+                    "on": "mdi:generator-portable"
+                }
             }
         },
         "datetime": {
@@ -191,6 +201,12 @@
             },
             "solar_evcharge_min_current": {
                 "default": "mdi:arrow-collapse-down"
+            },
+            "device_timeout": {
+                "default": "mdi:clock-end"
+            },
+            "charge_voltage_limit": {
+                "default": "mdi:speedometer"
             }
         },
         "select": {
@@ -248,6 +264,9 @@
             },
             "max_soc": {
                 "default": "mdi:battery-heart"
+            },
+            "backup_soc": {
+                "default": "mdi:battery-lock"
             },
             "temp_unit": {
                 "default": "mdi:temperature-celsius",
@@ -341,6 +360,15 @@
                     "different": "mdi:calendar-weekend"
                 }
             },
+            "car_battery_type": {
+                "default": "mdi:car-battery"
+            },
+            "car_battery_voltage_type": {
+                "default": "mdi:car-battery"
+            },
+            "charge_power_limit": {
+                "default": "mdi:speedometer"
+            },
             "vehicle_brand": {
                 "default": "mdi:car-info"
             },
@@ -394,6 +422,12 @@
             "state_of_health": {
                 "default": "mdi:battery-heart-variant"
             },
+            "bat_charge_power": {
+                "default": "mdi:battery-plus-variant"
+            },
+            "bat_discharge_power": {
+                "default": "mdi:battery-minus-variant"
+            },
             "battery_power_signed": {
                 "default": "mdi:battery-charging"
             },
@@ -445,6 +479,9 @@
             "other_solar_power": {
                 "default": "mdi:solar-panel"
             },
+            "solar_power_total": {
+                "default": "mdi:solar-power"
+            },
             "input_power": {
                 "default": "mdi:solar-power"
             },
@@ -458,6 +495,24 @@
                 "default": "mdi:solar-panel"
             },
             "solar_power_4": {
+                "default": "mdi:solar-panel"
+            },
+            "device_1_pv_power": {
+                "default": "mdi:solar-panel"
+            },
+            "device_2_pv_power": {
+                "default": "mdi:solar-panel"
+            },
+            "device_3_pv_power": {
+                "default": "mdi:solar-panel"
+            },
+            "device_4_pv_power": {
+                "default": "mdi:solar-panel"
+            },
+            "device_5_pv_power": {
+                "default": "mdi:solar-panel"
+            },
+            "device_6_pv_power": {
                 "default": "mdi:solar-panel"
             },
             "dc_input_power": {
@@ -480,6 +535,15 @@
             },
             "grid_to_battery_power": {
                 "default": "mdi:power-plug-battery"
+            },
+            "generator_power": {
+                "default": "mdi:generator-portable"
+            },
+            "generator_to_home_power": {
+                "default": "mdi:home-import-outline"
+            },
+            "generator_to_battery_power": {
+                "default": "mdi:fuel-cell"
             },
             "micro_inverter_power": {
                 "default": "mdi:sine-wave"
@@ -717,6 +781,7 @@
                 "default": "mdi:battery-alert-variant",
                 "state": {
                     "standby": "mdi:battery-off",
+                    "inactive": "mdi:battery-off",
                     "charging": "mdi:battery-plus",
                     "discharging": "mdi:battery-minus",
                     "sleep": "mdi:battery-clock-outline",
@@ -728,6 +793,7 @@
                 "state": {
                     "inactive": "mdi:battery-off",
                     "charging": "mdi:battery-plus",
+                    "discharging": "mdi:battery-minus",
                     "unknown": "mdi:battery-unknown"
                 }
             },
@@ -915,6 +981,9 @@
             },
             "total_saving": {
                 "default": "mdi:hand-coin"
+            },
+            "battery_voltage": {
+                "default": "mdi:car-battery"
             }
         },
         "switch": {
@@ -1053,6 +1122,20 @@
                 "state": {
                     "on": "mdi:car-select",
                     "off": "mdi:car"
+                }
+            },
+            "device_switch": {
+                "default": "mdi:power",
+                "state": {
+                    "on": "mdi:power",
+                    "off": "mdi:power-sleep"
+                }
+            },
+            "device_timeout_switch": {
+                "default": "mdi:timer-remove-outline",
+                "state": {
+                    "on": "mdi:timer-play-outline",
+                    "off": "mdi:timer-remove-outline"
                 }
             }
         },

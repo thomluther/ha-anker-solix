@@ -12,6 +12,7 @@ from .helpers import round_by_factor
 from .mqttcmdmap import (
     BYTES,
     COMMAND_LIST,
+    EMBEDDED,
     FACTOR,
     LENGTH,
     NAME,
@@ -154,33 +155,64 @@ class DeviceHexDataField:
             hexbytes = bytearray(hexbytes)
         if isinstance(hexbytes, bytearray) and len(hexbytes) >= 2:
             self.f_name = hexbytes[0:1]
-            # test if 2 byte LE length for str fields
+            # test if 2 byte LE length for str or bin fields
             self.f_length = int.from_bytes(hexbytes[1:3], byteorder="little")
             if (
-                hexbytes[3:4] == DeviceHexDataTypes.str.value
-                and 255 < self.f_length <= len(hexbytes) - 4
+                hexbytes[3:4]
+                in [DeviceHexDataTypes.str.value, DeviceHexDataTypes.bin.value]
+                and 3 < self.f_length <= len(hexbytes) - 4
             ):
-                try:
-                    # try string decoding
-                    hexbytes[4 : 3 + self.f_length].decode()
-                    self._len_bytes = 2
-                except UnicodeDecodeError:
-                    self.f_length = int.from_bytes(hexbytes[1:2])
+                if hexbytes[3:4] == DeviceHexDataTypes.bin.value:
+                    next_byte = hexbytes[3 + self.f_length : 4 + self.f_length]
+                    # next byte must be larger for next field name or last byte
+                    if next_byte and (
+                        len(hexbytes) - self.f_length == 4
+                        or (
+                            next_byte > self.f_name
+                            and len(hexbytes) - self.f_length >= 3
+                        )
+                    ):
+                        self._len_bytes = 2
+                    else:
+                        self.f_length = int.from_bytes(hexbytes[1:2])
+                else:
+                    try:
+                        # try string decoding
+                        hexbytes[4 : 3 + self.f_length].decode()
+                        self._len_bytes = 2
+                    except UnicodeDecodeError:
+                        self.f_length = int.from_bytes(hexbytes[1:2])
             else:
                 self.f_length = int.from_bytes(hexbytes[1:2])
             if 0 < self.f_length <= len(hexbytes) - 2:
-                if self.f_length > 1 and (
-                    bytes(hexbytes[2:3]) < b"10" or self.f_length > 1
+                if (
+                    self.f_length > 1
+                    and bytes(hexbytes[1 + self._len_bytes : 2 + self._len_bytes])
+                    < b"10"
                 ):
                     if self._len_bytes > 1:
                         # 2 byte length with str field
-                        self.f_value = hexbytes[4 : 3 + self.f_length]
                         self.f_type = hexbytes[3:4]
+                        self.f_value = hexbytes[4 : 3 + self.f_length]
                     else:
                         # field with value type
                         self.f_type = hexbytes[2:3]
                         self.f_value = hexbytes[3 : 2 + self.f_length]
                     self._check_json()
+                    # check if str field length is correct or missing last byte
+                    if self.f_type == DeviceHexDataTypes.str.value and (
+                        next_byte := hexbytes[
+                            1 + self._len_bytes + self.f_length : 2
+                            + self._len_bytes
+                            + self.f_length
+                        ]
+                    ):
+                        if next_byte < self.f_name:
+                            # byte is no fieldsname, include in string if decodable
+                            with contextlib.suppress(UnicodeDecodeError):
+                                next_byte.decode()
+                                self.f_length += 1
+                                self.f_value += next_byte
                 else:
                     # field with single byte value
                     self.f_type = bytearray()
@@ -331,7 +363,7 @@ class DeviceHexDataField:
                 sile = ""
                 fle = ""
                 dle = ""
-            s = f"{Color.RED}{self.f_name.hex()!s:<2}{Color.OFF} {self.f_length.to_bytes(length=(self.f_length.bit_length() + 7) // 8, byteorder='little').hex():>4} "
+            s = f"{Color.RED}{self.f_name.hex()!s:<2}{Color.OFF} {self.f_length.to_bytes(length=self._len_bytes, byteorder='little').hex():>4} "
             s += f"{tcol}{(self.f_type.hex().replace('fe', '00') or '--')!s:<4}{Color.OFF}  {self.f_value.hex(':')}\n"
             s += f"{'└->':<3}{self.f_length!s:>4} {tcol}{typ!s:<5}{Color.OFF} "
             s += f"{tcol if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''}{uile:>15}{Color.OFF if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''} "
@@ -385,8 +417,18 @@ class DeviceHexDataField:
                         factor,
                     )
             case DeviceHexDataTypes.sile.value:
+                # sile can also be a 2 byte str for some fields (weird), this should then be described like a binary field
+                if fieldmap.get(BYTES, {}):
+                    # extract found bytes description like DeviceHexDataTypes.bin
+                    values.update(
+                        self.extract_value(
+                            hexdata=hexdata,
+                            fieldtype=DeviceHexDataTypes.bin.value,
+                            fieldmap=fieldmap,
+                        )
+                    )
                 # 2 bytes fix, signed int LE (Base type)
-                if name := fieldmap.get(NAME):
+                elif name := fieldmap.get(NAME):
                     if name.endswith("_time"):
                         # special case for 2 bytes indicating minutes, hours
                         value = convert_time(hexdata) or ""
@@ -878,6 +920,8 @@ class DeviceHexData:
             if self.msg_fields:
                 s += f"\n{'Fld':<3}{'Len':>4} {'Type':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
                 fieldmap = self._get_fieldmap()
+                embedded_name = fieldmap.get(EMBEDDED)
+                embedded_json = {}
                 if cmd_list := fieldmap.get(COMMAND_LIST):
                     # extract the maps from all nested commands, they should not have duplicate field names
                     fieldmap = {
@@ -909,6 +953,13 @@ class DeviceHexData:
                             f"{('' if divider is None else ' (' + VALUE_DIVIDER + ' ' + str(divider) + ')')}"
                             f"{('' if signed is None else ' (' + SIGNED + ' ' + str(signed) + ')')}{Color.OFF}"
                         )
+                        if embedded_name:
+                            if f.f_type == DeviceHexDataTypes.str.value:
+                                embedded_json[name] = f.f_value.decode(
+                                    errors="ignore"
+                                ).strip()
+                            elif f.f_type == DeviceHexDataTypes.bin.value:
+                                embedded_json[name] = f.f_value.hex()
                     elif f.json:
                         s += DeviceJsonData(
                             model=self.model,
@@ -916,6 +967,18 @@ class DeviceHexData:
                             fieldname=f.f_name,
                             data=f.json,
                         ).decode_fields()
+                        if embedded_name:
+                            embedded_json = f.json
+                # Check if embedded message and decode also the embedded message
+                if embedded_json:
+                    if isinstance(embedded_json, dict):
+                        embedded_json = [embedded_json]
+                    for item in embedded_json:
+                        s += f"\n{Color.YELLOW}EMBEDDED MESSAGE DECODING FOR DEVICE: {Color.CYAN}{item.get('sn', '')}{Color.OFF}\n"
+                        s += DeviceHexData(
+                            model=item.get("type", ""), hexbytes=item.get(embedded_name)
+                        ).decode()
+                    s += f"\n{Color.YELLOW}END OF EMBEDDED MESSAGE{Color.OFF}"
                 s += f"\n{80 * '-'}"
         else:
             s = ""
@@ -929,6 +992,9 @@ class DeviceHexData:
         """Return a dictionary with extracted values based on defined field mappings."""
         values = {}
         fieldmap = self._get_fieldmap()
+        # skip extraction if embedded message
+        if fieldmap.get(EMBEDDED):
+            return values
         if cmd_list := fieldmap.get(COMMAND_LIST):
             # extract the maps from all nested commands, they should not have duplicate field names
             fieldmap = {
@@ -1037,7 +1103,8 @@ class DeviceJsonData:
         if self.hexbytes:
             self.length = len(self.hexbytes)
             with contextlib.suppress(UnicodeDecodeError):
-                self.data = json.loads(self.hexbytes.decode())
+                if not self.data:
+                    self.data = json.loads(self.hexbytes.decode())
         else:
             # update length and hexbytes if not initialized via hexbytes
             self._update_hexbytes()
@@ -1059,7 +1126,7 @@ class DeviceJsonData:
     def _update_hexbytes(self) -> None:
         # init hexbytes
         self.hexbytes = bytearray()
-        if not isinstance(self.data, dict):
+        if not isinstance(self.data, dict | list):
             self.data = {}
         if self.data:
             self.hexbytes = bytearray(
@@ -1184,52 +1251,47 @@ class DeviceJsonData:
         nested_fields = []
         list_fields = 0
         isnested = False
-        if fieldmap := self._get_fieldmap():
-            # extract nested json field from mapping for decoding
-            fieldmap = fieldmap.copy().pop("json", fieldmap)
-            if "data" in self.data:
-                # extend fieldmap with field descriptions under type_data map
-                if isinstance(m_type := self.data.get("type"), str):
-                    fieldmap |= fieldmap.copy().pop(f"{m_type}_data", {})
-                else:
-                    fieldmap |= fieldmap.copy().pop("data", {})
-            # search each json key in fieldmap,
-            for i, line in enumerate(lines):
-                # check if nested dict ends
-                if len(nested_fields) > 0 and line.endswith("}"):
-                    nested_fields = nested_fields[:-1]
+        fieldmap = self._get_fieldmap()
+        # extract nested json field from mapping for decoding
+        fieldmap = fieldmap.copy().pop("json", fieldmap)
+        if "data" in self.data:
+            # extend fieldmap with field descriptions under type_data map
+            if isinstance(m_type := self.data.get("type"), str):
+                fieldmap |= fieldmap.copy().pop(f"{m_type}_data", {})
+            else:
+                fieldmap |= fieldmap.copy().pop("data", {})
+        # search each json key in fieldmap,
+        for i, line in enumerate(lines):
+            # check if nested dict ends
+            if len(nested_fields) > 0 and line.endswith("}"):
+                nested_fields = nested_fields[:-1]
+                isnested = len(nested_fields) > 1 or not (nested_fields[-1:] or [""])[
+                    0
+                ].endswith("data")
+            elif line.endswith("]"):
+                list_fields -= 1
+            if key := (line.split('"')[1:2] or [""])[0]:
+                # check if nested dict starts
+                if line.endswith("{"):
+                    nested_fields.append(key)
                     isnested = len(nested_fields) > 1 or not (
                         nested_fields[-1:] or [""]
                     )[0].endswith("data")
-                elif line.endswith("]"):
-                    list_fields -= 1
-                if key := (line.split('"')[1:2] or [""])[0]:
-                    # check if nested dict starts
-                    if line.endswith("{"):
-                        nested_fields.append(key)
-                        isnested = len(nested_fields) > 1 or not (
-                            nested_fields[-1:] or [""]
-                        )[0].endswith("data")
-                    # check if list starts
-                    if (
-                        not isnested
-                        and list_fields <= 0
-                        and (fld := fieldmap.get(key, {}))
-                    ):
-                        value = self.data.get(key)
-                        name = fld.get(NAME) or ""
-                        factor = fld.get(FACTOR) or None
-                        divider = fld.get(VALUE_DIVIDER) or None
-                        if isinstance(value, float | int) and "timestamp" in str(name):
-                            name = f"{name} ({datetime.fromtimestamp(convert_timestamp(value, ms=(isinstance(value, float)))).strftime('%Y-%m-%d %H:%M:%S')})"
-                        if name:
-                            lines[i] = (
-                                f"{line}  {Color.CYAN} --> {name}{('' if factor is None else ' (' + FACTOR + ' ' + str(factor) + ')')}"
-                                f"{('' if divider is None else ' (' + VALUE_DIVIDER + ' ' + str(divider) + ')')}{Color.OFF}"
-                            )
-                if line.endswith("["):
-                    list_fields += 1
-
+                # check if list starts
+                if not isnested and list_fields <= 0 and (fld := fieldmap.get(key, {})):
+                    value = self.data.get(key)
+                    name = fld.get(NAME) or ""
+                    factor = fld.get(FACTOR) or None
+                    divider = fld.get(VALUE_DIVIDER) or None
+                    if isinstance(value, float | int) and "timestamp" in str(name):
+                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(value, ms=(isinstance(value, float)))).strftime('%Y-%m-%d %H:%M:%S')})"
+                    if name:
+                        lines[i] = (
+                            f"{line}  {Color.CYAN} --> {name}{('' if factor is None else ' (' + FACTOR + ' ' + str(factor) + ')')}"
+                            f"{('' if divider is None else ' (' + VALUE_DIVIDER + ' ' + str(divider) + ')')}{Color.OFF}"
+                        )
+            if line.endswith("["):
+                list_fields += 1
         return "\n".join(lines)
 
     def asdict(self) -> dict:
@@ -1244,6 +1306,9 @@ class DeviceJsonData:
     def extract_values(self, data: dict, fieldmap: dict) -> dict[str, Any]:
         """Get described json values in fieldmap from provided data."""
         values = {}
+        # skip extraction if embedded message
+        if fieldmap.get(EMBEDDED):
+            return values
         if isinstance(data, dict) and isinstance(fieldmap, dict):
             # get map
             for key, value in [
@@ -1427,12 +1492,13 @@ class MqttCmdValidator:
             )
         if self.options:
             if isinstance(self.options, list) and value not in self.options:
+                # check if value is found in list
                 s = "'" if isinstance(value, str) else ""
                 raise ValueError(
                     f"Provided value is no valid option {self.options!s}, got: {s}{value!s}{s}"
                 )
             if isinstance(self.options, dict):
-                # check if value is found in dict or list and get corresponding parameter value
+                # check if value is found in dict and get corresponding parameter value
                 if value in self.options:
                     parmvalue = self.options.get(value)
                 elif isinstance(value, str) and value.lower() in self.options:
@@ -1454,11 +1520,17 @@ class MqttCmdValidator:
                 raise ValueError(
                     f"Provided value is out of range ({self.min!s}-{self.max!s}{', step ' + str(self.step) if self.step not in [0, 1] else ''}), got: {parmvalue!s}"
                 )
-            # round value to step with same decimals
-            if self.step:
-                parmvalue = round_by_factor(
-                    self.step * round(parmvalue / self.step),
-                    self.step,
+            # round value to step with same decimals if not at limits to support partial last step
+            if self.step and self.min < parmvalue < self.max:
+                parmvalue = max(
+                    self.min,
+                    min(
+                        self.max,
+                        round_by_factor(
+                            self.step * round(parmvalue / self.step),
+                            self.step,
+                        ),
+                    ),
                 )
         elif self.min or self.max:
             # String value for expected number value

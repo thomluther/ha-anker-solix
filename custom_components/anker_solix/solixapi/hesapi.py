@@ -296,7 +296,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             self.devices.update({str(sn): device})
         return sn
 
-    async def update_sites(
+    async def update_sites(  # noqa: C901
         self,
         siteId: str | None = None,
         fromFile: bool = False,
@@ -854,6 +854,25 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         """Get the last 5 min average power from energy statistics.
 
         Example data:
+        {"totalEnergy": "3.29","totalEnergyUnit": "KWh","totalImportedEnergy": "16.98","totalImportedEnergyUnit": "KWh","totalExportedEnergy": "3.29",
+            "totalExportedEnergyUnit": "KWh","power": [
+                {"time": "00:00","powerInfos": [{"type": "hes","value": "-5.91","valuePtr": "-5.91","isFix": false}]},
+                {"time": "00:05","powerInfos": [{"type": "hes","value": "-5.88","valuePtr": "-5.88","isFix": false}]},
+                ...
+                {"time": "23:55","powerInfos": [{"type": "hes","value": "0.00","valuePtr": null,"isFix": true}]}],
+            "powerUnit": "kw","chargeLevel": [
+                {"value": "25","time": "00:00","valuePtr": "25","isFix": false},
+                {"value": "27","time": "00:05","valuePtr": "27","isFix": false},
+                ...
+                {"value": "0","time": "23:55","valuePtr": null,"isFix": true}],
+            "energy": null,"energyUnit": "","aggregates": [
+                {"title": "Photovoltaic power supply","value": "0.38","unit": "KWh","type": "solar","percent": "2%","imported": true,"showPercent": "2%","subItemList": null},
+                {"title": "Grid power consumption","value": "16.60","unit": "KWh","type": "grid","percent": "98%","imported": true,"showPercent": "98%","subItemList": null},
+                {"title": "Load power consumption","value": "3.27","unit": "KWh","type": "home","percent": "99%","imported": false,"showPercent": "99%","subItemList": [
+                    {"title": "EV Charger Consumption","value": "0.00","unit": "KWh","type": "evCharger","percent": "0%","showPercent": "0%"},
+                    {"title": "Other Loads Consumption","value": "3.27","unit": "KWh","type": "otherLoad","percent": "100%","showPercent": "100%"}]},
+                {"title": "Sold power","value": "0.02","unit": "KWh","type": "grid","percent": "1%","imported": false,"showPercent": "1%","subItemList": null}],
+            "totalForecastEnergy": "","forecastPower": null}
         """
         # get existing data first from site details to check if requery must be done
         avg_data = (self.devices.get(mainSn) or {}).get("average_power") or {}
@@ -992,7 +1011,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 if avg_data["valid_time"] == old_valid:
                     # Skip remaining queries if valid time did not change
                     return avg_data
-                avg_data["power_unit"] = data.get("powerUnit")
+                if unit := data.get("powerUnit"):
+                    avg_data["power_unit"] = str(unit).lower().replace("w","W")
                 # extract power values only if offset to last valid SOC entry was found
                 if offset.total_seconds() != 0 and (
                     powerlist := [
