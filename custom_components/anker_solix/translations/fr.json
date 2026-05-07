@@ -1003,66 +1003,102 @@
             "device_1_pv_power": {
                 "name": "Appareil 1 puissance solaire",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "Solaire PV 1",
-                        "pv_2_power": "Solaire PV 2",
-                        "pv_3_power": "Solaire PV 3",
-                        "pv_4_power": "Solaire PV 4"
+                    "pv_1_power": {
+                        "name": "Solaire PV 1"
+                    },
+                    "pv_2_power": {
+                        "name": "Solaire PV 2"
+                    },
+                    "pv_3_power": {
+                        "name": "Solaire PV 3"
+                    },
+                    "pv_4_power": {
+                        "name": "Solaire PV 4"
                     }
                 }
             },
             "device_2_pv_power": {
                 "name": "Appareil 2 puissance solaire",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "Solaire PV 1",
-                        "pv_2_power": "Solaire PV 2",
-                        "pv_3_power": "Solaire PV 3",
-                        "pv_4_power": "Solaire PV 4"
+                    "pv_1_power": {
+                        "name": "Solaire PV 1"
+                    },
+                    "pv_2_power": {
+                        "name": "Solaire PV 2"
+                    },
+                    "pv_3_power": {
+                        "name": "Solaire PV 3"
+                    },
+                    "pv_4_power": {
+                        "name": "Solaire PV 4"
                     }
                 }
             },
             "device_3_pv_power": {
                 "name": "Appareil 3 puissance solaire",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "Solaire PV 1",
-                        "pv_2_power": "Solaire PV 2",
-                        "pv_3_power": "Solaire PV 3",
-                        "pv_4_power": "Solaire PV 4"
+                    "pv_1_power": {
+                        "name": "Solaire PV 1"
+                    },
+                    "pv_2_power": {
+                        "name": "Solaire PV 2"
+                    },
+                    "pv_3_power": {
+                        "name": "Solaire PV 3"
+                    },
+                    "pv_4_power": {
+                        "name": "Solaire PV 4"
                     }
                 }
             },
             "device_4_pv_power": {
                 "name": "Appareil 4 puissance solaire",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "Solaire PV 1",
-                        "pv_2_power": "Solaire PV 2",
-                        "pv_3_power": "Solaire PV 3",
-                        "pv_4_power": "Solaire PV 4"
+                    "pv_1_power": {
+                        "name": "Solaire PV 1"
+                    },
+                    "pv_2_power": {
+                        "name": "Solaire PV 2"
+                    },
+                    "pv_3_power": {
+                        "name": "Solaire PV 3"
+                    },
+                    "pv_4_power": {
+                        "name": "Solaire PV 4"
                     }
                 }
             },
             "device_5_pv_power": {
                 "name": "Appareil 5 puissance solaire",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "Solaire PV 1",
-                        "pv_2_power": "Solaire PV 2",
-                        "pv_3_power": "Solaire PV 3",
-                        "pv_4_power": "Solaire PV 4"
+                    "pv_1_power": {
+                        "name": "Solaire PV 1"
+                    },
+                    "pv_2_power": {
+                        "name": "Solaire PV 2"
+                    },
+                    "pv_3_power": {
+                        "name": "Solaire PV 3"
+                    },
+                    "pv_4_power": {
+                        "name": "Solaire PV 4"
                     }
                 }
             },
             "device_6_pv_power": {
                 "name": "Appareil 6 puissance solaire",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "Solaire PV 1",
-                        "pv_2_power": "Solaire PV 2",
-                        "pv_3_power": "Solaire PV 3",
-                        "pv_4_power": "Solaire PV 4"
+                    "pv_1_power": {
+                        "name": "Solaire PV 1"
+                    },
+                    "pv_2_power": {
+                        "name": "Solaire PV 2"
+                    },
+                    "pv_3_power": {
+                        "name": "Solaire PV 3"
+                    },
+                    "pv_4_power": {
+                        "name": "Solaire PV 4"
                     }
                 }
             },

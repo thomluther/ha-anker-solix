@@ -1003,66 +1003,102 @@
             "device_1_pv_power": {
                 "name": "Device 1 PV power",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 power",
-                        "pv_2_power": "PV 2 power",
-                        "pv_3_power": "PV 3 power",
-                        "pv_4_power": "PV 4 power"
+                    "pv_1_power": {
+                        "name": "PV 1 power"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 power"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 power"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 power"
                     }
                 }
             },
             "device_2_pv_power": {
                 "name": "Device 2 PV power",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 power",
-                        "pv_2_power": "PV 2 power",
-                        "pv_3_power": "PV 3 power",
-                        "pv_4_power": "PV 4 power"
+                    "pv_1_power": {
+                        "name": "PV 1 power"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 power"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 power"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 power"
                     }
                 }
             },
             "device_3_pv_power": {
                 "name": "Device 3 PV power",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 power",
-                        "pv_2_power": "PV 2 power",
-                        "pv_3_power": "PV 3 power",
-                        "pv_4_power": "PV 4 power"
+                    "pv_1_power": {
+                        "name": "PV 1 power"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 power"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 power"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 power"
                     }
                 }
             },
             "device_4_pv_power": {
                 "name": "Device 4 PV power",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 power",
-                        "pv_2_power": "PV 2 power",
-                        "pv_3_power": "PV 3 power",
-                        "pv_4_power": "PV 4 power"
+                    "pv_1_power": {
+                        "name": "PV 1 power"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 power"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 power"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 power"
                     }
                 }
             },
             "device_5_pv_power": {
                 "name": "Device 5 PV power",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 power",
-                        "pv_2_power": "PV 2 power",
-                        "pv_3_power": "PV 3 power",
-                        "pv_4_power": "PV 4 power"
+                    "pv_1_power": {
+                        "name": "PV 1 power"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 power"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 power"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 power"
                     }
                 }
             },
             "device_6_pv_power": {
                 "name": "Device 6 PV power",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 power",
-                        "pv_2_power": "PV 2 power",
-                        "pv_3_power": "PV 3 power",
-                        "pv_4_power": "PV 4 power"
+                    "pv_1_power": {
+                        "name": "PV 1 power"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 power"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 power"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 power"
                     }
                 }
             },

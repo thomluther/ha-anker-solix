@@ -1003,66 +1003,102 @@
             "device_1_pv_power": {
                 "name": "Gerät 1 Solarleistung",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 Leistung",
-                        "pv_2_power": "PV 2 Leistung",
-                        "pv_3_power": "PV 3 Leistung",
-                        "pv_4_power": "PV 4 Leistung"
+                    "pv_1_power": {
+                        "name": "PV 1 Leistung"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 Leistung"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 Leistung"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 Leistung"
                     }
                 }
             },
             "device_2_pv_power": {
                 "name": "Gerät 2 Solarleistung",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 Leistung",
-                        "pv_2_power": "PV 2 Leistung",
-                        "pv_3_power": "PV 3 Leistung",
-                        "pv_4_power": "PV 4 Leistung"
+                    "pv_1_power": {
+                        "name": "PV 1 Leistung"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 Leistung"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 Leistung"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 Leistung"
                     }
                 }
             },
             "device_3_pv_power": {
                 "name": "Gerät 3 Solarleistung",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 Leistung",
-                        "pv_2_power": "PV 2 Leistung",
-                        "pv_3_power": "PV 3 Leistung",
-                        "pv_4_power": "PV 4 Leistung"
+                    "pv_1_power": {
+                        "name": "PV 1 Leistung"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 Leistung"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 Leistung"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 Leistung"
                     }
                 }
             },
             "device_4_pv_power": {
                 "name": "Gerät 4 Solarleistung",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 Leistung",
-                        "pv_2_power": "PV 2 Leistung",
-                        "pv_3_power": "PV 3 Leistung",
-                        "pv_4_power": "PV 4 Leistung"
+                    "pv_1_power": {
+                        "name": "PV 1 Leistung"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 Leistung"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 Leistung"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 Leistung"
                     }
                 }
             },
             "device_5_pv_power": {
                 "name": "Gerät 5 Solarleistung",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 Leistung",
-                        "pv_2_power": "PV 2 Leistung",
-                        "pv_3_power": "PV 3 Leistung",
-                        "pv_4_power": "PV 4 Leistung"
+                    "pv_1_power": {
+                        "name": "PV 1 Leistung"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 Leistung"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 Leistung"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 Leistung"
                     }
                 }
             },
             "device_6_pv_power": {
                 "name": "Gerät 6 Solarleistung",
                 "state_attributes": {
-                    "name": {
-                        "pv_1_power": "PV 1 Leistung",
-                        "pv_2_power": "PV 2 Leistung",
-                        "pv_3_power": "PV 3 Leistung",
-                        "pv_4_power": "PV 4 Leistung"
+                    "pv_1_power": {
+                        "name": "PV 1 Leistung"
+                    },
+                    "pv_2_power": {
+                        "name": "PV 2 Leistung"
+                    },
+                    "pv_3_power": {
+                        "name": "PV 3 Leistung"
+                    },
+                    "pv_4_power": {
+                        "name": "PV 4 Leistung"
                     }
                 }
             },
