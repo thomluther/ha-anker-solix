@@ -684,7 +684,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self.sites[siteId] = mysite
         return data
 
-    async def get_avg_power_from_energy(
+    async def get_avg_power_from_energy(  # noqa: C901
         self, siteId: str, fromFile: bool = False
     ) -> dict:
         """Get the last 5 min average power from energy statistics.
@@ -854,7 +854,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     # Skip remaining queries if valid time did not change
                     return avg_data
                 if unit := data.get("powerUnit"):
-                    avg_data["power_unit"] = str(unit).lower().replace("w","W")
+                    avg_data["power_unit"] = str(unit).lower().replace("w", "W")
                 # extract power values only if offset to last valid SOC entry was found
                 if offset.total_seconds() != 0 and (
                     powerlist := [

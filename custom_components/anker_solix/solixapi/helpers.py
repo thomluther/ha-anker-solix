@@ -137,12 +137,6 @@ def get_solix_product_code(sn: str) -> str:
     Rules:
     - 16-digit SN: characters 4-6 (index 3-5, 3 characters)
     - 17-digit SN: characters 4-7 (index 3-6, 4 characters)
-
-    Example:
-        >>> extract_product_code_from_sn("123DMWH4567890123")  # 17-digit
-        'DMWH'
-        >>> extract_product_code_from_sn("123QNA4567890123")   # 16-digit
-        'QNA'
     """
     if isinstance(sn, str):
         sn = sn.strip()
