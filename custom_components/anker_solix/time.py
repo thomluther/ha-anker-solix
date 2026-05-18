@@ -9,7 +9,7 @@ from typing import Any
 
 from homeassistant.components.time import TimeEntity, TimeEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EXCLUDE
+from homeassistant.const import CONF_EXCLUDE, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -62,6 +62,7 @@ DEVICE_TIMES = [
         key="light_off_start_time",
         translation_key="light_off_start_time",
         json_key="light_off_start_time",
+        entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: (
             time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),
@@ -74,6 +75,7 @@ DEVICE_TIMES = [
         key="light_off_end_time",
         translation_key="light_off_end_time",
         json_key="light_off_end_time",
+        entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: (
             time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),
@@ -86,6 +88,7 @@ DEVICE_TIMES = [
         key="week_start_time",
         translation_key="week_start_time",
         json_key="week_start_time",
+        entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: (
             time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),
@@ -98,6 +101,7 @@ DEVICE_TIMES = [
         key="week_end_time",
         translation_key="week_end_time",
         json_key="week_end_time",
+        entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: (
             time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),
@@ -110,6 +114,7 @@ DEVICE_TIMES = [
         key="weekend_start_time",
         translation_key="weekend_start_time",
         json_key="weekend_start_time",
+        entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: (
             time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),
@@ -122,6 +127,7 @@ DEVICE_TIMES = [
         key="weekend_end_time",
         translation_key="weekend_end_time",
         json_key="weekend_end_time",
+        entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: (
             time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
         ),

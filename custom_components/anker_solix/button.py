@@ -100,7 +100,7 @@ DEVICE_BUTTONS = [
         # json key must be available in MQTT cmd options to create and use the button
         json_key="restart",
         device_class=ButtonDeviceClass.RESTART,
-        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_category=EntityCategory.CONFIG,
         # create button only after MQTT data is available
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
         mqtt=True,
@@ -113,7 +113,7 @@ DEVICE_BUTTONS = [
         translation_key="shutdown_device",
         # json key must be available in MQTT cmd options to create and use the button
         json_key="shutdown",
-        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_category=EntityCategory.CONFIG,
         # create button only after MQTT data is available
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
         mqtt=True,

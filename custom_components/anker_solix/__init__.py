@@ -260,7 +260,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle unload of an entry, also triggered when integration is reloaded by UI."""
 
-    # Skip removal of services if no config remains, otherwise they are not registered agin upon new config entry setup
+    # Skip removal of services if no config remains, otherwise they are not registered again upon new config entry setup
+    # See also rules: https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/action-setup
     # other_entries = [
     #     e
     #     for e in hass.config_entries.async_loaded_entries(DOMAIN)
