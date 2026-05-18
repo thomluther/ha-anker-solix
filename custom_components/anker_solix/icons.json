@@ -143,6 +143,13 @@
                     "off": "mdi:power-plug-off",
                     "on": "mdi:generator-portable"
                 }
+            },
+            "mqtt_local_mode": {
+                "default": "mdi:cloud-question-outline",
+                "state": {
+                    "on": "mdi:cloud-cancel-outline",
+                    "off": "mdi:cloud-upload-outline"
+                }
             }
         },
         "datetime": {
@@ -1044,6 +1051,13 @@
             },
             "dc_output_power_switch": {
                 "default": "mdi:record-circle"
+            },
+            "energy_saving_switch": {
+                "default": "mdi:leaf-circle-outline",
+                "state": {
+                    "on": "mdi:leaf-circle",
+                    "off": "mdi:leaf-circle-outline"
+                }
             },
             "ac_fast_charge_switch": {
                 "default": "mdi:power-plug-battery"

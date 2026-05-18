@@ -5,8 +5,6 @@ Specific device classes should be inherited from this base class
 It also provides an MQTT device factory to create correct device class instance depending on specific device
 """
 
-from __future__ import annotations
-
 import contextlib
 from typing import TYPE_CHECKING, Any
 
@@ -308,6 +306,10 @@ class SolixMqttDevice:
             and {s for s in self.api.mqttsession.subscriptions if self.sn in s}
         )
 
+    def is_passive(self) -> bool:
+        """Return actual MQTT control state for device."""
+        return bool(self.device.get("is_passive", False))
+
     def get_cmd_parms(
         self,
         cmd: str,
@@ -450,6 +452,13 @@ class SolixMqttDevice:
                 cmd,
             )
             return None
+        if self.is_passive():
+            self._logger.error(
+                "MQTT device %s (%s) control error - Device is running in local mode",
+                self.sn,
+                self.pn,
+            )
+            return None
         # get all normal command parameters with or without default depending on provided value
         parms = self.get_cmd_parms(cmd=cmd, defaults=value is None)
         if not parm:
@@ -554,7 +563,14 @@ class SolixMqttDevice:
             str | None: String with hex command if sent, None otherwise
 
         """
-        # Generate command hex data
+        # Fail commands if passive
+        if self.is_passive():
+            self._logger.error(
+                "MQTT device %s (%s) cannot be controlled while running in local mode",
+                self.sn,
+                self.pn,
+            )
+            return None
         if not (
             hexdata := generate_mqtt_command(
                 command=command,

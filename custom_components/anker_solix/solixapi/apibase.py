@@ -1,7 +1,5 @@
 """Base Class for interacting with the Anker Power / Solix API."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from datetime import datetime, timedelta
 import json
@@ -16,11 +14,14 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     SolixDefaults,
+    SolixDeviceNames,
     SolixDeviceType,
     SolixPriceProvider,
     SolixPriceTypes,
 )
+from .helpers import get_solix_product_code
 from .mqtt import AnkerSolixMqttSession, MessageCallback
+from .mqttcmdmap import EMBEDDED
 from .session import AnkerSolixClientSession
 
 MqttUpdateCallback = Callable[[str], None]
@@ -457,11 +458,70 @@ class AnkerSolixBaseApi:
     ) -> None:
         """Define callback for MQTT session to update device MQTT data in cache and trigger MQTT update callback for device if registered."""
         if extracted_values and deviceSn:
-            new_values = self.update_device_mqtt(
-                deviceSn=deviceSn, values=extracted_values
-            )
-            if new_values and callable(self._mqtt_update_callback):
-                self._mqtt_update_callback(deviceSn)
+            # handle each device for embedded messages
+            embedded = extracted_values.get(EMBEDDED) or []
+            for device_data in embedded or [extracted_values]:
+                if embedded:
+                    if sn := device_data.get("sn"):
+                        # Note: If files with randomized SNs are used, embedded SNs are not randomized and cannot be mapped to Api cache SNs
+                        # Assign real SN to a random stand alone device that may match for test purposes
+                        if not session.is_connected() and sn not in self.devices:
+                            # try to find previous use of embedded sn
+                            pn = device_data.get("type", "")
+                            code = get_solix_product_code(sn)
+                            edev = (
+                                [
+                                    dev
+                                    for dev in self.devices.values()
+                                    if dev.get("embedded_sn") == sn
+                                ][0:1]
+                                or [""]
+                            )[0] or (
+                                [
+                                    dev
+                                    for dev in self.devices.values()
+                                    if not dev.get("embedded_sn")
+                                    and (
+                                        dev.get("device_code") == code
+                                        or dev.get("device_pn")[:5] == pn
+                                    )
+                                ][0:1]
+                                or [""]
+                            )[0]
+                            if edev:
+                                # switch the serials if mapped device was identified
+                                edev["embedded_sn"] = sn
+                                sn = edev.get("device_sn")
+                        # check if device is in api cache, otherwise create it and set same site id as sending device
+                        main_dev = self.devices.get(deviceSn, {})
+                        if sn not in self.devices:
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "device_pn": (pn := device_data.get("type", "")),
+                                    "alias": (
+                                        (self.account.get("products") or {}).get(pn)
+                                        or {}
+                                    ).get("name")
+                                    or getattr(SolixDeviceNames, pn, ""),
+                                },
+                            )
+                        # Ensure to add/update site id to main device
+                        self._update_dev(
+                            {"device_sn": sn, "is_passive": True},
+                            siteId=main_dev.get("site_id"),
+                        )
+                else:
+                    sn = deviceSn
+                if sn:
+                    new_values = self.update_device_mqtt(
+                        deviceSn=sn,
+                        values=device_data.get(EMBEDDED, {})
+                        if embedded
+                        else device_data,
+                    )
+                    if new_values and callable(self._mqtt_update_callback):
+                        self._mqtt_update_callback(sn)
 
     def update_device_mqtt(  # noqa: C901
         self,
@@ -475,24 +535,38 @@ class AnkerSolixBaseApi:
         updated = False
         dyn_desc = False
         if self.mqttsession:
-            for sn, device in [
-                (sn, device)
-                for sn, device in self.devices.items()
-                if not deviceSn or sn == deviceSn
-            ]:
+            if values and (device := self.devices.get(deviceSn or "")):
+                # update specific device from values
+                devices = [(deviceSn, device)]
+            elif not values and not deviceSn:
+                # update all devices from mqtt session data
+                devices = [(sn, device) for sn, device in self.devices.items()]
+            else:
+                # skip update if either no values or device not found
+                devices = []
+            for sn, device in devices:
                 # get old MQTT data of device
                 device_mqtt = device.get("mqtt_data") or {}
                 oldsize = len(device_mqtt)
-                # oldtime = device_mqtt.get("last_update") or ""
-                # check if newer MQTT data is available from last message timestamp
+                # use values or check if newer MQTT data is available from last message timestamp
                 # use copy of MQTT dict for device because it may be modified upon received messages
                 if (
-                    mqtt := (self.mqttsession.mqtt_data.get(sn) or {}).copy()
-                ) and values:  # and oldtime < (mqtt.get("last_message") or "")
+                    mqtt := (
+                        self.mqttsession.mqtt_data.get(sn)
+                        or self.mqttsession.mqtt_data.get(device.get("embedded_sn"))
+                        or {}
+                    ).copy()
+                ) and (
+                    values
+                    or (device_mqtt.get("last_update") or "")
+                    < (mqtt.get("last_message") or "")
+                ):
                     # cycle through all items and extract what is needed for the device type
                     calc_efficiency = False
                     calc_capacity = False
-                    for key, value in values.items():
+                    # check only received values or all from mqtt session cache
+                    check_values = values or mqtt or {}
+                    for key, value in check_values.items():
                         # Implement device MQTT merge code with key filtering, conversion, consolidation, calculation or dependency updates
                         # skip value update marker for static fields that may be extracted from various messages
                         value_updated = True
@@ -512,7 +586,7 @@ class AnkerSolixBaseApi:
                                     "wifi_name",
                                     "power_panel_sn",  # not used in monitor or HA
                                     "toggle_to_delay_time",  # HA missing, MQTT control not fully described
-                                    "toggle_to_elapsed_time",  # HA missins, MQTT control not fully described
+                                    "toggle_to_elapsed_time",  # HA missing, MQTT control not fully described
                                     "light_off_start_time",
                                     "light_off_end_time",
                                     "week_start_time",
@@ -619,7 +693,7 @@ class AnkerSolixBaseApi:
                             # calculate device PV total if not included in MQTT data
                             if any(
                                 key == f"device_{x}_pv_1_power"
-                                and f"device_{x}_pv_power" not in values
+                                and f"device_{x}_pv_power" not in check_values
                                 for x in range(1, 7)
                             ):
                                 if (
@@ -632,7 +706,9 @@ class AnkerSolixBaseApi:
                                     pv_power = 0
                                     for i in range(1, 5):
                                         pv_power += float(
-                                            values.get(f"device_{idx}_pv_{i}_power")
+                                            check_values.get(
+                                                f"device_{idx}_pv_{i}_power"
+                                            )
                                             or 0
                                         )
                                     device_mqtt[f"device_{idx}_pv_power"] = (
@@ -730,9 +806,9 @@ class AnkerSolixBaseApi:
                             # determine EV charger model 3 phase capability
                             if key == "charging_duration_seconds":
                                 device_mqtt["installed_phases"] = (
-                                    int(values.get("voltage_l1", 0) > 0)
-                                    + int(values.get("voltage_l2", 0) > 0)
-                                    + int(values.get("voltage_l3", 0) > 0)
+                                    int(check_values.get("voltage_l1", 0) > 0)
+                                    + int(check_values.get("voltage_l2", 0) > 0)
+                                    + int(check_values.get("voltage_l3", 0) > 0)
                                 )
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
@@ -741,65 +817,18 @@ class AnkerSolixBaseApi:
                             )
                         # use expansion values only if installed
                         elif (
-                            (
+                            any(
                                 key
                                 in [
-                                    "exp_1_soc",
-                                    "exp_1_temperature",
-                                    "exp_1_soh",
+                                    f"exp_{x}_soc",
+                                    f"exp_{x}_temperature",
+                                    f"exp_{x}_soh",
                                 ]
                                 and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 1
-                                    or float(mqtt.get("exp_1_soc", 0)) > 0
+                                    float(mqtt.get("expansion_packs", 0)) >= x
+                                    or float(mqtt.get(f"exp_{x}_soc", 0)) > 0
                                 )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_2_soc",
-                                    "exp_2_temperature",
-                                    "exp_2_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 2
-                                    or float(mqtt.get("exp_2_soc", 0)) > 0
-                                )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_3_soc",
-                                    "exp_3_temperature",
-                                    "exp_3_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 3
-                                    or float(mqtt.get("exp_3_soc", 0)) > 0
-                                )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_4_soc",
-                                    "exp_4_temperature",
-                                    "exp_4_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 4
-                                    or float(mqtt.get("exp_4_soc", 0)) > 0
-                                )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_5_soc",
-                                    "exp_5_temperature",
-                                    "exp_5_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 5
-                                    or float(mqtt.get("exp_5_soc", 0)) > 0
-                                )
+                                for x in range(1, 7)
                             )
                         ) and str(value).replace("-", "", 1).replace(
                             ".", "", 1
@@ -828,7 +857,9 @@ class AnkerSolixBaseApi:
                                         4: "usba_switch",
                                     }.get(value)
                                 )
-                                and (switch_value := values.get("set_port_switch"))
+                                and (
+                                    switch_value := check_values.get("set_port_switch")
+                                )
                                 is not None
                             ) or (
                                 (
@@ -837,7 +868,11 @@ class AnkerSolixBaseApi:
                                         1: "ac_2_switch",
                                     }.get(value)
                                 )
-                                and (switch_value := values.get("set_ac_port_switch"))
+                                and (
+                                    switch_value := check_values.get(
+                                        "set_ac_port_switch"
+                                    )
+                                )
                                 is not None
                             ):
                                 device_mqtt[switch_name] = switch_value
@@ -958,7 +993,7 @@ class AnkerSolixBaseApi:
                     )
                     for key, item in descs.items():
                         # check if key in message values and compare old state with new state
-                        if values.get(key) is not None and str(
+                        if check_values.get(key) is not None and str(
                             device_mqtt.get(key)
                         ) != str(item.get("last_value", "")):
                             # flag to trigger update if dynamic description value changed

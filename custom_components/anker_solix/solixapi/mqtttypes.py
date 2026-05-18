@@ -823,7 +823,7 @@ class DeviceHexData:
     Last byte is XOR checksum across the full message. Checksum byte is included in header message length
     """
 
-    hexbytes: bytearray = field(default_factory=bytearray)
+    hexbytes: bytearray | bytes | str = field(default_factory=bytearray)
     model: str = ""
     length: int = 0
     msg_header: DeviceHexDataHeader = field(default_factory=DeviceHexDataHeader)
@@ -992,20 +992,45 @@ class DeviceHexData:
         """Return a dictionary with extracted values based on defined field mappings."""
         values = {}
         fieldmap = self._get_fieldmap()
-        # skip extraction if embedded message
-        if fieldmap.get(EMBEDDED):
-            return values
-        if cmd_list := fieldmap.get(COMMAND_LIST):
-            # extract the maps from all nested commands, they should not have duplicate field names
-            fieldmap = {
-                k: v
-                for key, value in fieldmap.items()
-                if key in cmd_list
-                for k, v in value.items()
-            }
-        for key, item in fieldmap.items():
-            if key in self.msg_fields:
-                values.update(self.msg_fields[key].values(fieldmap=item))
+        # check for embedded message first
+        if embedded_name := fieldmap.get(EMBEDDED):
+            embedded_json = {}
+            # get metadata fields for embedded message
+            for f in self.msg_fields.values():
+                if name := fieldmap.get(f.f_name.hex(), {}).get(NAME):
+                    if f.f_type == DeviceHexDataTypes.str.value:
+                        embedded_json[name] = f.f_value.decode(errors="ignore").strip()
+                    elif f.f_type == DeviceHexDataTypes.bin.value:
+                        embedded_json[name] = f.f_value.hex()
+                elif f.f_type == DeviceHexDataTypes.json.value:
+                    embedded_json = f.json
+            if embedded_json:
+                # save embedded messages as list to support multiple if necessary
+                if isinstance(embedded_json, dict):
+                    embedded_json = [embedded_json]
+                values[EMBEDDED] = [
+                    {
+                        "sn": str(sn),
+                        "type": str(tp),
+                        EMBEDDED: DeviceHexData(
+                            model=str(tp), hexbytes=item.get(embedded_name)
+                        ).values(),
+                    }
+                    for item in embedded_json
+                    if (sn := item.get("sn")) and (tp := item.get("type"))
+                ]
+        else:
+            if cmd_list := fieldmap.get(COMMAND_LIST):
+                # extract the maps from all nested commands, they should not have duplicate field names
+                fieldmap = {
+                    k: v
+                    for key, value in fieldmap.items()
+                    if key in cmd_list
+                    for k, v in value.items()
+                }
+            for key, item in fieldmap.items():
+                if key in self.msg_fields:
+                    values.update(self.msg_fields[key].values(fieldmap=item))
         return values
 
     def update_field(self, datafield: DeviceHexDataField) -> None:
@@ -1079,7 +1104,7 @@ class DeviceJsonData:
     Json string
     """
 
-    hexbytes: bytearray = field(default_factory=bytearray)
+    hexbytes: str | bytearray | bytes = field(default_factory=bytearray)
     model: str = ""
     msgtype: str | bytearray | bytes = DeviceHexDataTypes.json.name
     fieldname: str | bytearray | bytes = ""

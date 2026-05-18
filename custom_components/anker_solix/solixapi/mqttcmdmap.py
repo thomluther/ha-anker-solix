@@ -89,6 +89,7 @@ class SolixMqttCommands:
     dc_output_switch: str = "dc_output_switch"
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
     dc_output_timeout_seconds: str = "dc_output_timeout_seconds"
+    energy_saving_switch: str = "energy_saving_switch"
     display_switch: str = "display_switch"
     display_mode_select: str = "display_mode_select"
     display_timeout_seconds: str = "display_timeout_seconds"
@@ -406,6 +407,17 @@ CMD_DC_OUTPUT_TIMEOUT_SEC = (
         },
     }
 )
+
+CMD_ENERGY_SAVING_SWITCH = CMD_COMMON | {
+    # Command: PPS energy/power saving mode setting
+    COMMAND_NAME: SolixMqttCommands.energy_saving_switch,
+    "a2": {
+        NAME: "set_energy_saving_switch",  # Disable (0) | Enable (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "energy_saving_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
 
 CMD_LIGHT_SWITCH = CMD_COMMON | {
     # Command: PPS LED light switch setting

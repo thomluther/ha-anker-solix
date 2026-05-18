@@ -1,7 +1,5 @@
 """Sensor platform for anker_solix."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -30,9 +28,9 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, SupportsResponse, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr, entity_platform
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -59,9 +57,6 @@ from .const import (
     SERVICE_GET_SYSTEM_INFO,
     SERVICE_SET_SOLARBANK_SCHEDULE,
     SERVICE_UPDATE_SOLARBANK_SCHEDULE,
-    SOLARBANK_TIMESLOT_SCHEMA,
-    SOLIX_ENTITY_SCHEMA,
-    SOLIX_WEEKDAY_SCHEMA,
     START_TIME,
     TEST_NUMBERVARIANCE,
     WEEK_DAYS,
@@ -3754,41 +3749,6 @@ async def async_setup_entry(
 
     # create the entities from the list
     async_add_entities(entities)
-
-    # register the entity services
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        name=SERVICE_GET_SYSTEM_INFO,
-        schema=SOLIX_ENTITY_SCHEMA,
-        func=SERVICE_GET_SYSTEM_INFO,
-        required_features=[AnkerSolixEntityFeature.SYSTEM_INFO],
-        supports_response=SupportsResponse.ONLY,
-    )
-    platform.async_register_entity_service(
-        name=SERVICE_GET_SOLARBANK_SCHEDULE,
-        schema=SOLIX_ENTITY_SCHEMA,
-        func=SERVICE_GET_SOLARBANK_SCHEDULE,
-        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
-        supports_response=SupportsResponse.ONLY,
-    )
-    platform.async_register_entity_service(
-        name=SERVICE_CLEAR_SOLARBANK_SCHEDULE,
-        schema=SOLIX_WEEKDAY_SCHEMA,
-        func=SERVICE_CLEAR_SOLARBANK_SCHEDULE,
-        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
-    )
-    platform.async_register_entity_service(
-        name=SERVICE_SET_SOLARBANK_SCHEDULE,
-        schema=SOLARBANK_TIMESLOT_SCHEMA,
-        func=SERVICE_SET_SOLARBANK_SCHEDULE,
-        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
-    )
-    platform.async_register_entity_service(
-        name=SERVICE_UPDATE_SOLARBANK_SCHEDULE,
-        schema=SOLARBANK_TIMESLOT_SCHEMA,
-        func=SERVICE_UPDATE_SOLARBANK_SCHEDULE,
-        required_features=[AnkerSolixEntityFeature.SOLARBANK_SCHEDULE],
-    )
 
 
 class AnkerSolixSensor(CoordinatorEntity, SensorEntity):

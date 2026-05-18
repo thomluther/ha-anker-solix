@@ -1,7 +1,5 @@
 """Define Anker Solix API errors."""
 
-from __future__ import annotations
-
 
 class AnkerSolixError(Exception):
     """Define a base error."""

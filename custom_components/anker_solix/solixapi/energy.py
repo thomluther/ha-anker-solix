@@ -1,6 +1,6 @@
 """Anker Power/Solix Cloud API class energy related methods."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: TID251
 
 from datetime import datetime, time, timedelta
 from pathlib import Path

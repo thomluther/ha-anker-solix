@@ -506,6 +506,13 @@
                     "on": "Eingesteckt",
                     "off": "Getrennt"
                 }
+            },
+            "mqtt_local_mode": {
+                "name": "MQTT lokaler Modus",
+                "state": {
+                    "on": "Active",
+                    "off": "Inactive"
+                }
             }
         },
         "datetime": {
@@ -2656,6 +2663,9 @@
             "dc_output_power_switch": {
                 "name": "DC Ausgang"
             },
+            "energy_saving_switch": {
+                "name": "Energie sparen"
+            },
             "ac_fast_charge_switch": {
                 "name": "Schnellladung"
             },
@@ -3023,6 +3033,9 @@
         },
         "active_testmode": {
             "message": "{entity_id} kann nicht benutzt werden solange die Konfiguration im Testmodus ist"
+        },
+        "local_mode": {
+            "message": "{entity_id} kann nicht benutzt werden solange das Gerät im lokalen Modus läuft"
         },
         "apiusage_deactivated": {
             "message": "{entity_id} kann nicht für die angeforderte Aktion {action_name} benutzt werden solange die Api Nutzung ausgeschaltet ist"

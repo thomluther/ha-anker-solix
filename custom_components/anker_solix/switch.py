@@ -1,7 +1,5 @@
 """Switch platform for anker_solix."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -28,9 +26,8 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant, SupportsResponse, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -51,13 +48,9 @@ from .const import (
     INCLUDE_MQTT,
     LOGGER,
     MQTT_OVERLAY,
-    REQUEST_LINK,
     SERVICE_API_REQUEST,
     SERVICE_EXPORT_SYSTEMS,
     SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
-    SOLIX_BACKUP_CHARGE_SCHEMA,
-    SOLIX_EXPORT_SCHEMA,
-    SOLIX_REQUEST_SCHEMA,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -225,6 +218,14 @@ DEVICE_SWITCHES = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.dc_output_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="energy_saving_switch",
+        translation_key="energy_saving_switch",
+        json_key="energy_saving_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.energy_saving_switch,
     ),
     AnkerSolixSwitchDescription(
         key="ac_charge_switch",
@@ -572,32 +573,6 @@ async def async_setup_entry(
     # create the sensors from the list
     async_add_entities(entities)
 
-    # register the entity services
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        name=SERVICE_EXPORT_SYSTEMS,
-        schema=SOLIX_EXPORT_SCHEMA,
-        func=SERVICE_EXPORT_SYSTEMS,
-        required_features=[AnkerSolixEntityFeature.ACCOUNT_INFO],
-        supports_response=SupportsResponse.ONLY,
-    )
-    platform.async_register_entity_service(
-        name=SERVICE_API_REQUEST,
-        schema=SOLIX_REQUEST_SCHEMA,
-        func=SERVICE_API_REQUEST,
-        description_placeholders={
-            "url": REQUEST_LINK,
-        },
-        required_features=[AnkerSolixEntityFeature.ACCOUNT_INFO],
-        supports_response=SupportsResponse.ONLY,
-    )
-    platform.async_register_entity_service(
-        name=SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
-        schema=SOLIX_BACKUP_CHARGE_SCHEMA,
-        func=SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
-        required_features=[AnkerSolixEntityFeature.AC_CHARGE],
-    )
-
 
 class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
     """anker_solix switch class."""
@@ -797,6 +772,14 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         # Wait until client cache is valid before applying any api change
         await self.coordinator.client.validate_cache()
         mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
+        # raise error if MQTT control but device is passive
+        if self.entity_description.mqtt_cmd and mdev and mdev.is_passive():
+            raise ServiceValidationError(
+                f"'{self.entity_id}' cannot be used while device is running in local mode",
+                translation_domain=DOMAIN,
+                translation_key="local_mode",
+                translation_placeholders={"entity_id": self.entity_id},
+            )
         if self.entity_description.restore:
             LOGGER.info(
                 "%s will be %s",

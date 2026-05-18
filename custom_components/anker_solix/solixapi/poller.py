@@ -1,7 +1,7 @@
 """Data poller modules to create/update Api cache structure for the Anker Power/Solix Cloud API."""
 
 # flake8: noqa: SLF001
-from __future__ import annotations
+from __future__ import annotations  # noqa: TID251
 
 from asyncio import sleep
 import contextlib

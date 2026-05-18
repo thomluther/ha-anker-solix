@@ -717,7 +717,7 @@ A17C2  Solarbank 2 E1600 AC                     Plug-in Home Battery
 A17C3  Solarbank 2 E1600 Plus                   Plug-in Home Battery
 A17C5  Solarbank 3 E2700 Pro                    Plug-in Home Battery
 A17E2  Solarbank Max AC                         Plug-in Home Battery
-XXXXX  Solarbank 4 E5000 Pro                    Plug-in Home Battery
+AE103  Solarbank 4 E5000 Pro                    Plug-in Home Battery
 A17X7  Smart Meter                              Accessory
 A17X8  Smart Plug                               Accessory
 A1903  150W Charging Base                       Charger
@@ -777,252 +777,205 @@ LOGIN_RESPONSE: dict = {
 # Define product codes for device model types that may have different features for supported control options
 PRODUCT_CODES: Final[dict] = {
     "A5191": {
-      "name": "V1 Smart EV Charger",
-      "platform": "Smart EV Charger",
-      "product_codes": {
-        "DK2Z": {
-          "p_code": "DK2Z",
-          "sku": "A5191GZ2",
-          "custom_fields": {
-            "phase": "three",
-            "gunType": "socket",
-            "standard": "eu",
-            "ratedPower": 22,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": True,
-            "second_charging_power": False
-          }
+        "name": "V1 Smart EV Charger",
+        "platform": "Smart EV Charger",
+        "product_codes": {
+            "DK2Z": {
+                "p_code": "DK2Z",
+                "sku": "A5191GZ2",
+                "custom_fields": {
+                    "phase": "three",
+                    "gunType": "socket",
+                    "standard": "eu",
+                    "ratedPower": 22,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": True,
+                    "second_charging_power": False,
+                },
+            },
+            "DJRA": {
+                "p_code": "DJRA",
+                "sku": "A5191GZ3",
+                "custom_fields": {
+                    "phase": "three",
+                    "gunType": "cable",
+                    "standard": "eu",
+                    "ratedPower": 22,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": False,
+                    "second_charging_power": False,
+                },
+            },
+            "DJJN": {
+                "p_code": "DJJN",
+                "sku": "A5191VZ0",
+                "custom_fields": {
+                    "phase": "single",
+                    "gunType": "socket",
+                    "standard": "eu",
+                    "ratedPower": 7.4,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": True,
+                    "second_charging_power": False,
+                },
+            },
+            "DK3A": {
+                "p_code": "DK3A",
+                "sku": "A5191VZ1",
+                "custom_fields": {
+                    "phase": "single",
+                    "gunType": "cable",
+                    "standard": "eu",
+                    "ratedPower": 7.4,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": False,
+                    "second_charging_power": False,
+                },
+            },
+            "DMEY": {
+                "p_code": "DMEY",
+                "sku": "A5191GZ4",
+                "custom_fields": {
+                    "phase": "three",
+                    "gunType": "socket",
+                    "standard": "eu",
+                    "ratedPower": 11,
+                    "delay_start": False,
+                    "ratedCurrent": 16,
+                    "tamper_proof": False,
+                    "certification": ["RoHS", "REACH", "CE"],
+                    "permanent_lock_gun": True,
+                    "second_charging_power": False,
+                },
+            },
+            "DMEZ": {
+                "p_code": "DMEZ",
+                "sku": "A5191GZ7",
+                "custom_fields": {
+                    "phase": "three",
+                    "gunType": "cable",
+                    "standard": "eu",
+                    "ratedPower": 11,
+                    "delay_start": False,
+                    "ratedCurrent": 16,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": False,
+                    "second_charging_power": False,
+                },
+            },
+            "DL4G": {
+                "p_code": "DL4G",
+                "sku": "A5191VZ2",
+                "custom_fields": {
+                    "phase": "single",
+                    "gunType": "socket",
+                    "standard": "uk",
+                    "ratedPower": 7.4,
+                    "delay_start": True,
+                    "ratedCurrent": 32,
+                    "tamper_proof": True,
+                    "certification": ["UKCA", "RoHS", "REACH"],
+                    "permanent_lock_gun": True,
+                    "second_charging_power": True,
+                },
+            },
+            "DKSH": {
+                "p_code": "DKSH",
+                "sku": "A5191VZ3",
+                "custom_fields": {
+                    "phase": "single",
+                    "gunType": "cable",
+                    "standard": "uk",
+                    "ratedPower": 7.4,
+                    "delay_start": True,
+                    "ratedCurrent": 32,
+                    "tamper_proof": True,
+                    "certification": ["UKCA", "RoHS", "REACH"],
+                    "permanent_lock_gun": False,
+                    "second_charging_power": True,
+                },
+            },
+            "DJRC": {
+                "p_code": "DJRC",
+                "sku": "A51913Z0",
+                "custom_fields": {
+                    "phase": "single",
+                    "gunType": "shutter",
+                    "standard": "eu",
+                    "ratedPower": 7.4,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": True,
+                    "second_charging_power": False,
+                },
+            },
+            "DK3C": {
+                "p_code": "DK3C",
+                "sku": "A51913Z1",
+                "custom_fields": {
+                    "phase": "three",
+                    "gunType": "shutter",
+                    "standard": "eu",
+                    "ratedPower": 22,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": True,
+                    "second_charging_power": False,
+                },
+            },
+            "DMNM": {
+                "p_code": "DMNM",
+                "sku": "A5191TZ1",
+                "custom_fields": {
+                    "phase": "single",
+                    "gunType": "cable",
+                    "standard": "eu",
+                    "ratedPower": 7.4,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": False,
+                    "second_charging_power": False,
+                },
+            },
+            "DMNN": {
+                "p_code": "DMNN",
+                "sku": "A5191TZ2",
+                "custom_fields": {
+                    "phase": "three",
+                    "gunType": "cable",
+                    "standard": "eu",
+                    "ratedPower": 22,
+                    "delay_start": False,
+                    "ratedCurrent": 32,
+                    "tamper_proof": False,
+                    "certification": ["CE", "RoHS", "REACH"],
+                    "permanent_lock_gun": False,
+                    "second_charging_power": False,
+                },
+            },
         },
-        "DJRA": {
-          "p_code": "DJRA",
-          "sku": "A5191GZ3",
-          "custom_fields": {
-            "phase": "three",
-            "gunType": "cable",
-            "standard": "eu",
-            "ratedPower": 22,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": False,
-            "second_charging_power": False
-          }
-        },
-        "DJJN": {
-          "p_code": "DJJN",
-          "sku": "A5191VZ0",
-          "custom_fields": {
-            "phase": "single",
-            "gunType": "socket",
-            "standard": "eu",
-            "ratedPower": 7.4,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": True,
-            "second_charging_power": False
-          }
-        },
-        "DK3A": {
-          "p_code": "DK3A",
-          "sku": "A5191VZ1",
-          "custom_fields": {
-            "phase": "single",
-            "gunType": "cable",
-            "standard": "eu",
-            "ratedPower": 7.4,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": False,
-            "second_charging_power": False
-          }
-        },
-        "DMEY": {
-          "p_code": "DMEY",
-          "sku": "A5191GZ4",
-          "custom_fields": {
-            "phase": "three",
-            "gunType": "socket",
-            "standard": "eu",
-            "ratedPower": 11,
-            "delay_start": False,
-            "ratedCurrent": 16,
-            "tamper_proof": False,
-            "certification": [
-              "RoHS",
-              "REACH",
-              "CE"
-            ],
-            "permanent_lock_gun": True,
-            "second_charging_power": False
-          }
-        },
-        "DMEZ": {
-          "p_code": "DMEZ",
-          "sku": "A5191GZ7",
-          "custom_fields": {
-            "phase": "three",
-            "gunType": "cable",
-            "standard": "eu",
-            "ratedPower": 11,
-            "delay_start": False,
-            "ratedCurrent": 16,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": False,
-            "second_charging_power": False
-          }
-        },
-        "DL4G": {
-          "p_code": "DL4G",
-          "sku": "A5191VZ2",
-          "custom_fields": {
-            "phase": "single",
-            "gunType": "socket",
-            "standard": "uk",
-            "ratedPower": 7.4,
-            "delay_start": True,
-            "ratedCurrent": 32,
-            "tamper_proof": True,
-            "certification": [
-              "UKCA",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": True,
-            "second_charging_power": True
-          }
-        },
-        "DKSH": {
-          "p_code": "DKSH",
-          "sku": "A5191VZ3",
-          "custom_fields": {
-            "phase": "single",
-            "gunType": "cable",
-            "standard": "uk",
-            "ratedPower": 7.4,
-            "delay_start": True,
-            "ratedCurrent": 32,
-            "tamper_proof": True,
-            "certification": [
-              "UKCA",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": False,
-            "second_charging_power": True
-          }
-        },
-        "DJRC": {
-          "p_code": "DJRC",
-          "sku": "A51913Z0",
-          "custom_fields": {
-            "phase": "single",
-            "gunType": "shutter",
-            "standard": "eu",
-            "ratedPower": 7.4,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": True,
-            "second_charging_power": False
-          }
-        },
-        "DK3C": {
-          "p_code": "DK3C",
-          "sku": "A51913Z1",
-          "custom_fields": {
-            "phase": "three",
-            "gunType": "shutter",
-            "standard": "eu",
-            "ratedPower": 22,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": True,
-            "second_charging_power": False
-          }
-        },
-        "DMNM": {
-          "p_code": "DMNM",
-          "sku": "A5191TZ1",
-          "custom_fields": {
-            "phase": "single",
-            "gunType": "cable",
-            "standard": "eu",
-            "ratedPower": 7.4,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": False,
-            "second_charging_power": False
-          }
-        },
-        "DMNN": {
-          "p_code": "DMNN",
-          "sku": "A5191TZ2",
-          "custom_fields": {
-            "phase": "three",
-            "gunType": "cable",
-            "standard": "eu",
-            "ratedPower": 22,
-            "delay_start": False,
-            "ratedCurrent": 32,
-            "tamper_proof": False,
-            "certification": [
-              "CE",
-              "RoHS",
-              "REACH"
-            ],
-            "permanent_lock_gun": False,
-            "second_charging_power": False
-          }
-        }
-      }
     },
 }
+
 
 class SolixDeviceType(Enum):
     """Enumeration for Anker Solix device types."""
@@ -1062,6 +1015,7 @@ class SolixParmType(Enum):
     # SOLARBANK_EV_CHARGER = "23" # EV Charger switch?
     SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
     # SOLARBANK_BACKUP = "33" # backup install and ats setting
+
 
 class SolarbankPowerMode(IntEnum):
     """Int Enumeration for Anker Solix Solarbank 1 Power setting modes."""
@@ -1207,7 +1161,6 @@ class SolixDeviceNames:
     ECOIR: str = "EverHome EcoTracker IR"
 
 
-
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
     """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
@@ -1219,6 +1172,8 @@ class SolixDeviceCapacity:
     A17C2: int = 1600  # SOLIX Solarbank 2 E1600 AC
     A17C3: int = 1600  # SOLIX Solarbank 2 E1600 Plus
     A17C5: int = 2688  # SOLIX Solarbank 3 E2700 Pro
+    AE103: int = 5024  # SOLIX Solarbank 4 E5000 Pro
+    A17E2: int = 7000  # Solarbank Max AC
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
     A1723: int = 288  # SOLIX C300X Portable Power Station
@@ -1258,7 +1213,6 @@ class SolixDeviceCapacity:
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
     A17E1: int = 6144  # SOLIX E10 Battery module, Controller has no battery?
-    A17E2: int = 7000 # Solarbank Max AC
 
 
 @dataclass(frozen=True)
@@ -1316,6 +1270,9 @@ class SolixDeviceCategory:
     A17E2: str = (
         SolixDeviceType.SOLARBANK.value + "_4"
     )  # SOLIX Solarbank Max AC, generation 4
+    AE103: str = (
+        SolixDeviceType.SOLARBANK.value + "_4"
+    )  # SOLIX Solarbank 4 E5000 Pro, generation 4
     # Station
     AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock Solarbanks
     AX1S0: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Pro HES system
@@ -1519,6 +1476,7 @@ class SolarbankDeviceMetrics:
         "A17C2": ["350", "600", "800", "1000"],
         "A17C3": ["350", "600", "800", "1000"],
         "A17C5": ["350", "600", "800", "1200"],
+        "AE103": ["600", "790", "800", "2500"],
     }
     MPPT_INPUT_OPTIONS: ClassVar[dict[str, Any]] = {
         "A17C5": ["2000", "3600"],
@@ -1917,8 +1875,8 @@ class SolixEvChargerMode(StrEnum):
     skip_delay = "3"
     boost_charge = "4"
     unknown = "unknown"
-    wait_start = "wait_start" # Virtual mode not usable as control value
-    wait_plug = "wait_plug" # Virtual mode not usable as control value
+    wait_start = "wait_start"  # Virtual mode not usable as control value
+    wait_plug = "wait_plug"  # Virtual mode not usable as control value
 
 
 class SolixEvChargerWipeMode(StrEnum):
@@ -1954,6 +1912,7 @@ class SolixScheduleWeekendMode(StrEnum):
     different = "2"
     unknown = "unknown"
 
+
 class SolixBatteryType(StrEnum):
     """Str Enumeration for Battery types."""
 
@@ -1961,12 +1920,14 @@ class SolixBatteryType(StrEnum):
     lead_acid = "1"
     unknown = "unknown"
 
+
 class SolixBatteryVoltageType(StrEnum):
     """Str Enumeration for Battery Voltage types."""
 
     _12_v = "0"
     _24_v = "1"
     unknown = "unknown"
+
 
 @dataclass
 class SolarbankTimeslot:
@@ -1992,7 +1953,9 @@ class Solarbank2Timeslot:
     start_time: datetime | None
     end_time: datetime | None
     appliance_load: int | None = None  # mapped to appliance_load setting
-    charging_type: int | None = None  # mapped to charging_type setting, was introduced April 2026
+    charging_type: int | None = (
+        None  # mapped to charging_type setting, was introduced April 2026
+    )
     weekdays: set[int | str] | None = (
         None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
     )

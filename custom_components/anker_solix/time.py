@@ -1,7 +1,5 @@
 """Datetime platform for anker_solix."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -368,6 +366,14 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
             # Wait until client cache is valid before applying any api change
             await self.coordinator.client.validate_cache()
             mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
+            # raise error if MQTT control but device is passive
+            if self.entity_description.mqtt_cmd and mdev and mdev.is_passive():
+                raise ServiceValidationError(
+                    f"'{self.entity_id}' cannot be used while device is running in local mode",
+                    translation_domain=DOMAIN,
+                    translation_key="local_mode",
+                    translation_placeholders={"entity_id": self.entity_id},
+                )
             # Trigger Api calls depending on changed entity
             if self._attribute_name == "":
                 # Insert Api commands here once required

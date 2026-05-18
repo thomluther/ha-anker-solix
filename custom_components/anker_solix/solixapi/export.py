@@ -1982,7 +1982,7 @@ class AnkerSolixApiExport:
             if mqttdevices := [
                 dev
                 for dev in self.api_power.devices.values()
-                if dev.get("mqtt_supported")
+                if dev.get("mqtt_supported") and not dev.get("is_passive")
             ]:
                 # reuse existing MQTT client or start new one
                 if mqttsession := self.api_power.mqttsession:

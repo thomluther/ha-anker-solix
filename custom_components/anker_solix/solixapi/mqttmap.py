@@ -10,6 +10,7 @@ from .mqttcmdmap import (
     CMD_AC_FAST_CHARGE_SWITCH,
     CMD_AC_OUTPUT_MODE,
     CMD_AC_OUTPUT_SWITCH,
+    CMD_AC_OUTPUT_TIMEOUT_SEC,
     CMD_AC_PORT_SWITCH,
     CMD_BATTERY_CHARGE_LIMITS,
     CMD_COMMON_V2,
@@ -23,6 +24,7 @@ from .mqttcmdmap import (
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
+    CMD_ENERGY_SAVING_SWITCH,
     CMD_EV_AUTO_CHARGE_RESTART_SWITCH,
     CMD_EV_AUTO_START_SWITCH,
     CMD_EV_CHARGE_RANDOM_DELAY_SWITCH,
@@ -888,6 +890,8 @@ _A1783_0421 = {
 _A1780_0405 = {
     # F2000(P) param info
     TOPIC: "param_info",
+    "a2": {NAME: "ac_output_timeout_seconds"},  # Active AC auto-off countdown in seconds
+    "a3": {NAME: "dc_output_timeout_seconds"},  # Active DC auto-off countdown in seconds
     "a4": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},  # In hours
     "a5": {NAME: "ac_input_power"},  # AC charging power to battery
     "a6": {NAME: "ac_output_power"},  # AC outlet power
@@ -926,7 +930,7 @@ _A1780_0405 = {
     "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
     "da": {NAME: "ac_frequency"},  # 60 / 50 Hz
-    "db": {NAME: "energy_saving_mode"},  # Disabled (0) or Enabled (1)
+    "db": {NAME: "energy_saving_switch"},  # Disabled (0) or Enabled (1)
     "dc": {NAME: "light_mode"},  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
@@ -953,8 +957,10 @@ _A1780_0408 = {
     "a3": {NAME: "device_sn"},
     "a4": {NAME: "local_timestamp"},
     "a5": {NAME: "utc_timestamp"},
-    "a6": {NAME: "discharged_energy?", FACTOR: 0.001},  # in kWh
-    "a7": {NAME: "charged_energy?", FACTOR: 0.001},  # in kWh
+    "a6": {NAME: "battery_voltage?", FACTOR: 0.001},
+    "a7": {NAME: "pv_voltage?", FACTOR: 0.001},
+    "aa": {NAME: "ac_output_power_inverted?"},
+    "ab": {NAME: "battery_power_signed?", FACTOR: -1},
     "ac": {NAME: "main_battery_soc"},  # in %
 }
 
@@ -1465,6 +1471,8 @@ _A1782_0502 = {
 _A1790_0405 = {
     # F3800 param info
     TOPIC: "param_info",
+    "a2": {NAME: "ac_output_timeout_seconds"},  # Active AC auto-off countdown in seconds
+    "a3": {NAME: "dc_output_timeout_seconds"},  # Active DC auto-off countdown in seconds
     "a4": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},  # In hours
     "a5": {NAME: "ac_input_power"},
     "a6": {NAME: "ac_output_power"},
@@ -1474,7 +1482,7 @@ _A1790_0405 = {
     "aa": {NAME: "usba_1_power?"},
     "ab": {NAME: "usba_2_power?"},
     "ac": {NAME: "dc_12v_output_power_switch?"},
-    "ad": {NAME: "main_battery_soc"},  # Main battery SOC?
+    "ad": {NAME: "battery_soc"},  # Total SOC of main + Exp batteries?
     "ae": {NAME: "photovoltaic_power"},  # Total solar input
     "af": {NAME: "pv_1_power"},
     "b0": {NAME: "pv_2_power"},
@@ -1492,7 +1500,7 @@ _A1790_0405 = {
     },
     "be": {NAME: "temperature", SIGNED: True},  # In Celsius
     "bf": {NAME: "display_status"},  # Asleep (0), Manual Off (1), On (2)
-    "c0": {NAME: "battery_soc"},  # Total SOC of main + Exp batteries?
+    "c0": {NAME: "main_battery_soc"},  # Main battery SOC?
     "c1": {NAME: "battery_soh"},
     # TODO: What does USB status mean, is that a toggle setting? If port is used, this should be indicated by power as well
     "c2": {NAME: "usbc_1_status"},
@@ -1542,26 +1550,26 @@ _A1790_0405 = {
 _A1790_040a = {
     # F3800 param info
     TOPIC: "param_info",
-    "a2": {NAME: "expansion_packs?"},
-    "a3": {NAME: "main_battery_soc?"},  # main battery SOC
+    "a2": {NAME: "expansion_packs"},
+    "a3": {NAME: "expansion_soc"},  # total of all expansions
     "a4": {
         BYTES: {
             "00": {
-                NAME: "exp_1_sn?",
+                NAME: "exp_1_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_1_temperature?",
+                NAME: "exp_1_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_1_soc?",
+                NAME: "exp_1_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_1_soh?",
+                NAME: "exp_1_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1574,21 +1582,21 @@ _A1790_040a = {
     "a5": {
         BYTES: {
             "00": {
-                NAME: "exp_2_sn?",
+                NAME: "exp_2_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_2_temperature?",
+                NAME: "exp_2_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_2_soc?",
+                NAME: "exp_2_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_2_soh?",
+                NAME: "exp_2_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1601,21 +1609,21 @@ _A1790_040a = {
     "a6": {
         BYTES: {
             "00": {
-                NAME: "exp_3_sn?",
+                NAME: "exp_3_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_3_temperature?",
+                NAME: "exp_3_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_3_soc?",
+                NAME: "exp_3_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_3_soh?",
+                NAME: "exp_3_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1628,21 +1636,21 @@ _A1790_040a = {
     "a7": {
         BYTES: {
             "00": {
-                NAME: "exp_4_sn?",
+                NAME: "exp_4_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_4_temperature?",
+                NAME: "exp_4_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_4_soc?",
+                NAME: "exp_4_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_4_soh?",
+                NAME: "exp_4_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1655,21 +1663,21 @@ _A1790_040a = {
     "a8": {
         BYTES: {
             "00": {
-                NAME: "exp_5_sn?",
+                NAME: "exp_5_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_5_temperature?",
+                NAME: "exp_5_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_5_soc?",
+                NAME: "exp_5_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_5_soh?",
+                NAME: "exp_5_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1682,21 +1690,21 @@ _A1790_040a = {
     "a9": {
         BYTES: {
             "00": {
-                NAME: "exp_6_sn?",
+                NAME: "exp_6_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_6_temperature?",
+                NAME: "exp_6_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_6_soc?",
+                NAME: "exp_6_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_6_soh?",
+                NAME: "exp_6_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1715,7 +1723,7 @@ _A1790_0410 = {
     "a2": {
         BYTES: {
             "00": {
-                NAME: "power_panel_sn?",
+                NAME: "power_panel_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
@@ -1724,16 +1732,16 @@ _A1790_0410 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "device_1_sn?",
+                NAME: "device_1_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "device_1_soc?",
+                NAME: "device_1_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "20": {
-                NAME: "device_1_temperature?",
+                NAME: "device_1_temperature",
                 SIGNED: True,
                 TYPE: DeviceHexDataTypes.ui.value,
             },
@@ -1742,23 +1750,23 @@ _A1790_0410 = {
     "a4": {
         BYTES: {
             "00": {
-                NAME: "device_2_sn?",
+                NAME: "device_2_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "device_2_soc?",
+                NAME: "device_2_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "20": {
-                NAME: "device_2_temperature?",
+                NAME: "device_2_temperature",
                 SIGNED: True,
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
     },
-    "a5": {NAME: "device_1_pn?"},
-    "a6": {NAME: "device_2_pn?"},
+    "a5": {NAME: "device_1_pn"},
+    "a6": {NAME: "device_2_pn"},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -3215,13 +3223,13 @@ _AS200_0421 = {
         BYTES: {
             "00": {NAME: "device_switch", TYPE: DeviceHexDataTypes.ui.value},
             "02": {
-                NAME: "car_battery_type",
+                NAME: "car_battery_type",  # 0=LiFePO4, 1=Lead Acid
                 TYPE: DeviceHexDataTypes.ui.value,
-            },  # 0=LiFePO4, 1=Lead Acid
+            },
             "03": {
-                NAME: "car_battery_voltage_type",
+                NAME: "car_battery_voltage_type",  # 0=12V, 1=24V
                 TYPE: DeviceHexDataTypes.ui.value,
-            },  # 0=12V, 1=24V
+            },
             "05": {
                 NAME: "charge_voltage_limit",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3236,22 +3244,21 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "11": {
-                NAME: "active_device_timeout_minutes",
+                NAME: "active_device_timeout_minutes",  # active device auto-off timeout (minutes): 0 (Never), 720–1440 min in 30 min steps
                 TYPE: DeviceHexDataTypes.sile.value,
             },
-            # active device auto-off timeout (minutes): 0 (Never), 720–1440 min in 30 min steps
             "13": {
                 NAME: "temp_unit_fahrenheit",
                 TYPE: DeviceHexDataTypes.ui.value,
             },  # Celsius (0) or Fahrenheit (1)
-            "14": {
-                NAME: "device_timeout_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },  # Timeout (0) or Off (1)
             "16": {
-                NAME: "device_timeout_minutes",
+                NAME: "device_timeout_minutes",  # Device auto-off timeout control (minutes): 720–1440 min in 30 min steps
                 TYPE: DeviceHexDataTypes.sile.value,
-            },  # Device auto-off timeout control (minutes): 720–1440 min in 30 min steps
+            },
+            "18": {
+                NAME: "device_timeout_switch",  # Timeout (0) or Off (1) = Never timeout
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         }
     },
     "a6": {
@@ -4625,6 +4632,39 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1780_0405,
         # Interval: irregular, triggerd by wifi signal change?
+        "0407": _PPS_0407,
+        # Interval: ??
+        "0408": _A1780_0408,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
+    },
+    # PPS F2600
+    "A1781": {
+        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # AC output timeout: 0-86400 seconds, step 300
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: 0-86400 seconds, step 300
+        "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 100, max: 1440, step: 100
+        | {
+            "a2": {
+                **CMD_AC_CHARGE_LIMIT["a2"],
+                # Note: App only supports from 200 W, but F2600 and App support 100 W as MQTT command
+                VALUE_MIN: 100,
+                VALUE_MAX: 1440,
+                VALUE_STEP: 100,
+            }
+        },
+        # 0045 omitted: F2600 reports d2=0 in telemetry but ignores writes
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004e": CMD_ENERGY_SAVING_SWITCH,  # Power saving mode: Off (0) or On (1)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": _A1780_0405,
+        # Interval: irregular, triggered by wifi signal change?
         "0407": _PPS_0407,
         # Interval: ??
         "0408": _A1780_0408,

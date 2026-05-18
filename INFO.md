@@ -45,6 +45,7 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Device specific MQTT options](#device-specific-mqtt-options)
     * [Device real time triggers](#device-real-time-triggers)
     * [Device status requests](#device-status-requests)
+    * [Devices in MQTT local mode](#devices-in-mqtt-local-mode)
 1. **[Switching between different Anker Power accounts](#switching-between-different-anker-power-accounts)**
 1. **[How to create a second Anker Power account](#how-to-create-a-second-anker-power-account)**
 1. **[Automation to send and clear sticky, actionable notifications to your smart phone based on Api switch setting](#automation-to-send-and-clear-sticky-actionable-notifications-to-your-smart-phone-based-on-api-switch-setting)**
@@ -388,7 +389,7 @@ Integration version 3.4.1 added another diagnostic button for a single MQTT stat
 
 Depending on which message(s) the various devices publish upon a status request, you may see that some of your MQTT based entity states will not refresh. However, if all relevant entities are being refreshed with a status request, that should be the preferred button for any of your customized automation, since you have more control about the extra MQTT data traffic. For example, if you need to get state updates only every 30 or 15 seconds, you can control that with the status request button and the frequency when and how often your automation triggers. The real time trigger button instead does not allow to control the message traffic or frequency.
 
-### Example automation for regular status requests
+#### Example automation for regular status requests
 
 Following is an example automation to trigger real time data every 15 minutes. This will trigger the device to publish real time data messages every 3-5 seconds until the configured MQTT real time trigger timeout is expired (default 5 minutes). If you want permanent real time data, you would have to change the automation interval to 5 minutes. The conditions in your automation should verify the state of the device and whether real time data make sense at all, to avoid useless data traffic.
 
@@ -440,6 +441,19 @@ actions:
       entity_id: button.sb_e1600_2_pro_mqtt_realtime_data
 ```
 </details>
+
+
+### Devices in MQTT local mode
+
+Some Anker Solix system types have device connections that utilize an 'MQTT local mode'. Once a device runs in this mode, it does not longer subscribe to the Anker MQTT cloud, but only connects to the local hub in the system. The hub acts as MQTT proxy and sends embedded MQTT messages from the device to the cloud server. At the same time, only the hub can control the device locally and MQTT commands can only be sent to the hub. The device itself is not known to the system or the mobile App and the device may appear only as stand alone device without direct control capabilities. Examples of such system types are:
+- Home Power Panel A17B1, where one or two F3800(P) PPS devices can be connected
+- Home Backup System power dock AX170, where multiple E10 devices can be connected
+
+Integration version 3.6.3 added full support for toleration of devices running in 'MQTT local mode' and embedded MQTT messages of their hub devices. Embedded messages can be described in the MQTT mapping of the hub model and the embedded data is presented with the originating device. The MQTT local mode devices are also assigned to the same system as the publishing hub device. Such devices will create a unique diagnostic sensor indicating that MQTT local mode is active. All control entities of the device will remain available to represent the actual state of the control. However, if MQTT based controls are modified or buttons are pressed through the HA front end or by automation, an error will be raised as indicated in following screenshot:
+
+![MQTT local Mode][mqtt-local-mode-img]
+
+You can consider devices with active MQTT local mode as read only devices. This allows proper display of their data and control entity states, and you can utilize this information in your home automation scenarios as needed.
 
 
 ## Switching between different Anker Power accounts
@@ -2038,6 +2052,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]. If you
 [device-mqtt-diag-entities-img]: doc/device-mqtt-diag-entities.png
 [entity-attributes-img]: doc/entity-attributes.png
 [mqtt-statistics-img]: doc/mqtt-statistics.png
+[mqtt-local-mode-img]: doc/mqtt_local_mode.png
 
 
 

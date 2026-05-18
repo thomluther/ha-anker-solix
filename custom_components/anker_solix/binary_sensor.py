@@ -1,7 +1,5 @@
 """Binary sensor platform for anker_solix."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from random import randrange
@@ -173,6 +171,15 @@ DEVICE_SENSORS = [
         device_class=BinarySensorDeviceClass.PLUG,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
+    ),
+    AnkerSolixBinarySensorDescription(
+        key="mqtt_local_mode",
+        translation_key="mqtt_local_mode",
+        json_key="is_passive",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and d.get("mqtt_data") and d.get("is_passive"))
+        ),
     ),
 ]
 

@@ -1,7 +1,5 @@
 """DataUpdateCoordinator for Anker Solix."""
 
-from __future__ import annotations
-
 from asyncio import TimerHandle, run_coroutine_threadsafe, sleep
 from datetime import datetime, timedelta
 import logging
@@ -119,11 +117,9 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         ) as exception:
             raise ConfigEntryAuthFailed(exception) from exception
         except AnkerSolixApiClientCommunicationError as exception:
-            # TODO: Evaluate implementation of retry parameter, see
-            # https://developers.home-assistant.io/blog/2025/11/17/retry-after-update-failed
-            # may require HA 2025.12 or later...
-            # raise UpdateFailed(retry_after=60) from exception
-            raise UpdateFailed(exception) from exception
+            # If the API is providing backoff signals, these can be honored via the retry_after parameter
+            # This parameter will be ignored on first refresh during config entry setup
+            raise UpdateFailed(retry_after=60) from exception
         except AnkerSolixApiClientError as exception:
             raise UpdateFailed(exception) from exception
         else:

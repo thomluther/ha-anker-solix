@@ -1,6 +1,6 @@
 """Anker Power/Solix Cloud API class outsourced schedule related methods."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: TID251
 
 import contextlib
 import copy

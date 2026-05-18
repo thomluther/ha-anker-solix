@@ -1,7 +1,5 @@
 """Switch platform for anker_solix."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -17,9 +15,8 @@ from homeassistant.components.button import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EXCLUDE, EntityCategory
-from homeassistant.core import HomeAssistant, SupportsResponse
+from homeassistant.core import HomeAssistant, ServiceResponse
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -31,7 +28,6 @@ from .const import (
     INCLUDE_MQTT_CACHE,
     LOGGER,
     SERVICE_GET_DEVICE_INFO,
-    SOLIX_ENTITY_SCHEMA,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -56,7 +52,7 @@ class AnkerSolixButtonDescription(
 ):
     """Button entity description with optional keys."""
 
-    force_creation: bool = False
+    force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
     picture_path: str = None
     feature: AnkerSolixEntityFeature | None = None
     mqtt: bool = False
@@ -72,7 +68,7 @@ DEVICE_BUTTONS = [
         key="refresh_device",
         translation_key="refresh_device",
         json_key="",
-        force_creation=True,
+        force_creation_fn=lambda d, jk: True,
         feature=AnkerSolixEntityFeature.SYSTEM_INFO,
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -84,15 +80,19 @@ DEVICE_BUTTONS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
         mqtt=True,
+        mqtt_cmd=SolixMqttCommands.realtime_trigger,
     ),
     AnkerSolixButtonDescription(
         # Status request button should only be created if no realtime triggers are supported
         key="mqtt_status_request",
         translation_key="mqtt_status_request",
-        json_key="mqtt_status_request",
+        json_key="",
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
         mqtt=True,
+        # Note: Enforce creation together with realtime trigger since cmd not defined for each device
+        force_creation_fn=lambda d, jk: "mqtt_data" in d,
+        mqtt_cmd=SolixMqttCommands.status_request,
     ),
     AnkerSolixButtonDescription(
         key="restart_device",
@@ -107,20 +107,19 @@ DEVICE_BUTTONS = [
         mqtt_cmd=SolixMqttCommands.device_power_mode,
         mqtt_cmd_parm="set_device_power_mode",
     ),
-    # NOTE: Shutdown not enabled for now due to required physical device access afterwards
-    # AnkerSolixButtonDescription(
-    #     key="shutdown_device",
-    #     translation_key="shutdown_device",
-    #     # json key must be available in MQTT cmd options to create and use the button
-    #     # NOTE: Shutdown may require physical power on at the device
-    #     json_key="shutdown",
-    #     entity_category=EntityCategory.DIAGNOSTIC,
-    #     # create button only after MQTT data is available
-    #     exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
-    #     mqtt=True,
-    #     mqtt_cmd=SolixMqttCommands.device_power_mode,
-    #     mqtt_cmd_parm="set_device_power_mode",
-    # ),
+    # NOTE: Shutdown requires physical device access afterwards
+    AnkerSolixButtonDescription(
+        key="shutdown_device",
+        translation_key="shutdown_device",
+        # json key must be available in MQTT cmd options to create and use the button
+        json_key="shutdown",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # create button only after MQTT data is available
+        exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.device_power_mode,
+        mqtt_cmd_parm="set_device_power_mode",
+    ),
 ]
 
 SITE_BUTTONS = []
@@ -130,7 +129,7 @@ ACCOUNT_BUTTONS = [
         key="refresh_vehicles",
         translation_key="refresh_vehicles",
         json_key="",
-        force_creation=True,
+        force_creation_fn=lambda d, jk: True,
         entity_category=EntityCategory.DIAGNOSTIC,
         picture_path=getattr(
             AnkerSolixPicturePath, SolixDeviceType.VEHICLE.value.upper(), None
@@ -145,7 +144,7 @@ VEHICLE_BUTTONS = [
     #     key="restore_attributes",
     #     translation_key="restore_attributes",
     #     json_key="restore_attributes",
-    #     force_creation=True,
+    #     force_creation_fn=lambda d, jk: True,
     #     exclude_fn=lambda s, d: not ({d.get("type")} - s),
     # ),
 ]
@@ -192,18 +191,33 @@ async def async_setup_entry(
                 or (
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
-                        desc.force_creation
+                        desc.force_creation_fn(data, desc.json_key)
                         # filter MQTT entities and provide combined or only api cache
                         # Entities that should not be created without MQTT data need to use exclude option
                         or (
                             desc.mqtt
                             and mdev
                             # Buttons with an MQTT command should only be created if the json key is in the control options
+                            # or the command and optional parameter is in the control
                             and (
                                 not desc.mqtt_cmd
-                                or desc.json_key
-                                in mdev.get_cmd_parm_option_map(
-                                    cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                                or (
+                                    desc.json_key
+                                    and desc.json_key
+                                    in mdev.get_cmd_parm_option_map(
+                                        cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                                    )
+                                )
+                                or (
+                                    not desc.json_key
+                                    and desc.mqtt_cmd in mdev.controls
+                                    and (
+                                        not desc.mqtt_cmd_parm
+                                        or desc.mqtt_cmd_parm
+                                        in mdev.get_cmd_parms(
+                                            cmd=desc.mqtt_cmd, defaults=True
+                                        )
+                                    )
                                 )
                             )
                         )
@@ -222,16 +236,6 @@ async def async_setup_entry(
 
     # create the buttons from the list
     async_add_entities(entities)
-
-    # register the entity services
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        name=SERVICE_GET_DEVICE_INFO,
-        schema=SOLIX_ENTITY_SCHEMA,
-        func=SERVICE_GET_DEVICE_INFO,
-        required_features=[AnkerSolixEntityFeature.SYSTEM_INFO],
-        supports_response=SupportsResponse.ONLY,
-    )
 
 
 class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
@@ -319,6 +323,15 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
         """Handle the button press."""
         # Wait until client cache is valid before running any api action
         await self.coordinator.client.validate_cache()
+        mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
+        # raise error if MQTT control but device is passive
+        if self.entity_description.mqtt_cmd and mdev and mdev.is_passive():
+            raise ServiceValidationError(
+                f"'{self.entity_id}' cannot be used while device is running in local mode",
+                translation_domain=DOMAIN,
+                translation_key="local_mode",
+                translation_placeholders={"entity_id": self.entity_id},
+            )
         if self._attribute_name == "refresh_device":
             if (
                 self.coordinator.client.last_device_refresh
@@ -358,11 +371,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
             await self.coordinator.async_execute_command(self.entity_description.key)
         elif self._attribute_name == "mqtt_realtime_trigger":
             if not (
-                (
-                    mdev := self.coordinator.client.get_mqtt_device(
-                        self.coordinator_context
-                    )
-                )
+                mdev
                 and await mdev.realtime_trigger(
                     timeout=self.coordinator.client.trigger_timeout(),
                     toFile=self.coordinator.client.testmode(),
@@ -390,11 +399,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
             )
         elif self._attribute_name == "mqtt_status_request":
             if not (
-                (
-                    mdev := self.coordinator.client.get_mqtt_device(
-                        self.coordinator_context
-                    )
-                )
+                mdev
                 and await mdev.status_request(
                     toFile=self.coordinator.client.testmode(),
                 )
@@ -480,8 +485,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                     str(vehicle),
                 )
         # Trigger MQTT commands depending on changed entity
-        elif self.entity_description.mqtt_cmd:
-            mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
+        elif self.entity_description.mqtt_cmd and mdev:
             LOGGER.debug(
                 "'%s' press will be applied via MQTT command '%s'",
                 self.entity_id,
@@ -492,7 +496,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 mdev=mdev, value=self.entity_description.json_key or None
             )
 
-    async def get_device_info(self, **kwargs: Any) -> dict | None:
+    async def get_device_info(self, **kwargs: Any) -> ServiceResponse:
         """Get the actual device info from the cache."""
         return await self._solix_device_service(
             service_name=SERVICE_GET_DEVICE_INFO, **kwargs
@@ -580,7 +584,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
 
     async def _solix_device_service(
         self, service_name: str, **kwargs: Any
-    ) -> dict | None:
+    ) -> ServiceResponse:
         """Execute the defined device action."""
         # Raise alerts to frontend
         if not (self.supported_features & AnkerSolixEntityFeature.SYSTEM_INFO):

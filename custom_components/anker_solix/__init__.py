@@ -4,8 +4,6 @@ For more details about this integration, please refer to
 https://github.com/thomluther/ha-anker-solix
 """
 
-from __future__ import annotations
-
 from datetime import timedelta
 from pathlib import Path
 
@@ -25,6 +23,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers import issue_registry as ir, restore_state
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
+from homeassistant.helpers.typing import ConfigType
 
 from . import api_client
 from .config_flow import (
@@ -58,19 +57,16 @@ from .const import (
     LOGGER,
     PLATFORMS,
     REGISTERED_EXCLUDES,
-    SERVICE_API_REQUEST,
-    SERVICE_CLEAR_SOLARBANK_SCHEDULE,
-    SERVICE_EXPORT_SYSTEMS,
-    SERVICE_GET_DEVICE_INFO,
-    SERVICE_GET_SOLARBANK_SCHEDULE,
-    SERVICE_GET_SYSTEM_INFO,
-    SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
-    SERVICE_MODIFY_SOLIX_USE_TIME,
-    SERVICE_SET_SOLARBANK_SCHEDULE,
-    SERVICE_UPDATE_SOLARBANK_SCHEDULE,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
+from .services import async_setup_services  # async_remove_services
 from .solixapi.apitypes import ApiCategories, SolixDeviceType
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the integration."""
+    async_setup_services(hass)
+    return True
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
@@ -264,27 +260,16 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle unload of an entry, also triggered when integration is reloaded by UI."""
 
-    other_entries = [
-        e
-        for e in hass.config_entries.async_loaded_entries(DOMAIN)
-        if e.entry_id != entry.entry_id
-    ]
-    if not other_entries:
-        # The last config entry is being unloaded, release shared resources, unregister services etc.
-        # unregister services if no config remains
-        for action in [
-            SERVICE_GET_SYSTEM_INFO,
-            SERVICE_GET_DEVICE_INFO,
-            SERVICE_EXPORT_SYSTEMS,
-            SERVICE_GET_SOLARBANK_SCHEDULE,
-            SERVICE_CLEAR_SOLARBANK_SCHEDULE,
-            SERVICE_SET_SOLARBANK_SCHEDULE,
-            SERVICE_UPDATE_SOLARBANK_SCHEDULE,
-            SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
-            SERVICE_MODIFY_SOLIX_USE_TIME,
-            SERVICE_API_REQUEST,
-        ]:
-            hass.services.async_remove(DOMAIN, action)
+    # Skip removal of services if no config remains, otherwise they are not registered agin upon new config entry setup
+    # other_entries = [
+    #     e
+    #     for e in hass.config_entries.async_loaded_entries(DOMAIN)
+    #     if e.entry_id != entry.entry_id
+    # ]
+    # if not other_entries:
+    #     # The last config entry is being unloaded, release shared resources, unregister services etc.
+    #     # unregister services if no config remains
+    #     async_remove_services(hass)
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded

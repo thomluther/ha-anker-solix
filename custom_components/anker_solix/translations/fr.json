@@ -402,36 +402,36 @@
             "heating": {
                 "name": "Chauffage de la batterie",
                 "state": {
-                    "on": "actif",
-                    "off": "inactif"
+                    "on": "Actif",
+                    "off": "Inactif"
                 }
             },
             "micro_inverter_power_exceed": {
                 "name": "Puissance de l'onduleur dépassée",
                 "state": {
-                    "on": "actif",
-                    "off": "inactif"
+                    "on": "Actif",
+                    "off": "Inactif"
                 }
             },
             "offgrid_with_micro_inverter_alert": {
                 "name": "Alerte de l'onduleur hors réseau",
                 "state": {
-                    "on": "actif",
-                    "off": "inactif"
+                    "on": "Actif",
+                    "off": "Inactif"
                 }
             },
             "sub_pack_temp_alarm": {
                 "name": "Alerte de température d'extension",
                 "state": {
-                    "on": "actif",
-                    "off": "inactif"
+                    "on": "Actif",
+                    "off": "Inactif"
                 }
             },
             "protection_status": {
                 "name": "Protection anti-tempête",
                 "state": {
-                    "on": "actif",
-                    "off": "inactif"
+                    "on": "Actif",
+                    "off": "Inactif"
                 },
                 "state_attributes": {
                     "charge_threshold": {
@@ -505,6 +505,13 @@
                 "state": {
                     "on": "Branché",
                     "off": "Débranché"
+                }
+            },
+            "mqtt_local_mode": {
+                "name": "Mode local MQTT",
+                "state": {
+                    "on": "Actif",
+                    "off": "Inactif"
                 }
             }
         },
@@ -2656,6 +2663,9 @@
             "dc_output_power_switch": {
                 "name": "Sortie CC"
             },
+            "energy_saving_switch": {
+                "name": "Economie d'énergie"
+            },
             "ac_fast_charge_switch": {
                 "name": "Charge rapide"
             },
@@ -3023,6 +3033,9 @@
         },
         "active_testmode": {
             "message": "{entity_id} ne peut pas être utilisé lorsque la configuration est exécutée en mode test"
+        },
+        "local_mode": {
+            "message": "{entity_id} ne peut pas être utilisé lorsque l'appareil est en mode local"
         },
         "apiusage_deactivated": {
             "message": "{entity_id} ne peut pas être utilisé pour l'action demandée {action_name} si l'utilisation de l'Api est désactivée"

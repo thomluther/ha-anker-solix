@@ -1,14 +1,13 @@
 """AnkerSolixEntity class."""
 
-from __future__ import annotations  # noqa: I001
-
 from dataclasses import dataclass
 from enum import IntFlag
-
-from .solixapi.apitypes import SolixSiteType
-from .const import IMAGEFOLDER, DOMAIN, MANUFACTURER
 from pathlib import Path
+
 from homeassistant.helpers.entity import DeviceInfo
+
+from .const import DOMAIN, IMAGEFOLDER, MANUFACTURER
+from .solixapi.apitypes import SolixSiteType
 
 
 @dataclass(frozen=True)
@@ -44,6 +43,7 @@ class AnkerSolixPicturePath:
     A17C3: str = str(Path(IMAGEPATH) / "Solarbank_2_plus_A17C3_pub.png")
     A17C5: str = str(Path(IMAGEPATH) / "Solarbank_3_pro_A17C5_pub.png")
     A17E2: str = str(Path(IMAGEPATH) / "Solarbank_Max_AC_A17E2_pub.png")
+    AE103: str = str(Path(IMAGEPATH) / "Solarbank_4_pro_AE103.png")
 
     A5140: str = str(Path(IMAGEPATH) / "MI60_A5140_pub.png")
     A5143: str = str(Path(IMAGEPATH) / "MI80_A5143_pub.png")

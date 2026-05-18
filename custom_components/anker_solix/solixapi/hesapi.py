@@ -6,8 +6,6 @@ pip install aiohttp
 pip install aiofiles
 """
 
-from __future__ import annotations
-
 import contextlib
 from datetime import datetime, timedelta
 import logging
@@ -1012,7 +1010,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     # Skip remaining queries if valid time did not change
                     return avg_data
                 if unit := data.get("powerUnit"):
-                    avg_data["power_unit"] = str(unit).lower().replace("w","W")
+                    avg_data["power_unit"] = str(unit).lower().replace("w", "W")
                 # extract power values only if offset to last valid SOC entry was found
                 if offset.total_seconds() != 0 and (
                     powerlist := [

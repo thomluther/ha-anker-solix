@@ -4,8 +4,6 @@ This module contains control methods specific to portable power stations (PPS).
 These methods provide comprehensive device control via MQTT commands.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from .mqtt_device import SolixMqttDevice
@@ -59,6 +57,7 @@ FEATURES = {
     SolixMqttCommands.dc_output_switch: MODELS,
     SolixMqttCommands.dc_12v_output_mode_select: MODELS,
     SolixMqttCommands.dc_output_timeout_seconds: MODELS,
+    SolixMqttCommands.energy_saving_switch: MODELS,
     SolixMqttCommands.display_switch: MODELS,
     SolixMqttCommands.display_mode_select: MODELS,
     SolixMqttCommands.display_timeout_seconds: MODELS,

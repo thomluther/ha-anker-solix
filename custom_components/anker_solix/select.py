@@ -1,7 +1,5 @@
 """Select platform for anker_solix."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -23,7 +21,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr, entity_platform
+from homeassistant.helpers import device_registry as dr
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -795,15 +793,6 @@ async def async_setup_entry(
     # create the sensors from the list
     async_add_entities(entities)
 
-    # register the entity services
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        name=SERVICE_MODIFY_SOLIX_USE_TIME,
-        schema=SOLIX_USE_TIME_SCHEMA,
-        func=SERVICE_MODIFY_SOLIX_USE_TIME,
-        required_features=[AnkerSolixEntityFeature.AC_CHARGE],
-    )
-
 
 class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
     """anker_solix select class."""
@@ -949,8 +938,11 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     ).keys()
                 )
             number_sort = True
-        # ensure numbered sort also for strings
-        if number_sort and self._attr_options:
+        # Remove all options if mdev control but device is in local mode
+        if self.entity_description.mqtt_cmd and mdev and mdev.is_passive():
+            self._attr_options = [self._attr_current_option]
+        elif number_sort and self._attr_options:
+            # ensure numbered sort also for strings
             self._attr_options.sort(
                 key=lambda x: (
                     not (
@@ -985,7 +977,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         return self._attr_current_option
 
     @property
-    def options(self) -> str | None:
+    def options(self) -> str | None:  # noqa: C901
         """Return the entity options available."""
         # update the options depending on conditions
         number_sort = False
@@ -1108,14 +1100,17 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             if mdev := self.coordinator.client.get_mqtt_device(
                 self.coordinator_context
             ):
-                # Get MQTT device options for supported control
-                self._attr_options = list(
-                    mdev.get_cmd_parm_option_map(
-                        cmd=self.entity_description.mqtt_cmd,
-                        parm=self.entity_description.mqtt_cmd_parm,
-                    ).keys()
-                )
-                number_sort = True
+                if mdev.is_passive():
+                    self._attr_options = [self._attr_current_option]
+                else:
+                    # Get MQTT device options for supported control
+                    self._attr_options = list(
+                        mdev.get_cmd_parm_option_map(
+                            cmd=self.entity_description.mqtt_cmd,
+                            parm=self.entity_description.mqtt_cmd_parm,
+                        ).keys()
+                    )
+                    number_sort = True
         # ensure numbered sort also for strings
         if number_sort and self._attr_options:
             self._attr_options.sort(
@@ -1262,6 +1257,15 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 return
             # Wait until client cache is valid before applying any api change
             await self.coordinator.client.validate_cache()
+            mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
+            # raise error if MQTT control but device is passive
+            if self.entity_description.mqtt_cmd and mdev and mdev.is_passive():
+                raise ServiceValidationError(
+                    f"'{self.entity_id}' cannot be used while device is running in local mode",
+                    translation_domain=DOMAIN,
+                    translation_key="local_mode",
+                    translation_placeholders={"entity_id": self.entity_id},
+                )
             # Customize cache first if restore entity
             if self.entity_description.restore:
                 if self._attribute_name == "dynamic_price_provider":
@@ -1289,7 +1293,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             self.entity_id,
                             option,
                         )
-            mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
             # Trigger Api calls depending on changed entity
             if self._attribute_name == "power_cutoff":
                 LOGGER.debug(

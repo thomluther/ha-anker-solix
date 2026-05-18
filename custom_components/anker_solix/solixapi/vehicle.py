@@ -1,6 +1,6 @@
 """Anker Power/Solix Cloud API class vehicle related methods."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: TID251
 
 from datetime import datetime
 from pathlib import Path

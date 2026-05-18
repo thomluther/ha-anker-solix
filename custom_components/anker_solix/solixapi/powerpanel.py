@@ -6,8 +6,6 @@ pip install aiohttp
 pip install aiofiles
 """
 
-from __future__ import annotations
-
 import contextlib
 from datetime import datetime, timedelta
 import logging

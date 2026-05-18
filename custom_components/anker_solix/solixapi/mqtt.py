@@ -19,7 +19,14 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, NAME, TYPE, SolixMqttCommands
+from .mqttcmdmap import (
+    COMMAND_LIST,
+    COMMAND_NAME,
+    EMBEDDED,
+    NAME,
+    TYPE,
+    SolixMqttCommands,
+)
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
@@ -169,16 +176,27 @@ class AnkerSolixMqttSession:
                 )
             # save extracted values in common mqtt data cache
             elif device_sn and model:
-                # get existing mqtt data for device
-                device = self.mqtt_data.get(device_sn) or {}
-                topics = set(device.get("topics") or [])
-                topics.add(msg.topic)
                 extracted_values = hd.values()
-                self.mqtt_data[device_sn] = (
-                    device
-                    | extracted_values
-                    | {"last_message": timestamp, "topics": list(topics)}
-                )
+                # get embedded data from other devices
+                if embedded_list := extracted_values.get(EMBEDDED):
+                    for edata in embedded_list:
+                        embedded_sn = edata.get("sn", "")
+                        device = self.mqtt_data.get(embedded_sn) or {}
+                        self.mqtt_data[embedded_sn] = (
+                            device
+                            | edata.get(EMBEDDED, {})
+                            | {"last_message": timestamp}
+                        )
+                else:
+                    # get existing mqtt data for device
+                    device = self.mqtt_data.get(device_sn) or {}
+                    topics = set(device.get("topics") or [])
+                    topics.add(msg.topic)
+                    self.mqtt_data[device_sn] = (
+                        device
+                        | extracted_values
+                        | {"last_message": timestamp, "topics": list(topics)}
+                    )
         elif data:
             # no encoded data in payload, print object whatever it is
             self._logger.debug(
@@ -474,7 +492,7 @@ class AnkerSolixMqttSession:
         # Wait briefly for the client to establish the connection
         # Paho's connect_async is non-blocking; some servers are fast but we still
         # need to wait until client.is_connected() becomes True before returning.
-        interval = 0.1
+        interval = 0.2
         waited = 0.0
         while not self.client.is_connected() and waited < self.client.connect_timeout:
             await asyncio.sleep(interval)
@@ -852,11 +870,7 @@ class AnkerSolixMqttSession:
                         * speed
                     )
                     while time_idx < len(timestamps) and (
-                        (
-                            steps is None
-                            and timestamps[time_idx] <= cycle_now
-                        )
-                        or steps
+                        (steps is None and timestamps[time_idx] <= cycle_now) or steps
                     ):
                         # write cycle progress into folderdict
                         if steps:
