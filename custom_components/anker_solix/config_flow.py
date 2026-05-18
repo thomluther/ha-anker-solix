@@ -1,5 +1,7 @@
 """Adds config flow for Anker Solix."""
 
+from __future__ import annotations  # noqa: TID251
+
 from pathlib import Path
 from typing import Any
 

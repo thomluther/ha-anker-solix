@@ -40,7 +40,6 @@ from .const import (
     LOGGER,
     MQTT_OVERLAY,
     SERVICE_MODIFY_SOLIX_USE_TIME,
-    SOLIX_USE_TIME_SCHEMA,
     START_HOUR,
     START_MONTH,
     TARIFF,
