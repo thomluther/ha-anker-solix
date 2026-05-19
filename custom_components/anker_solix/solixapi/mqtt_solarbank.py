@@ -5,6 +5,8 @@ These methods provide comprehensive device control via MQTT commands.
 Solarbanks can also be controlled via Api, these methods cover settings only controllable via MQTT.
 """
 
+from __future__ import annotations  # noqa: TID251
+
 from typing import TYPE_CHECKING
 
 from .mqtt_device import SolixMqttDevice

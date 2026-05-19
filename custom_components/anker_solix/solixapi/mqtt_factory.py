@@ -1,5 +1,7 @@
 """Device factory for creating appropriate Anker Solix MQTT device control instances."""
 
+from __future__ import annotations  # noqa: TID251
+
 from typing import TYPE_CHECKING
 
 from .apitypes import SolixDeviceType

@@ -4,6 +4,8 @@ This module contains control methods specific to Anker Solix generator devices.
 These methods provide comprehensive device control via MQTT commands.
 """
 
+from __future__ import annotations  # noqa: TID251
+
 from typing import TYPE_CHECKING
 
 from .mqtt_device import SolixMqttDevice
