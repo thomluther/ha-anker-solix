@@ -71,9 +71,6 @@ def async_setup_services(hass: HomeAssistant) -> None:
         entity_domain=switch.DOMAIN,
         schema=SOLIX_REQUEST_SCHEMA,
         func=SERVICE_API_REQUEST,
-        description_placeholders={
-            "url": REQUEST_LINK,
-        },
         required_features=[AnkerSolixEntityFeature.ACCOUNT_INFO],
         supports_response=SupportsResponse.ONLY,
     )
