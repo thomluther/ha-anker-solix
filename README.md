@@ -556,7 +556,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]. If you
 [contributors-shield]: https://img.shields.io/github/contributors/thomluther/ha-anker-solix.svg?style=for-the-badge
 [buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
 [hacs-repo-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
-[hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=https%3A%2F%2Fgithub.com%2Fthomluther%2Fha-anker-solix&category=Integration
+[hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=ha-anker-solix&category=integration
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/badge/Licence-MIT-orange
