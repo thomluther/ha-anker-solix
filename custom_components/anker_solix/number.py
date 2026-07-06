@@ -186,6 +186,9 @@ DEVICE_NUMBERS = [
         entity_category=EntityCategory.CONFIG,
         unit_of_measurement=PERCENTAGE,
         mode=NumberMode.BOX,
+        native_min_value=1,
+        native_max_value=20,
+        native_step=1,
         # use different MQTT value name if overlay
         value_fn=lambda d, jk: (
             v
@@ -207,6 +210,7 @@ DEVICE_NUMBERS = [
                     }
                 )
                 and {ApiCategories.solarbank_cutoff} - s
+                and str(d.get("discharge_lower_limit",""))
                 and (d.get("generation", 3) > 2 or d.get("mqtt_data"))
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
@@ -225,6 +229,9 @@ DEVICE_NUMBERS = [
         entity_category=EntityCategory.CONFIG,
         unit_of_measurement=PERCENTAGE,
         mode=NumberMode.BOX,
+        native_min_value=80,
+        native_max_value=100,
+        native_step=1,
         # use different MQTT value name if overlay
         value_fn=lambda d, jk: (
             None
@@ -265,6 +272,9 @@ DEVICE_NUMBERS = [
         entity_category=EntityCategory.CONFIG,
         unit_of_measurement=PERCENTAGE,
         mode=NumberMode.BOX,
+        native_min_value=0,
+        native_max_value=100,
+        native_step=1,
         # use different MQTT value name if overlay
         value_fn=lambda d, jk: (
             None
