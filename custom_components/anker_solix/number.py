@@ -69,6 +69,7 @@ class AnkerSolixNumberDescription(
     mqtt: bool = False
     mqtt_cmd: str | None = None
     mqtt_cmd_parm: str | None = None
+    api_cmd: bool | None = None
     dynamic_options: bool = False
     ignore_opt_count: bool | None = None
     # Use optionally to provide function for value calculation or lookup of nested values
@@ -178,6 +179,125 @@ DEVICE_NUMBERS = [
         restore=True,
     ),
     AnkerSolixNumberDescription(
+        # Solarbank Battery min soc setting for SB 2/3 with new FW
+        key="sb_min_soc",
+        translation_key="min_soc",
+        json_key="discharge_lower_limit",
+        entity_category=EntityCategory.CONFIG,
+        unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.BOX,
+        # use different MQTT value name if overlay
+        value_fn=lambda d, jk: (
+            v
+            if (
+                v := (str(d.get("power_cutoff", "")) or str(d.get(jk, "")))
+                if d.get(MQTT_OVERLAY)
+                else (str(d.get(jk, "")) or str(d.get("power_cutoff", "")))
+            ).isdigit()
+            else None
+        ),
+        # Excludde for Solarbanks not support new SOC feature
+        exclude_fn=lambda s, d: (
+            not (
+                (
+                    ({d.get("type")} - s)
+                    & {
+                        SolixDeviceType.SOLARBANK.value,
+                        SolixDeviceType.COMBINER_BOX.value,
+                    }
+                )
+                and {ApiCategories.solarbank_cutoff} - s
+                and (d.get("generation", 3) > 2 or d.get("mqtt_data"))
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_soc_limits,
+        mqtt_cmd_parm="set_min_soc",
+        api_cmd=True,
+        ignore_opt_count=True,
+    ),
+    AnkerSolixNumberDescription(
+        # Solarbank Battery min soc setting for SB 2/3 with new FW
+        key="sb_max_soc",
+        translation_key="max_soc",
+        json_key="charge_upper_limit",
+        entity_category=EntityCategory.CONFIG,
+        unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.BOX,
+        # use different MQTT value name if overlay
+        value_fn=lambda d, jk: (
+            None
+            if (
+                v := (d.get("max_soc") or d.get(jk))
+                if d.get(MQTT_OVERLAY)
+                else (d.get(jk) or d.get("max_soc"))
+            )
+            is None
+            else str(v)
+        ),
+        # Excludde for Solarbanks not support new SOC feature
+        exclude_fn=lambda s, d: (
+            not (
+                (
+                    ({d.get("type")} - s)
+                    & {
+                        SolixDeviceType.SOLARBANK.value,
+                        SolixDeviceType.COMBINER_BOX.value,
+                    }
+                )
+                and {ApiCategories.solarbank_cutoff} - s
+                and (d.get("generation", 3) > 2 or d.get("mqtt_data"))
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_soc_limits,
+        mqtt_cmd_parm="set_max_soc",
+        api_cmd=True,
+        ignore_opt_count=True,
+    ),
+    AnkerSolixNumberDescription(
+        # Solarbank Battery min soc setting for SB 3+ with new FW
+        key="sb_backup_soc",
+        translation_key="backup_soc",
+        json_key="backup_reserve",
+        entity_category=EntityCategory.CONFIG,
+        unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.BOX,
+        # use different MQTT value name if overlay
+        value_fn=lambda d, jk: (
+            None
+            if (
+                v := (d.get("backup_soc") or d.get(jk))
+                if d.get(MQTT_OVERLAY)
+                else (d.get(jk) or d.get("backup_soc"))
+            )
+            is None
+            else str(v)
+        ),
+        # Excludde for Solarbanks not support new SOC feature
+        exclude_fn=lambda s, d: (
+            not (
+                (
+                    ({d.get("type")} - s)
+                    & {
+                        SolixDeviceType.SOLARBANK.value,
+                        SolixDeviceType.COMBINER_BOX.value,
+                    }
+                )
+                and ({ApiCategories.solarbank_cutoff} - s)
+                and (d.get("generation", 3) > 2)
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_soc_limits,
+        mqtt_cmd_parm="set_backup_soc",
+        api_cmd=True,
+        ignore_opt_count=True,
+    ),
+    AnkerSolixNumberDescription(
         key="ac_output_timeout",
         translation_key="ac_output_timeout",
         json_key="ac_output_timeout_seconds",
@@ -282,6 +402,11 @@ DEVICE_NUMBERS = [
         json_key="charge_voltage_limit",
         entity_category=EntityCategory.CONFIG,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        value_fn=lambda d, jk: (
+            float(v)
+            if (v := str(d.get(jk, ""))).replace(".", "", 1).lstrip("-").isdigit()
+            else None
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.battery_charge_limits,
@@ -459,18 +584,21 @@ async def async_setup_entry(
                         or (
                             desc.mqtt
                             and desc.value_fn(mdata or data, desc.json_key) is not None
-                            # include command number entities only if more than 20 options
-                            and not (
-                                mdev
-                                and desc.mqtt_cmd
-                                and (
-                                    mdev.get_cmd_parm_option_map(
-                                        cmd=desc.mqtt_cmd,
-                                        parm=desc.mqtt_cmd_parm,
-                                        limit=0 if desc.ignore_opt_count else 20,
-                                    )
-                                    or not mdev.cmd_is_number(
-                                        cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                            # include command number entities only if more than 20 options or also using Api cmd
+                            and (
+                                desc.api_cmd
+                                or not (
+                                    mdev
+                                    and desc.mqtt_cmd
+                                    and (
+                                        mdev.get_cmd_parm_option_map(
+                                            cmd=desc.mqtt_cmd,
+                                            parm=desc.mqtt_cmd_parm,
+                                            limit=0 if desc.ignore_opt_count else 20,
+                                        )
+                                        or not mdev.cmd_is_number(
+                                            cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                                        )
                                     )
                                 )
                             )
@@ -722,6 +850,22 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             / (data.get("solarbank_count") or 1)
                         ),
                     )
+                # update backup soc limits based on min/max states of Api cache
+                elif self._attribute_name == "sb_backup_soc":
+                    self.native_min_value = (
+                        int(v)
+                        if (v := str(data.get("discharge_lower_limit", ""))).isdigit()
+                        else (self.native_min_value or 0)
+                    ) + 1
+                    self.native_max_value = max(
+                        self.native_min_value,
+                        (
+                            int(v)
+                            if (v := str(data.get("charge_upper_limit", ""))).isdigit()
+                            else (self.native_max_value or 100)
+                        )
+                        - 1,
+                    )
                 # convert seconds to minutes
                 elif self._attribute_name in ["ac_output_timeout", "dc_output_timeout"]:
                     if self._native_value is not None:
@@ -827,14 +971,14 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         LOGGER.debug(
                             "'%s' change to %s will be applied", self.entity_id, value
                         )
-                        siteId = data.get("site_id") or ""
+                        site_id = data.get("site_id") or ""
                         if (
                             data.get("type") == SolixDeviceType.COMBINER_BOX.value
                             or (data.get("generation") or 0) >= 2
                         ):
                             # SB2 preset change
                             resp = await self.coordinator.client.api.set_sb2_home_load(
-                                siteId=siteId,
+                                siteId=site_id,
                                 deviceSn=self.coordinator_context,
                                 preset=int(value),
                                 toFile=self.coordinator.client.testmode(),
@@ -857,7 +1001,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         else:
                             # SB1 preset change
                             resp = await self.coordinator.client.api.set_home_load(
-                                siteId=siteId,
+                                siteId=site_id,
                                 deviceSn=self.coordinator_context,
                                 preset=int(value)
                                 if self._attribute_name == "preset_system_output_power"
@@ -885,7 +1029,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                         # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
                         # await self.coordinator.client.api.update_sites(
-                        #     siteId=siteId,
+                        #     siteId=site_id,
                         #     fromFile=self.coordinator.client.testmode(),
                         # )
                         self.last_changed = datetime.now().astimezone()
@@ -1029,15 +1173,15 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             toFile=self.coordinator.client.testmode(),
                         )
                     # Control all solarbank devices via individual MQTT device setting
-                    if siteId := data.get("site_id"):
-                        stationSn = (
+                    if site_id := data.get("site_id"):
+                        station_sn = (
                             self.coordinator_context
                             if data.get("type") == SolixDeviceType.COMBINER_BOX.value
                             else data.get("station_sn", "")
                         )
                         for md in self.coordinator.client.get_mqtt_devices(
-                            siteId=siteId,
-                            stationSn=stationSn,
+                            siteId=site_id,
+                            stationSn=station_sn,
                             extraDeviceSn=self.coordinator_context,
                             mqttControl=self.entity_description.mqtt_cmd,
                         ):
@@ -1050,6 +1194,113 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                         "set_disable_grid_export_switch": 0
                                         if mdev.device.get("allow_grid_export", True)
                                         else 1
+                                    },
+                                )
+                            }
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied settings for '%s' change to %s:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            value,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+                elif (
+                    self.entity_description.mqtt_cmd == SolixMqttCommands.sb_soc_limits
+                ):
+                    resp = None
+                    if (
+                        data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                        or data.get("station_sn") is not None
+                    ):
+                        # control only via station setting which will issue required device MQTT commands
+                        resp = await self.coordinator.client.api.set_station_parm(
+                            deviceSn=self.coordinator_context,
+                            socMin=value
+                            if self._attribute_name == "sb_min_soc"
+                            else None,
+                            socMax=value
+                            if self._attribute_name == "sb_max_soc"
+                            else None,
+                            socBackup=value
+                            if self._attribute_name == "sb_backup_soc"
+                            else None,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                        # NOTE: Power dock systems reset the backup reserve switch after some time
+                        # MQTT not required if station managed:
+                        # if (
+                        #     resp
+                        #     and data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                        #     and self.entity_description.mqtt_cmd in mdev.controls
+                        # ):
+                        #     resp_data = resp.get("param_data") or {}
+                        #     resp |= {
+                        #         f"mqtt_control_{mdev.sn}": await self._async_mqtt_value(
+                        #             mdev=mdev,
+                        #             value=value,
+                        #             cmd=self.entity_description.mqtt_cmd,
+                        #             parm=self.entity_description.mqtt_cmd_parm,
+                        #             # add the returned defaults for backup since states not included in MQTT data cache
+                        #             parm_map={
+                        #                 "set_backup_soc_switch": resp_data.get(
+                        #                     "backup_reserve_switch"
+                        #                 )
+                        #                 or 0,
+                        #             }
+                        #             | (
+                        #                 {
+                        #                     "set_min_soc": resp_data.get(
+                        #                         "discharge_lower_limit"
+                        #                     )
+                        #                 }
+                        #                 if self._attribute_name != "sb_min_soc"
+                        #                 else {}
+                        #             )
+                        #             | (
+                        #                 {"set_max_soc": resp_data.get("charge_upper_limit")}
+                        #                 if self._attribute_name != "sb_max_soc"
+                        #                 else {}
+                        #             )
+                        #             | (
+                        #                 {"set_backup_soc": resp_data.get("backup_reserve")}
+                        #                 if self._attribute_name != "sb_backup_soc"
+                        #                 else {}
+                        #             ),
+                        #         )
+                        #     }
+                    else:
+                        # control via individual device setting + MQTT command
+                        # legacy set_power_cutoff query does not trigger cloud to send MQTT commands
+                        resp = await self.coordinator.client.api.set_power_cutoff(
+                            deviceSn=self.coordinator_context,
+                            socMin=value
+                            if self._attribute_name == "sb_min_soc"
+                            else None,
+                            socMax=value
+                            if self._attribute_name == "sb_max_soc"
+                            else None,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                        if resp and self.entity_description.mqtt_cmd in mdev.controls:
+                            resp |= {
+                                f"mqtt_control_{mdev.sn}": await self._async_mqtt_value(
+                                    mdev=mdev,
+                                    value=value,
+                                    cmd=self.entity_description.mqtt_cmd,
+                                    parm=self.entity_description.mqtt_cmd_parm,
+                                    # add the returned defaults for backup since states not included in MQTT data cache
+                                    parm_map={
+                                        "set_backup_soc": resp.get("backup_reserve")
+                                        or 0,
+                                        "set_backup_soc_switch": resp.get(
+                                            "backup_reserve_switch"
+                                        )
+                                        or 0,
                                     },
                                 )
                             }

@@ -175,9 +175,24 @@ set_solarbank_schedule:
       selector:
         number:
           min: 0
-          max: 3600
+          max: 4800
           step: 10
           unit_of_measurement: "W"
+    sb3_fields:
+      # Following section is used only for Solarbank 3 or later schedule types
+      collapsed: true
+      fields:
+        load_type:
+          required: false
+          example: ac_charge
+          selector:
+            select:
+              mode: list
+              multiple: false
+              translation_key: load_type
+              options:
+                - supply
+                - ac_charge
     sb1_fields:
       # Following section is used only for Solarbank 1 schedule types
       collapsed: true
@@ -274,9 +289,24 @@ update_solarbank_schedule:
       selector:
         number:
           min: 0
-          max: 3600
+          max: 4800
           step: 10
           unit_of_measurement: "W"
+    sb3_fields:
+      # Following section is used only for Solarbank 3 or later schedule types
+      collapsed: true
+      fields:
+        load_type:
+          required: false
+          example: ac_charge
+          selector:
+            select:
+              mode: list
+              multiple: false
+              translation_key: load_type
+              options:
+                - supply
+                - ac_charge
     sb1_fields:
       # Following section is used only for Solarbank 1 schedule types
       collapsed: true

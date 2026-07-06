@@ -30,7 +30,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -49,6 +48,7 @@ from .const import (
     DOMAIN,
     END_TIME,
     INCLUDE_CACHE,
+    LOAD_TYPE,
     LOGGER,
     MQTT_OVERLAY,
     PLAN,
@@ -81,11 +81,13 @@ from .solixapi.apitypes import (
     SolarbankPowerMode,
     SolarbankPpsStatus,
     SolarbankRatePlan,
+    SolarbankSchedulePresetType,
     SolarbankStatus,
     SolarbankTimeslot,
     SolarbankUsageMode,
     SolixBatteryStatus,
     SolixChargerPortStatus,
+    SolixConnectionStatus,
     SolixCpSignalStatus,
     SolixDeviceStatus,
     SolixDeviceType,
@@ -100,7 +102,7 @@ from .solixapi.apitypes import (
     SolixRoleStatus,
     SolixWorkingStatus,
 )
-from .solixapi.helpers import get_enum_name
+from .solixapi.helpers import get_enum_name, get_enum_value
 
 
 @dataclass(frozen=True)
@@ -481,6 +483,18 @@ DEVICE_SENSORS = [
             if d.get(MQTT_OVERLAY)
             else (d.get(jk) or d.get("battery_power_signed"))
         ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        # battery power of multiple devices on power docks
+        key="battery_power_signed_total",
+        translation_key="battery_power_signed_total",
+        json_key="battery_power_signed_total",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -953,13 +967,6 @@ DEVICE_SENSORS = [
         )
         for idx in range(1, 6)
     ],
-    AnkerSolixSensorDescription(
-        key="sw_version",
-        translation_key="sw_version",
-        json_key="sw_version",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-    ),
     AnkerSolixSensorDescription(
         key="sub_package_num",
         translation_key="sub_package_num",
@@ -1829,7 +1836,7 @@ DEVICE_SENSORS = [
             native_unit_of_measurement=UnitOfPower.WATT,
             device_class=SensorDeviceClass.POWER,
             state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=0,
+            suggested_display_precision=0.1,
             attrib_fn=lambda d, _, idx=idx: (
                 (
                     {
@@ -1873,6 +1880,43 @@ DEVICE_SENSORS = [
             "dc_12v_2",
         ]
     ],
+    AnkerSolixSensorDescription(
+        key="device_1_output_power",
+        translation_key="device_1_output_power",
+        json_key="device_1_output_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            {"mode": get_enum_name(SolixPpsPortStatus, str(v))}
+            if (v := d.get("device_1_mode")) is not None
+            else {}
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="device_1_status",
+        translation_key="device_1_status",
+        json_key="device_1_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=[status.name for status in SolixConnectionStatus],
+        value_fn=lambda d, jk, _: get_enum_name(SolixConnectionStatus, str(d.get(jk))),
+        attrib_fn=lambda d, _: (
+            ({"device_sn": v} if (v := d.get("device_1_sn")) else {})
+            | ({"device_pn": v} if (v := d.get("device_1_pn")) else {})
+            | (
+                {"xt60i_cable": get_enum_name(SolixConnectionStatus, str(v))}
+                if (v := d.get("cable_unplugged")) is not None
+                else {}
+            )
+            | ({"state_of_charge": v} if (v := d.get("device_1_soc")) else {})
+            | ({"temperature": v} if (v := d.get("device_1_temperature")) else {})
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
     AnkerSolixSensorDescription(
         key="dc_charging_status",
         translation_key="dc_charging_status",
@@ -2406,7 +2450,7 @@ SITE_SENSORS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.EV_CHARGER.value} - s),
     ),
     AnkerSolixSensorDescription(
-        # Summary of all solarbank charing power on site
+        # Summary of all solarbank charging power on site
         key="solarbank_battery_power_signed",
         translation_key="solarbank_battery_power_signed",
         json_key="total_charging_power",
@@ -3836,9 +3880,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "solar_brand",
             "solar_model",
             "solar_sn",
-            "sw_version",
             "tcp_port",
             "tcp_timeout_seconds",
+            "temperature",
             "total_duration",
             "total_km",
             "trees",
@@ -3847,6 +3891,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "voltage_l1l2",
             "voltage_l1l3",
             "voltage_l2l3",
+            "xt60i_cable",
         }
     )
 
@@ -4019,76 +4064,54 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 ignore_invalid = mdev.device.get(MQTT_OVERLAY) and mdev.is_connected
             key = self.entity_description.json_key
             with suppress(ValueError, TypeError):
-                # check if FW changed for device and update device entry in registry
-                # check only for single device sensor that should be common for each Solix device type
-                if (
-                    self._attribute_name == "sw_version"
-                    and self.device_entry
-                    and (
-                        firmware := self.entity_description.value_fn(
-                            data, key, self.coordinator_context
-                        )
-                    )
+                # update sensor unit if described by function
+                if unit := self.entity_description.unit_fn(
+                    data, self.coordinator_context
                 ):
-                    if firmware != self.state:
-                        # get device registry and update the device entry attribute
-                        dev_registry = dr.async_get(self.coordinator.hass)
-                        dev_registry.async_update_device(
-                            self.device_entry.id,
-                            sw_version=firmware,
-                        )
-                    self._native_value = firmware
-                else:
-                    # update sensor unit if described by function
-                    if unit := self.entity_description.unit_fn(
-                        data, self.coordinator_context
-                    ):
-                        self._attr_native_unit_of_measurement = unit
-                    if (
-                        not ignore_invalid
-                        and self.entity_description.check_invalid
-                        and not data.get("data_valid", True)
-                    ):
-                        # skip update or mark unvailable
-                        if not self.coordinator.config_entry.options.get(
-                            CONF_SKIP_INVALID
-                        ):
-                            self._native_value = None
-                    elif self.state_class == SensorStateClass.TOTAL_INCREASING:
-                        # Fix #319: Skip energy rounding errors by cloud if decrease within suggested display precision
-                        old = self._native_value
-                        self._native_value = self.entity_description.value_fn(
-                            data, key, self.coordinator_context
-                        )
-                        if old is not None and (
-                            0
-                            > (float(self._native_value) - float(old))
-                            >= -1 / 10**self.suggested_display_precision
-                        ):
-                            self._native_value = old
-                    else:
-                        self._native_value = self.entity_description.value_fn(
-                            data, key, self.coordinator_context
-                        )
-                        if (
-                            self._native_value
-                            and self.device_class == SensorDeviceClass.TEMPERATURE
-                        ):
-                            # Set unit of measurement as user option to allow automatic state conversion by HA core
-                            if data.get("temp_unit_fahrenheit"):
-                                self._sensor_option_unit_of_measurement = (
-                                    UnitOfTemperature.FAHRENHEIT
-                                )
-                            else:
-                                self._sensor_option_unit_of_measurement = (
-                                    UnitOfTemperature.CELSIUS
-                                )
-                    # Ensure to set power sensors to None if empty strings returned
-                    if (
-                        self.device_class == SensorDeviceClass.POWER
-                        and not self._native_value
-                    ):
+                    self._attr_native_unit_of_measurement = unit
+                if (
+                    not ignore_invalid
+                    and self.entity_description.check_invalid
+                    and not data.get("data_valid", True)
+                ):
+                    # skip update or mark unvailable
+                    if not self.coordinator.config_entry.options.get(CONF_SKIP_INVALID):
                         self._native_value = None
+                elif self.state_class == SensorStateClass.TOTAL_INCREASING:
+                    # Fix #319: Skip energy rounding errors by cloud if decrease within suggested display precision
+                    old = self._native_value
+                    self._native_value = self.entity_description.value_fn(
+                        data, key, self.coordinator_context
+                    )
+                    if old is not None and (
+                        0
+                        > (float(self._native_value) - float(old))
+                        >= -1 / 10**self.suggested_display_precision
+                    ):
+                        self._native_value = old
+                else:
+                    self._native_value = self.entity_description.value_fn(
+                        data, key, self.coordinator_context
+                    )
+                    if (
+                        self._native_value
+                        and self.device_class == SensorDeviceClass.TEMPERATURE
+                    ):
+                        # Set unit of measurement as user option to allow automatic state conversion by HA core
+                        if data.get("temp_unit_fahrenheit"):
+                            self._sensor_option_unit_of_measurement = (
+                                UnitOfTemperature.FAHRENHEIT
+                            )
+                        else:
+                            self._sensor_option_unit_of_measurement = (
+                                UnitOfTemperature.CELSIUS
+                            )
+                # Ensure to set power sensors to None if empty strings returned
+                if (
+                    self.device_class == SensorDeviceClass.POWER
+                    and not self._native_value
+                ):
+                    self._native_value = None
 
                 # perform potential value conversions in testmode
                 if (
@@ -4278,11 +4301,11 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         ):
             data: dict = self.coordinator.data.get(self._context_base)
             generation: int = (
-                2
+                3
                 if data.get("type") == SolixDeviceType.COMBINER_BOX.value
                 else int(data.get("generation") or 0)
             )
-            siteId = data.get("site_id") or ""
+            site_id = data.get("site_id") or ""
             if service_name in [
                 SERVICE_SET_SOLARBANK_SCHEDULE,
                 SERVICE_UPDATE_SOLARBANK_SCHEDULE,
@@ -4311,6 +4334,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 if start_time and end_time:
                     if start_time < end_time:
                         weekdays = kwargs.get(WEEK_DAYS)
+                        # Ignore load type if not supported
+                        load_type = (
+                            kwargs.get(LOAD_TYPE)
+                            if "preset_load_type" in data
+                            else None
+                        )
                         load = kwargs.get(APPLIANCE_LOAD)
                         dev_load = kwargs.get(DEVICE_LOAD)
                         allow_export = kwargs.get(ALLOW_EXPORT)
@@ -4319,7 +4348,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         # check if now is in given time range and ensure preset increase is limited by min interval
                         now = datetime.now().astimezone()
                         # consider device timezone offset when checking for actual slot
-                        tz_offset = (self.coordinator.data.get(siteId) or {}).get(
+                        tz_offset = (self.coordinator.data.get(site_id) or {}).get(
                             "energy_offset_tz"
                         ) or 0
                         start_time.astimezone()
@@ -4330,7 +4359,11 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         old_dev = dev_load if old_dev is None else old_dev
                         # set the system load that should be checked for increase
                         check_load = (
-                            load
+                            None
+                            if get_enum_value(
+                                SolarbankSchedulePresetType, load_type
+                            )  # skip check for ac charge
+                            else load
                             if dev_load is None
                             else int(
                                 self._last_schedule_service_value + (dev_load - old_dev)
@@ -4380,12 +4413,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 start_time=start_time,
                                 end_time=end_time,
                                 appliance_load=load,
+                                charging_type=load_type,
                                 weekdays=set(weekdays) if weekdays else None,
                             )
                             if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
                                 result = (
                                     await self.coordinator.client.api.set_sb2_home_load(
-                                        siteId=siteId,
+                                        siteId=site_id,
                                         deviceSn=self._context_base,
                                         set_slot=slot,
                                         plan_name=plan,
@@ -4395,7 +4429,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             elif service_name == SERVICE_UPDATE_SOLARBANK_SCHEDULE:
                                 result = (
                                     await self.coordinator.client.api.set_sb2_home_load(
-                                        siteId=siteId,
+                                        siteId=site_id,
                                         deviceSn=self._context_base,
                                         insert_slot=slot,
                                         plan_name=plan,
@@ -4435,7 +4469,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             if service_name == SERVICE_SET_SOLARBANK_SCHEDULE:
                                 result = (
                                     await self.coordinator.client.api.set_home_load(
-                                        siteId=siteId,
+                                        siteId=site_id,
                                         deviceSn=self._context_base,
                                         set_slot=slot,
                                         toFile=self.coordinator.client.testmode(),
@@ -4444,7 +4478,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             elif service_name == SERVICE_UPDATE_SOLARBANK_SCHEDULE:
                                 result = (
                                     await self.coordinator.client.api.set_home_load(
-                                        siteId=siteId,
+                                        siteId=site_id,
                                         deviceSn=self._context_base,
                                         insert_slot=slot,
                                         toFile=self.coordinator.client.testmode(),
@@ -4469,13 +4503,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                         # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
                         # await self.coordinator.client.api.update_sites(
-                        #     siteId=siteId,
+                        #     siteId=site_id,
                         #     fromFile=self.coordinator.client.testmode(),
                         # )
                         # trigger coordinator update with api dictionary data
                         await self.coordinator.async_refresh_data_from_apidict()
                         # refresh last applied system load
-                        if result:
+                        if result and not load_type:
                             self._last_schedule_service_value = (
                                 self.coordinator.data.get(self._context_base) or {}
                             ).get("preset_system_output_power") or None
@@ -4508,7 +4542,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     # get SB2 schedule
                     result = (
                         await self.coordinator.client.api.get_device_parm(
-                            siteId=siteId,
+                            siteId=site_id,
                             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
                             deviceSn=self._context_base,
                             fromFile=self.coordinator.client.testmode(),
@@ -4518,7 +4552,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 else:
                     result = (
                         await self.coordinator.client.api.get_device_load(
-                            siteId=siteId,
+                            siteId=site_id,
                             deviceSn=self._context_base,
                             fromFile=self.coordinator.client.testmode(),
                         )
@@ -4538,7 +4572,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         plan = kwargs.get(PLAN)
                         weekdays = kwargs.get(WEEK_DAYS)
                         result = await self.coordinator.client.api.set_sb2_home_load(
-                            siteId=siteId,
+                            siteId=site_id,
                             deviceSn=self._context_base,
                             plan_name=plan,
                             set_slot=Solarbank2Timeslot(
@@ -4567,7 +4601,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     await self.coordinator.client.validate_cache()
                     # No need to Raise error if cascaded, since clearing will directly be done against correct Api device param for custom SB1 schedule
                     result = await self.coordinator.client.api.set_device_parm(
-                        siteId=siteId,
+                        siteId=site_id,
                         paramData={"ranges": []},
                         deviceSn=self._context_base,
                         toFile=self.coordinator.client.testmode(),
@@ -4589,7 +4623,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                 # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
                 # await self.coordinator.client.api.update_sites(
-                #     siteId=siteId,
+                #     siteId=site_id,
                 #     fromFile=self.coordinator.client.testmode(),
                 # )
                 # trigger coordinator update with api dictionary data

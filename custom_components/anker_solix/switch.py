@@ -65,7 +65,11 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi import export
-from .solixapi.apitypes import SolixDeviceType
+from .solixapi.apitypes import (
+    ApiCategories,
+    SolixConnectionStatus,
+    SolixDeviceType,
+)
 from .solixapi.mqtt_device import SolixMqttDevice
 from .solixapi.mqttcmdmap import SolixMqttCommands
 
@@ -168,6 +172,38 @@ DEVICE_SWITCHES = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.sb_light_switch,
         inverted=True,
+    ),
+    AnkerSolixSwitchDescription(
+        # Solarbank Battery soc reserve switch SB 3+ with new FW
+        key="sb_backup_soc_switch",
+        translation_key="backup_soc_switch",
+        json_key="backup_reserve_switch",
+        entity_category=EntityCategory.CONFIG,
+        # use different MQTT value name if overlay
+        value_fn=lambda d, jk: (
+            (v if (v := d.get("backup_soc_switch")) is not None else d.get(jk))
+            if d.get(MQTT_OVERLAY)
+            else (v if (v := d.get(jk)) is not None else d.get("backup_soc_switch"))
+        ),
+        # Excludde for Solarbanks not supporting new SOC feature
+        exclude_fn=lambda s, d: (
+            not (
+                (
+                    ({d.get("type")} - s)
+                    & {
+                        SolixDeviceType.SOLARBANK.value,
+                        SolixDeviceType.COMBINER_BOX.value,
+                    }
+                )
+                and {ApiCategories.solarbank_cutoff} - s
+                and d.get("generation", 3) > 2
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.sb_soc_limits,
+        mqtt_cmd_parm="set_backup_soc_switch",
+        api_cmd=True,
     ),
     AnkerSolixSwitchDescription(
         # PPS Light switch
@@ -731,6 +767,16 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 )
             key = self.entity_description.json_key
             self._attr_is_on = self.entity_description.value_fn(data, key)
+            if (
+                self._attribute_name == "device_switch"
+                and data.get("type") == SolixDeviceType.CHARGER.value
+            ):
+                # enable reverse mode only if PPS connected via expansion cable and showing SN
+                if (
+                    str(data.get("device_1_status", ""))
+                    == SolixConnectionStatus.disconnected.value
+                ):
+                    self._attr_is_on = None
         else:
             self._attr_is_on = self.entity_description.value_fn(
                 self.coordinator.data, self.entity_description.json_key
@@ -750,7 +796,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         """Turn off the switch."""
         await self._async_toggle(enable=False)
 
-    async def _async_toggle(self, enable: bool) -> None:
+    async def _async_toggle(self, enable: bool) -> None:  # noqa: C901
         """Enable or disable the entity."""
         # Skip Api calls if entity does not change
         if self._attr_is_on in [None, enable]:
@@ -836,14 +882,14 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 registered := set(self.coordinator.client.get_registered_vehicles())
             ) > 1:
                 if enable ^ self.entity_description.inverted:
-                    vehicleId = self.coordinator_context
+                    vehicle_id = self.coordinator_context
                 else:
                     # get first other vehicle from list to set as new default
-                    vehicleId = list(registered - {self.coordinator_context})[0]
+                    vehicle_id = list(registered - {self.coordinator_context})[0]
                 resp = await self.coordinator.client.api.manage_vehicle(
-                    vehicleId=vehicleId,
+                    vehicleId=vehicle_id,
                     action="setdefault",
-                    vehicle=(self.coordinator.data or {}).get(vehicleId) or {},
+                    vehicle=(self.coordinator.data or {}).get(vehicle_id) or {},
                     toFile=self.coordinator.client.testmode(),
                 )
                 if isinstance(resp, dict) and ALLOW_TESTMODE:
@@ -895,15 +941,15 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     )
                 elif self._attribute_name == "allow_grid_export":
                     # First control all solarbank devices via individual MQTT device setting
-                    if siteId := data.get("site_id"):
-                        stationSn = (
+                    if site_id := data.get("site_id"):
+                        station_sn = (
                             self.coordinator_context
                             if data.get("type") == SolixDeviceType.COMBINER_BOX.value
                             else data.get("station_sn", "")
                         )
                         for md in self.coordinator.client.get_mqtt_devices(
-                            siteId=siteId,
-                            stationSn=stationSn,
+                            siteId=site_id,
+                            stationSn=station_sn,
                             extraDeviceSn=self.coordinator_context,
                             mqttControl=self.entity_description.mqtt_cmd,
                         ):
@@ -922,7 +968,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         # Last control settings via Api, set power limit will make required Api call for switch
                         resp = (resp or {}) | (
                             await self.coordinator.client.api.set_power_limit(
-                                siteId=siteId,
+                                siteId=site_id,
                                 deviceSn=self.coordinator_context,
                                 grid_export=enable ^ self.entity_description.inverted,
                                 toFile=self.coordinator.client.testmode(),
@@ -940,6 +986,42 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         discharge_prio=(enable ^ self.entity_description.inverted)
                         if self._attribute_name == "preset_discharge_priority"
                         else None,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                if isinstance(resp, dict) and ALLOW_TESTMODE:
+                    LOGGER.info(
+                        "%s: Applied settings for '%s' change to '%s':\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
+                        self.entity_id,
+                        "ON" if enable else "OFF",
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
+                    )
+                await self.coordinator.async_refresh_data_from_apidict()
+            else:
+                LOGGER.error(
+                    "'%s' cannot be toggled because entity data was not found",
+                    self.entity_id,
+                )
+        elif self._attribute_name == "sb_backup_soc_switch":
+            if (
+                self.coordinator
+                and hasattr(self.coordinator, "data")
+                and self.coordinator_context in self.coordinator.data
+            ):
+                data = self.coordinator.data.get(self.coordinator_context)
+                resp = None
+                if (
+                    data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                    or data.get("station_sn") is not None
+                ):
+                    # control only via station setting which will issue required device MQTT commands
+                    resp = await self.coordinator.client.api.set_station_parm(
+                        deviceSn=self.coordinator_context,
+                        socSwitch=enable ^ self.entity_description.inverted,
                         toFile=self.coordinator.client.testmode(),
                     )
                 if isinstance(resp, dict) and ALLOW_TESTMODE:
@@ -1073,7 +1155,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 },
             )
         # When running in Test mode do not run services that are not supporting a testmode
-        if self.coordinator.client.testmode() and service_name not in []:
+        if self.coordinator.client.testmode():
             raise ServiceValidationError(
                 f"'{self.entity_id}' cannot be used while configuration is running in testmode",
                 translation_domain=DOMAIN,

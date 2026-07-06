@@ -1,4 +1,5 @@
 """Anker Power/Solix Cloud API class outsourced schedule related methods."""
+# ruff: noqa: N806
 
 from __future__ import annotations  # noqa: TID251
 
@@ -17,6 +18,7 @@ from .apitypes import (
     SolarbankDeviceMetrics,
     SolarbankPowerMode,
     SolarbankRatePlan,
+    SolarbankSchedulePresetType,
     SolarbankTimeslot,
     SolarbankUsageMode,
     SolixDayTypes,
@@ -27,7 +29,7 @@ from .apitypes import (
     SolixPriceTypes,
     SolixTariffTypes,
 )
-from .helpers import get_enum_name
+from .helpers import get_enum_name, get_enum_value
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -353,7 +355,6 @@ async def get_device_parm(
             if station_sn in self.devices:
                 station = {"device_sn": station_sn}
                 station["power_cutoff_data"] = paramData.get("soc_list") or []
-                station["schedule"] = schedule
                 # extract active setting for station
                 for setting in station["power_cutoff_data"]:
                     if (
@@ -361,12 +362,6 @@ async def get_device_parm(
                         and int(setting.get("soc", 0)) > 0
                     ):
                         station["power_cutoff"] = int(setting.get("soc"))
-                station["allow_grid_export"] = not bool(
-                    paramData.get("switch_0w", None)
-                )
-                station["grid_export_limit"] = str(
-                    paramData.get("feed-in_power_limit", "")
-                )
                 station["charge_upper_limit"] = str(
                     paramData.get("charge_upper_limit", "")
                 )
@@ -376,6 +371,13 @@ async def get_device_parm(
                 station["backup_reserve"] = str(paramData.get("backup_reserve", ""))
                 station["backup_reserve_switch"] = bool(
                     paramData.get("backup_reserve_switch", "")
+                )
+                station["schedule"] = schedule
+                station["allow_grid_export"] = not bool(
+                    paramData.get("switch_0w", None)
+                )
+                station["grid_export_limit"] = str(
+                    paramData.get("feed-in_power_limit", "")
                 )
                 self._update_dev(station)
     return data
@@ -451,10 +453,16 @@ async def set_device_parm(
                     if sb.get("site_id") == siteId and sb.get("station_sn") is not None
                 ]:
                     await self.set_power_cutoff(deviceSn=sn, setId=setId, toFile=toFile)
-            if (setting := paramData.get("switch_0w")) is not None:
-                filedata["switch_0w"] = setting
-            if (setting := paramData.get("feed-in_power_limit")) is not None:
-                filedata["feed-in_power_limit"] = setting
+            for key in [
+                "switch_0w",
+                "feed-in_power_limit",
+                "discharge_lower_limit",
+                "charge_upper_limit",
+                "backup_reserve",
+                "backup_reserve_switch",
+            ]:
+                if (setting := paramData.get(key)) is not None:
+                    filedata[key] = setting
         elif paramType in [
             SolixParmType.SOLARBANK_SCHEDULE.value,
             SolixParmType.SOLARBANK_2_SCHEDULE.value,
@@ -1436,8 +1444,8 @@ async def set_sb2_home_load(  # noqa: C901
     self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
-    preset: int | None = None,
-    charging_type: int | None = None,
+    preset: float | None = None,
+    charging_type: int | str | None = None,  # Any SolixPresetType
     usage_mode: int | None = None,
     plan_name: str | None = None,
     set_slot: Solarbank2Timeslot | None = None,
@@ -1485,7 +1493,7 @@ async def set_sb2_home_load(  # noqa: C901
     charging_type = (
         int(charging_type)
         if str(charging_type).isdigit() or isinstance(charging_type, int | float)
-        else None
+        else get_enum_value(SolarbankSchedulePresetType, charging_type)
     )
     # Validate if selected mode is possible
     usage_mode_options = self.solarbank_usage_mode_options(deviceSn=deviceSn)
@@ -1726,7 +1734,7 @@ async def set_sb2_home_load(  # noqa: C901
                 insert: dict = {}
                 # Workaround to avoid None data for new field
                 if slot.get("charging_type", "") is None:
-                    slot["charging_type"] = 0
+                    slot["charging_type"] = SolixDefaults.PRESET_TYPE
 
                 # Check if parameter update required for current time but it falls into gap of no defined slot.
                 # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications (required for allday usage)
@@ -1775,7 +1783,12 @@ async def set_sb2_home_load(  # noqa: C901
                         insert.update(
                             {
                                 "charging_type": int(
-                                    charging_type or insert.get("charging_type") or 0
+                                    charging_type
+                                    if charging_type is not None
+                                    else (
+                                        insert.get("charging_type")
+                                        or SolixDefaults.PRESET_TYPE
+                                    )
                                 )
                             }
                         )
@@ -1835,7 +1848,12 @@ async def set_sb2_home_load(  # noqa: C901
                         overwrite and "charging_type" in insert
                     ):
                         insert.update(
-                            {"charging_type": int(insert_slot.charging_type or 0)}
+                            {
+                                "charging_type": int(
+                                    insert_slot.charging_type
+                                    or SolixDefaults.PRESET_TYPE
+                                )
+                            }
                         )
 
                     # insert slot before current slot if not last
@@ -1991,7 +2009,7 @@ async def set_sb2_home_load(  # noqa: C901
             "power": SolixDefaults.PRESET_DEF
             if set_slot.appliance_load is None
             else set_slot.appliance_load,
-            "charging_type": int(set_slot.charging_type or 0),
+            "charging_type": int(set_slot.charging_type or SolixDefaults.PRESET_TYPE),
         }
         new_ranges.append(slot)
 
@@ -2273,6 +2291,7 @@ async def set_sb2_use_time(  # noqa: C901
     day_type: str | None = None,  # Anker Solix use time day types
     tariff_type: int | str | None = None,  # Any SolixTariffTypes
     tariff_price: float | str | None = None,
+    tariff_sell_price: float | str | None = None,
     currency: str | None = None,
     delete: bool | None = False,
     merge_tariff_slots: bool = True,  # merge time slots with same tariff
@@ -2457,6 +2476,11 @@ async def set_sb2_use_time(  # noqa: C901
         if str(tariff_price).replace(".", "", 1).isdigit()
         else None
     )
+    tariff_sell_price = (
+        f"{float(tariff_sell_price):.2f}"
+        if str(tariff_sell_price).replace(".", "", 1).isdigit()
+        else None
+    )
     currency = str(currency)[0:3] if currency else None
     delete = delete if isinstance(delete, bool) else False
     merge_tariff_slots = (
@@ -2475,6 +2499,7 @@ async def set_sb2_use_time(  # noqa: C901
         or day_type
         or tariff_type
         or tariff_price
+        or tariff_sell_price
         or currency
         or delete
     ):
@@ -2512,7 +2537,7 @@ async def set_sb2_use_time(  # noqa: C901
             delete_scope = "daytype"
         elif start_month or end_month:
             delete_scope = "season"
-        elif not (tariff_price or currency):
+        elif not (tariff_price or tariff_sell_price or currency):
             delete_scope = "plan"
 
     # set defaults if needed
@@ -2547,6 +2572,14 @@ async def set_sb2_use_time(  # noqa: C901
         )
         or SolixDefaults.TARIFF_PRICE_DEF
     )
+    def_tariff_sell_price = (
+        tariff_sell_price
+        or str(
+            ((self.sites.get(siteId) or {}).get("site_details") or {}).get("sell_price")
+            or ""
+        )
+        or SolixDefaults.TARIFF_SELL_PRICE_DEF
+    )
 
     # obtain actual device schedule from internal dict or fetch via api
     if not isinstance(test_schedule, dict):
@@ -2577,10 +2610,18 @@ async def set_sb2_use_time(  # noqa: C901
                     {"start_time": 0, "end_time": 24, "type": def_tariff_type},
                 ],
                 "weekday_price": [
-                    {"price": def_tariff_price, "type": def_tariff_type},
+                    {
+                        "price": def_tariff_price,
+                        "type": def_tariff_type,
+                        "sell_price": def_tariff_sell_price,
+                    },
                 ],
                 "weekend_price": [
-                    {"price": def_tariff_price, "type": def_tariff_type},
+                    {
+                        "price": def_tariff_price,
+                        "type": def_tariff_type,
+                        "sell_price": def_tariff_sell_price,
+                    },
                 ],
                 "unit": def_currency,
                 "is_same": SolixDefaults.TARIFF_WE_SAME,
@@ -2721,7 +2762,9 @@ async def set_sb2_use_time(  # noqa: C901
                         tariff_type
                         and (
                             not (
-                                tariff_price and start_hour is None and end_hour is None
+                                (tariff_price or tariff_sell_price)
+                                and start_hour is None
+                                and end_hour is None
                             )
                             or len(season.get(day) or []) == 1
                         )
@@ -2850,6 +2893,9 @@ async def set_sb2_use_time(  # noqa: C901
                             if tariff_price and tariff == day_tariff_type:
                                 # update price of tariff if specified
                                 price["price"] = tariff_price
+                            if tariff_sell_price and tariff == day_tariff_type:
+                                # update sell price of tariff if specified
+                                price["sell_price"] = tariff_sell_price
                             # remove found tariff to prevent it will be added
                             find_tariff.discard(tariff)
                             prices.append(price)
@@ -2877,6 +2923,8 @@ async def set_sb2_use_time(  # noqa: C901
                             {
                                 "price": tariff_price or def_tariff_price,
                                 "type": tariff,
+                                "sell_price": tariff_sell_price
+                                or def_tariff_sell_price,
                             }
                             for tariff in find_tariff
                         )

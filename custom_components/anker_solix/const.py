@@ -13,6 +13,7 @@ import homeassistant.helpers.config_validation as cv
 
 from .solixapi.apitypes import (
     SolarbankRatePlan,
+    SolarbankSchedulePresetType,
     SolixDayTypes,
     SolixDefaults,
     SolixTariffTypes,
@@ -43,6 +44,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.TIME,
+    Platform.UPDATE,
 ]
 TESTMODE: Final[str] = "testmode"
 TESTFOLDER: Final[str] = "testfolder"
@@ -92,6 +94,7 @@ START_TIME: Final[str] = "start_time"
 END_TIME: Final[str] = "end_time"
 PLAN: Final[str] = "plan"
 WEEK_DAYS: Final[str] = "week_days"
+LOAD_TYPE: Final[str] = "load_type"
 APPLIANCE_LOAD: Final[str] = "appliance_load"
 DEVICE_LOAD: Final[str] = "device_load"
 CHARGE_PRIORITY_LIMIT: Final[str] = "charge_priority_limit"
@@ -127,6 +130,30 @@ def extractNone(value: Any) -> None:
 
 VALID_DAYTIME = vol.All(
     lambda v: datetime.strptime(":".join(str(v).split(":")[:2]), "%H:%M"),
+)
+VALID_LOAD_TYPE = vol.All(
+    extractNone,
+    vol.Any(
+        None,
+        vol.In(
+            [
+                item.value
+                for item in SolarbankSchedulePresetType
+                if item.name != "unknown"
+            ],
+        ),
+        vol.All(
+            vol.Lower,
+            vol.In(
+                [
+                    item.name.lower()
+                    for item in SolarbankSchedulePresetType
+                    if item.name != "unknown"
+                ],
+            ),
+        ),
+        msg=f"not in {[item.value for item in SolarbankSchedulePresetType if item.name != 'unknown'] + [item.name.lower() for item in SolarbankSchedulePresetType if item.name != 'unknown']}",
+    ),
 )
 VALID_APPLIANCE_LOAD = vol.All(
     extractNone,
@@ -218,6 +245,9 @@ SOLARBANK_TIMESLOT_DICT: dict = {
     vol.Optional(
         WEEK_DAYS,
     ): VALID_WEEK_DAYS,
+    vol.Optional(
+        LOAD_TYPE,
+    ): VALID_LOAD_TYPE,
     vol.Optional(
         APPLIANCE_LOAD,
     ): VALID_APPLIANCE_LOAD,
@@ -353,15 +383,15 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
                 vol.Any(
                     None,
                     vol.In(
-                        [item.value for item in SolixTariffTypes],
+                        [item.value for item in SolixTariffTypes if item.name != "UNKNOWN"],
                     ),
                     vol.All(
                         vol.Lower,
                         vol.In(
-                            [item.name.lower() for item in SolixTariffTypes],
+                            [item.name.lower() for item in SolixTariffTypes if item.name != "UNKNOWN"],
                         ),
                     ),
-                    msg=f"not in {[item.value for item in SolixTariffTypes] + [item.name.lower() for item in SolixTariffTypes]}",
+                    msg=f"not in {[item.value for item in SolixTariffTypes if item.name != "UNKNOWN"] + [item.name.lower() for item in SolixTariffTypes if item.name != "UNKNOWN"]}",
                 ),
             ),
             vol.Optional(TARIFF_PRICE): vol.All(

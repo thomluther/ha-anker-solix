@@ -20,10 +20,13 @@ from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
 from .mqttcmdmap import (
+    BYTES,
     COMMAND_LIST,
     COMMAND_NAME,
     EMBEDDED,
+    LENGTH,
     NAME,
+    OFFSET,
     TYPE,
     SolixMqttCommands,
 )
@@ -863,6 +866,7 @@ class AnkerSolixMqttSession:
                             folderdict["duration"] = duration
                             folderdict["timestamps"] = len(timestamps)
                             folderdict["ts_index"] = 0
+                            folderdict["timestamp"] = timestamps[0] if timestamps else 0
                 if timestamps:
                     cycle_now = (
                         speedstart
@@ -883,6 +887,7 @@ class AnkerSolixMqttSession:
                                 2,
                             )
                         folderdict["ts_index"] = time_idx
+                        folderdict["timestamp"] = timestamps[time_idx]
                         # simulate mqtt messages for timestamp
                         for message in active_msgs.get(timestamps[time_idx]) or []:
                             self._logger.debug(
@@ -1087,8 +1092,60 @@ def generate_mqtt_command(
                         hexdata.add_timestamp_ms_field()
                     else:
                         hexdata.add_timestamp_field(fieldtype=desc.get(TYPE))
+                # compose command field based on description
+                elif subfields := desc.get(BYTES, {}):
+                    # initialize datafield with empty value for subfield updates
+                    datafield = DeviceHexDataField(
+                        f_name=bytes.fromhex(field),
+                        f_type=desc.get(TYPE),
+                        f_value=bytearray(bytes.fromhex("00" * desc.get(LENGTH, 0))),
+                    )
+                    # use all subfields to update datafield
+                    pos = 0
+                    length = 0
+                    for key, subfield in (
+                        enumerate(subfields)
+                        if isinstance(subfields, list)
+                        else subfields.items()
+                    ):
+                        name = subfield.get(NAME)
+                        value = parameters.get(name)
+                        if isinstance(key, int):
+                            # relative byte position last position
+                            pos += length + int(subfield.get(OFFSET, 0))
+                            typ = subfield.get(TYPE)
+                            if length := subfield.get(LENGTH, 0):
+                                # for negative length, add 1 byte for the str length
+                                length = abs(length) + int(
+                                    length < 0 and typ == DeviceHexDataTypes.str.value
+                                )
+                            else:
+                                length = (
+                                    1
+                                    if typ == DeviceHexDataTypes.ui.value
+                                    else 2
+                                    if typ == DeviceHexDataTypes.sile.value
+                                    else 4
+                                    if typ
+                                    in [
+                                        DeviceHexDataTypes.sfle.value,
+                                        DeviceHexDataTypes.var.value,
+                                    ]
+                                    else (len(value) + int(LENGTH in subfield))
+                                    if typ == DeviceHexDataTypes.str.value
+                                    and isinstance(value, str)
+                                    else 0
+                                )
+                        else:
+                            pos = int(key)
+
+                        datafield.update(
+                            value=value,
+                            offset=pos,
+                            desc=subfield | dynamic_descriptions.get(name, {}),
+                        )
+                    hexdata.update_field(datafield)
                 else:
-                    # compose command field based on description
                     value = parameters.get(name)
                     hexdata.update_field(
                         DeviceHexDataField().update(

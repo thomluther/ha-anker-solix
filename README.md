@@ -141,6 +141,7 @@ Platform | Description
 `number` | Change values for certain entities
 `datetime` | Change date and time for certain entities
 `time` | Change time for certain entities
+`update` | Update entities to reflect available firmware updates
 `service` | Various Solarbank schedule or Api related services/actions
 
 Device type | Description
@@ -156,7 +157,7 @@ Device type | Description
 `solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(basic Api & MQTT monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
-`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(MQTT monitoring & partial control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & partial control)**<br>- AS200: Alternator Charger **(MQTT monitoring & control for car battery charging, reverse charging is missing completely)**
+`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(MQTT monitoring & partial control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & partial control)**<br>- AS200: Alternator Charger **(MQTT monitoring & control)**
 `ev_charger` | Anker Solix EV charger devices:<br>- A5191: V1 Smart EV Charger **(MQTT monitoring & control)**
 `home_backup` | Anker Solix Home Backup devices:<br>- A17E1: Solix E10 (US market) **(Basic MQTT monitoring)**<br>- AX170: Power Dock for Solix E10 (US market) **(Basic MQTT monitoring)**
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the Anker Solix V1 EV Charger.
@@ -206,8 +207,7 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
 
-> [!IMPORTANT]
-> The output limit change via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
+Version 3.7.0 added new Min and Max SOC settings (Requires optional MQTT connection and appropriate device Firmware, otherwise the control entities will not be created)
 
 
 ### Solarbank 2 AC devices
@@ -221,8 +221,7 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
 
-> [!IMPORTANT]
-> The output limit change via the integration may not work properly since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
+Version 3.7.0 added new Min and Max SOC settings (Requires optional MQTT connection and appropriate device Firmware, otherwise the control entities will not be created)
 
 
 ### Combined Solarbank 2 systems containing cascaded Solarbank 1 devices
@@ -271,6 +270,8 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
 
+Version 3.7.0 added new Min, Max and Backup SOC settings (Requires appropriate device Firmware, otherwise the control entities will not be created)
+
 > [!IMPORTANT]
 > Following limitations apply:
 - Dynamic price forecast support remains limited to the Nordpool provider only. **Other price providers may show wrong price calculations**, see [Dynamic price provider selection](#dynamic-price-provider-selection).
@@ -295,8 +296,7 @@ Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or
 
 Version 3.5.0 added device control via optional MQTT connection and merged individual solarbank device controls to Power Dock controls. Multisystem controls are implemented via additional or hybrid control entities.
 
-> [!IMPORTANT]
-> The output limit for Multisystems is not changeable via the integration since the required Api request is unknown at this time. See more details in [Solarbank station controls](#solarbank-station-controls)
+Version 3.7.0 added new Min, Max and Backup SOC settings (Requires appropriate device Firmware, otherwise the control entities will not be created)
 
 
 ### Solarbank station controls
@@ -305,6 +305,7 @@ Device controls via station controls have been implemented by Anker to manage So
 
 Following settings may require the hybrid approach:
 - SOC reserve (min SOC) - same for all Solarbank devices in Multisystems, must also be set on Power Dock device if available
+- New Min and Max SOC settings (MQTT required for Solarbank 2 systems without station support). This requires also appropriate device firmare.
 - PV input limit - individual per Solarbank
 - AC input limit (AC charge limit) - individual per Solarbank
 - AC output limit (max home load) - overall limit across all Solarbank devices in system, must also be set on Power Dock device if available
@@ -346,11 +347,6 @@ Following temporary states may be shown as well, but cannot be used in actions f
 - `wait_plug` is waiting for the EV charging cable to be plugged in after starting a charge (120 seconds)
 
 The countdowns of these wait states are available as attributes of the control entity. The available entity options are adopted dynamically, depending on the state and other MQTT data. If you automate operational mode changes, you need to implement conditions to check that the desired mode you want to activate is available in the entity options. Otherwise your automation action step may fail due to invalid select option of the entity.
-
-> [!NOTE]
-> The random delay switch is created for all charger variants, but since the variant and its supported features cannot be recognized through the known MQTT data, enabling the random start delay switch may or may not work. A random charger start delay is just required for specific country regulations, e.g. for UK. If you don't see this option in your mobile App, don't use it with the integration either, since you could not modify it without the integration.
-
-The auto phase switch control is only available for 3 phase EV charger variants. This is recognized by the integration via voltage values on all 3 phases.
 
 All metrics of the active charging session are recorded in device entities and attributes. Completed charging session statistics are **NOT supported by the integration** and won't be implemented. You can use the entity history data in HA to gain more insights of previous charger statistics if required, or use the mobile App statistic review.
 
@@ -397,7 +393,7 @@ X1 system owners need to explore and document cloud Api capabilities to further 
 Version 3.5.2 added experimental [device MQTT data](#mqtt-managed-devices) for X1 primary controller modules. This version also changed the capacity calculations per controller, which now only reflects the (customized) capacity of the battery modules they control. For larger systems with multiple controllers, there will only be one primary controller that is used as home for all entities. This also seems to be the only device that reports MQTT messages. Any overall SOC and Battery Energy calculation will be assigned to the primary controller device.
 
 > [!TIP]
-> If you prefer local integration of your X1 devices, please refer to the generic [HA Modbus integration](https://www.home-assistant.io/integrations/modbus/) and the [Anker X1 Modbus specification](https://support.ankersolix.com/de/s/download-preview?urlname=Anker-SOLIX-X1-Series-Modbus-Protocol). Modbus will NOT be covered by this project, and you need to configure the Modbus integration in YAML, including each sensor definition according to the documented modbus registers. Examples are shown by user [@Freacly](https://github.com/Freacly) in this [issue](https://github.com/thomluther/ha-anker-solix/issues/429#issuecomment-3810556184).
+> If you prefer local integration of your X1 devices, please refer to the generic [HA Modbus integration](https://www.home-assistant.io/integrations/modbus/) and the [Anker X1 Modbus specification](https://support.ankersolix.com/de/s/download-preview?urlname=Anker-SOLIX-X1-Series-Modbus-Protocol). Modbus will NOT be covered by this project, and you need to configure the Modbus integration in YAML, including each sensor definition according to the documented modbus registers. Examples are shown by user [@Freacly](https://github.com/Freacly) in this [issue](https://github.com/thomluther/ha-anker-solix/issues/429#issuecomment-3810556184). X1 Modbus can only be enabled by the Anker Installer App (not by the current consumer App).
 
 
 ### Home Backup Systems

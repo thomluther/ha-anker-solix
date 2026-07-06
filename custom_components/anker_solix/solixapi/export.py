@@ -6,6 +6,7 @@ Optionally the export files will also be zipped.
 They json files can be used as examples for dedicated data extraction from the Api responses.
 Furthermore the API class can use the json files for debugging and testing of various system outputs.
 """
+# ruff: noqa: N806
 
 import asyncio
 from base64 import b64encode
@@ -46,7 +47,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.6.2.0"
+VERSION: str = "3.7.0.0"
 
 
 class AnkerSolixApiExport:
@@ -83,6 +84,7 @@ class AnkerSolixApiExport:
         self._randomdata: dict = {}
         self._loop: asyncio.AbstractEventLoop
         self._mqtt_msg_types: set = set()
+        self._hexserials: dict = {}
         self._old_callback: Callable | None = None
 
         # initialize logger for object
@@ -107,7 +109,9 @@ class AnkerSolixApiExport:
 
         if not export_path:
             # default to exports self.export_path in parent path of api library
-            self.export_path = (Path(__file__).parent / ".." / "exports").resolve()
+            self.export_path = (
+                Path(__file__).parent.parent.parent / "exports"
+            ).resolve()
             if not (
                 os.access(self.export_path.parent, os.W_OK)
                 or os.access(self.export_path, os.W_OK)
@@ -802,6 +806,7 @@ class AnkerSolixApiExport:
                     "30",
                     "31",
                     "33",
+                    "34",
                 ]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
@@ -1030,6 +1035,9 @@ class AnkerSolixApiExport:
                             "enable_0w",
                             "ip_region",
                             "regulation_code",
+                            "pps_use_time",
+                            "currency",
+                            "tag",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
@@ -1219,7 +1227,7 @@ class AnkerSolixApiExport:
         return True
 
     async def export_charging_energy_service_data(self) -> bool:
-        """Run functions to export charging_energy_service endpoint data."""
+        """Run functions to export charging_energy_service and charging_disaster_prepared endpoint data."""
 
         self._logger.info(
             "\nQuerying %s endpoint data...", ApiEndpointServices.charging
@@ -1322,6 +1330,39 @@ class AnkerSolixApiExport:
                         replace=[(siteId, "<siteId>")],
                     )
 
+                # Get site device disaster information
+                self._logger.info("Exporting Charging site device disaster data...")
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
+                    filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },  # Has only been validated with 2 for power panel sites
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },  # Has only been validated with 2 for power panel sites
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
+                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },  # Has only been validated with 2 for power panel sites
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+
             # skip device queries if no charging system found and charging not enforced
             if not has_charging and not self.export_services & {
                 ApiEndpointServices.charging
@@ -1379,19 +1420,39 @@ class AnkerSolixApiExport:
                         payload={
                             "siteId": siteId,
                             "sn": sn,
-                        },  # TODO: required parameters unknown
+                        },  # payload verified on A17B1 owner account
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
                     self._logger.info("Exporting %s info...", dev_type)
                     # works only for site owners
-                    await self.query(
+                    response = await self.query(
                         endpoint=API_CHARGING_ENDPOINTS["get_device_info"],
                         filename=f"{API_FILEPREFIXES['charging_get_device_info']}_{self._randomize(sn, '_sn')}.json",
                         payload={"siteId": siteId, "sns": [sn]},
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
+                    # resolve serials of attached devices from their mac addresses
+                    if macs := [
+                        str(dev.get("ble_mac"))
+                        for dev in (response or {})
+                        .get("data", {})
+                        .get("device_infos", [])
+                        if dev.get("ble_mac")
+                    ]:
+                        self._logger.info(
+                            "Exporting %s attached device serials...", dev_type
+                        )
+                        # works only for site owners
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS["get_sns"],
+                            filename=f"{API_FILEPREFIXES['charging_get_sns']}_{self._randomize(sn, '_sn')}.json",
+                            payload={"main_sn": sn, "macs": macs},
+                            replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                            admin=admin,
+                            randomkeys=True,
+                        )
 
                 # run for proper device types if site owner
                 if dev_type in [
@@ -1417,7 +1478,8 @@ class AnkerSolixApiExport:
                     await self.query(
                         endpoint=API_CHARGING_ENDPOINTS["get_installation_inspection"],
                         filename=f"{API_FILEPREFIXES['charging_get_installation_inspection']}_{self._randomize(sn, '_sn')}.json",
-                        payload={"sn": sn},
+                        # siteId + sn payload verified on A17B1 owner account
+                        payload={"siteId": siteId, "sn": sn} if siteId else {"sn": sn},
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
@@ -1745,7 +1807,7 @@ class AnkerSolixApiExport:
                             string.ascii_uppercase + string.digits, k=len(val)
                         )
                     )
-            elif "bt_ble_" in key or "_mac" in key:
+            elif ("bt_ble_" in key and key != "bt_ble_id") or "_mac" in key:
                 # Handle values with and without ':'
                 temp = val.replace(":", "")
                 randomstr = self._randomdata.get(
@@ -1763,6 +1825,7 @@ class AnkerSolixApiExport:
                         for a, b in zip(randomstr[::2], randomstr[1::2], strict=False)
                     )
             elif any(x in key for x in ["_id", "_password", "stationId"]):
+                # Handle values with and without '-'
                 for part in val.split("-"):
                     if randomstr:
                         randomstr = "-".join(
@@ -2001,6 +2064,14 @@ class AnkerSolixApiExport:
                         "MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages..."
                     )
                     request_devices = set()
+                    # initialize randomized hex serrials
+                    if self.randomized:
+                        self._hexserials = {
+                            sn.encode().hex(): self._randomize(sn, "device_sn")
+                            .encode()
+                            .hex()
+                            for sn in self.api_power.devices
+                        }
                     for dev in mqttdevices:
                         sn = dev.get("device_sn", "")
                         pn = dev.get("device_pn", "") or dev.get("product_code", "")
@@ -2177,20 +2248,8 @@ class AnkerSolixApiExport:
                     msgtype = "json"
                 # randomize potential hex serials of system device serials in hex data
                 if self.randomized:
-                    if siteId := (self.api_power.devices.get(device_sn) or {}).get(
-                        "site_id"
-                    ):
-                        serials = {
-                            sn
-                            for sn, dev in self.api_power.devices.items()
-                            if siteId == dev.get("site_id")
-                        }
-                    else:
-                        serials = {device_sn}
                     datastr = bytes(data).hex()
-                    for sn in serials:
-                        snhex = sn.encode().hex()
-                        randsnhex = self._randomize(sn, "device_sn").encode().hex()
+                    for snhex, randsnhex in self._hexserials.items():
                         datastr = datastr.replace(snhex, randsnhex)
             if isinstance(payload, dict):
                 if datastr:

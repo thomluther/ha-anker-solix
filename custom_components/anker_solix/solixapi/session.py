@@ -458,8 +458,8 @@ class AnkerSolixClientSession:
 
         url: str = f"{self._api_base}/{endpoint}"
         # use required headers and merge provided/optional headers
-        mergedHeaders = self.generate_header()
-        mergedHeaders.update(headers)
+        merged_headers = self.generate_header()
+        merged_headers.update(headers)
         # TODO(ENCRYPTION): Handle payload encryption once known
         if self.encrypt_payload and self._login_response:
             if not self._eh and self._token:
@@ -472,7 +472,7 @@ class AnkerSolixClientSession:
             if not self._eh.shared_secret:
                 # Perform key exchange
                 await self._eh.perform_key_exchange(
-                    api_base=self._api_base, headers=mergedHeaders
+                    api_base=self._api_base, headers=merged_headers
                 )
 
             # App Example request with encrypted payload
@@ -513,7 +513,7 @@ class AnkerSolixClientSession:
             #     'x-signature': [generated signature] # 32 Byte SHA256 hash
             # Response will return encrypted body and a signature field
             timestamp = generateTimestamp()
-            mergedHeaders.update(
+            merged_headers.update(
                 self._eh.generate_x_header(timestamp=timestamp, data=json)
                 | {
                     "content-type": "text/plain",
@@ -523,7 +523,7 @@ class AnkerSolixClientSession:
         self._logger.debug("Request Url: %s %s", method.upper(), url)
         self._logger.debug(
             "Request Headers: %s",
-            self.mask_values(mergedHeaders, "x-auth-token", "gtoken"),
+            self.mask_values(merged_headers, "x-auth-token", "gtoken"),
         )
         if endpoint in [
             API_LOGIN,
@@ -557,7 +557,7 @@ class AnkerSolixClientSession:
             async with self._session.request(
                 method,
                 url,
-                headers=mergedHeaders,
+                headers=merged_headers,
                 json=json,
                 # TODO(COMPRESSION): only response encoding seems to be accepted by servers
                 # json=None if self.compress_data else json,

@@ -1,6 +1,8 @@
 """Base Class for interacting with the Anker Power / Solix API."""
+# ruff: noqa: N806
 
 from collections.abc import Callable
+import contextlib
 from datetime import datetime, timedelta
 import json
 import logging
@@ -367,7 +369,7 @@ class AnkerSolixBaseApi:
         site_details = site.get("site_details") or {}
         # Implement site details update code with key filtering, conversion, consolidation, calculation or dependency updates
         for key, value in details.items():
-            if key in [] and value:
+            if key == "" and value:
                 pass
             else:
                 site_details[key] = value
@@ -410,14 +412,14 @@ class AnkerSolixBaseApi:
                     #
                     if key == "device_sw_version" and value:
                         # Example for key name conversion when value is given
-                        device.update({"sw_version": str(value)})
+                        device["sw_version"] = str(value).lstrip("v")
                     elif key in [
                         # Examples for boolean key values
                         "wifi_online",
                         "auto_upgrade",
                         "is_ota_update",
                     ]:
-                        device.update({key: bool(value)})
+                        device[key] = bool(value)
                     elif key in [
                         # Example for key with string values
                         "wireless_type",
@@ -426,10 +428,10 @@ class AnkerSolixBaseApi:
                         # Example for key with string values that should only be updated if value returned
                         key == "wifi_name" and value
                     ):
-                        device.update({key: str(value)})
+                        device[key] = str(value)
                     else:
                         # Example for all other keys not filtered or converted
-                        device.update({key: value})
+                        device[key] = value
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -564,6 +566,7 @@ class AnkerSolixBaseApi:
                     # cycle through all items and extract what is needed for the device type
                     calc_efficiency = False
                     calc_capacity = False
+                    circuits = {}
                     # check only received values or all from mqtt session cache
                     check_values = values or mqtt or {}
                     for key, value in check_values.items():
@@ -599,7 +602,9 @@ class AnkerSolixBaseApi:
                                     "load_balance_setting_d6",  # Unknown control parameter state value
                                 ]
                                 or (
-                                    key.startswith(("device_", "exp_", "pps_"))
+                                    key.startswith(
+                                        ("device_", "exp_", "pps_", "charger_")
+                                    )
                                     and (key.endswith(("_sn", "_pn", "_type")))
                                 )
                             )
@@ -608,7 +613,7 @@ class AnkerSolixBaseApi:
                             device_mqtt.update({key: str(value)})
                             value_updated = bool(
                                 key != "wifi_name"
-                                and not key.endswith(("_sn", "_pn", "_type"))
+                                and not key.endswith(("_sn", "_pn", "_type", "?"))
                             )
                         elif (
                             key
@@ -619,6 +624,8 @@ class AnkerSolixBaseApi:
                                 "main_battery_soc",
                                 "max_soc",
                                 "backup_soc",
+                                "active_charge_soc",
+                                "active_discharge_soc",
                                 "temperature",
                                 "photovoltaic_power",
                                 "pv_power_3rd_party",
@@ -666,12 +673,22 @@ class AnkerSolixBaseApi:
                             ]
                             or (
                                 key.startswith(("device_", "pv_"))
-                                and (key.endswith(("_power", "_power_signed", "_soc")))
+                                and (
+                                    key.endswith(
+                                        (
+                                            "_power",
+                                            "_power_signed",
+                                            "_soc",
+                                            "_temperature",
+                                        )
+                                    )
+                                )
                             )
                             or (
                                 key.startswith(
                                     (
                                         "charge_power",
+                                        "reverse_power",
                                         "grid_power",
                                         "ac_input_power",
                                         "ac_output_power",
@@ -690,8 +707,13 @@ class AnkerSolixBaseApi:
                             # trigger device capacity calculation with SOC updates
                             if key in ["battery_soc", "main_battery_soc"]:
                                 calc_capacity = True
+                            # For alternator charger, invert output power depending on mode
+                            elif key == "output_power" and check_values.get(
+                                "charger_mode"
+                            ):
+                                device_mqtt[key] = f"{float(-1 * value):.0f}"
                             # calculate device PV total if not included in MQTT data
-                            if any(
+                            elif any(
                                 key == f"device_{x}_pv_1_power"
                                 and f"device_{x}_pv_power" not in check_values
                                 for x in range(1, 7)
@@ -786,6 +808,8 @@ class AnkerSolixBaseApi:
                                 "generator_plug_status",
                                 "car_battery_type",
                                 "car_battery_voltage_type",
+                                "cable_unplugged",
+                                "device_1_disconnected",
                             ]
                             or (
                                 str(key).endswith(
@@ -798,6 +822,16 @@ class AnkerSolixBaseApi:
                                         "_hours",
                                         "_timestamp",
                                         "_packs",
+                                        # "?", # Add for decoder testing
+                                    )
+                                )
+                            )
+                            or (
+                                str(key).startswith(
+                                    (
+                                        "pair_id_circuit_",
+                                        "id_circuit_",
+                                        "unknown_",  # Add for decoder testing
                                     )
                                 )
                             )
@@ -810,6 +844,9 @@ class AnkerSolixBaseApi:
                                     + int(check_values.get("voltage_l2", 0) > 0)
                                     + int(check_values.get("voltage_l3", 0) > 0)
                                 )
+                            elif key.startswith("id_circuit_"):
+                                # assign physical ids to logical ids
+                                circuits[value] = [*circuits.get(value, []), key[-2:]]
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
@@ -840,7 +877,7 @@ class AnkerSolixBaseApi:
                                 # trigger capacity calculation if any soc provided
                                 if "_soc" in key:
                                     calc_capacity = True
-                        elif key in ["output_cutoff_data", "min_soc"]:
+                        elif key in ["output_cutoff_data", "min_soc", "power_cutoff"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in [
                             "set_port_switch_select",
@@ -936,6 +973,23 @@ class AnkerSolixBaseApi:
                             # Solarbank 3 seems to reduce the reported charge energy by energy loss
                             device_mqtt["battery_efficiency"] = (
                                 f"{min(100, float(discharge) / (float(charge) + max(0, float(consumed) - float(ac_charge))) * 100):.3f}"
+                            )
+                    # combine power of paired circuits
+                    # Paired circuits must be consecutive and are limited to 2
+                    for physicals in [p for p in circuits.values() if len(p) > 1]:
+                        combined = 0
+                        with contextlib.suppress(ValueError):
+                            combined = int(
+                                device_mqtt.get(
+                                    f"home_demand_circuit_{physicals[0]}", 0
+                                )
+                            )
+                            for p in physicals[1:]:
+                                combined += int(
+                                    device_mqtt.pop(f"home_demand_circuit_{p}", 0)
+                                )
+                            device_mqtt[f"home_demand_circuit_{physicals[0]}"] = (
+                                f"{float(combined):.0f}"
                             )
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
@@ -1437,7 +1491,9 @@ class AnkerSolixBaseApi:
                                 "device_type": child.get("device_type"),
                                 "need_update": bool(child.get("needUpdate")),
                                 "force_upgrade": bool(child.get("force_upgrade")),
-                                "rom_version_name": child.get("rom_version_name"),
+                                "rom_version_name": str(
+                                    child.get("rom_version_name", "")
+                                ).lstrip("v"),
                             }
                         )
                     self._update_dev(
@@ -1445,9 +1501,11 @@ class AnkerSolixBaseApi:
                             "device_sn": deviceSn,
                             "is_ota_update": need_update,
                             "ota_forced": need_update,
-                            "ota_version": (dev.get("lastPackage") or {}).get("version")
-                            or dev.get("current_version")
-                            or "",
+                            "ota_version": str(
+                                (dev.get("lastPackage") or {}).get("version", "")
+                                or dev.get("current_version", "")
+                                or ""
+                            ).lstrip("v"),
                             "ota_children": children,
                         }
                     )
@@ -1771,6 +1829,8 @@ class AnkerSolixBaseApi:
         "current_mode": 7, "use_time": null, "dynamic_price": {
             "country": "DE", "company": "Nordpool", "area": "GER", "pct": null}
         "accuracy": 2}
+        Enhanced base data with sell price in 2026
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"sell_price": 0,"site_co2": 0,"site_price_unit": "\u20ac"}
         """
         siteId = str(siteId) or ""
         decimals = int(decimals) if isinstance(decimals, int | float) else None
@@ -1804,6 +1864,7 @@ class AnkerSolixBaseApi:
         self,
         siteId: str,
         price: float | None = None,
+        sell_price: float | None = None,
         decimals: int | None = 5,
         unit: str | None = None,
         co2: float | None = None,
@@ -1821,6 +1882,8 @@ class AnkerSolixBaseApi:
             "company": "Nordpool",
             "area": "GER",
         }}
+        Enhanced base data with sell price in 2026
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"sell_price": 0,"site_co2": 0,"site_price_unit": "\u20ac"}
         """
         siteId = str(siteId) or ""
         decimals = int(decimals) if isinstance(decimals, int | float) else None
@@ -1848,6 +1911,11 @@ class AnkerSolixBaseApi:
         data: dict = {}
         data["price"] = (
             float(price) if isinstance(price, float | int) else details.get("price")
+        )
+        data["sell_price"] = (
+            float(sell_price)
+            if isinstance(sell_price, float | int)
+            else details.get("sell_price")
         )
         data["site_price_unit"] = unit or details.get("site_price_unit")
         data["site_co2"] = (

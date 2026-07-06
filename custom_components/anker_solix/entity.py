@@ -164,7 +164,7 @@ def get_AnkerSolixSubdeviceInfo(
         model_id=data.get("device_pn"),
         serial_number=data.get("device_sn"),
         name=data.get("alias") or data.get("name"),
-        sw_version=data.get("sw_version"),
+        sw_version=str(data.get("sw_version") or "").lstrip("v"),
         # map to main device
         via_device=(DOMAIN, maindevice),
     )
@@ -181,7 +181,7 @@ def get_AnkerSolixDeviceInfo(data: dict, identifier: str, account: str) -> Devic
         model_id=data.get("device_pn"),
         serial_number=data.get("device_sn"),
         name=data.get("alias") or data.get("name"),
-        sw_version=data.get("sw_version"),
+        sw_version=str(data.get("sw_version") or "").lstrip("v"),
         # map to site, or map standalone devices to account device
         via_device=(DOMAIN, data.get("site_id") or account),
     )
@@ -237,7 +237,7 @@ def get_AnkerSolixVehicleInfo(data: dict, identifier: str, account: str) -> Devi
         serial_number=identifier,
         model=str(data.get("type")).capitalize(),
         model_id=data.get("model"),
-        hw_version=data.get("productive_year"),
+        hw_version=str(data.get("productive_year")),
         name=data.get("vehicle_name"),
         via_device=(DOMAIN, account),
     )

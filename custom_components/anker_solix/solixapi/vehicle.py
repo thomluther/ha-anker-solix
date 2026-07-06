@@ -1,4 +1,5 @@
 """Anker Power/Solix Cloud API class vehicle related methods."""
+# ruff: noqa: N806
 
 from __future__ import annotations  # noqa: TID251
 

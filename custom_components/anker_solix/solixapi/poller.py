@@ -1,4 +1,5 @@
 """Data poller modules to create/update Api cache structure for the Anker Power/Solix Cloud API."""
+# ruff: noqa: N806
 
 # flake8: noqa: SLF001
 from __future__ import annotations  # noqa: TID251
@@ -138,9 +139,7 @@ async def poll_sites(  # noqa: C901
                     )
                 else:
                     # Used defined codes for required device feature identification
-                    api._update_account(
-                        {"products": PRODUCT_CODES}
-                    )
+                    api._update_account({"products": PRODUCT_CODES})
             # Add any missing site device to cache
             for dev in [
                 d
@@ -159,7 +158,7 @@ async def poll_sites(  # noqa: C901
                 )
                 api._site_devices.add(sn)
             # Routines for hes site type to get site statistic object (no values in scene info response)
-            if (site_Type := mysite.get("site_type")) == SolixDeviceType.HES.value:
+            if (site_type := mysite.get("site_type")) == SolixDeviceType.HES.value:
                 # initialize the HES Api if not done yet and link the account cache
                 if not api.hesApi:
                     api.hesApi = AnkerSolixHesApi(apisession=api.apisession)
@@ -182,7 +181,7 @@ async def poll_sites(  # noqa: C901
                     if sn := hes_device.get("device_sn"):
                         api._site_devices.add(sn)
             # Routines for virtual site types
-            elif site_Type == SolixDeviceType.VIRTUAL.value:
+            elif site_type == SolixDeviceType.VIRTUAL.value:
                 # Add device SN of virtual site id if still in device list and maintain virtual site
                 if (sn := myid.split("-")[1]) in api.devices:
                     api._site_devices.add(sn)
@@ -265,7 +264,7 @@ async def poll_sites(  # noqa: C901
                             }
                         )
                 # check if power panel site type to maintain statistic object which will be updated and replaced only during site details refresh
-                if site_Type == SolixDeviceType.POWERPANEL.value:
+                if site_type == SolixDeviceType.POWERPANEL.value:
                     # initialize the powerpanel Api if not done yet and link account cache
                     if not api.powerpanelApi:
                         api.powerpanelApi = AnkerSolixPowerpanelApi(
@@ -284,7 +283,7 @@ async def poll_sites(  # noqa: C901
                     )
                     scene.update(api.powerpanelApi.sites.get(myid) or {})
                 # check if solarbank_pps site type to maintain statistic object which will be updated only during energy query
-                elif site_Type == SolixDeviceType.SOLARBANK_PPS.value:
+                elif site_type == SolixDeviceType.SOLARBANK_PPS.value:
                     # keep previous statistics since it should not overwrite stats updated by energy update
                     scene["statistics"] = mysite.get("statistics") or []
                 mysite.update(scene)
@@ -733,8 +732,9 @@ async def poll_sites(  # noqa: C901
                     # make sure to write back any changes to the solarbank info in sites dict
                     new_sites[myid] = mysite
 
+                site_details = mysite.get("site_details") or {}
                 if not (cb_info := mysite.get("combiner_box_info") or {}) and (
-                    station_sn := mysite.get("station_sn")
+                    station_sn := site_details.get("station_sn")
                 ):
                     # handle updates for old scene info without combiner box info
                     cb_info = {"combiner_box_list": [{"device_sn": station_sn}]}
@@ -755,12 +755,29 @@ async def poll_sites(  # noqa: C901
                                 "retain_load": total_preset,  # only a flag to indicate the actual schedule preset updates don't need to update site appliance load
                             }
                         )
+                    # add required FW features to station since not listed per combiner box
+                    cb["feature_switch"] = (cb.get("feature_switch") or {}) | {
+                        k: v
+                        for k, v in (mysite.get("feature_switch") or {}).items()
+                        if k
+                        in [
+                            "soc_enable",
+                            "custom_rate_charge_enable",
+                            "backup_reserve_enable",
+                            "backup_reserve_effective",
+                        ]
+                    }
                     if sn := api._update_dev(
                         cb,
                         siteId=myid,
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
+                    # add physical station_sn to site details as reference
+                    if not site_details.get("station_sn"):
+                        site_details["station_sn"] = sn
+                        mysite["site_details"] = site_details
+
                 if cp_info := mysite.get("charging_pile_info") or {}:
                     for cp in cp_info.get("charging_pile_list") or []:
                         # modify only a copy of the device dict to prevent changing the scene info dict
@@ -1081,9 +1098,9 @@ async def poll_device_details(  # noqa: C901
     queried_sites_parm: set[str] = set()
     for sn, device in api.devices.items():
         site_id: str = device.get("site_id") or ""
-        dev_Type: str = device.get("type") or ""
+        dev_type: str = device.get("type") or ""
         # create a virtual site for any stand alone admin device that may track more details in the cloud without site
-        if dev_Type == SolixDeviceType.INVERTER.value and not site_id:
+        if dev_type == SolixDeviceType.INVERTER.value and not site_id:
             # create virtual site for stand alone inverters (MI80)
             site_id = f"{SolixDeviceType.VIRTUAL.value}-{sn}"
             device["site_id"] = site_id
@@ -1147,7 +1164,7 @@ async def poll_device_details(  # noqa: C901
                     api._update_dev({"device_sn": sn} | dict(wifi_list[wifi_index - 1]))
 
             # Fetch device type specific details, if device type not excluded
-            if dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude):
+            if dev_type in ({SolixDeviceType.SOLARBANK.value} - exclude):
                 # Fetch active Power Cutoff setting for solarbanks
                 if {ApiCategories.solarbank_cutoff} - exclude:
                     api._logger.debug(
@@ -1247,7 +1264,7 @@ async def poll_device_details(  # noqa: C901
                     )
 
         # Fetch device type specific details, if device type not excluded
-        if dev_Type in ({SolixDeviceType.EV_CHARGER.value} - exclude):
+        if dev_type in ({SolixDeviceType.EV_CHARGER.value} - exclude):
             # Fetch charger total statistics
             await api.get_device_charge_order_stats(deviceSn=sn, fromFile=fromFile)
 

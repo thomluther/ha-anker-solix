@@ -67,13 +67,6 @@
                     "off": "mdi:cloud-remove-outline"
                 }
             },
-            "ota_update": {
-                "default": "mdi:alert-circle-outline",
-                "state": {
-                    "on": "mdi:download-circle-outline",
-                    "off": "mdi:check-circle-outline"
-                }
-            },
             "ai_ems_enabled": {
                 "default": "mdi:head-question-outline",
                 "state": {
@@ -194,6 +187,15 @@
             "grid_export_limit": {
                 "default": "mdi:transmission-tower-import"
             },
+            "min_soc": {
+                "default": "mdi:battery-heart-outline"
+            },
+            "max_soc": {
+                "default": "mdi:battery-heart"
+            },
+            "backup_soc": {
+                "default": "mdi:battery-lock"
+            },
             "ac_output_timeout": {
                 "default": "mdi:clock-end"
             },
@@ -229,6 +231,13 @@
                     "use_time": "mdi:battery-clock",
                     "smart": "mdi:auto-mode",
                     "time_slot": "mdi:update"
+                }
+            },
+            "preset_load_type": {
+                "default": "mdi:battery-unknown",
+                "state": {
+                    "supply": "mdi:home-battery-outline",
+                    "ac_charge": "mdi:power-plug-battery-outline"
                 }
             },
             "preset_tariff": {
@@ -367,6 +376,14 @@
                     "different": "mdi:calendar-weekend"
                 }
             },
+            "charger_mode": {
+                "default": "mdi:car-battery",
+                "state": {
+                    "normal": "mdi:battery-positive",
+                    "reverse": "mdi:car-battery",
+                    "unknown": "mdi:battery-unknown"
+                }
+            },
             "car_battery_type": {
                 "default": "mdi:car-battery"
             },
@@ -374,6 +391,9 @@
                 "default": "mdi:car-battery"
             },
             "charge_power_limit": {
+                "default": "mdi:speedometer"
+            },
+            "reverse_power_limit": {
                 "default": "mdi:speedometer"
             },
             "vehicle_brand": {
@@ -436,6 +456,9 @@
                 "default": "mdi:battery-minus-variant"
             },
             "battery_power_signed": {
+                "default": "mdi:battery-charging"
+            },
+            "battery_power_signed_total": {
                 "default": "mdi:battery-charging"
             },
             "dc_output_power": {
@@ -804,6 +827,9 @@
                     "unknown": "mdi:battery-unknown"
                 }
             },
+            "device_1_status": {
+                "default": "mdi:connection"
+            },
             "plant_status": {
                 "default": "mdi:timeline-question",
                 "state": {
@@ -1027,6 +1053,13 @@
                 "state": {
                     "on": "mdi:transmission-tower-import",
                     "off": "mdi:transmission-tower-off"
+                }
+            },
+            "backup_soc_switch": {
+                "default": "mdi:battery-heart-variant",
+                "state": {
+                    "off": "mdi:battery-heart-outline",
+                    "on": "mdi:battery-lock"
                 }
             },
             "mqtt_overlay": {

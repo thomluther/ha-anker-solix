@@ -1,10 +1,5 @@
-"""Class for interacting with the Anker Power / Solix API Power Panel related charging_service endpoints.
-
-Required Python modules:
-pip install cryptography
-pip install aiohttp
-pip install aiofiles
-"""
+"""Class for interacting with the Anker Power / Solix API Power Panel related charging_service endpoints."""
+# ruff: noqa: N806
 
 import contextlib
 from datetime import datetime, timedelta
@@ -177,13 +172,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         device[key] = int(value)
                     # Examples for boolean key values
                     elif key == "auto_upgrade":
-                        device.update({key: bool(value)})
+                        device[key] = bool(value)
                     # key with string values
                     elif key == "wireless_type" or (
-                        # Example for key with string values that should only be updated if value returned
-                        key == "wifi_name" and value
+                        # Example for keys with string values that should only be updated if value returned
+                        key in ["wifi_name", "rssi"] and value
                     ):
                         device.update({key: str(value)})
+                    elif key == "utility_rate_plan":
+                        device[key] = value
+                        # TODO: Add code to extract active slot parameters from plan
+
                     # check that main device is defined for all sub devices
                     if update_main or (
                         device.get("is_subdevice") and not device.get("main_sn")
@@ -511,6 +510,25 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         self.apisession.nickname,
                     )
                     await self.get_site_price(siteId=site_id, fromFile=fromFile)
+                # Fetch utility rate plan (TOU) of the main Power Panel device
+                if {ApiCategories.site_price} - exclude and (
+                    main_sn := next(
+                        (
+                            sn
+                            for sn, dev in self.devices.items()
+                            if dev.get("site_id") == site_id
+                            and dev.get("type") == SolixDeviceType.POWERPANEL.value
+                        ),
+                        None,
+                    )
+                ):
+                    self._logger.debug(
+                        "Getting api %s utility rate plan for site",
+                        self.apisession.nickname,
+                    )
+                    await self.get_utility_rate_plan(
+                        siteId=site_id, deviceSn=main_sn, fromFile=fromFile
+                    )
             # Fetch details that work for all account types
             # Fetch CO2 Ranking if not excluded
             if not ({ApiCategories.powerpanel_energy} & exclude):
@@ -611,10 +629,18 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             "Updating api %s Power Panel Device details",
             self.apisession.nickname,
         )
-        #
-        # Implement required queries according to exclusion set
-        #
-
+        for sn, device in self.devices.items():
+            if device.get("type") in (
+                {SolixDeviceType.POWERPANEL.value} - exclude
+            ) and device.get("is_admin", False):
+                # Fetch wifi info of the Power Panel, since bind_devices does not
+                # report the rssi of the panel itself (attached PPS devices are
+                # already covered by bind_devices, so they are skipped here)
+                self._logger.debug(
+                    "Getting api %s wifi info for device",
+                    self.apisession.nickname,
+                )
+                await self.get_wifi_info(deviceSn=sn, fromFile=fromFile)
         return self.devices
 
     async def get_system_running_info(
@@ -1572,3 +1598,437 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                     )
         return entry
+
+    async def get_disaster_support(
+        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get backup feature support info (auto disaster support, allowed country codes).
+
+        Example data:
+        {"support_auto_disaster": true,"support_country_code": [
+            {"code": "US","google_code": "ChIJCzYy5IS16lQRQrfeQ5K5Oxw"},
+            {"code": "PR","google_code": "ChIJ-aeSGyaWAowRGpsEGCjsNvM"}]}
+        """
+        data = {"identifier_id": siteId, "type": deviceType}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_disaster_support_func"], json=data
+            )
+        if result := resp.get("data") or {}:
+            # cache under site_details
+            self._update_site(siteId, {"disaster_support": result})
+        return result
+
+    async def get_device_disaster(
+        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get the manual/auto backup (disaster preparedness) configuration of a Power Panel site.
+
+        Verified on A17B1 Home Power Panel, deviceType=2 for power panel sites.
+        Example data:
+        {"auto_disaster_switch": false,"manual_disaster_switch": true,"disaster_details": [
+            {"uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
+            "end_time": 1780991880,"charging_time": 36,"event_key": ""}]}
+        """
+        self._logger.debug(
+            "Getting api %s Power Panel disaster config", self.apisession.nickname
+        )
+        data = {"identifier_id": siteId, "type": deviceType}
+        if fromFile:
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{siteId}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_site_device_disaster"], json=data
+            )
+        if result := resp.get("data") or {}:
+            # cache under site_details
+            self._update_site(siteId, {"device_disaster": result})
+        return result
+
+    async def get_device_disaster_status(
+        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get the live backup-preparedness status of a Power Panel site.
+
+        manual_disaster_status: 1 = active/running, 2 = inactive.
+        current_disaster_detail is only populated while a window is active.
+        Note: status flips to 1 only once start_time is reached, back to 2 after end_time.
+        Example data:
+        {"auto_disaster_status": 2,"manual_disaster_status": 1,"current_disaster_detail": {
+            "uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
+            "end_time": 1780991880,"charging_time": 36,"event_key": ""}}
+        """
+        self._logger.debug(
+            "Getting api %s Power Panel disaster status", self.apisession.nickname
+        )
+        data = {"identifier_id": siteId, "type": deviceType}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post",
+                API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
+                json=data,
+            )
+        if result := resp.get("data") or {}:
+            # cache under site_details
+            self._update_site(siteId, {"device_disaster_status": result})
+        return result
+
+    async def set_manual_backup(
+        self,
+        siteId: str,
+        enable: bool = False,
+        start_time: int | datetime | None = None,
+        end_time: int | datetime | None = None,
+        disaster_type: int = 1,
+        deviceType: int = 2,
+        toFile: bool = False,
+    ) -> dict:
+        """Disable or enable manual backup mode for a Power Panel site over a time window.
+
+        Notes: When disabled, the device ramps power down gradually rather than cutting off instantly.
+        Disaster_type other than 1 is accepted but stored/returned as 1;
+        start_time / end_time are unix epoch seconds; end_time must be after start_time.
+        The server auto-generates the event uuid.
+        Returns the refreshed disaster configuration or an empty dict upon error
+        """
+        if isinstance(start_time, datetime):
+            start_time = int(start_time.timestamp())
+        elif not isinstance(start_time, int):
+            start_time = 0
+        if isinstance(end_time, datetime):
+            end_time = int(end_time.timestamp())
+        elif not isinstance(end_time, int):
+            end_time = 0
+        data = {
+            "identifier_id": siteId,
+            "type": deviceType,
+            "manual_disaster_switch": bool(enable),
+        }
+        # When disabled, the payload MUST omit manual_disaster_detail.
+        # Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
+        if enable:
+            if end_time <= start_time:
+                self._logger.error(
+                    "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
+                    self.apisession.nickname,
+                    start_time,
+                    end_time,
+                )
+                return {}
+            data["manual_disaster_detail"] = {
+                "disaster_type": disaster_type,
+                "start_time": start_time,
+                "end_time": end_time,
+            }
+        if toFile:
+            # change only relevant parts of existing status
+            filedata = (
+                self.sites.get(siteId, {})
+                .get("site_details", {})
+                .get("device_disaster")
+                or {}
+            )
+            filedata["manual_disaster_switch"] = bool(enable)
+            if details := data.get("manual_disaster_detail"):
+                if (filedetails := filedata.get("disaster_details")) and isinstance(
+                    filedetails, list
+                ):
+                    filedetails[0].update(details)
+                else:
+                    # Mock the details if it just got enabled without previous information
+                    filedetails = (
+                        {"uuid": "00000000-0000-0000-0000-000000000001"}
+                        | details
+                        | {"charging_time": 36, "event_key": ""}
+                    )
+                filedata["disaster_details"] = [filedetails]
+            else:
+                filedata["disaster_details"] = []
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json",
+                data={"code": 0, "msg": "success!", "data": data},
+            ):
+                return {}
+        else:
+            code = (
+                await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return {}
+        # return refreshed config and update cache
+        return await self.get_device_disaster(
+            siteId=siteId, deviceType=deviceType, fromFile=toFile
+        )
+
+    async def get_utility_rate_plan(
+        self, siteId: str, deviceSn: str, fromFile: bool = False
+    ) -> dict:
+        """Get the Time-of-Use (TOU) utility rate plan of a Power Panel site.
+
+        Verified on A17B1 Home Power Panel (owner account).
+        Returns peak_sessions[] (each with peak_valley_prices: buy price per time
+        period, peak_type 1-4, day_type) and fixed_price.
+
+        Example data:
+        {"peak_sessions": [{"id": 10001,"name": "Season 1","start_time": "2026-01-01 00:00:00","start_desc": "January",
+            "end_time": "2026-12-01 00:00:00","end_desc": "December","type": 2,"peak_valley_prices": [
+            {"id": 20001,"buy": 0.03,"energy_unit": "kWh","start_time_period": "00:00","end_time_period": "16:00","peak_type": 1,"day_type": 2},
+            {"id": 20002,"buy": 0.39,"energy_unit": "kWh","start_time_period": "16:00","end_time_period": "21:00","peak_type": 4,"day_type": 2},
+            {"id": 20006,"buy": 0.09,"energy_unit": "kWh","start_time_period": "07:00","end_time_period": "23:00","peak_type": 2,"day_type": 1}]}],
+        "fixed_price": null}
+        """
+        self._logger.debug(
+            "Getting api %s Power Panel utility rate plan", self.apisession.nickname
+        )
+        data = {"siteId": siteId, "sn": deviceSn}
+        if fromFile:
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_utility_rate_plan']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_utility_rate_plan']}_{deviceSn}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_utility_rate_plan"], json=data
+            )
+        if result := resp.get("data") or {}:
+            # add to device cache
+            self._update_dev({"device_sn": deviceSn, "utility_rate_plan": result})
+        return result
+
+    async def get_monetary_units(self, deviceSn: str, fromFile: bool = False) -> dict:
+        """Get the list of supported monetary/price units (currencies) for the system.
+
+        Example data:
+        {"price_units": [{"price_unit": "$","is_default": true,"name": "AUD, CAD, USD"},
+            {"price_unit": "€","is_default": false,"name": "EUR"},{"price_unit": "£","is_default": false,"name": "GBP"}]}
+        """
+        data = {"sn": deviceSn}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_monetary_units']}_{deviceSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_monetary_units"], json=data
+            )
+        return resp.get("data") or {}
+
+    async def get_device_info(
+        self, deviceSns: list[str], fromFile: bool = False
+    ) -> dict:
+        """Get Wi-Fi / MAC binding info for the provided device serials.
+
+        Works for the Home Power Panel and its attached PPS serials.
+        Returns device_infos[] with device_type, ble_mac, wifi_bind_type, connect, site_id.
+
+        Example data:
+        {"device_infos": [
+            {"sn": "AZVABY0F00000001","device_type": "A17B1","ble_bind_type": 2,"ble_mac": "F49D8A000001","wifi_bind_type": 2,"connect": true,"site_id": "f6a1b2c3-d4e5-6789-abcd-ef0123456789"},
+            {"sn": "AZVBH30D00000001","device_type": "A1790","ble_bind_type": 2,"ble_mac": "E8EECC000001","wifi_bind_type": 2,"connect": false,"site_id": ""}]}
+        """
+        data = {"sns": list(deviceSns)}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_device_info']}_{next(iter(deviceSns), '')}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_device_info"], json=data
+            )
+        result = resp.get("data") or {}
+        # update device cache with details
+        for device in result.get("device_infos") or []:
+            devdata = device.copy()
+            devdata["device_sn"] = devdata.pop("sn", "")
+            self._update_dev(devdata)
+        return result
+
+    async def get_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
+        """Get the Wi-Fi network (ssid, rssi) the given device is connected to.
+
+        Example data:
+        {"ssid": "wifi-network-1", "rssi": 100}
+        """
+        data = {"sn": deviceSn}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_wifi_info']}_{deviceSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_wifi_info"], json=data
+            )
+        result = resp.get("data") or {}
+        # update device cache with wifi details, since bind_devices does not report
+        # the rssi of the Power Panel itself
+        if result:
+            devdata = {"device_sn": deviceSn}
+            if str(result.get("ssid") or ""):
+                devdata["wifi_name"] = str(result.get("ssid"))
+            if str(result.get("rssi") or ""):
+                devdata["rssi"] = str(result.get("rssi"))
+            self._update_dev(devdata)
+        return result
+
+    async def get_installation_inspection(
+        self, siteId: str, deviceSn: str, fromFile: bool = False
+    ) -> dict:
+        """Get the installation/self-inspection status of a Power Panel site.
+
+        Returns latest_result, latest_time, latest_page (last App page viewed)
+        and need_self_inspection.
+
+        Example data:
+        {"latest_result": true, "latest_time": 1758515431, "latest_page": "/electricityScene", "need_self_inspection": true}
+        """
+        data = {"siteId": siteId, "sn": deviceSn}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_installation_inspection']}_{deviceSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post",
+                API_CHARGING_ENDPOINTS["get_installation_inspection"],
+                json=data,
+            )
+        return resp.get("data") or {}
+
+    async def get_device_sns(
+        self, mainSn: str, macs: list[str], fromFile: bool = False
+    ) -> dict:
+        """Resolve attached device MAC addresses to serial numbers for a Power Panel.
+
+        Returns {"mac_sn_map": {<mac>: <sn>}}; the main device's own MAC maps to "".
+
+        Example data:
+        {"mac_sn_map": {"E8EECC000001": "AZVBH30D00000001","E8EECC000002": "AZVBH30D00000002","F49D8A000001": ""}}
+        """
+        data = {"main_sn": mainSn, "macs": list(macs)}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_sns']}_{mainSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_sns"], json=data
+            )
+        return resp.get("data") or {}
+
+    async def set_utility_rate_plan(
+        self,
+        siteId: str,
+        deviceSn: str,
+        peak_sessions: list,
+        fixed_price: float | None = None,
+        toFile: bool = False,
+    ) -> dict:
+        """Set (replace) the Time-of-Use (TOU) utility rate plan of a Power Panel site.
+
+        Two-step cloud flow, verified reversible on A17B1 (owner account):
+        preprocess_utility_rate_plan compiles the peak_sessions into a compact
+        "rule" string, then ack_utility_rate_plan commits
+        {rule, peak_sessions, fixed_price}. Returns the refreshed plan.
+
+        peak_sessions uses the same structure returned by get_utility_rate_plan
+        (each session has peak_valley_prices with buy/start_time_period/
+        end_time_period/peak_type/day_type).
+
+        Example "rule" returned by preprocess (compact schedule encoding):
+        [{"Sea":{"S":1,"E":12},"P1":[{"S":0,"E":16,"T":3},{"S":16,"E":21,"T":1},{"S":21,"E":23,"T":1},{"S":23,"E":24,"T":3}],
+          "P2":[{"S":0,"E":7,"T":3},{"S":7,"E":23,"T":2},{"S":23,"E":24,"T":3}]}]
+        Sea = season start/end month, P1/P2 = hourly segments for day_type 2/1,
+        S/E = hour boundaries (0-24), T = price tier (T3 = off-peak, T2 = mid-peak,
+        T1 = peak). The rule string does NOT carry the prices, which is why ack
+        must include the full peak_sessions and fixed_price alongside it.
+        """
+        if not isinstance(peak_sessions, list):
+            self._logger.error("set_utility_rate_plan: peak_sessions must be a list")
+            return {}
+        data = {
+            "siteId": siteId,
+            "sn": deviceSn,
+            "peak_sessions": peak_sessions,
+            "fixed_price": fixed_price,
+        }
+        if toFile:
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_utility_rate_plan']}_modified_{deviceSn}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": {
+                        "peak_sessions": peak_sessions,
+                        "fixed_price": fixed_price,
+                    },
+                },
+            ):
+                return {}
+        else:
+            rule = (
+                (
+                    await self.apisession.request(
+                        "post",
+                        API_CHARGING_ENDPOINTS["preprocess_utility_rate_plan"],
+                        json=data,
+                    )
+                ).get("data")
+                or {}
+            ).get("rule")
+            code = (
+                await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["ack_utility_rate_plan"],
+                    json={
+                        "siteId": siteId,
+                        "sn": deviceSn,
+                        "rule": rule,
+                        "peak_sessions": peak_sessions,
+                        "fixed_price": fixed_price,
+                    },
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return {}
+        # return refreshed plan and update cache
+        return await self.get_utility_rate_plan(
+            siteId=siteId, deviceSn=deviceSn, fromFile=toFile
+        )

@@ -1,4 +1,5 @@
 """Class for interacting with the Anker Power / Solix API."""
+# ruff: noqa: N806
 
 import contextlib
 from datetime import datetime, timedelta
@@ -221,7 +222,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 or str(value)
                             )
                     elif key == "device_sw_version" and value:
-                        device["sw_version"] = str(value)
+                        device["sw_version"] = str(value).lstrip("v")
                     elif key == "preset_inverter_limit" and str(value):
                         device.update(
                             {
@@ -253,6 +254,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             ):
                                 # mark power limit option as Auto if empty like in app
                                 device[key] = value or ["Auto"]
+                        elif key == "feature_switch":
+                            # keep existing features, just update with new features provided
+                            device[key] = (device.get(key) or {}) | (value or {})
                         else:
                             device[key] = value
                     elif (
@@ -300,9 +304,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "time_zone",
                             "grid_export_limit",
                             "owner_user_id",
-                            "charge_upper_limit",
-                            "discharge_lower_limit",
-                            "backup_reserve",
                         ]
                         and value
                     ):
@@ -366,14 +367,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "micro_inverter_low_power_limit",
                             "grid_to_battery_power",
                             "pei_heating_power",
-                            "charge_upper_limit",
-                            "discharge_lower_limit",
-                            "backup_reserve",
                         ]
-                        and value
                     ):
-                        if key in getattr(
-                            SolarbankDeviceMetrics, device.get("device_pn") or "", {}
+                        if (
+                            value != ""
+                            and value is not None
+                            and key
+                            in getattr(
+                                SolarbankDeviceMetrics,
+                                device.get("device_pn") or "",
+                                {},
+                            )
                         ):
                             device[key] = str(value)
                     elif (
@@ -384,21 +388,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "pv_power_limit",
                             "ac_input_limit",
                         ]
-                        and str(value).isdigit()
                     ):
-                        if key in getattr(
+                        if str(value).isdigit() and key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
                             device[key] = int(value)
                     elif (
-                        # Add solarbank int metrics depending on device type or generation
-                        key == "backup_reserve_switch"
-                        and key
-                        in getattr(
-                            SolarbankDeviceMetrics, device.get("device_pn") or "", {}
-                        )
+                        # Add solarbank int metrics depending on device type or generation and features
+                        key
+                        in [
+                            "charge_upper_limit",
+                            "discharge_lower_limit",
+                            "backup_reserve",
+                            "backup_reserve_switch",
+                        ]
                     ):
-                        device[key] = bool(value)
+                        if (
+                            value is not None
+                            and key
+                            in getattr(
+                                SolarbankDeviceMetrics,
+                                device.get("device_pn") or "",
+                                {},
+                            )
+                            and (
+                                (device.get("feature_switch") or {})
+                                | (devData.get("feature_switch") or {})
+                            ).get("soc_enable")
+                        ):
+                            if key == "backup_reserve_switch":
+                                device[key] = bool(value)
+                            else:
+                                device[key] = str(value)
                     elif key == "sub_package_num" and str(value).isdigit():
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
@@ -610,16 +631,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # set default presets for no active schedule slot
                         if device.get("type") == SolixDeviceType.COMBINER_BOX.value:
                             # assume generation and ac type for tracking schedule data in combiner box
-                            generation = 2
+                            generation = 3
                             ac_type = True
                         else:
                             generation = int(device.get("generation", 0))
                             ac_type = bool(device.get("grid_to_battery_power") or False)
+                        # flag if rate plan charge type supported
+                        charge_enabled = bool(
+                            (device.get("feature_switch") or {}).get(
+                                "custom_rate_charge_enable"
+                            )
+                        )
                         # Count solarbanks for device output presets (only used for SB1)
                         cnt = device.get("solarbank_count", 0)
                         mysite = self.sites.get(device.get("site_id") or "") or {}
                         if generation >= 2:
-                            # Solarbank 2 schedule
+                            # Solarbank 2+ schedule
                             mode_type = (
                                 value.get("mode_type") or SolixDefaults.USAGE_MODE
                             )
@@ -637,6 +664,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     else None,
                                 }
                             )
+                            if charge_enabled:
+                                # SB3+ unique settings
+                                device["preset_load_type"] = SolixDefaults.PRESET_TYPE
                             if ac_type:
                                 # update default with site currency if found
                                 if not (
@@ -689,7 +719,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
                             now_time = datetime.strptime("00:00", "%H:%M").time()
                         if generation >= 2:
-                            # Solarbank 2 schedule, weekday starts with 0=Sunday)
+                            # Solarbank 2+ schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
                             weekday = int(now.strftime("%w"))
                             month = now.month
@@ -730,11 +760,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         ).time()
                                     if start_time <= now_time < end_time:
                                         sys_power = slot.get("power")
-                                        device.update(
-                                            {
-                                                "preset_system_output_power": sys_power,
-                                            }
-                                        )
+                                        device["preset_system_output_power"] = sys_power
+                                        if charge_enabled:
+                                            # SB3+ unique settings
+                                            device["preset_load_type"] = (
+                                                slot.get("charging_type")
+                                                or SolixDefaults.PRESET_TYPE
+                                            )
                                         break
                             if ac_type and (
                                 backup := value.get(SolarbankRatePlan.backup) or {}
@@ -1443,8 +1475,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
         Example data:
         {'power_cutoff_data': [
-        {'id': 1, 'is_selected': 1, 'output_cutoff_data': 10, 'lowpower_input_data': 5, 'input_cutoff_data': 10},
-        {'id': 2, 'is_selected': 0, 'output_cutoff_data': 5, 'lowpower_input_data': 4, 'input_cutoff_data': 5}]}
+            {'id': 1, 'is_selected': 1, 'output_cutoff_data': 10, 'lowpower_input_data': 5, 'input_cutoff_data': 10},
+            {'id': 2, 'is_selected': 0, 'output_cutoff_data': 5, 'lowpower_input_data': 4, 'input_cutoff_data': 5}]}
+        Example data with new SOC limits:
+        {"power_cutoff_data": [
+            {"id": 1,"is_selected": 1,"output_cutoff_data": 10,"lowpower_input_data": 5,"input_cutoff_data": 10},
+            {"id": 2,"is_selected": 0,"output_cutoff_data": 5,"lowpower_input_data": 4,"input_cutoff_data": 5}],
+        "charge_upper_limit": 91,"discharge_lower_limit": 11,"backup_reserve": 0,"backup_reserve_switch": 0,"cmd_type": 1}
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
@@ -1465,37 +1502,80 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             )
         data = resp.get("data") or {}
         # add whole list to device details to provide option selection capabilities
-        details = {
-            "device_sn": deviceSn,
-            "power_cutoff_data": data.get("power_cutoff_data") or [],
-        }
-        for setting in data.get("power_cutoff_data") or []:
+        details = {"device_sn": deviceSn} | data
+        details["power_cutoff_data"] = data.get("power_cutoff_data", None) or []
+        for setting in details.get("power_cutoff_data"):
             if (
                 int(setting.get("is_selected", 0)) > 0
                 and int(setting.get("output_cutoff_data", 0)) > 0
             ):
                 details["power_cutoff"] = int(setting.get("output_cutoff_data"))
+                break
         self._update_dev(details)
         return data
 
     async def set_power_cutoff(
-        self, deviceSn: str, setId: int, toFile: bool = False
+        self,
+        deviceSn: str,
+        setId: int = 1,
+        socMin: float | None = None,
+        socMax: float | None = None,
+        cmdType: int = 1,
+        toFile: bool = False,
     ) -> bool | dict:
         """Set power cut off settings.
 
-        Example input:
+        Note: This query may only update the cloud for App display. For supported SB1 parameters, the cloud will drive the MQTT command.
+        For SB2 parameter updates, the client must drive the MQTT command to the device, otherwise it is only an App display change.
+        Example input for query:
         {'device_sn': '9JVB42LJK8J0P5RY', 'cutoff_data_id': 1}
-        The id must be one of the ids listed with the get_power_cutoff endpoint
+        {'device_sn': '9JVB42LJK8J0P5RY', 'discharge_lower_limit': 15, 'charge_upper_limit': 90, 'cmd_type': 1}
+        The id must be one of the ids listed with the get_power_cutoff endpoint.
+        SOC min and max require appropriate firmware level of device. SB2 does not support backup_reserve settings
+        NOTE: SB2 models must use this query since site_device_parm query with station parameter does not work for them yet
         """
         data = {
             "device_sn": deviceSn,
-            "cutoff_data_id": setId,
+            "cutoff_data_id": setId,  # required parameter, default to id 1 with 10 %
         }
+        if not isinstance(cmdType, int):
+            cmdType = 1
+        if isinstance(socMin, float | int):
+            data["discharge_lower_limit"] = round(min(20, max(5, socMin)))
+            data["cmd_type"] = cmdType
+        if isinstance(socMax, float | int):
+            data["charge_upper_limit"] = round(min(100, max(80, socMax)))
+            data["cmd_type"] = cmdType
+        if "cmd_Type" in data:
+            # Add new soc setting parameters for SB2 not supporting backup soc
+            data["backup_reserve"] = 0
+            data["backup_reserve_switch"] = 0
+
         if toFile:
-            filedata = (self.devices.get(deviceSn) or {}).get("power_cutoff_data") or []
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_cutoff']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_cutoff']}_{deviceSn}.json"
+                )
+            filedata = resp.get("data") or {}
             # update active setting in filedata
-            for setting in filedata:
+            for setting in filedata.get("power_cutoff_data") or []:
                 setting["is_selected"] = 1 if setting.get("id") == setId else 0
+            for key in [
+                "discharge_lower_limit",
+                "charge_upper_limit",
+                "backup_reserve",
+                "backup_reserve_switch",
+                "cmd_type",
+            ]:
+                if (val := data.get(key)) is not None:
+                    filedata[key] = val
             # Write data file for testing purposes
             if filedata and not await self.apisession.saveToFile(
                 Path(self.testDir())
@@ -1503,7 +1583,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 data={
                     "code": 0,
                     "msg": "success!",
-                    "data": {"power_cutoff_data": filedata},
+                    "data": filedata,
                 },
             ):
                 return False
@@ -1524,11 +1604,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         siteId: str | None = None,
         deviceSn: str | None = None,
         socReserve: int | None = None,
+        socMin: int | None = None,
+        socMax: int | None = None,
+        socBackup: int | None = None,
+        socSwitch: bool | None = None,
         gridExport: bool | None = None,
         gridExportLimit: int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Set various parm for the station.
+
+        Note: socMin, socMax socBackup and socSwitch settings depend on firmware level of devices
 
         Example input:
         {'siteId': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'socReserve': 10}
@@ -1565,6 +1651,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             and "feed-in_power_limit" in station_settings
         ):
             data["feed-in_power_limit"] = round(gridExportLimit)
+        # Old SOC reserve setting
         if isinstance(socReserve, float | int):
             # lookup id of specified soc
             socid = next(
@@ -1580,13 +1667,67 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if socid is None:
                 return False
             data["id"] = socid
+        elif any(x is not None for x in [socMin, socMax, socBackup, socSwitch]):
+            socMin = (
+                round(min(20, max(1, socMin)))
+                if isinstance(socMin, float | int)
+                else (station_settings.get("discharge_lower_limit") or 10)
+            )
+            socMax = (
+                round(min(100, max(80, socMax)))
+                if isinstance(socMax, float | int)
+                else (station_settings.get("charge_upper_limit") or 100)
+            )
+            if "discharge_lower_limit" in station_settings:
+                data["discharge_lower_limit"] = socMin
+                data["cmd_type"] = 1
+            if "charge_upper_limit" in station_settings:
+                data["charge_upper_limit"] = socMax if socMax > socMin else 100
+                data["cmd_type"] = 1
+
+            # existing 0 backup soc may indicate backup not supported
+            backup_supported = bool(station_settings.get("backup_reserve"))
+            socBackup = (
+                round(min(100, max(0, socBackup)))
+                if isinstance(socBackup, float | int) and backup_supported
+                else None
+            )
+            socSwitch = (
+                socSwitch if isinstance(socSwitch, bool) and backup_supported else None
+            )
+            if "backup_reserve_switch" in station_settings:
+                data["backup_reserve_switch"] = int(
+                    socSwitch
+                    if isinstance(socSwitch, bool)
+                    else bool(station_settings.get("backup_reserve_switch"))
+                )
+                data["cmd_type"] = 1
+            # check and adjust new or existing backup value
+            backup = round(
+                min(
+                    float(data.get("charge_upper_limit") or 1) - 1,
+                    max(
+                        float(data.get("discharge_lower_limit") or -1) + 1,
+                        socBackup or station_settings.get("backup_reserve") or 0,
+                    ),
+                )
+            )
+            if "backup_reserve" in station_settings:
+                if socSwitch is not False and (
+                    station_settings.get("backup_reserve_switch") or socBackup
+                ):
+                    # backup soc is or should be enabled
+                    data["backup_reserve"] = backup or 50
+                    data["backup_reserve_switch"] = 1
+                else:
+                    # backup soc is or was disabled, reset to 50 if it has a value
+                    data["backup_reserve"] = (
+                        50 if station_settings.get("backup_reserve") else 0
+                    )
+                data["cmd_type"] = 1
+
         if not (data or station_settings):
             return False
-        # Remove fields not required for station setting changes
-        data.pop("enable_0w", None)  # 0/1 toggles enable_0w_change to False/True
-        data.pop(
-            "enable_0w_change", None
-        )  # Allow change per device, False for stations
         # Make the Api call and return result
         return await self.set_device_parm(
             siteId=siteId,
@@ -1820,17 +1961,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 station["grid_export_limit"] = str(
                     station_param.get("feed-in_power_limit", "")
                 )
-                station["charge_upper_limit"] = str(
-                    station_param.get("charge_upper_limit", "")
-                )
-                station["discharge_lower_limit"] = str(
-                    station_param.get("discharge_lower_limit", "")
-                )
-                station["backup_reserve"] = str(station_param.get("backup_reserve", ""))
-                station["backup_reserve_switch"] = bool(
-                    station_param.get("backup_reserve_switch")
-                )
-                # add station_sn to site as reference
+                # add physical station_sn to site as reference
                 self._update_site(siteId, {"station_sn": station_sn})
             # drop same name device limits as those field may be used to control individual device settings
             self._update_dev(

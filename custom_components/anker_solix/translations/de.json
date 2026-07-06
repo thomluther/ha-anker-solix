@@ -87,6 +87,12 @@
                 "valley": "Nebenzeit"
             }
         },
+        "load_type": {
+            "options": {
+                "supply": "Hausabgabe",
+                "ac_charge": "Netzaufladung"
+            }
+        },
         "request_method": {
             "options": {
                 "get": "GET",
@@ -525,10 +531,10 @@
         },
         "number": {
             "preset_system_output_power": {
-                "name": "System Einspeisevorgabe"
+                "name": "System Lastvorgabe"
             },
             "preset_device_output_power": {
-                "name": "Geräte Einspeisevorgabe"
+                "name": "Geräte Lastvorgabe"
             },
             "preset_charge_priority": {
                 "name": "Ladeprioritätslimit"
@@ -581,6 +587,15 @@
             "grid_export_limit": {
                 "name": "Netz Einspeiselimit"
             },
+            "min_soc": {
+                "name": "SoC Minimum"
+            },
+            "max_soc": {
+                "name": "SoC Maximum"
+            },
+            "backup_soc": {
+                "name": "Notstrom SoC"
+            },
             "ac_output_timeout": {
                 "name": "Zeitüberschreitung AC"
             },
@@ -621,6 +636,18 @@
                 "state_attributes": {
                     "mode": {
                         "name": "Modus"
+                    }
+                }
+            },
+            "preset_load_type": {
+                "name": "System Lastvorgabe Typ",
+                "state": {
+                    "supply": "Hausabgabe",
+                    "ac_charge": "Netzaufladung"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Typ"
                     }
                 }
             },
@@ -696,13 +723,13 @@
                 "name": "Gerätezeitüberschreitung"
             },
             "min_soc": {
-                "name": "SOC Minimum"
+                "name": "SoC Minimum"
             },
             "max_soc": {
-                "name": "SOC Maximum"
+                "name": "SoC Maximum"
             },
             "backup_soc": {
-                "name": "SOC Backup"
+                "name": "Notstrom SoC"
             },
             "temp_unit": {
                 "name": "Temperatureinheit",
@@ -830,6 +857,14 @@
                     "unknown": "Unbekannt"
                 }
             },
+            "charger_mode": {
+                "name": "Lademodus",
+                "state": {
+                    "normal": "Normal",
+                    "reverse": "Rückwärts",
+                    "unknown": "Unbekannt"
+                }
+            },
             "car_battery_type": {
                 "name": "Batterietyp",
                 "state": {
@@ -848,6 +883,9 @@
             },
             "charge_power_limit": {
                 "name": "Ladeleistungsgrenze"
+            },
+            "reverse_power_limit": {
+                "name": "Rückladeleistungsgrenze"
             },
             "vehicle_brand": {
                 "name": "1. Marke"
@@ -934,6 +972,9 @@
             },
             "battery_power_signed": {
                 "name": "Akkuleistung"
+            },
+            "battery_power_signed_total": {
+                "name": "Akkuleistung gesamt"
             },
             "other_solar_power": {
                 "name": "Solar Drittanbieter"
@@ -1159,7 +1200,7 @@
                         "name": "Modell"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Erweiterungen"
@@ -1176,7 +1217,7 @@
                         "name": "Modell"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Erweiterungen"
@@ -1193,7 +1234,7 @@
                         "name": "Modell"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Erweiterungen"
@@ -1210,7 +1251,7 @@
                         "name": "Modell"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Erweiterungen"
@@ -1227,7 +1268,7 @@
                         "name": "Modell"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Erweiterungen"
@@ -1244,7 +1285,7 @@
                         "name": "Modell"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Erweiterungen"
@@ -1409,9 +1450,6 @@
                         "name": "Seriennummer"
                     }
                 }
-            },
-            "sw_version": {
-                "name": "Firmware"
             },
             "sub_package_num": {
                 "name": "Erweiterungsakkus"
@@ -2355,6 +2393,52 @@
                     }
                 }
             },
+            "device_1_output_power": {
+                "name": "Gerät 1 Leistung",
+                "state_attributes": {
+                    "mode": {
+                        "name": "Modus",
+                        "state": {
+                            "inactive": "Inaktiv",
+                            "charging": "Aufladung",
+                            "discharging": "Entladung",
+                            "standby": "Bereitschaft"
+                        }
+                    }
+                }
+            },
+            "device_1_status": {
+                "name": "Gerät 1 Status",
+                "state": {
+                    "disconnected": "Getrennt",
+                    "connecting": "Verbinden",
+                    "connected": "Verbunden",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Seriennummer"
+                    },
+                    "device_pn": {
+                        "name": "Modell"
+                    },
+                    "xt60i_cable": {
+                        "name": "XT60i Kabel",
+                        "state": {
+                            "disconnected": "Getrennt",
+                            "connecting": "Verbinden",
+                            "connected": "Verbunden",
+                            "unknown": "Unbekannt"
+                        }
+                    },
+                    "state_of_charge": {
+                        "name": "Ladestand %"
+                    },
+                    "temperature": {
+                        "name": "Temperatur °C"
+                    }
+                }
+            },
             "remaining_time_hours": {
                 "name": "Verbleibende Zeit"
             },
@@ -2643,6 +2727,9 @@
             "allow_grid_export": {
                 "name": "Erlaube Netzeinspeisung"
             },
+            "backup_soc_switch": {
+                "name": "Aktiviere Notstrom SoC"
+            },
             "mqtt_overlay": {
                 "name": "MQTT Überlagerung",
                 "state_attributes": {
@@ -2769,6 +2856,11 @@
             "weekend_end_time": {
                 "name": "Ladezeitplan WE Ende"
             }
+        },
+        "update":{
+            "sw_version": {
+                "name": "Firmware"
+            }
         }
     },
     "entity_component": {
@@ -2852,6 +2944,10 @@
                 "sb2_fields": {
                     "name": "Solarbank 2+ Optionen",
                     "description": "Für Solarbank 2+ Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                },
+                "sb3_fields": {
+                    "name": "Solarbank 3+ Optionen",
+                    "description": "Für Solarbank 2+ Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1 und 2)"
                 }
             },
             "fields": {
@@ -2871,12 +2967,16 @@
                     "name": "Wochentage",
                     "description": "Wochentage für das definierte Zeitintervall (ignoriert für Solarbank 1)"
                 },
+                "load_type": {
+                    "name": "Lasttvorgabe Typ",
+                    "description": "Art der Lastvorgabe (ignoriert für Solarbank 1 und 2)"
+                },
                 "appliance_load": {
-                    "name": "Einspeisevorgabe",
-                    "description": "Watt die ins Haus eingespeist werden sollen von allen Geräten"
+                    "name": "Lastvorgabe",
+                    "description": "Watt für die Lastvorgabe des Systems"
                 },
                 "device_load": {
-                    "name": "Geräte Einspeisevorgabe",
+                    "name": "Geräte Lastvorgabe",
                     "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2+ Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2+)"
                 },
                 "allow_export": {
@@ -2904,6 +3004,10 @@
                 "sb2_fields": {
                     "name": "Solarbank 2+ Optionen",
                     "description": "Für Solarbank 2+ Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1)"
+                },
+                "sb3_fields": {
+                    "name": "Solarbank 3+ Optionen",
+                    "description": "Für Solarbank 2+ Systeme können folgende Optionen angegeben werden (ignoriert für Solarbank 1 und 2)"
                 }
             },
             "fields": {
@@ -2923,12 +3027,16 @@
                     "name": "Wochentage",
                     "description": "Wochentage für das definierte Zeitintervall (ignoriert für Solarbank 1)"
                 },
+                "load_type": {
+                    "name": "Lasttvorgabe Typ",
+                    "description": "Art der Lastvorgabe (ignoriert für Solarbank 1 und 2)"
+                },
                 "appliance_load": {
-                    "name": "Einspeisevorgabe",
-                    "description": "Watt die ins Haus eingespeist werden sollen von allen Geräten"
+                    "name": "Lastvorgabe",
+                    "description": "Watt für die Lastvorgabe des Systems"
                 },
                 "device_load": {
-                    "name": "Geräte Einspeisevorgabe",
+                    "name": "Geräte Lastvorgabe",
                     "description": "Watt die vom Gerät eingespeist werden sollen. Optional für Systeme mit 2+ Solarbänken zur individuellen Vorgabe (ignoriert für Solarbank 2+)"
                 },
                 "allow_export": {

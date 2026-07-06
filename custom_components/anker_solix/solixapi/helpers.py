@@ -118,7 +118,7 @@ def get_enum_value(
     enum_class: Enum, name: str, default: Any | None = None
 ) -> Any | None:
     """Get the value for an enum name safely with optional default or None."""
-    member: Enum | None = getattr(enum_class, name, None)
+    member: Enum | None = getattr(enum_class, str(name), None)
     return member.value if member is not None else default
 
 

@@ -54,7 +54,7 @@ class DeviceHexDataHeader:
     cmd_msg: InitVar[bytearray | bytes | str | None] = None
 
     def __post_init__(self, hexbytes, cmd_msg) -> None:
-        """Init the dataclass from optional hexbytes or for new cmf_msg."""
+        """Init the dataclass from optional hexbytes or for new cmd_msg."""
         self.msglength = 0
         if isinstance(hexbytes, str):
             hexbytes = bytearray(bytes.fromhex(hexbytes))
@@ -602,7 +602,7 @@ class DeviceHexDataField:
                         DeviceHexDataTypes.sfle.value,
                         DeviceHexDataTypes.var.value,
                     ]:
-                        length = 4
+                        length = bytemap.get(LENGTH, 4)
                     else:
                         length = bytemap.get(LENGTH, 0)
                     if length == 0:
@@ -659,6 +659,7 @@ class DeviceHexDataField:
         value: float | str | None = None,
         name: str | bytearray | bytes | None = None,
         fieldtype: bytearray | bytes | None = None,
+        offset: int | None = None,
         desc: dict | None = None,
     ) -> Self:
         """Return the updated class instance, exception is raised if value encoding was not successfull."""
@@ -673,9 +674,28 @@ class DeviceHexDataField:
                 "Error updating DeviceHexDataField: Missing field identifier"
             )
         try:
-            self.f_value = self.encode_value(
-                value=value, fieldtype=fieldtype, desc=desc
-            )
+            if offset is None:
+                self.f_value = self.encode_value(
+                    value=value, fieldtype=fieldtype, desc=desc
+                )
+            # update only subfield value for requested byte offset and subfield type
+            elif val := self.encode_value(
+                value=value, fieldtype=desc.get(TYPE), desc=desc
+            ):
+                # Extend with zeros if needed
+                if len(self.f_value) < offset:
+                    self.f_value.extend(b"\x00" * (offset - len(self.f_value)))
+                # avoid str field exceeds overall field length
+                elif (
+                    (maxlen := len(self.f_value) - offset) > 0
+                    and desc.get(TYPE) == DeviceHexDataTypes.str.value
+                    and len(val) > maxlen
+                ):
+                    val = val[:maxlen]
+                    # check if field has length byte and adjust it
+                    if desc.get(LENGTH, 1) <= 0:
+                        val[0] = len(val) - 1
+                self.f_value[offset : offset + len(val)] = val
             # Update data length
             self.f_length = len(self.f_type) + len(self.f_value)
             if self.f_length > 255:
@@ -700,7 +720,7 @@ class DeviceHexDataField:
         if not isinstance(desc, dict):
             desc = {}
         # Ignore options for fields following, since their value was already updated during validation
-        options = {} if desc.get(VALUE_FOLLOWS) else desc.get(VALUE_OPTIONS, {})
+        options = None if desc.get(VALUE_FOLLOWS) else desc.get(VALUE_OPTIONS)
         if (desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
             # special case for time strings HH:MM[:SS], convert to bytes already
             fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
@@ -741,11 +761,14 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, encode provided string for base type
                 hexvalue = bytearray(str(fieldvalue).encode())
-                if length := int(desc.get(LENGTH, 0)):
-                    # fill length with \x00
-                    hexvalue += bytearray(
+                # fill length with \x00 or cut value length
+                if length := abs(int(desc.get(LENGTH, len(hexvalue)))):
+                    hexvalue = hexvalue[:length] + bytearray(
                         max(0, length - len(hexvalue)) * bytes.fromhex("00")
                     )
+                # add length byte if length specified <= 0
+                if (length := int(desc.get(LENGTH, 1) or 0 - len(hexvalue))) < 0:
+                    hexvalue = bytearray(abs(length).to_bytes()) + hexvalue
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
                 if isinstance(fieldvalue, int | float):
@@ -1214,7 +1237,7 @@ class DeviceJsonData:
         """Return the encoded value according to existing or provided value and field description."""
         if not isinstance(desc, dict):
             desc = {}
-        options = desc.get(VALUE_OPTIONS, {})
+        options = desc.get(VALUE_OPTIONS)
         is_str = isinstance(value, str)
         if isinstance(value, str | int | float):
             # for provided default or state values without value validation descriptions, use value as is
@@ -1461,9 +1484,7 @@ class MqttCmdValidator:
     min: float | int = 0
     max: float | int = 0
     step: float | int = 0
-    options: dict[str | int, str | float | int] | list[int | float] = field(
-        default_factory=dict
-    )
+    options: dict[str | int, str | float | int] | list[int | float] | None = None
 
     def __post_init__(self) -> None:
         """Validate init parms."""
@@ -1473,8 +1494,6 @@ class MqttCmdValidator:
             self.max = 0
         if not self.step:
             self.step = 0
-        if not self.options:
-            self.options = {}
         if not isinstance(self.min, float | int):
             raise TypeError(
                 f"Expected type float|int for min, got {type(self.min)}: {self.min!s}"
@@ -1487,10 +1506,10 @@ class MqttCmdValidator:
             raise TypeError(
                 f"Expected type float|int for step, got {type(self.step)}: {self.step!s}"
             )
-        if self.options and isinstance(self.options, dict | list):
+        if isinstance(self.options, dict | list):
             # ignore step if options are provided
             self.step = 0
-        elif self.options:
+        elif self.options is not None:
             raise TypeError(
                 f"Expected type list() or dict() for options, got {type(self.options)}: {self.options!s}"
             )
@@ -1502,7 +1521,7 @@ class MqttCmdValidator:
             raise ValueError(
                 f"Expected step to be smaller or equal to delta max/min, got step: {self.step!s}"
             )
-        if self.min == 0 == self.max and not self.options:
+        if self.min == 0 == self.max and self.options is None:
             raise TypeError("Expected range or options definition!")
 
     def __str__(self) -> str:
@@ -1537,6 +1556,8 @@ class MqttCmdValidator:
                     )
             else:
                 parmvalue = value
+        elif self.options is not None and not isinstance(value, str):
+            raise ValueError(f"Provided value is no text, got: {value!s}")
         else:
             parmvalue = value
         if not isinstance(parmvalue, str):
@@ -1587,7 +1608,7 @@ def convert_timestamp(
         if ms or len(value) > 4:
             msec = "".join(
                 c for c in value.decode(errors="ignore").strip() if c.isprintable()
-            )
+            ).rstrip("?")
             if msec.replace(".", "", 1).isdigit():
                 return float(msec) / 1000
         else:

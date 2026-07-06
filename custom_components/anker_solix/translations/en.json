@@ -87,6 +87,12 @@
                 "valley": "Valley"
             }
         },
+        "load_type": {
+            "options": {
+                "supply": "Home supply",
+                "ac_charge": "Grid charge"
+            }
+        },
         "request_method": {
             "options": {
                 "get": "GET",
@@ -525,10 +531,10 @@
         },
         "number": {
             "preset_system_output_power": {
-                "name": "System output preset"
+                "name": "System load preset"
             },
             "preset_device_output_power": {
-                "name": "Device output preset"
+                "name": "Device load preset"
             },
             "preset_charge_priority": {
                 "name": "Charge priority limit"
@@ -581,6 +587,15 @@
             "grid_export_limit": {
                 "name": "Grid export limit"
             },
+            "min_soc": {
+                "name": "SoC min"
+            },
+            "max_soc": {
+                "name": "SoC max"
+            },
+            "backup_soc": {
+                "name": "Backup SoC"
+            },
             "ac_output_timeout": {
                 "name": "AC output timeout"
             },
@@ -605,7 +620,7 @@
         },
         "select": {
             "power_cutoff": {
-                "name": "SOC reserve"
+                "name": "SoC reserve"
             },
             "preset_usage_mode": {
                 "name": "Usage mode",
@@ -621,6 +636,18 @@
                 "state_attributes": {
                     "mode": {
                         "name": "Mode"
+                    }
+                }
+            },
+            "preset_load_type": {
+                "name": "System load type preset",
+                "state": {
+                    "supply": "Home supply",
+                    "ac_charge": "Grid charge"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Type"
                     }
                 }
             },
@@ -696,13 +723,13 @@
                 "name": "Device timeout"
             },
             "min_soc": {
-                "name": "SOC min"
+                "name": "SoC min"
             },
             "max_soc": {
-                "name": "SOC max"
+                "name": "SoC max"
             },
             "backup_soc": {
-                "name": "SOC backup"
+                "name": "Backup SoC"
             },
             "temp_unit": {
                 "name": "Temperature unit",
@@ -830,6 +857,14 @@
                     "unknown": "Unknown"
                 }
             },
+            "charger_mode": {
+                "name": "Charger mode",
+                "state": {
+                    "normal": "Normal",
+                    "reverse": "Reverse",
+                    "unknown": "Unknown"
+                }
+            },
             "car_battery_type": {
                 "name": "Battery type",
                 "state": {
@@ -848,6 +883,9 @@
             },
             "charge_power_limit": {
                 "name": "Charge power limit"
+            },
+            "reverse_power_limit": {
+                "name": "Reverse power limit"
             },
             "vehicle_brand": {
                 "name": "1. Brand"
@@ -934,6 +972,9 @@
             },
             "battery_power_signed": {
                 "name": "Battery power"
+            },
+            "battery_power_signed_total": {
+                "name": "Battery power total"
             },
             "other_solar_power": {
                 "name": "Solar 3rd party"
@@ -1159,7 +1200,7 @@
                         "name": "Model"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Expansions"
@@ -1176,7 +1217,7 @@
                         "name": "Model"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Expansions"
@@ -1193,7 +1234,7 @@
                         "name": "Model"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Expansions"
@@ -1210,7 +1251,7 @@
                         "name": "Model"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Expansions"
@@ -1227,7 +1268,7 @@
                         "name": "Model"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Expansions"
@@ -1244,7 +1285,7 @@
                         "name": "Model"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "SoC %"
                     },
                     "expansions": {
                         "name": "Expansions"
@@ -1409,9 +1450,6 @@
                         "name": "Serialnumber"
                     }
                 }
-            },
-            "sw_version": {
-                "name": "Firmware"
             },
             "sub_package_num": {
                 "name": "Expansion batteries"
@@ -2355,6 +2393,52 @@
                     }
                 }
             },
+            "device_1_output_power": {
+                "name": "Device 1 power",
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging",
+                            "standby": "Standby"
+                        }
+                    }
+                }
+            },
+            "device_1_status": {
+                "name": "Device 1 status",
+                "state": {
+                    "disconnected": "Disconnected",
+                    "connecting": "Connecting",
+                    "connected": "Connected",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Serialnumber"
+                    },
+                    "device_pn": {
+                        "name": "Model"
+                    },
+                    "xt60i_cable": {
+                        "name": "XT60i cable",
+                        "state": {
+                            "disconnected": "Disconnected",
+                            "connecting": "Connecting",
+                            "connected": "Connected",
+                            "unknown": "Unknown"
+                        }
+                    },
+                    "state_of_charge": {
+                        "name": "SoC %"
+                    },
+                    "temperature": {
+                        "name": "Temperatur °C"
+                    }
+                }
+            },
             "remaining_time_hours": {
                 "name": "Remaining time"
             },
@@ -2643,6 +2727,9 @@
             "allow_grid_export": {
                 "name": "Allow grid export"
             },
+            "backup_soc_switch": {
+                "name": "Activate Backup SoC"
+            },
             "mqtt_overlay": {
                 "name": "MQTT Overlay",
                 "state_attributes": {
@@ -2769,6 +2856,11 @@
             "weekend_end_time": {
                 "name": "Schedule weekend end"
             }
+        },
+        "update":{
+            "sw_version": {
+                "name": "Firmware"
+            }
         }
     },
     "entity_component": {
@@ -2852,6 +2944,10 @@
                 "sb2_fields": {
                     "name": "Solarbank 2+ options",
                     "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
+                },
+                "sb3_fields": {
+                    "name": "Solarbank 3+ options",
+                    "description": "For Solarbank 3+ systems you can specify following options (ignored for Solarbank 1 and 2)"
                 }
             },
             "fields": {
@@ -2871,13 +2967,17 @@
                     "name": "Weekdays",
                     "description": "Weekdays for the defined time interval (ignored for Solarbank 1)"
                 },
+                "load_type": {
+                    "name": "Load type preset",
+                    "description": "Type of the configured load preset (ignored for Solarbank 1 und 2)"
+                },
                 "appliance_load": {
-                    "name": "Home load preset",
-                    "description": "Watt to be delivered to the house by all devices"
+                    "name": "Appliance load preset",
+                    "description": "Watt to be used for the preset of the system"
                 },
                 "device_load": {
                     "name": "Device load preset",
-                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
+                    "description": "Watt to be supplied by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Allow export",
@@ -2904,6 +3004,10 @@
                 "sb2_fields": {
                     "name": "Solarbank 2+ options",
                     "description": "For Solarbank 2+ systems you can specify following options (ignored for Solarbank 1)"
+                },
+                "sb3_fields": {
+                    "name": "Solarbank 3+ options",
+                    "description": "For Solarbank 3+ systems you can specify following options (ignored for Solarbank 1 and 2)"
                 }
             },
             "fields": {
@@ -2923,13 +3027,17 @@
                     "name": "Weekdays",
                     "description": "Weekdays for the defined time interval (ignored for Solarbank 1)"
                 },
+                "load_type": {
+                    "name": "Load type preset",
+                    "description": "Type of the configured load preset (ignored for Solarbank 1 und 2)"
+                },
                 "appliance_load": {
-                    "name": "Home load preset",
-                    "description": "Watt to be delivered to the house by all devices"
+                    "name": "Appliance load preset",
+                    "description": "Watt to be used for the preset of the system"
                 },
                 "device_load": {
                     "name": "Device load preset",
-                    "description": "Watt to be delivered by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
+                    "description": "Watt to be supplied by the device. Optional for dual solarbank systems with individual device presets (ignored for Solarbank 2+)"
                 },
                 "allow_export": {
                     "name": "Allow export",

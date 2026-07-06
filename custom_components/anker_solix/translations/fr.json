@@ -87,6 +87,12 @@
                     "valley": "Vallée"
             }
         },
+        "load_type": {
+            "options": {
+                "supply": "Livraison à domicile",
+                "ac_charge": "Recharge du réseau"
+            }
+        },
         "request_method": {
             "options": {
                 "get": "GET",
@@ -525,10 +531,10 @@
         },
         "number": {
             "preset_system_output_power": {
-                "name": "Réglage puissance de sortie du système"
+                "name": "Réglage de la puissance du système"
             },
             "preset_device_output_power": {
-                "name": "Réglage puissance de sortie de l'appareil"
+                "name": "Réglage de la puissance de l'appareil"
             },
             "preset_charge_priority": {
                 "name": "Limite de priorité de charge"
@@ -581,6 +587,15 @@
             "grid_export_limit": {
                 "name": "Limite d'exportation du réseau"
             },
+            "min_soc": {
+                "name": "Niveau de charge minimal"
+            },
+            "max_soc": {
+                "name": "Niveau de charge maximal"
+            },
+            "backup_soc": {
+                "name": "Niveau de charge de sauvegarde"
+            },
             "ac_output_timeout": {
                 "name": "Temporisation sortie CA"
             },
@@ -605,7 +620,7 @@
         },
         "select": {
             "power_cutoff": {
-                "name": "Réserve SOC"
+                "name": "Réserve SoC"
             },
             "preset_usage_mode": {
                 "name": "Mode d'utilisation",
@@ -621,6 +636,18 @@
                 "state_attributes": {
                     "mode": {
                         "name": "Mode"
+                    }
+                }
+            },
+            "preset_load_type": {
+                "name": "Préréglage du type de charge du système",
+                "state": {
+                    "supply": "Livraison à domicile",
+                    "ac_charge": "Recharge du réseau"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Type"
                     }
                 }
             },
@@ -696,13 +723,13 @@
                 "name": "Délai d'inactivité de l'appareil"
             },
             "min_soc": {
-                "name": "SOC min"
+                "name": "Niveau de charge minimal"
             },
             "max_soc": {
-                "name": "SOC max"
+                "name": "Niveau de charge maximal"
             },
             "backup_soc": {
-                "name": "SOC sauvegarde"
+                "name": "Niveau de charge de sauvegarde"
             },
             "temp_unit": {
                 "name": "Unité de température",
@@ -830,6 +857,14 @@
                     "unknown": "Inconnu"
                 }
             },
+            "charger_mode": {
+                "name": "Mode chargeur",
+                "state": {
+                    "normal": "Normal",
+                    "reverse": "Inverse",
+                    "unknown": "Inconnu"
+                }
+            },
             "car_battery_type": {
                 "name": "Type de batterie",
                 "state": {
@@ -848,6 +883,9 @@
             },
             "charge_power_limit": {
                 "name": "Limite de puissance de charge"
+            },
+            "reverse_power_limit": {
+                "name": "Limite de puissance de recharge"
             },
             "vehicle_brand": {
                 "name": "1. Marque"
@@ -933,7 +971,10 @@
                 "name": "Puissance de décharge"
             },
             "battery_power_signed": {
-                "name": "puissance de la batterie"
+                "name": "Puissance de la batterie"
+            },
+            "battery_power_signed_total": {
+                "name": "Puissance de la batterie totale"
             },
             "other_solar_power": {
                 "name": "Tierce partie solaire"
@@ -1159,7 +1200,7 @@
                         "name": "Modèle"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "Niveau de charge %"
                     },
                     "expansions": {
                         "name": "Extensions"
@@ -1176,7 +1217,7 @@
                         "name": "Modèle"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "Niveau de charge %"
                     },
                     "expansions": {
                         "name": "Extensions"
@@ -1193,7 +1234,7 @@
                         "name": "Modèle"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "Niveau de charge %"
                     },
                     "expansions": {
                         "name": "Extensions"
@@ -1210,7 +1251,7 @@
                         "name": "Modèle"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "Niveau de charge %"
                     },
                     "expansions": {
                         "name": "Extensions"
@@ -1227,7 +1268,7 @@
                         "name": "Modèle"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "Niveau de charge %"
                     },
                     "expansions": {
                         "name": "Extensions"
@@ -1244,7 +1285,7 @@
                         "name": "Modèle"
                     },
                     "state_of_charge": {
-                        "name": "SOC %"
+                        "name": "Niveau de charge %"
                     },
                     "expansions": {
                         "name": "Extensions"
@@ -1348,10 +1389,10 @@
                 }
             },
             "state_of_charge_total": {
-                "name": "État de charge total"
+                "name": "Niveau de charge total"
             },
             "state_of_charge": {
-                "name": "État de charge",
+                "name": "Niveau de charge",
                 "state_attributes": {
                     "voltage": {
                         "name": "Volt"
@@ -1409,9 +1450,6 @@
                         "name": "Numéro de série"
                     }
                 }
-            },
-            "sw_version": {
-                "name": "Firmware"
             },
             "sub_package_num": {
                 "name": "Batteries supplémentaire"
@@ -1549,7 +1587,7 @@
                 "name": "Alimentation domestique SB"
             },
             "solarbank_state_of_charge": {
-                "name": "Etat de charge du SB"
+                "name": "Niveau de charge du SB"
             },
             "solarbank_timestamp": {
                 "name": "Temps de données SB",
@@ -1584,7 +1622,7 @@
                 "name": "Puissance de sortie PPS"
             },
             "pps_state_of_charge": {
-                "name": "Etat de charge du PPS"
+                "name": "Niveau de charge du PPS"
             },
             "smart_plugs_power": {
                 "name": "Puissance des prises intelligentes"
@@ -2355,11 +2393,57 @@
                     }
                 }
             },
+            "device_1_output_power": {
+                "name": "Appareil 1 puissance",
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode",
+                        "state": {
+                            "inactive": "Inactif",
+                            "charging": "Recharge",
+                            "discharging": "Décharge",
+                            "standby": "Veille"
+                        }
+                    }
+                }
+            },
+            "device_1_status": {
+                "name": "Appareil 1 statut",
+                "state": {
+                    "disconnected": "Déconnecté",
+                    "connecting": "Connexion",
+                    "connected": "Connecté",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "device_sn": {
+                        "name": "Numéro de série"
+                    },
+                    "device_pn": {
+                        "name": "Modèle"
+                    },
+                    "xt60i_cable": {
+                        "name": "Câble XT60i",
+                        "state": {
+                            "disconnected": "Déconnecté",
+                            "connecting": "Connexion",
+                            "connected": "Connecté",
+                            "unknown": "Inconnu"
+                        }
+                    },
+                    "state_of_charge": {
+                        "name": "Niveau de charge %"
+                    },
+                    "temperature": {
+                        "name": "Température °C"
+                    }
+                }
+            },
              "remaining_time_hours": {
                 "name": "Temps restant"
             },
             "main_battery_soc": {
-                "name": "Principal état de charge",
+                "name": "Principal niveau de charge",
                 "state_attributes": {
                     "serialnumber": {
                         "name": "Numéro de série"
@@ -2370,7 +2454,7 @@
                 }
             },
             "exp_1_soc": {
-                "name": "Exp. 1 état de charge",
+                "name": "Exp. 1 niveau de charge",
                 "state_attributes": {
                     "serialnumber": {
                         "name": "Numéro de série"
@@ -2387,7 +2471,7 @@
                 "name": "Exp. 1 température"
             },
             "exp_2_soc": {
-                "name": "Exp. 2 état de charge",
+                "name": "Exp. 2 niveau de charge",
                 "state_attributes": {
                     "serialnumber": {
                         "name": "Numéro de série"
@@ -2404,7 +2488,7 @@
                 "name": "Exp. 2 température"
             },
             "exp_3_soc": {
-                "name": "Exp. 3 état de charge",
+                "name": "Exp. 3 niveau de charge",
                 "state_attributes": {
                     "serialnumber": {
                         "name": "Numéro de série"
@@ -2421,7 +2505,7 @@
                 "name": "Exp. 3 température"
             },
             "exp_4_soc": {
-                "name": "Exp. 4 état de charge",
+                "name": "Exp. 4 niveau de charge",
                 "state_attributes": {
                     "serialnumber": {
                         "name": "Numéro de série"
@@ -2438,7 +2522,7 @@
                 "name": "Exp. 4 température"
             },
             "exp_5_soc": {
-                "name": "Exp. 5 état de charge",
+                "name": "Exp. 5 niveau de charge",
                 "state_attributes": {
                     "serialnumber": {
                         "name": "Numéro de série"
@@ -2643,6 +2727,9 @@
             "allow_grid_export": {
                 "name": "Exporter vers le réseau"
             },
+            "backup_soc_switch": {
+                "name": "Activer le SoC de sauvegarde"
+            },
             "mqtt_overlay": {
                 "name": "Superposition MQTT",
                 "state_attributes": {
@@ -2769,6 +2856,11 @@
             "weekend_end_time": {
                 "name": "Horaire de chargement WE fin"
             }
+        },
+        "update":{
+            "sw_version": {
+                "name": "Firmware"
+            }
         }
     },
     "entity_component": {
@@ -2852,6 +2944,10 @@
                 "sb2_fields": {
                     "name": "Options de Solarbank 2+",
                     "description": "Pour les systèmes Solarbank 2+, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                },
+                "sb3_fields": {
+                    "name": "Options de Solarbank 3+",
+                    "description": "Pour les systèmes Solarbank 3+, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1 et 2)"
                 }
             },
             "fields": {
@@ -2871,9 +2967,13 @@
                     "name": "En semaine",
                     "description": "Jours de la semaine pour l'intervalle défini (ignoré pour solarbank 1)"
                 },
+                "load_type": {
+                    "name": "Préréglage du type de charge",
+                    "description": "Type de charge (ignoré pour solarbank 1 et 2)"
+                },
                 "appliance_load": {
-                    "name": "Réglage puissance de sortie",
-                    "description": "Watt à livrer à la maison par tous les appareils"
+                    "name": "Préréglage de la charge",
+                    "description": "Watt pour la charge nominale du système"
                 },
                 "device_load": {
                     "name": "Réglage puissance de sortie de l'appareil",
@@ -2904,6 +3004,10 @@
                 "sb2_fields": {
                     "name": "Options de Solarbank 2+",
                     "description": "Pour les systèmes Solarbank 2+, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1)"
+                },
+                "sb3_fields": {
+                    "name": "Options de Solarbank 3+",
+                    "description": "Pour les systèmes Solarbank 3+, vous pouvez spécifier les options suivantes (ignoré pour Solarbank 1 et 2)"
                 }
             },
             "fields": {
@@ -2923,9 +3027,13 @@
                     "name": "En semaine",
                     "description": "Jours de la semaine pour l'intervalle défini (ignoré pour solarbank 1)"
                 },
+                "load_type": {
+                    "name": "Préréglage du type de charge",
+                    "description": "Type de charge (ignoré pour solarbank 1 et 2)"
+                },
                 "appliance_load": {
-                    "name": "Réglage puissance de sortie",
-                    "description": "Watt à livrer à la maison par tous les appareils"
+                    "name": "Préréglage de la charge",
+                    "description": "Watt pour la charge nominale du système"
                 },
                 "device_load": {
                     "name": "Réglage puissance de sortie de l'appareil",

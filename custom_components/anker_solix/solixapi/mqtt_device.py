@@ -14,9 +14,11 @@ from .apitypes import SolixDefaults
 from .helpers import round_by_factor
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import (
+    BYTES,
     COMMAND_ENCODING,
     COMMAND_LIST,
     COMMAND_NAME,
+    LENGTH,
     NAME,
     STATE_CONVERTER,
     STATE_NAME,
@@ -119,113 +121,134 @@ class SolixMqttDevice:
                         required_number = None
                         # get nested command fields if available
                         fields = fields.get(cmd) or fields
-                        for key, item in fields.items():
+                        for key, items in fields.items():
                             if len(key) > 2:
                                 # No bytefield key, use as is
-                                control[key] = item
-                            elif isinstance(item, dict):
+                                control[key] = items
+                            elif isinstance(items, dict):
                                 # extract all bytefield descriptions as parameter which have defined value keys
-                                descriptors = {
-                                    k: v
-                                    for k, v in item.items()
-                                    if k
-                                    in [
-                                        VALUE_MIN,
-                                        VALUE_MAX,
-                                        VALUE_MIN_STATE,
-                                        VALUE_MAX_STATE,
-                                        VALUE_STEP,
-                                        VALUE_STATE,
-                                        VALUE_OPTIONS,
-                                        VALUE_OPTIONS_STATE,
-                                        VALUE_DEFAULT,
-                                        STATE_CONVERTER,
-                                        STATE_NAME,
-                                        VALUE_FOLLOWS,
-                                    ]
-                                }
-                                # check if valid parameter for command
-                                if (name := item.get(NAME)) and descriptors:
-                                    # check if validator can be initialized, will throw ValueError or TypeError
-                                    if (
-                                        VALUE_STATE not in descriptors
-                                        and VALUE_DEFAULT not in descriptors
-                                        and VALUE_FOLLOWS not in descriptors
-                                    ):
-                                        # This is a required parameter
-                                        MqttCmdValidator(
-                                            min=descriptors.get(VALUE_MIN),
-                                            max=descriptors.get(VALUE_MAX),
-                                            step=descriptors.get(VALUE_STEP),
-                                            options=descriptors.get(VALUE_OPTIONS),
+                                subfields = items.get(BYTES, {})
+                                for item in (
+                                    subfields
+                                    if isinstance(subfields, list)
+                                    else list(subfields.values())
+                                    if subfields
+                                    else [items]
+                                ):
+                                    descriptors = {
+                                        k: v
+                                        for k, v in item.items()
+                                        if k
+                                        in [
+                                            VALUE_MIN,
+                                            VALUE_MAX,
+                                            VALUE_MIN_STATE,
+                                            VALUE_MAX_STATE,
+                                            VALUE_STEP,
+                                            VALUE_STATE,
+                                            VALUE_OPTIONS,
+                                            VALUE_OPTIONS_STATE,
+                                            VALUE_DEFAULT,
+                                            STATE_CONVERTER,
+                                            STATE_NAME,
+                                            VALUE_FOLLOWS,
+                                            LENGTH,
+                                        ]
+                                    }
+                                    # check if valid parameter for command
+                                    if (name := item.get(NAME)) and descriptors:
+                                        # check if validator can be initialized, will throw ValueError or TypeError
+                                        if (
+                                            VALUE_STATE not in descriptors
+                                            and VALUE_DEFAULT not in descriptors
+                                            and VALUE_FOLLOWS not in descriptors
+                                        ):
+                                            # This is a required parameter, preliminary descriptor check
+                                            opt = descriptors.get(VALUE_OPTIONS)
+                                            MqttCmdValidator(
+                                                min=descriptors.get(VALUE_MIN),
+                                                max=descriptors.get(VALUE_MAX),
+                                                step=descriptors.get(VALUE_STEP),
+                                                options=opt,
+                                            )
+                                            required_options.append(opt)
+                                            if required_number is None:
+                                                required_number = descriptors.get(
+                                                    VALUE_MIN, 0
+                                                ) < descriptors.get(VALUE_MAX, 0)
+                                            else:
+                                                required_number = False
+                                        # flag whether parameter is switch
+                                        descriptors["is_switch"] = bool(
+                                            isinstance(
+                                                opt := descriptors.get(VALUE_OPTIONS),
+                                                dict,
+                                            )
+                                            and len(opt) == 2
+                                            and "on" in opt
+                                            and "off" in opt
                                         )
-                                        required_options.append(
-                                            descriptors.get(VALUE_OPTIONS)
+                                        # flag whether parameter is number
+                                        descriptors["is_number"] = bool(
+                                            descriptors.get(VALUE_MIN, 0)
+                                            < descriptors.get(VALUE_MAX, 0)
                                         )
-                                        if required_number is None:
-                                            required_number = descriptors.get(
-                                                VALUE_MIN, 0
-                                            ) < descriptors.get(VALUE_MAX, 0)
-                                        else:
-                                            required_number = False
-                                    # flag whether parameter is switch
-                                    descriptors["is_switch"] = bool(
-                                        isinstance(
-                                            opt := descriptors.get(VALUE_OPTIONS), dict
+                                        # flag whether parameter is text
+                                        descriptors["is_text"] = bool(
+                                            isinstance(
+                                                opt := descriptors.get(VALUE_OPTIONS),
+                                                dict | list,
+                                            )
+                                            and len(opt) == 0
                                         )
-                                        and len(opt) == 2
-                                        and "on" in opt
-                                        and "off" in opt
-                                    )
-                                    # flag whether parameter is number
-                                    descriptors["is_number"] = bool(
-                                        descriptors.get(VALUE_MIN, 0)
-                                        < descriptors.get(VALUE_MAX, 0)
-                                    )
-                                    # add descriptors
-                                    parameters[name] = descriptors
-                                    # save reference to descriptor for dynamic updates if state was found
-                                    if (
-                                        state_name := descriptors.get(VALUE_MIN_STATE)
-                                    ) is not None:
-                                        desc = self.dynamic_descriptions.get(
-                                            state_name, {}
-                                        )
-                                        self.dynamic_descriptions[state_name] = {
-                                            "key": VALUE_MIN,
-                                            "desc": [
-                                                *desc.get("desc", []),
-                                                descriptors,
-                                            ],
-                                        }
-                                    if (
-                                        state_name := descriptors.get(VALUE_MAX_STATE)
-                                    ) is not None:
-                                        desc = self.dynamic_descriptions.get(
-                                            state_name, {}
-                                        )
-                                        self.dynamic_descriptions[state_name] = {
-                                            "key": VALUE_MAX,
-                                            "desc": [
-                                                *desc.get("desc", []),
-                                                descriptors,
-                                            ],
-                                        }
-                                    if (
-                                        state_name := descriptors.get(
-                                            VALUE_OPTIONS_STATE
-                                        )
-                                    ) is not None:
-                                        desc = self.dynamic_descriptions.get(
-                                            state_name, {}
-                                        )
-                                        self.dynamic_descriptions[state_name] = {
-                                            "key": VALUE_OPTIONS,
-                                            "desc": [
-                                                *desc.get("desc", []),
-                                                descriptors,
-                                            ],
-                                        }
+                                        # add descriptors
+                                        parameters[name] = descriptors
+                                        # save reference to descriptor for dynamic updates if state was found
+                                        if (
+                                            state_name := descriptors.get(
+                                                VALUE_MIN_STATE
+                                            )
+                                        ) is not None:
+                                            desc = self.dynamic_descriptions.get(
+                                                state_name, {}
+                                            )
+                                            self.dynamic_descriptions[state_name] = {
+                                                "key": VALUE_MIN,
+                                                "desc": [
+                                                    *desc.get("desc", []),
+                                                    descriptors,
+                                                ],
+                                            }
+                                        if (
+                                            state_name := descriptors.get(
+                                                VALUE_MAX_STATE
+                                            )
+                                        ) is not None:
+                                            desc = self.dynamic_descriptions.get(
+                                                state_name, {}
+                                            )
+                                            self.dynamic_descriptions[state_name] = {
+                                                "key": VALUE_MAX,
+                                                "desc": [
+                                                    *desc.get("desc", []),
+                                                    descriptors,
+                                                ],
+                                            }
+                                        if (
+                                            state_name := descriptors.get(
+                                                VALUE_OPTIONS_STATE
+                                            )
+                                        ) is not None:
+                                            desc = self.dynamic_descriptions.get(
+                                                state_name, {}
+                                            )
+                                            self.dynamic_descriptions[state_name] = {
+                                                "key": VALUE_OPTIONS,
+                                                "desc": [
+                                                    *desc.get("desc", []),
+                                                    descriptors,
+                                                ],
+                                            }
                         control["parameters"] = parameters
                         # check if control is a switch with only "on" and "off" in single required option
                         control["is_switch"] = bool(
@@ -234,6 +257,12 @@ class SolixMqttDevice:
                             and len(opt) == 2
                             and "on" in opt
                             and "off" in opt
+                        )
+                        # check if control is text with empty required option
+                        control["is_text"] = bool(
+                            len(required_options) == 1
+                            and isinstance(opt := required_options[0], dict)
+                            and len(opt) == 0
                         )
                         # check if control is a single number control
                         control["is_number"] = bool(required_number)
@@ -438,6 +467,18 @@ class SolixMqttDevice:
             return bool(self.controls.get(cmd, {}).get("is_number"))
         return False
 
+    def cmd_is_text(self, cmd: str, parm: str | None = None) -> bool:
+        """Check whether the command is a single text control. If parm is specified, it will check the given parameter."""
+        if isinstance(cmd, str):
+            if isinstance(parm, str):
+                # use parameter flag
+                return bool(
+                    self.get_cmd_parms(cmd=cmd, all=True).get(parm, {}).get("is_text")
+                )
+            # use control flag
+            return bool(self.controls.get(cmd, {}).get("is_text"))
+        return False
+
     def validate_cmd_value(
         self, cmd: str, value: Any, parm: str | None = None
     ) -> int | float | str | bool | None:
@@ -497,6 +538,13 @@ class SolixMqttDevice:
             value = (
                 convert_time(hextime)
                 if isinstance(hextime := convert_time(value), bytes)
+                else None
+            )
+        # limit text value if length specified
+        elif desc.get("is_text"):
+            value = (
+                value[: abs(int(desc.get(LENGTH) or len(value)))]
+                if isinstance(value, str)
                 else None
             )
         # lookup state if value is string
@@ -635,7 +683,7 @@ class SolixMqttDevice:
         self._logger.info("MQTT device %s (%s) %s", self.sn, self.pn, description)
         return hexdata.hex()
 
-    async def run_command(
+    async def run_command(  # noqa: C901
         self,
         cmd: str,
         value: Any = None,
@@ -697,7 +745,11 @@ class SolixMqttDevice:
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_value = (
-                            converter(fieldvalue, None, self.mqttdata | parameters)
+                            converter(
+                                fieldvalue,
+                                None,
+                                self.get_status(fromFile=True) | parameters,
+                            )
                             if callable(converter)
                             else fieldvalue
                         )
@@ -705,7 +757,12 @@ class SolixMqttDevice:
                         if (
                             par.endswith("_time")
                             and isinstance(state_value, str)
-                            and (length := len(self.mqttdata.get(state_name, ""))) > 0
+                            and (
+                                length := len(
+                                    self.get_status(fromFile=True).get(state_name, "")
+                                )
+                            )
+                            > 0
                         ):
                             state_fields[state_name] = state_value[:length]
                         else:
@@ -727,8 +784,13 @@ class SolixMqttDevice:
                     )
                     is not None
                 ):
+                    # limit text value if length specified
+                    if desc.get("is_text"):
+                        parameters[par] = str(state)[
+                            : abs(int(desc.get(LENGTH) or len(state)))
+                        ]
                     # convert state to number format if valid number
-                    if str(state).replace("-", "", 1).replace(".", "", 1).isdigit():
+                    elif str(state).replace("-", "", 1).replace(".", "", 1).isdigit():
                         parameters[par] = round_by_factor(
                             float(state), desc.get(VALUE_STEP, 1)
                         )
@@ -738,7 +800,11 @@ class SolixMqttDevice:
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_fields[state_name] = (
-                            converter(parameters[par], None, self.mqttdata | parameters)
+                            converter(
+                                parameters[par],
+                                None,
+                                self.get_status(fromFile=True) | parameters,
+                            )
                             if callable(converter)
                             else parameters[par]
                         )
@@ -754,14 +820,21 @@ class SolixMqttDevice:
                         state = options.get(parameters.get(follows, ""))
                     else:
                         # get follow value from converter
-                        state = parameters.get(follows, "")
+                        state = parameters.get(follows)
                     state = (
-                        converter(state, None, self.mqttdata | parameters)
+                        converter(
+                            state, None, self.get_status(fromFile=True) | parameters
+                        )
                         if callable(converter)
                         else state
                     )
+                    # limit text value if length specified
+                    if desc.get("is_text"):
+                        parameters[par] = str(state)[
+                            : abs(int(desc.get(LENGTH) or len(state)))
+                        ]
                     # convert state to number format if valid number
-                    if str(state).replace("-", "", 1).replace(".", "", 1).isdigit():
+                    elif str(state).replace("-", "", 1).replace(".", "", 1).isdigit():
                         parameters[par] = round_by_factor(
                             float(state), desc.get(VALUE_STEP, 1)
                         )

@@ -1,10 +1,5 @@
-"""Class for interacting with the Anker Power / Solix API HES related charging_service endpoints.
-
-Required Python modules:
-pip install cryptography
-pip install aiohttp
-pip install aiofiles
-"""
+"""Class for interacting with the Anker Power / Solix API HES related charging_service endpoints."""
+# ruff: noqa: N806
 
 import contextlib
 from datetime import datetime, timedelta

@@ -47,7 +47,6 @@ API_COUNTRIES: Final[dict] = {
         "TW",
         "US",
         "CA",
-        "RO",
     ],
     "eu": [
         "DE",
@@ -95,6 +94,7 @@ API_COUNTRIES: Final[dict] = {
         "BY",
         "AZ",
         "IL",
+        "RO",
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
@@ -211,10 +211,17 @@ API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_wifi_info": "charging_energy_service/get_wifi_info",  # Displays WiFi network connected to Home Power Panel, needs owner account
     "get_installation_inspection": "charging_energy_service/get_installation_inspection",  # appears to say which page last viewed on App, needs owner account
     "get_utility_rate_plan": "charging_energy_service/get_utility_rate_plan",  # needs owner account
+    "preprocess_utility_rate_plan": "charging_energy_service/preprocess_utility_rate_plan",  # needs owner, json={"siteId", "sn", "peak_sessions", "fixed_price"}, returns {"rule": compact tier schedule}
+    "ack_utility_rate_plan": "charging_energy_service/ack_utility_rate_plan",  # needs owner, json={"siteId", "sn", "rule", "peak_sessions", "fixed_price"}, commits the TOU plan (verified reversible on A17B1); rule drops prices, so full peak_sessions + fixed_price must be included
     "report_device_data": "charging_energy_service/report_device_data",  # ctrol [0 1], works but data is null (may need owner account?)
     "get_configs": "charging_energy_service/get_configs",  # json={"siteId": "SITEID", "sn": "POWERPANELSN", "param_types": []})) # needs owner account, list of parm types not clear
     "get_sns": "charging_energy_service/get_sns",  # json={"main_sn": "POWERPANELSN","macs": ["F38001MAC001","F38002MAC002"]})) # needs owner account, Displays Serial Numbers of attached PPS in Home
     "get_monetary_units": "charging_energy_service/get_world_monetary_unit",  # monetary unit list for system, needs owner account
+    # Power Panel disaster preparedness / backup mode (verified on A17B1 hardware, use type=2)
+    "get_disaster_support_func": "charging_disaster_prepared/get_support_func",  # {"identifier_id": siteId, "type": 2}
+    "get_site_device_disaster": "charging_disaster_prepared/get_site_device_disaster",  # {"identifier_id": siteId, "type": 2}
+    "get_site_device_disaster_status": "charging_disaster_prepared/get_site_device_disaster_status",  # {"identifier_id": siteId, "type": 2}
+    "set_site_device_disaster": "charging_disaster_prepared/set_site_device_disaster",  # ON: switch True + manual_disaster_detail; OFF: switch False, omit detail
 }
 
 """Following are the Anker Power/Solix Cloud API charging_hes_svc endpoints known so far. They are used for Home Energy Systems like X1."""
@@ -480,14 +487,10 @@ Home Energy System related (X1): 6 + 0 used => 6 total
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
     "charging_hes_dynamic_price_svc/get_third_jump_url"
 
-related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
-    'charging_disaster_prepared/get_site_device_disaster', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
-    'charging_disaster_prepared/get_site_device_disaster_status', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
-    'charging_disaster_prepared/set_site_device_disaster',
+related to what, seem to work with Power Panel sites: 3 + 4 used => 7 total
     'charging_disaster_prepared/clear',
     'charging_disaster_prepared/quit_disaster_prepare',
-    'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
-    'charging_disaster_prepared/disaster_detail',
+    'charging_disaster_prepared/disaster_detail', # 404 page not found (verified on A17B1)
 
 related to Prime charger models: 22 + 9 used => 31 total
     'mini_power/v1/app/charging/update_charging_mode',
@@ -619,6 +622,9 @@ API_FILEPREFIXES: Final[dict] = {
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
+    "charging_get_site_device_disaster": "charging_site_device_disaster",
+    "charging_get_site_device_disaster_status": "charging_site_device_disaster_status",
+    "charging_get_disaster_support_func": "charging_disaster_support_func",
     "charging_energy_solar": "charging_energy_solar",
     "charging_energy_hes": "charging_energy_hes",
     "charging_energy_pps": "charging_energy_pps",
@@ -640,7 +646,6 @@ API_FILEPREFIXES: Final[dict] = {
     "charging_get_configs": "charging_configs",
     "charging_get_sns": "charging_sns",
     "charging_get_monetary_units": "charging_monetary_units",
-    # charging_energy_service endpoint file prefixes
     "hes_get_product_info": "hes_product_info",
     "hes_get_heat_pump_plan": "hes_heat_pump_plan",
     "hes_get_electric_plan_list": "hes_electric_plan",
@@ -1033,6 +1038,14 @@ class SolarbankDischargePriorityMode(IntEnum):
     on = 1
 
 
+class SolarbankSchedulePresetType(IntEnum):
+    """Int Enumeration for Anker Solix Solarbank 3 schedule preset power types."""
+
+    unknown = -1
+    supply = 0
+    ac_charge = 1
+
+
 class SolarbankAiemsStatus(IntEnum):
     """Int Enumeration for Anker Solix Solarbank Anker Intelligence status."""
 
@@ -1239,12 +1252,15 @@ class SolixSiteType:
     t_15 = (
         SolixDeviceType.HOME_BACKUP.value
     )  # Main E10 A17E1 & A17X7US Smart Meter for US market
-    # t_16 = ???  # Main A1903 Charging base & 4 each A110A, A110B, A110G, A1341
+    t_16 = (
+        SolixDeviceType.POWERBANK.value
+    )  # Main A1903 Charging base for power banks & 4 each A110A, A110B, A110G, A1341
     t_17 = (
         SolixDeviceType.HOME_BACKUP.value
     )  # Only AX170: Power Dock US market to connect multiple E10
     t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS, A5191
     t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
+    t_20 = SolixDeviceType.SOLARBANK.value  # Main AE103 Solarbank 4 Pro with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
 
 
 @dataclass(frozen=True)
@@ -1403,6 +1419,8 @@ class SolarbankDeviceMetrics:
         "pei_heating_power",
         "power_limit",
         "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -1419,6 +1437,8 @@ class SolarbankDeviceMetrics:
         "other_input_power",  # This is AC input for charging typically
         "power_limit",
         "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -1429,6 +1449,8 @@ class SolarbankDeviceMetrics:
         "pei_heating_power",
         "power_limit",
         "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
@@ -1492,7 +1514,8 @@ class SolixDefaults:
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
     PRESET_NOSCHEDULE: int = 200
-    PRESET_MAX_MULTISYSTEM: int = 3600
+    PRESET_MAX_MULTISYSTEM: int = 4800
+    PRESET_TYPE: int = SolarbankSchedulePresetType.supply.value
     # Export Switch preset for Solarbank schedule timeslot settings
     ALLOW_EXPORT: bool = True
     # Preset power mode for Solarbank schedule timeslot settings
@@ -1508,6 +1531,7 @@ class SolixDefaults:
     # AC tariff settings for Use Time plan
     TARIFF_DEF: int = SolixTariffTypes.OFF_PEAK.value
     TARIFF_PRICE_DEF: str = "0.00"
+    TARIFF_SELL_PRICE_DEF: str = ""  # default to nothing in case not supported
     TARIFF_WE_SAME: bool = True
     CURRENCY_DEF: str = "€"
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
@@ -1658,7 +1682,6 @@ class SolarbankGridStatus(StrEnum):
 class SolixGridStatus(StrEnum):
     """Str Enumeration for Anker Solix grid status."""
 
-    # TODO(X1) Update grid status description once known
     ok = "0"  # normal grid state when hes pcu grid status is ok
     unknown = "unknown"
 
@@ -1689,7 +1712,6 @@ class SolixRoleStatus(StrEnum):
     """Str Enumeration for Anker Solix role status of devices."""
 
     # The device role status codes as used for HES devices
-    # TODO(X1): The proper description of those codes has to be confirmed
     primary = "1"  # Master role in Api
     subordinate = "2"  # Slave role in Api
     unknown = "unknown"
@@ -1698,17 +1720,15 @@ class SolixRoleStatus(StrEnum):
 class SolixNetworkStatus(StrEnum):
     """Str Enumeration for Anker Solix HES network status."""
 
-    # TODO(X1): The proper description of those codes has to be confirmed
-    wifi = "1"  # to be confirmed
-    lan = "2"  # this was seen on LAN connected systems
-    mobile = "3"  # HES systems support also 5G connections, code to be confirmed
+    wifi = "1"  # wifi connection
+    lan = "2"  # lan/wired connection
+    mobile = "3"  # mobile/5G connection
     unknown = "unknown"
 
 
 class SolixWorkingStatus(StrEnum):
     """Str Enumeration for Anker Solix HES working status."""
 
-    # TODO(X1): The proper description of those codes has to be confirmed
     standby = "0"
     running = "1"
     unknown = "unknown"
@@ -1717,7 +1737,6 @@ class SolixWorkingStatus(StrEnum):
 class SolixMode(StrEnum):
     """Str Enumeration for Anker Solix HES mode."""
 
-    # TODO(X1): The proper description of those codes has to be confirmed
     off = "0"
     on = "1"
     auto = "2"
@@ -1788,6 +1807,7 @@ class SolixPpsPortStatus(StrEnum):
     inactive = "0"
     discharging = "1"
     charging = "2"
+    standby = "3"
     unknown = "unknown"
 
 
@@ -1833,6 +1853,16 @@ class SolixConnectionStatus(StrEnum):
 
     disconnected = "0"
     connected = "1"
+    connecting = "2"
+    unknown = "unknown"
+
+
+class SolixChargerConnectionStatus(StrEnum):
+    """Str Enumeration for charger connection status."""
+
+    connected = "0"
+    disconnected = "1"
+    connecting = "2"
     unknown = "unknown"
 
 
@@ -1913,6 +1943,14 @@ class SolixScheduleWeekendMode(StrEnum):
     unknown = "unknown"
 
 
+class SolixChargerMode(StrEnum):
+    """Str Enumeration for charger mode types."""
+
+    normal = "0"
+    reverse = "1"
+    unknown = "unknown"
+
+
 class SolixBatteryType(StrEnum):
     """Str Enumeration for Battery types."""
 
@@ -1926,6 +1964,16 @@ class SolixBatteryVoltageType(StrEnum):
 
     _12_v = "0"
     _24_v = "1"
+    unknown = "unknown"
+
+
+class SolixPlugTimerMode(StrEnum):
+    """Str Enumeration for Smart Plug delayed toggle modes."""
+
+    off = "0"
+    start = "1"
+    paused = "2"
+    running = "3"
     unknown = "unknown"
 
 
@@ -1952,13 +2000,33 @@ class Solarbank2Timeslot:
 
     start_time: datetime | None
     end_time: datetime | None
-    appliance_load: int | None = None  # mapped to appliance_load setting
-    charging_type: int | None = (
-        None  # mapped to charging_type setting, was introduced April 2026
+    appliance_load: int | None = None  # mapped to timeslot preset value
+    charging_type: int | str | None = (
+        None  # mapped to value type, introduced April 2026
     )
     weekdays: set[int | str] | None = (
         None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
     )
+
+    def __post_init__(self) -> None:
+        """Init the dataclass with proper type of parameters."""
+        if not isinstance(self.appliance_load, int | None):
+            self.appliance_load = (
+                int(self.appliance_load)
+                if str(self.appliance_load).replace(".", "", 1).lstrip("-").isdigit()
+                else None
+            )
+        if not isinstance(self.charging_type, int | None):
+            member: Enum | None = getattr(
+                SolarbankSchedulePresetType, str(self.charging_type), None
+            )
+            self.charging_type = (
+                member.value
+                if member
+                else int(self.charging_type)
+                if str(self.charging_type).replace(".", "", 1).isdigit()
+                else None
+            )
 
 
 @dataclass(order=True, kw_only=True)

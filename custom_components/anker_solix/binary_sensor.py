@@ -90,18 +90,6 @@ DEVICE_SENSORS = [
         ),
     ),
     AnkerSolixBinarySensorDescription(
-        key="ota_update",
-        translation_key="ota_update",
-        json_key="is_ota_update",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        device_class=BinarySensorDeviceClass.UPDATE,
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        attrib_fn=lambda d: {
-            "ota_version": d.get("ota_version") or None,
-            "ota_components": d.get("ota_children") or [],
-        },
-    ),
-    AnkerSolixBinarySensorDescription(
         key="ai_ems_enabled",
         translation_key="ai_ems_enabled",
         json_key="enable",
@@ -407,7 +395,6 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "discharge_threshold",
             "network",
             "network_code",
-            "ota_components",
             "post_interval",
             "rssi",
             "site_admin",

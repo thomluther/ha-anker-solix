@@ -6,7 +6,9 @@ from typing import Final
 from .apitypes import DeviceHexDataTypes
 
 # common mapping keys to be used for status and command descriptions
-EMBEDDED: Final[str] = "embedded"  # name of the json field that contains the embedded message hex data
+EMBEDDED: Final[str] = (
+    "embedded"  # name of the json field that contains the embedded message hex data
+)
 NAME: Final[str] = "name"  # name of the data field, also used for message descriptions
 TYPE: Final[str] = (
     "type"  # type the data field relevant for de/encoding, must be a byte as defined in DeviceHexDataTypes
@@ -106,7 +108,8 @@ class SolixMqttCommands:
     soc_limits: str = "soc_limits"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
-    sb_min_soc_select: str = "sb_min_soc_select"  # Does not change App station wide setting, needs Api request as well
+    sb_min_soc_select: str = "sb_min_soc_select"  # Old command: Does not change App station wide setting, needs Api request as well
+    sb_soc_limits: str = "sb_soc_limits"  # New command: Does not change App station wide setting, needs Api request as well
     sb_inverter_type_select: str = "sb_inverter_type_select"
     sb_max_load: str = "sb_max_load"
     sb_max_load_parallel: str = "sb_max_load_parallel"
@@ -146,8 +149,10 @@ class SolixMqttCommands:
     )
     ev_solar_charging: str = "ev_solar_charging"  # complex command with switches
     ac_dc_mode_select: str = "ac_dc_mode_select"
+    charger_mode_select: str = "charger_mode_select"
     car_battery_type: str = "car_battery_type"
     battery_charge_limits: str = "battery_charge_limits"
+    reverse_charge_limits: str = "reverse_charge_limits"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -236,7 +241,7 @@ CMD_REALTIME_TRIGGER = CMD_COMMON | {
     "a3": {
         NAME: "trigger_timeout_sec",  # realtime timeout in seconds when enabled
         TYPE: DeviceHexDataTypes.var.value,
-        VALUE_MIN: 60,  # real limit is unknown
+        VALUE_MIN: 30,  # real limit is unknown
         VALUE_MAX: 600,  # real limit is unknown
         VALUE_DEFAULT: 60,
     },
@@ -563,7 +568,7 @@ CMD_SB_STATUS_CHECK = (
         "a2": {
             NAME: "device_sn",
             TYPE: DeviceHexDataTypes.str.value,
-            "length": 16,
+            LENGTH: 16,
         },
         "a3": {
             NAME: "charging_status",
@@ -626,13 +631,65 @@ CMD_SB_POWER_CUTOFF = CMD_COMMON | {
 }
 
 CMD_SB_MIN_SOC = CMD_COMMON | {
-    # Command: Solarbank Set max AC input limit (AC charge)
+    # Command: Solarbank Set SOC reserve for power cutoff
     COMMAND_NAME: SolixMqttCommands.sb_min_soc_select,
     "a2": {
         NAME: "set_min_soc",  # 5 or 10 %
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "power_cutoff",
         VALUE_OPTIONS: [5, 10],
+    },
+}
+
+CMD_SB_SOC_LIMITS = CMD_COMMON | {
+    # Command: Solarbank Set new SOC limits
+    COMMAND_NAME: SolixMqttCommands.sb_soc_limits,
+    "a2": {
+        NAME: "set_min_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "power_cutoff",
+        VALUE_MIN: 5,  # 5 % for SB2, 1 %  for SB3
+        VALUE_MAX: 20,
+        VALUE_STATE: "power_cutoff",
+    },
+    "a5": {
+        NAME: "set_max_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "max_soc",
+        VALUE_MIN: 80,
+        VALUE_MAX: 100,
+        VALUE_STATE: "max_soc",
+    },
+    "a6": {
+        NAME: "set_backup_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "backup_soc",
+        VALUE_MIN: 0,
+        VALUE_MAX: 99,
+        VALUE_FOLLOWS: "backup_soc",
+        STATE_CONVERTER: lambda value, state, cache: (
+            value
+            if value is not None
+            # ensure backup is min < backup < max if not specified
+            else min(
+                int(cache.get("set_max_soc", cache.get("max_soc") or 1)) - 1,
+                max(
+                    int(cache.get("set_min_soc", cache.get("power_cutoff") or -1)) + 1,
+                    int(cache.get("backup_soc")),
+                ),
+            )
+            if cache.get("backup_soc") and state is None
+            else 0
+            if state is None
+            else state
+        ),
+    },
+    "a7": {
+        NAME: "set_backup_soc_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "backup_soc_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_STATE: "backup_soc_switch",
     },
 }
 
@@ -990,42 +1047,75 @@ CMD_PLUG_SCHEDULE = (
     }
 )
 
-CMD_PLUG_DELAYED_TOGGLE = CMD_COMMON | {
-    # Command: Smartplug delayed toggle
-    COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
-    "a2": {
-        NAME: "set_toggle_to_action",  # Off (0), Start (1), Pause (2), Resume (3)
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"off": 0, "start": 1, "pause": 1, "resume": 1},
-    },
-    "a3": {
-        TYPE: DeviceHexDataTypes.bin.value,
-        LENGTH: 3,
-        BYTES: {
-            "00": TIME_VAR
-            | {
-                NAME: "set_toggle_to_delay_time",  # 3 bytes: Seconds:Minutes:Hours
-                VALUE_DEFAULT: 0,
+CMD_PLUG_DELAYED_TOGGLE = (
+    CMD_COMMON
+    | {
+        # Command: Smartplug delayed toggle
+        COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
+        "a2": {
+            NAME: "set_toggle_timer_mode",  # Off (0), Start (1), Pausews (2), Running (3)
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "toggle_timer_mode",
+            VALUE_OPTIONS: {"off": 0, "start": 1, "paused": 2, "running": 3},
+            VALUE_STATE: "toggle_timer_mode",
+        },
+        "a3": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 3,
+            BYTES: {
+                "00": TIME_VAR
+                | {
+                    NAME: "set_toggle_to_delay_time",  # 3 bytes: Seconds:Minutes:Hours
+                    STATE_NAME: "toggle_to_delay_time",
+                    VALUE_DEFAULT: 0,
+                    VALUE_STATE: "toggle_to_delay_time",
+                },
             },
         },
-    },
-    "a4": {
-        NAME: "set_toggle_back_switch?",  # Off (0), On (1)
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-    "a5": {
-        TYPE: DeviceHexDataTypes.bin.value,
-        LENGTH: 3,
-        BYTES: {
-            "00": TIME_VAR
-            | {
-                NAME: "set_toggle_back_delay_time",  # 3 bytes: Seconds:Minutes:Hours
-                VALUE_DEFAULT: 0,
+        "a4": {
+            NAME: "set_toggle_to_switch",  # State the switch will be toggled to: Off (0), On (1)
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+            VALUE_STATE: "toggle_to_switch",
+            STATE_CONVERTER: lambda value, state, cache: (
+                value
+                if value is not None
+                else cache.get(
+                    "set_toggle_to_switch",
+                    cache.get(
+                        "toggle_to_switch", int(not cache.get("ac_output_power_switch"))
+                    ),  # default to toggle state of actual switch
+                )
+                if state is None
+                else state
+            ),
+        },
+        "a5": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 3,
+            BYTES: {
+                "00": TIME_VAR
+                | {
+                    NAME: "set_toggle_to_elapsed_time",  # 3 bytes: Seconds:Minutes:Hours
+                    STATE_NAME: "toggle_to_elapsed_time",
+                    VALUE_STATE: "toggle_to_elapsed_time",
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        "00:00:00"
+                        if cache.get(
+                            "set_toggle_timer_mode",
+                            cache.get("toggle_timer_mode"),
+                        )
+                        in [0, 1]
+                        and state is None  # reset elapsed time for stop or start
+                        else value
+                        if value is not None
+                        else (state or 0)
+                    ),
+                },
             },
         },
-    },
-}
+    }
+)
 
 CMD_EV_CHARGER_MODE = CMD_COMMON | {
     # Command: EV Charger mode selection
@@ -1416,3 +1506,53 @@ CMD_BATTERY_CHARGE_LIMITS = (
         },
     }
 )
+
+CMD_REVERSE_CHARGE_LIMITS = (
+    CMD_COMMON_V2
+    | {
+        # Command: Alternator charger reverse charging limits
+        COMMAND_NAME: SolixMqttCommands.reverse_charge_limits,
+        "a6": {
+            NAME: "set_reverse_power_limit",  # 100-800 W, step 100 W
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "reverse_power_limit",
+            VALUE_MIN: 500,
+            VALUE_MIN_STATE: "reverse_power_limit_min",
+            VALUE_MAX: 800,
+            VALUE_MAX_STATE: "reverse_power_limit_max",
+            VALUE_STEP: 100,
+            VALUE_STATE: "reverse_power_limit",
+        },
+        "b4": {
+            NAME: "set_charge_voltage_limit",  # 12.0V to 13.8V in 0.1V step, depends on set type?
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "charge_voltage_limit",
+            VALUE_MIN: 12.0,
+            VALUE_MIN_STATE: "charge_voltage_limit_min",
+            VALUE_MAX: 13.8,
+            VALUE_MAX_STATE: "charge_voltage_limit_max",
+            VALUE_STEP: 0.1,
+            VALUE_DIVIDER: 0.1,
+            VALUE_STATE: "charge_voltage_limit",
+        },
+    }
+)
+
+CMD_CAR_BATTERY_TYPE = CMD_COMMON_V2 | {
+    # Command: Alternator charger battery type
+    COMMAND_NAME: SolixMqttCommands.car_battery_type,
+    "a3": {
+        NAME: "set_car_battery_type",  # LiFePO4 (0), Lead Acid (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "car_battery_type",
+        VALUE_OPTIONS: {"li_fe_po": 0, "lead_acid": 1},
+        VALUE_STATE: "car_battery_type",
+    },
+    "aa": {
+        NAME: "set_car_battery_voltage_type",  # 12V (0), 24V (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "car_battery_voltage_type",
+        VALUE_OPTIONS: {"12_v": 0, "24_v": 1},
+        VALUE_STATE: "car_battery_voltage_type",
+    },
+}

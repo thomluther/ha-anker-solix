@@ -34,6 +34,7 @@ FEATURES = {
     # Min SOC different since SB3
     SolixMqttCommands.sb_power_cutoff_select: {"A17C0", "A17C1", "A17C2", "A17C3"},
     SolixMqttCommands.sb_min_soc_select: {"A17C5", "AE100"},
+    SolixMqttCommands.sb_soc_limits: MODELS,
     # Commands since SB2
     SolixMqttCommands.sb_ac_socket_switch: MODELS,
     SolixMqttCommands.sb_light_switch: MODELS,

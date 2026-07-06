@@ -73,6 +73,7 @@ This integration utilizes an unofficial Python library to communicate with the A
         - [Modify Time of Use plan action](#modify-time-of-use-plan-action)
         - [Usage of flexible tariffs with the Time of Use mode](#usage-of-flexible-tariffs-with-the-time-of-use-mode)
 1. **[Modification of Solarbank 3 settings](#modification-of-solarbank-3-settings)**
+    * [Home load type](#home-load-type)
     * [Smart mode](#smart-mode)
         - [Usage of Smart mode](#usage-of-smart-mode)
     * [Time Slot mode](#time-slot-mode)
@@ -985,6 +986,18 @@ An added Time of Use plan action of the Anker Solix integration supports dynamic
 
 ## Modification of Solarbank 3 settings
 
+### Home load type
+
+Starting with release 3.7.0, the integration supports a new Solarbank 3 capability introduced early 2026 to switch the type of the configured home load preset in custom and smart plug usage modes. The Solarbank 3 systems still use a default type of `supply` (home supply) for the power preset in the schedule, but the type can now be toggled to `ac_charge` (grid charge) for each defined time slot. If grid charge is enabled, the Solarbank will charge the battery with the given power preset. That means you can now control at which times the battery should be charged (and how much) from the grid while using the custom or smart plug modes. This allows customized automations for surplus AC charging if 3rd party PV is installed but no smart meter is connected to your Solarbank system. The AC charge will stop if the configured Max Soc is reached or the battery is full. The mode can be toggled via a new select entity, as well as in the updated Anker Solix actions to set or update the solarbank schedule.
+If you use a single time slot in the schedule, you can now easily automate the power and the load type based on your actual home consumption or external PV surplus measured by any Home Assistant entities.
+
+> [!IMPORTANT]
+> The home load type requires appropriate firmware of your Solarbank 3 based system. Following rules will be applied:
+  - The load type entity will only be created if the system supports the type toggle.
+  -  The entity cannot be toggled, if the actual usage mode ignores the type setting in the schedule.
+  - Likewise the load type field will be ignored in corresponding schedule actions, if the home load type toggle is not supported by the system type or firmware.
+
+
 ### Smart mode
 
 The Smart mode is designed to optimize your overall energy consumption and lower energy cost by Anker Intelligence (AI). You need to make your own opinion, how intelligent this mode really operates, but it includes PV production forecast data as well as price forecast of an optional [dynamic utility rate plan](#dynamic-utility-rate-plans-options) or a defined flexible [use time plan](#modify-time-of-use-plan-action). You need to authorize Anker for data collection, you need Google Maps on the Anker mobile App device and you need to locate your home for accurate PV forecast data. For optional dynamic prices, you also have to configure the dynamic utility rate plan options (price provider, price fee and tax) if not done yet. For the optional flexible tariff you have to define a use time plan or you can enter a [fixed price for your system](#toggling-system-price-type-or-currency-settings) if you have a fix price tariff. Furthermore you can configure smart plugs with the Smart mode and prioritize the order of the automated plugs if PV surplus will occur. They can help to avoid unnecessary power export to the grid by temporary use of power consumers in your house.
@@ -1170,8 +1183,8 @@ content: >
     {% if plan_name in ['custom_rate_plan','blend_plan'] and plan -%}
       {%- set week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] -%}
       {%- set active = (mode=='smartplugs' and plan_name=='blend_plan') or (mode=='manual' and plan_name=='custom_rate_plan')-%}
-    {{ "%s | %s | %s | %s | %s"|format('ID', 'Start', 'End', 'Preset', 'Weekdays ('+plan_name+')') }}
-    {{ ":---|:---|:---|:---:|:---" }}
+    {{ "%s | %s | %s | %s | %s | %s"|format('ID', 'Start', 'End', 'Preset', 'Type', 'Weekdays ('+plan_name+')') }}
+    {{ ":---|:---|:---|:---:|:---:|:---" }}
       {%- for idx in plan -%}
         {%- set index = idx.index|default('--') -%}
         {%- for slot in idx.ranges|default([]) -%}
@@ -1180,8 +1193,9 @@ content: >
             {%- set ns.days = ns.days + [week[day]] -%}
           {%- endfor -%}
           {%- set bs = '_**' if strptime(slot.start_time,"%H:%M").time() <= isnow.time() < strptime(slot.end_time.replace('24:00','23:59'),"%H:%M").time() and int(isnow.strftime("%w")) in idx.week|default([]) and active else '' -%}
-          {%- set be = '**_' if bs else '' %}
-    {{ "%s%s | %s | %s | %s | %s"|format(bs~index~be,'*' if bs else '', bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.power~" W"~be, bs~','.join(ns.days)~be) }}
+          {%- set be = '**_' if bs else '' -%}
+          {%- set typ = 'AC Charge' if slot.charging_type|default(0) else 'Supply' %}
+    {{ "%s%s | %s | %s | %s | %s | %s"|format(bs~index~be,'*' if bs else '', bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.power~" W"~be, bs~typ~be, bs~','.join(ns.days)~be) }}
         {%- endfor %}
       {%- endfor %}
     {%- endif %}
@@ -1506,15 +1520,15 @@ sequence:
       end_time: |
         {{end_time}}
       appliance_load: |
-        {{appliance_load|default(None)}}
+        {{appliance_load|default(none)}}
       device_load: |
-        {{device_load|default(None)}}
+        {{device_load|default(none)}}
       allow_export: |
-        {{allow_export|default(None)}}
+        {{allow_export|default(none)}}
       discharge_priority: |
-        {{discharge_priority|default(None)}}
+        {{discharge_priority|default(none)}}
       charge_priority_limit: |
-        {{charge_priority_limit|default(None)}}
+        {{charge_priority_limit|default(none)}}
 mode: single
 icon: mdi:sun-clock
 ```
@@ -1528,6 +1542,18 @@ icon: mdi:sun-clock
 ```yaml
 alias: Change Solarbank 2+ Schedule
 fields:
+  entity:
+    name: Entity
+    description: Choose a SB2+ entity
+    required: true
+    selector:
+      target:
+        entity:
+          integration: anker_solix
+          domain: sensor
+          supported_features:
+            # Work around for required string, since custom integration features are not supported
+            - calendar.CalendarEntityFeature.CREATE_EVENT
   action:
     name: Action
     description: Choose which action to use
@@ -1559,15 +1585,17 @@ fields:
   plan:
     name: Plan
     description: Plan to be modified (active plan is default)
-    required: false
+    required: true
+    default: custom_rate_plan
     selector:
       select:
         mode: list
         multiple: false
-        translation_key: plan
         options:
-          - custom_rate_plan
-          - blend_plan
+          - label: Manual plan
+            value: custom_rate_plan
+          - label: Smart plug plan
+            value: blend_plan
   week_days:
     name: Weekdays
     description: Weekdays for interval
@@ -1576,18 +1604,24 @@ fields:
       select:
         mode: list
         multiple: true
-        translation_key: weekday
         options:
-          - sun
-          - mon
-          - tue
-          - wed
-          - thu
-          - fri
-          - sat
+          - label: Sunday
+            value: sun
+          - label: Monday
+            value: mon
+          - label: Tuesday
+            value: tue
+          - label: Wednesday
+            value: wed
+          - label: Thursday
+            value: thu
+          - label: Friday
+            value: fri
+          - label: Saturday
+            value: sat
   appliance_load:
     name: Appliance load preset
-    description: Watt to be delivered to the house
+    description: Watt to be used for the load
     required: false
     default: 100
     selector:
@@ -1596,22 +1630,37 @@ fields:
         max: 800
         step: 10
         unit_of_measurement: W
+  load_type:
+    name: Load type preset
+    description: Type to be used for the load (Requires Solarbank 3 system with appropriate firmware)
+    required: false
+    selector:
+      select:
+        mode: list
+        multiple: false
+        options:
+          - value: supply
+            label: Supply
+          - value: ac_charge
+            label: Grid charge
 sequence:
-  - service: |
-      {{action}}
-    target:
-      entity_id: sensor.solarbank_2_e1600_pro_home_preset
+  - action: |
+        {{action}}
+    target: |
+        {{entity}}
     data:
       start_time: |
         {{start_time}}
       end_time: |
         {{end_time}}
       plan: |
-        {{plan|default(None)}}
+        {{plan|default(none)}}
       week_days: |
-        {{week_days|default(None)}}
+        {{week_days|default(none)}}
       appliance_load: |
-        {{appliance_load|default(None)}}
+        {{appliance_load|default(none)}}
+      load_type: |
+        {{load_type|default(none)}}
 mode: single
 icon: mdi:sun-clock
 ```
@@ -1675,13 +1724,13 @@ sequence:
         {{entity}}
     data:
       backup_start: |
-        {{backup_start|default(None)}}
+        {{backup_start|default(none)}}
       backup_end: |
-        {{backup_end|default(None)}}
+        {{backup_end|default(none)}}
       backup_duration: |
-        {{backup_duration|default(None)}}
+        {{backup_duration|default(none)}}
       enable_backup: |
-        {{enable_backup|default(None)}}
+        {{enable_backup|default(none)}}
 ```
 </details>
 
@@ -1822,21 +1871,21 @@ sequence:
         {{entity}}
     data:
       start_month: |
-        {{start_month|default(None)}}
+        {{start_month|default(none)}}
       end_month: |
-        {{end_month|default(None)}}
+        {{end_month|default(none)}}
       day_type: |
-        {{day_type|default(None)}}
+        {{day_type|default(none)}}
       start_hour: |
-        {{start_hour|default(None)}}
+        {{start_hour|default(none)}}
       end_hour: |
-        {{end_hour|default(None)}}
+        {{end_hour|default(none)}}
       tariff: |
-        {{tariff|default(None)}}
+        {{tariff|default(none)}}
       tariff_price: |
-        {{tariff_price|default(None)}}
+        {{tariff_price|default(none)}}
       delete: |
-        {{delete|default(None)}}
+        {{delete|default(none)}}
 ```
 </details>
 
