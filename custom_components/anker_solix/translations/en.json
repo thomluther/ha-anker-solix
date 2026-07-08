@@ -1048,93 +1048,8 @@
                     }
                 }
             },
-            "device_1_pv_power": {
-                "name": "Device 1 PV power",
-                "state_attributes": {
-                    "pv_1_power": {
-                        "name": "PV 1 power"
-                    },
-                    "pv_2_power": {
-                        "name": "PV 2 power"
-                    },
-                    "pv_3_power": {
-                        "name": "PV 3 power"
-                    },
-                    "pv_4_power": {
-                        "name": "PV 4 power"
-                    }
-                }
-            },
-            "device_2_pv_power": {
-                "name": "Device 2 PV power",
-                "state_attributes": {
-                    "pv_1_power": {
-                        "name": "PV 1 power"
-                    },
-                    "pv_2_power": {
-                        "name": "PV 2 power"
-                    },
-                    "pv_3_power": {
-                        "name": "PV 3 power"
-                    },
-                    "pv_4_power": {
-                        "name": "PV 4 power"
-                    }
-                }
-            },
-            "device_3_pv_power": {
-                "name": "Device 3 PV power",
-                "state_attributes": {
-                    "pv_1_power": {
-                        "name": "PV 1 power"
-                    },
-                    "pv_2_power": {
-                        "name": "PV 2 power"
-                    },
-                    "pv_3_power": {
-                        "name": "PV 3 power"
-                    },
-                    "pv_4_power": {
-                        "name": "PV 4 power"
-                    }
-                }
-            },
-            "device_4_pv_power": {
-                "name": "Device 4 PV power",
-                "state_attributes": {
-                    "pv_1_power": {
-                        "name": "PV 1 power"
-                    },
-                    "pv_2_power": {
-                        "name": "PV 2 power"
-                    },
-                    "pv_3_power": {
-                        "name": "PV 3 power"
-                    },
-                    "pv_4_power": {
-                        "name": "PV 4 power"
-                    }
-                }
-            },
-            "device_5_pv_power": {
-                "name": "Device 5 PV power",
-                "state_attributes": {
-                    "pv_1_power": {
-                        "name": "PV 1 power"
-                    },
-                    "pv_2_power": {
-                        "name": "PV 2 power"
-                    },
-                    "pv_3_power": {
-                        "name": "PV 3 power"
-                    },
-                    "pv_4_power": {
-                        "name": "PV 4 power"
-                    }
-                }
-            },
-            "device_6_pv_power": {
-                "name": "Device 6 PV power",
+            "device_x_pv_power": {
+                "name": "Device {id} PV power",
                 "state_attributes": {
                     "pv_1_power": {
                         "name": "PV 1 power"
@@ -1190,93 +1105,8 @@
             "device_output_power_signed_total": {
                 "name": "Device power total"
             },
-            "device_1_ac_output_power_signed": {
-                "name": "Device 1 AC power",
-                "state_attributes": {
-                    "device_sn": {
-                        "name": "Serialnumber"
-                    },
-                    "device_pn": {
-                        "name": "Model"
-                    },
-                    "state_of_charge": {
-                        "name": "SoC %"
-                    },
-                    "expansions": {
-                        "name": "Expansions"
-                    }
-                }
-            },
-            "device_2_ac_output_power_signed": {
-                "name": "Device 2 AC power",
-                "state_attributes": {
-                    "device_sn": {
-                        "name": "Serialnumber"
-                    },
-                    "device_pn": {
-                        "name": "Model"
-                    },
-                    "state_of_charge": {
-                        "name": "SoC %"
-                    },
-                    "expansions": {
-                        "name": "Expansions"
-                    }
-                }
-            },
-            "device_3_ac_output_power_signed": {
-                "name": "Device 3 AC power",
-                "state_attributes": {
-                    "device_sn": {
-                        "name": "Serialnumber"
-                    },
-                    "device_pn": {
-                        "name": "Model"
-                    },
-                    "state_of_charge": {
-                        "name": "SoC %"
-                    },
-                    "expansions": {
-                        "name": "Expansions"
-                    }
-                }
-            },
-            "device_4_ac_output_power_signed": {
-                "name": "Device 4 AC power",
-                "state_attributes": {
-                    "device_sn": {
-                        "name": "Serialnumber"
-                    },
-                    "device_pn": {
-                        "name": "Model"
-                    },
-                    "state_of_charge": {
-                        "name": "SoC %"
-                    },
-                    "expansions": {
-                        "name": "Expansions"
-                    }
-                }
-            },
-            "device_5_ac_output_power_signed": {
-                "name": "Device 5 AC power",
-                "state_attributes": {
-                    "device_sn": {
-                        "name": "Serialnumber"
-                    },
-                    "device_pn": {
-                        "name": "Model"
-                    },
-                    "state_of_charge": {
-                        "name": "SoC %"
-                    },
-                    "expansions": {
-                        "name": "Expansions"
-                    }
-                }
-            },
-            "device_6_ac_output_power_signed": {
-                "name": "Device 6 AC power",
+            "device_x_ac_output_power_signed": {
+                "name": "Device {id} AC power",
                 "state_attributes": {
                     "device_sn": {
                         "name": "Serialnumber"
@@ -1301,41 +1131,13 @@
             "home_load_power": {
                 "name": "Home demand"
             },
-            "home_demand_circuit_01": {
-                "name": "Circuit 1"
-            },
-            "home_demand_circuit_02": {
-                "name": "Circuit 2"
-            },
-            "home_demand_circuit_03": {
-                "name": "Circuit 3"
-            },
-            "home_demand_circuit_04": {
-                "name": "Circuit 4"
-            },
-            "home_demand_circuit_05": {
-                "name": "Circuit 5"
-            },
-            "home_demand_circuit_06": {
-                "name": "Circuit 6"
-            },
-            "home_demand_circuit_07": {
-                "name": "Circuit 7"
-            },
-            "home_demand_circuit_08": {
-                "name": "Circuit 8"
-            },
-            "home_demand_circuit_09": {
-                "name": "Circuit 9"
-            },
-            "home_demand_circuit_10": {
-                "name": "Circuit 10"
-            },
-            "home_demand_circuit_11": {
-                "name": "Circuit 11"
-            },
-            "home_demand_circuit_12": {
-                "name": "Circuit 12"
+            "home_demand_circuit_x": {
+                "name": "Circuit {id}",
+                "state_attributes": {
+                    "coupled_circuits": {
+                        "name": "Coupled circuits"
+                    }
+                }
             },
             "ac_generate_power": {
                 "name": "AC power"
@@ -2241,8 +2043,8 @@
                     }
                 }
             },
-            "usbc_1_power": {
-                "name": "USB-C port 1",
+            "usbc_x_power": {
+                "name": "USB-C port {id}",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port status",
@@ -2260,8 +2062,8 @@
                     }
                 }
             },
-            "usbc_2_power": {
-                "name": "USB-C port 2",
+            "usba_x_power": {
+                "name": "USB-A port {id}",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port status",
@@ -2279,103 +2081,8 @@
                     }
                 }
             },
-            "usbc_3_power": {
-                "name": "USB-C port 3",
-                "state_attributes": {
-                    "port_status": {
-                        "name": "Port status",
-                        "state": {
-                            "inactive": "Inactive",
-                            "charging": "Charging",
-                            "discharging": "Discharging"
-                        }
-                    },
-                    "voltage": {
-                        "name": "Volt"
-                    },
-                    "current": {
-                        "name": "Ampere"
-                    }
-                }
-            },
-            "usbc_4_power": {
-                "name": "USB-C port 4",
-                "state_attributes": {
-                    "port_status": {
-                        "name": "Port status",
-                        "state": {
-                            "inactive": "Inactive",
-                            "charging": "Charging",
-                            "discharging": "Discharging"
-                        }
-                    },
-                    "voltage": {
-                        "name": "Volt"
-                    },
-                    "current": {
-                        "name": "Ampere"
-                    }
-                }
-            },
-            "usba_1_power": {
-                "name": "USB-A port 1",
-                "state_attributes": {
-                    "port_status": {
-                        "name": "Port status",
-                        "state": {
-                            "inactive": "Inactive",
-                            "charging": "Charging",
-                            "discharging": "Discharging"
-                        }
-                    },
-                    "voltage": {
-                        "name": "Volt"
-                    },
-                    "current": {
-                        "name": "Ampere"
-                    }
-                }
-            },
-            "usba_2_power": {
-                "name": "USB-A port 2",
-                "state_attributes": {
-                    "port_status": {
-                        "name": "Port status",
-                        "state": {
-                            "inactive": "Inactive",
-                            "charging": "Charging",
-                            "discharging": "Discharging"
-                        }
-                    },
-                    "voltage": {
-                        "name": "Volt"
-                    },
-                    "current": {
-                        "name": "Ampere"
-                    }
-                }
-            },
-            "dc_12v_1_power": {
-                "name": "DC 12V port 1",
-                "state_attributes": {
-                    "port_status": {
-                        "name": "Port status",
-                        "state": {
-                            "inactive": "Inactive",
-                            "charging": "Charging",
-                            "discharging": "Discharging"
-                        }
-                    },
-                    "voltage": {
-                        "name": "Volt"
-                    },
-                    "current": {
-                        "name": "Ampere"
-                    }
-                }
-            },
-            "dc_12v_2_power": {
-                "name": "DC 12V port 2",
+            "dc_12v_x_power": {
+                "name": "DC 12V port {id}",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port status",
@@ -2453,8 +2160,8 @@
                     }
                 }
             },
-            "exp_1_soc": {
-                "name": "Exp. 1 SoC",
+            "exp_x_soc": {
+                "name": "Exp. {id} SoC",
                 "state_attributes": {
                     "serialnumber": {
                         "name": "Serialnumber"
@@ -2467,76 +2174,8 @@
                     }
                 }
             },
-            "exp_1_temperature": {
-                "name": "Exp. 1 temperature"
-            },
-            "exp_2_soc": {
-                "name": "Exp. 2 SoC",
-                "state_attributes": {
-                    "serialnumber": {
-                        "name": "Serialnumber"
-                    },
-                    "state_of_health": {
-                        "name": "Health %"
-                    },
-                    "type": {
-                        "name": "Type"
-                    }
-                }
-            },
-            "exp_2_temperature": {
-                "name": "Exp. 2 temperature"
-            },
-            "exp_3_soc": {
-                "name": "Exp. 3 SoC",
-                "state_attributes": {
-                    "serialnumber": {
-                        "name": "Serialnumber"
-                    },
-                    "state_of_health": {
-                        "name": "Health %"
-                    },
-                    "type": {
-                        "name": "Type"
-                    }
-                }
-            },
-            "exp_3_temperature": {
-                "name": "Exp. 3 temperature"
-            },
-            "exp_4_soc": {
-                "name": "Exp. 4 SoC",
-                "state_attributes": {
-                    "serialnumber": {
-                        "name": "Serialnumber"
-                    },
-                    "state_of_health": {
-                        "name": "Health %"
-                    },
-                    "type": {
-                        "name": "Type"
-                    }
-                }
-            },
-            "exp_4_temperature": {
-                "name": "Exp. 4 temperature"
-            },
-            "exp_5_soc": {
-                "name": "Exp. 5 SoC",
-                "state_attributes": {
-                    "serialnumber": {
-                        "name": "Serialnumber"
-                    },
-                    "state_of_health": {
-                        "name": "Health %"
-                    },
-                    "type": {
-                        "name": "Type"
-                    }
-                }
-            },
-            "exp_5_temperature": {
-                "name": "Exp. 5 temperature"
+            "exp_x_temperature": {
+                "name": "Exp. {id} temperature"
             },
             "ip_address": {
                 "name": "IP address",
@@ -2765,17 +2404,8 @@
             "port_memory_switch": {
                 "name": "Port memory"
             },
-            "usbc_1_switch": {
-                "name": "USB-C port 1"
-            },
-            "usbc_2_switch": {
-                "name": "USB-C port 2"
-            },
-            "usbc_3_switch": {
-                "name": "USB-C port 3"
-            },
-            "usbc_4_switch": {
-                "name": "USB-C port 4"
+            "usbc_x_switch": {
+                "name": "USB-C port {id}"
             },
             "usba_switch": {
                 "name": "USB-A ports"

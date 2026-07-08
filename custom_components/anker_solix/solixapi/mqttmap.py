@@ -277,7 +277,7 @@ _A1728_0405 = {
     "bc": {NAME: "usbc_4_status"},  # USB-C top status: Inactive (0), Discharging (1)
     "bd": {NAME: "usba_1_status"},  # USB-A left status: Inactive (0), Discharging (1)
     "be": {NAME: "usba_2_status"},  # USB-A right status: Inactive (0), Discharging (1)
-    #"bf": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
+    # "bf": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
     "bf": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "c1": {
         NAME: "overload_event"
@@ -3554,10 +3554,6 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
                 FACTOR: 0.001,
             },
-            "07": {
-                NAME: "unknown_a3_07?",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
             "08": {
                 NAME: "unknown_a3_08?",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3661,7 +3657,7 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "27": {
-                NAME: "cable_unplugged",  # XT60i cable disconnected (0), connected (1)
+                NAME: "xt60i_cable",  # XT60i cable disconnected (0), connected (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
@@ -3686,12 +3682,16 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "unknown_pps_a7_04",
+                NAME: "remaining_time_hours",  # PPS remaining time charge
                 TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+                SIGNED: False,
             },
             "06": {
-                NAME: "unknown_pps_a7_06",
+                NAME: "reverse_remaining_time_hours",  # PPS remaining time reverse charge
                 TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+                SIGNED: False,
             },
             "08": {
                 NAME: "device_1_soc",

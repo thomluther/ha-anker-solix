@@ -1165,15 +1165,6 @@ async def poll_device_details(  # noqa: C901
 
             # Fetch device type specific details, if device type not excluded
             if dev_type in ({SolixDeviceType.SOLARBANK.value} - exclude):
-                # Fetch active Power Cutoff setting for solarbanks
-                if {ApiCategories.solarbank_cutoff} - exclude:
-                    api._logger.debug(
-                        "Getting api %s Power Cutoff settings for device",
-                        api.apisession.nickname,
-                    )
-                    await api.get_power_cutoff(
-                        siteId=site_id, deviceSn=sn, fromFile=fromFile
-                    )
                 # queries for solarbank 1 only
                 if (device.get("generation") or 0) < 2:
                     # Fetch available OTA update for solarbanks, does not work for solarbank 2 with device SN
@@ -1261,6 +1252,17 @@ async def poll_device_details(  # noqa: C901
                         attributes=["pv_power_limit"]
                         + (["switch_0w"] if device.get("station_sn") is None else []),
                         fromFile=fromFile,
+                    )
+                # Fetch active Power Cutoff setting for solarbanks that are not station controlled
+                if ({ApiCategories.solarbank_cutoff} - exclude) and device.get(
+                    "station_sn"
+                ) is None:
+                    api._logger.debug(
+                        "Getting api %s Power Cutoff settings for device",
+                        api.apisession.nickname,
+                    )
+                    await api.get_power_cutoff(
+                        siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
 
         # Fetch device type specific details, if device type not excluded

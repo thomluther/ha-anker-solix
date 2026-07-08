@@ -327,6 +327,16 @@ async def get_device_parm(
             dev_serials.discard(station_sn)
             # copy schedule to physical station device if not existing yet
             schedule = self.devices.get(station_sn, {}).get("schedule")
+            # extract legacy SOC limit selection
+            soc_list = paramData.get("soc_list") or []
+            power_cutoff = -1
+            for setting in soc_list:
+                if (
+                    int(setting.get("is_selected", 0)) > 0
+                    and int(setting.get("soc", 0)) > 0
+                ):
+                    power_cutoff = int(setting.get("soc"))
+                    break
             for sn in dev_serials:
                 if station_sn and not schedule:
                     schedule = self.devices.get(sn, {}).get("schedule")
@@ -349,19 +359,20 @@ async def get_device_parm(
                         "backup_reserve_switch": bool(
                             paramData.get("backup_reserve_switch", "")
                         ),
+                        "power_cutoff_data": soc_list,
                     }
+                    | ({"power_cutoff": power_cutoff} if power_cutoff >= 0 else {})
                 )
             # update physical station device if in use (this cannot be done by power_limit query in site details poller if update triggered by param change)
             if station_sn in self.devices:
                 station = {"device_sn": station_sn}
-                station["power_cutoff_data"] = paramData.get("soc_list") or []
-                # extract active setting for station
-                for setting in station["power_cutoff_data"]:
-                    if (
-                        int(setting.get("is_selected", 0)) > 0
-                        and int(setting.get("soc", 0)) > 0
-                    ):
-                        station["power_cutoff"] = int(setting.get("soc"))
+                station["schedule"] = schedule
+                station["allow_grid_export"] = not bool(
+                    paramData.get("switch_0w", None)
+                )
+                station["grid_export_limit"] = str(
+                    paramData.get("feed-in_power_limit", "")
+                )
                 station["charge_upper_limit"] = str(
                     paramData.get("charge_upper_limit", "")
                 )
@@ -372,13 +383,9 @@ async def get_device_parm(
                 station["backup_reserve_switch"] = bool(
                     paramData.get("backup_reserve_switch", "")
                 )
-                station["schedule"] = schedule
-                station["allow_grid_export"] = not bool(
-                    paramData.get("switch_0w", None)
-                )
-                station["grid_export_limit"] = str(
-                    paramData.get("feed-in_power_limit", "")
-                )
+                station["power_cutoff_data"] = soc_list
+                if power_cutoff >= 0:
+                    station["power_cutoff"] = power_cutoff
                 self._update_dev(station)
     return data
 
@@ -460,6 +467,7 @@ async def set_device_parm(
                 "charge_upper_limit",
                 "backup_reserve",
                 "backup_reserve_switch",
+                "cmd_type",
             ]:
                 if (setting := paramData.get(key)) is not None:
                     filedata[key] = setting

@@ -246,7 +246,11 @@ DEVICE_SENSORS = [
                 {
                     "name": (d.get("pv_name") or {}).get(f"pv{idx}_name") or "",
                 }
-                | ({"voltage": v} if (v := d.get(f"pv_{idx}_voltage")) else {})
+                | (
+                    {"voltage": float(v)}
+                    if (v := str(d.get(f"pv_{idx}_voltage", "")))
+                    else {}
+                )
             ),
             exclude_fn=lambda s, d: not ({d.get("type")} - s),
             check_invalid=True,
@@ -329,7 +333,9 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        attrib_fn=lambda d, _: {"voltage": v} if (v := d.get("output_voltage")) else {},
+        attrib_fn=lambda d, _: (
+            {"voltage": float(v)} if (v := str(d.get("output_voltage", ""))) else {}
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         check_invalid=True,
         mqtt=True,
@@ -409,7 +415,8 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"device_{idx}_ac_output_power_signed",
-            translation_key=f"device_{idx}_ac_output_power_signed",
+            translation_key="device_x_ac_output_power_signed",
+            translation_placeholders={"id": f"{idx}"},
             json_key=f"device_{idx}_ac_output_power_signed",
             native_unit_of_measurement=UnitOfPower.WATT,
             device_class=SensorDeviceClass.POWER,
@@ -435,7 +442,8 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"device_{idx}_pv_power",
-            translation_key=f"device_{idx}_pv_power",
+            translation_key="device_x_pv_power",
+            translation_placeholders={"id": f"{idx}"},
             json_key=f"device_{idx}_pv_power",
             native_unit_of_measurement=UnitOfPower.WATT,
             device_class=SensorDeviceClass.POWER,
@@ -564,12 +572,15 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"home_demand_circuit_{idx:02d}",
-            translation_key=f"home_demand_circuit_{idx:02d}",
+            translation_key="home_demand_circuit_x",
             json_key=f"home_demand_circuit_{idx:02d}",
             native_unit_of_measurement=UnitOfPower.WATT,
             device_class=SensorDeviceClass.POWER,
             state_class=SensorStateClass.MEASUREMENT,
             suggested_display_precision=0,
+            attrib_fn=lambda d, _, idx=idx: {
+                "coupled_circuits": [idx, *d.get(f"peers_circuit_{idx:02d}", [])]
+            },
             exclude_fn=lambda s, d: not ({d.get("type")} - s),
             mqtt=True,
         )
@@ -605,16 +616,16 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: (
             (
                 {
-                    "voltage": val,
+                    "voltage": float(val),
                 }
-                if (val := d.get("voltage"))
+                if (val := str(d.get("voltage", "")))
                 else {}
             )
             | (
                 {
-                    "current": val,
+                    "current": float(val),
                 }
-                if (val := d.get("current"))
+                if (val := str(d.get("current", "")))
                 else {}
             )
         ),
@@ -772,16 +783,16 @@ DEVICE_SENSORS = [
             )
             | (
                 {
-                    "voltage": v,
+                    "voltage": float(v),
                 }
-                if (v := d.get("battery_voltage"))
+                if (v := str(d.get("battery_voltage", "")))
                 else {}
             )
             | (
                 {
-                    "energy_ah": v,
+                    "energy_ah": float(v),
                 }
-                if (v := d.get("battery_soc_ah"))
+                if (v := str(d.get("battery_soc_ah", "")))
                 else {}
             )
         ),
@@ -820,6 +831,8 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: float(val) if (val := str(d.get(jk, ""))) else None,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -956,7 +969,8 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"exp_{idx}_temperature",
-            translation_key=f"exp_{idx}_temperature",
+            translation_key="exp_x_temperature",
+            translation_placeholders={"id": f"{idx}"},
             json_key=f"exp_{idx}_temperature",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
@@ -1082,16 +1096,16 @@ DEVICE_SENSORS = [
             attrib_fn=lambda d, _, idx=idx: (
                 (
                     {
-                        "voltage": val,
+                        "voltage": float(val),
                     }
-                    if (val := d.get(f"voltage_{idx}"))
+                    if (val := str(d.get(f"voltage_{idx}", "")))
                     else {}
                 )
                 | (
                     {
-                        "current": val,
+                        "current": float(val),
                     }
-                    if (val := d.get(f"current_{idx}"))
+                    if (val := str(d.get(f"current_{idx}", "")))
                     else {}
                 )
             ),
@@ -1112,9 +1126,9 @@ DEVICE_SENSORS = [
             suggested_display_precision=0,
             attrib_fn=lambda d, _, idx=idx: (
                 {
-                    "current": val,
+                    "current": float(val),
                 }
-                if (val := d.get(f"system_output_current_{idx}"))
+                if (val := str(d.get(f"system_output_current_{idx}", "")))
                 else {}
             ),
             exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -1831,12 +1845,16 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"{idx}_power",
-            translation_key=f"{idx}_power",
+            translation_key=f"{idx[:-2]}_x_power",
+            translation_placeholders={"id": idx[-1:]},
             json_key=f"{idx}_power",
             native_unit_of_measurement=UnitOfPower.WATT,
             device_class=SensorDeviceClass.POWER,
             state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=0.1,
+            suggested_display_precision=1,
+            value_fn=lambda d, jk, _: (
+                float(val) if (val := str(d.get(jk, ""))) else None
+            ),
             attrib_fn=lambda d, _, idx=idx: (
                 (
                     {
@@ -1853,16 +1871,16 @@ DEVICE_SENSORS = [
                 )
                 | (
                     {
-                        "voltage": val,
+                        "voltage": float(val),
                     }
-                    if (val := d.get(f"{idx}_voltage"))
+                    if (val := str(d.get(f"{idx}_voltage", "")))
                     else {}
                 )
                 | (
                     {
-                        "current": val,
+                        "current": float(val),
                     }
-                    if (val := d.get(f"{idx}_current"))
+                    if (val := str(d.get(f"{idx}_current", "")))
                     else {}
                 )
             ),
@@ -1908,7 +1926,7 @@ DEVICE_SENSORS = [
             | ({"device_pn": v} if (v := d.get("device_1_pn")) else {})
             | (
                 {"xt60i_cable": get_enum_name(SolixConnectionStatus, str(v))}
-                if (v := d.get("cable_unplugged")) is not None
+                if (v := d.get("xt60i_cable")) is not None
                 else {}
             )
             | ({"state_of_charge": v} if (v := d.get("device_1_soc")) else {})
@@ -1961,7 +1979,8 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"exp_{idx}_soc",
-            translation_key=f"exp_{idx}_soc",
+            translation_key="exp_x_soc",
+            translation_placeholders={"id": f"{idx}"},
             json_key=f"exp_{idx}_soc",
             native_unit_of_measurement=PERCENTAGE,
             device_class=SensorDeviceClass.BATTERY,
@@ -2192,16 +2211,16 @@ DEVICE_SENSORS = [
             attrib_fn=lambda d, _, idx=idx: (
                 (
                     {
-                        "voltage": val,
+                        "voltage": float(val),
                     }
-                    if (val := d.get(f"voltage_{idx}"))
+                    if (val := str(d.get(f"voltage_{idx}", "")))
                     else {}
                 )
                 | (
                     {
-                        "current": val,
+                        "current": float(val),
                     }
-                    if (val := d.get(f"current_{idx}"))
+                    if (val := str(d.get(f"current_{idx}", "")))
                     else {}
                 )
             ),
@@ -3845,6 +3864,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "name",
             "network",
             "network_code",
+            "coupled_circuits",
             "percentage",
             "provider",
             "poll_time",
@@ -3961,6 +3981,17 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 # change the charing status options for matching device type
                 if data.get("type") == SolixDeviceType.SOLARBANK_PPS.value:
                     self._attr_options = [status.name for status in SolarbankPpsStatus]
+            elif description.translation_key == "home_demand_circuit_x":
+                # generate the id for the circuit
+                self._attr_translation_placeholders = {
+                    "id": "-".join(
+                        map(
+                            str,
+                            (self.extra_state_attributes or {}).get("coupled_circuits")
+                            or [],
+                        )
+                    )
+                }
             # disable picture again if path does not exist to allow display of icons alternatively
             if (
                 self._attr_entity_picture
@@ -4094,7 +4125,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         data, key, self.coordinator_context
                     )
                     if (
-                        self._native_value
+                        self._native_value is not None
                         and self.device_class == SensorDeviceClass.TEMPERATURE
                     ):
                         # Set unit of measurement as user option to allow automatic state conversion by HA core
@@ -4109,7 +4140,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                 # Ensure to set power sensors to None if empty strings returned
                 if (
                     self.device_class == SensorDeviceClass.POWER
-                    and not self._native_value
+                    and self._native_value == ""
                 ):
                     self._native_value = None
 

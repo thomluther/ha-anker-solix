@@ -479,22 +479,7 @@
             "device_output_power_signed_total": {
                 "default": "mdi:home-battery-outline"
             },
-            "device_1_ac_output_power_signed": {
-                "default": "mdi:home-battery-outline"
-            },
-            "device_2_ac_output_power_signed": {
-                "default": "mdi:home-battery-outline"
-            },
-            "device_3_ac_output_power_signed": {
-                "default": "mdi:home-battery-outline"
-            },
-            "device_4_ac_output_power_signed": {
-                "default": "mdi:home-battery-outline"
-            },
-            "device_5_ac_output_power_signed": {
-                "default": "mdi:home-battery-outline"
-            },
-            "device_6_ac_output_power_signed": {
+            "device_x_ac_output_power_signed": {
                 "default": "mdi:home-battery-outline"
             },
             "ac_to_home_load": {
@@ -527,22 +512,7 @@
             "solar_power_4": {
                 "default": "mdi:solar-panel"
             },
-            "device_1_pv_power": {
-                "default": "mdi:solar-panel"
-            },
-            "device_2_pv_power": {
-                "default": "mdi:solar-panel"
-            },
-            "device_3_pv_power": {
-                "default": "mdi:solar-panel"
-            },
-            "device_4_pv_power": {
-                "default": "mdi:solar-panel"
-            },
-            "device_5_pv_power": {
-                "default": "mdi:solar-panel"
-            },
-            "device_6_pv_power": {
+            "device_x_pv_power": {
                 "default": "mdi:solar-panel"
             },
             "dc_input_power": {
@@ -940,28 +910,13 @@
             "mqtt_statistic": {
                 "default": "mdi:chart-bar-stacked"
             },
-            "usbc_1_power": {
+            "usbc_x_power": {
                 "default": "mdi:usb-c-port"
             },
-            "usbc_2_power": {
-                "default": "mdi:usb-c-port"
-            },
-            "usbc_3_power": {
-                "default": "mdi:usb-c-port"
-            },
-            "usbc_4_power": {
-                "default": "mdi:usb-c-port"
-            },
-            "usba_1_power": {
+            "usba_x_power": {
                 "default": "mdi:usb-port"
             },
-            "usba_2_power": {
-                "default": "mdi:usb-port"
-            },
-            "dc_12v_1_power": {
-                "default": "mdi:record-circle-outline"
-            },
-            "dc_12v_2_power": {
+            "dc_12v_x_power": {
                 "default": "mdi:record-circle-outline"
             },
             "remaining_time_hours": {
@@ -1104,16 +1059,7 @@
             "port_memory_switch": {
                 "default": "mdi:memory"
             },
-            "usbc_1_switch": {
-                "default": "mdi:usb-c-port"
-            },
-            "usbc_2_switch": {
-                "default": "mdi:usb-c-port"
-            },
-            "usbc_3_switch": {
-                "default": "mdi:usb-c-port"
-            },
-            "usbc_4_switch": {
+            "usbc_x_switch": {
                 "default": "mdi:usb-c-port"
             },
             "usba_switch": {

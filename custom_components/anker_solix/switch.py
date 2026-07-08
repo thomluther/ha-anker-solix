@@ -65,11 +65,7 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi import export
-from .solixapi.apitypes import (
-    ApiCategories,
-    SolixConnectionStatus,
-    SolixDeviceType,
-)
+from .solixapi.apitypes import ApiCategories, SolixConnectionStatus, SolixDeviceType
 from .solixapi.mqtt_device import SolixMqttDevice
 from .solixapi.mqttcmdmap import SolixMqttCommands
 
@@ -306,7 +302,8 @@ DEVICE_SWITCHES = [
     ),
     AnkerSolixSwitchDescription(
         key="usbc_1_switch",
-        translation_key="usbc_1_switch",
+        translation_key="usbc_x_switch",
+        translation_placeholders={"id": "1"},
         json_key="usbc_1_switch",
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         device_class=SwitchDeviceClass.SWITCH,
@@ -315,7 +312,8 @@ DEVICE_SWITCHES = [
     ),
     AnkerSolixSwitchDescription(
         key="usbc_2_switch",
-        translation_key="usbc_2_switch",
+        translation_key="usbc_x_switch",
+        translation_placeholders={"id": "2"},
         json_key="usbc_2_switch",
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         device_class=SwitchDeviceClass.SWITCH,
@@ -324,7 +322,8 @@ DEVICE_SWITCHES = [
     ),
     AnkerSolixSwitchDescription(
         key="usbc_3_switch",
-        translation_key="usbc_3_switch",
+        translation_key="usbc_x_switch",
+        translation_placeholders={"id": "3"},
         json_key="usbc_3_switch",
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         device_class=SwitchDeviceClass.SWITCH,
@@ -333,7 +332,8 @@ DEVICE_SWITCHES = [
     ),
     AnkerSolixSwitchDescription(
         key="usbc_4_switch",
-        translation_key="usbc_4_switch",
+        translation_key="usbc_x_switch",
+        translation_placeholders={"id": "4"},
         json_key="usbc_4_switch",
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         device_class=SwitchDeviceClass.SWITCH,

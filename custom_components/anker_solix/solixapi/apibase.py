@@ -712,6 +712,11 @@ class AnkerSolixBaseApi:
                                 "charger_mode"
                             ):
                                 device_mqtt[key] = f"{float(-1 * value):.0f}"
+                            # Remove circuit power while circuit setup unknown
+                            elif key.startswith(
+                                "home_demand_circuit"
+                            ) and not circuits and not device_mqtt.get("circuits", {}):
+                                device_mqtt.pop(key, None)
                             # calculate device PV total if not included in MQTT data
                             elif any(
                                 key == f"device_{x}_pv_1_power"
@@ -805,11 +810,9 @@ class AnkerSolixBaseApi:
                                 "tcp_port",
                                 "ip_address",
                                 "mode",  # HA missing, HES meaning not clear
-                                "generator_plug_status",
                                 "car_battery_type",
                                 "car_battery_voltage_type",
-                                "cable_unplugged",
-                                "device_1_disconnected",
+                                "xt60i_cable",
                             ]
                             or (
                                 str(key).endswith(
@@ -822,7 +825,7 @@ class AnkerSolixBaseApi:
                                         "_hours",
                                         "_timestamp",
                                         "_packs",
-                                        # "?", # Add for decoder testing
+                                        # "?", # Add for decoder testing in monitor
                                     )
                                 )
                             )
@@ -831,7 +834,7 @@ class AnkerSolixBaseApi:
                                     (
                                         "pair_id_circuit_",
                                         "id_circuit_",
-                                        "unknown_",  # Add for decoder testing
+                                        # "unknown_",  # Add for decoder testing monitor
                                     )
                                 )
                             )
@@ -847,6 +850,13 @@ class AnkerSolixBaseApi:
                             elif key.startswith("id_circuit_"):
                                 # assign physical ids to logical ids
                                 circuits[value] = [*circuits.get(value, []), key[-2:]]
+                            elif (
+                                key == "reverse_remaining_time_hours"
+                                and check_values.get("charger_mode")
+                            ):
+                                # consolidate values depending on active charger mode
+                                device_mqtt["remaining_time_hours"] = value
+                                check_values["remaining_time_hours"] = value
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
@@ -975,22 +985,28 @@ class AnkerSolixBaseApi:
                                 f"{min(100, float(discharge) / (float(charge) + max(0, float(consumed) - float(ac_charge))) * 100):.3f}"
                             )
                     # combine power of paired circuits
-                    # Paired circuits must be consecutive and are limited to 2
-                    for physicals in [p for p in circuits.values() if len(p) > 1]:
-                        combined = 0
-                        with contextlib.suppress(ValueError):
-                            combined = int(
-                                device_mqtt.get(
-                                    f"home_demand_circuit_{physicals[0]}", 0
+                    if circuits:
+                        device_mqtt["circuits"] = circuits
+                    if "home_demand_circuit_01" in check_values:
+                        # Paired circuits must be consecutive and are limited to 2
+                        for physicals in [p for p in device_mqtt.get("circuits", {}).values() if len(p) > 1]:
+                            combined = 0
+                            with contextlib.suppress(ValueError):
+                                combined = int(
+                                    device_mqtt.get(
+                                        f"home_demand_circuit_{physicals[0]}", 0
+                                    )
                                 )
-                            )
-                            for p in physicals[1:]:
-                                combined += int(
-                                    device_mqtt.pop(f"home_demand_circuit_{p}", 0)
+                                for p in physicals[1:]:
+                                    combined += int(
+                                        device_mqtt.pop(f"home_demand_circuit_{p}", 0)
+                                    )
+                                device_mqtt[f"home_demand_circuit_{physicals[0]}"] = (
+                                    f"{float(combined):.0f}"
                                 )
-                            device_mqtt[f"home_demand_circuit_{physicals[0]}"] = (
-                                f"{float(combined):.0f}"
-                            )
+                                device_mqtt[f"peers_circuit_{physicals[0]}"] = list(
+                                    map(int, physicals[1:])
+                                )
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if calc_capacity and (cap := device.get("battery_capacity")):
