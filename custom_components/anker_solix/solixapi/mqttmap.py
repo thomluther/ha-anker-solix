@@ -14,6 +14,7 @@ from .mqttcmdmap import (
     CMD_AC_PORT_SWITCH,
     CMD_BATTERY_CHARGE_LIMITS,
     CMD_CAR_BATTERY_TYPE,
+    CMD_CHARGER_USAGE_MODE,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
@@ -22,6 +23,7 @@ from .mqttcmdmap import (
     CMD_DEVICE_POWER_MODE,
     CMD_DEVICE_SWITCH,
     CMD_DEVICE_TIMEOUT_MIN,
+    CMD_DISPLAY_BRIGHTNESS,
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
@@ -44,6 +46,7 @@ from .mqttcmdmap import (
     CMD_PLUG_LOCK_SWITCH,
     CMD_PLUG_SCHEDULE,
     CMD_PORT_MEMORY_SWITCH,
+    CMD_PORT_PRIORITY,
     CMD_REALTIME_TRIGGER,
     CMD_REVERSE_CHARGE_LIMITS,
     CMD_SB_3RD_PARTY_PV_SWITCH,
@@ -3344,6 +3347,26 @@ _A2345_0303 = {
             },
         }
     },
+    "a8": {
+        BYTES: {
+            "00": {
+                NAME: "unknown_a8_00_01",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "01": {
+                NAME: "unknown_a8_01_02",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "02": {
+                NAME: "unknown_a8_02_03",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "03": {
+                NAME: "unknown_a8_03",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -3493,12 +3516,20 @@ _A2345_0a00 = {
                 NAME: "usbc_1_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "18": {
+                NAME: "usbc_1_priority",  # 1 normal, 2 prioritized
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         },
     },
     "ab": {
         BYTES: {
             "00": {
                 NAME: "usbc_2_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "18": {
+                NAME: "usbc_2_priority",  # 1 normal, 2 prioritized
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         },
@@ -3509,12 +3540,20 @@ _A2345_0a00 = {
                 NAME: "usbc_3_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "18": {
+                NAME: "usbc_3_priority",  # 1 normal, 2 prioritized
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         },
     },
     "ad": {
         BYTES: {
             "00": {
                 NAME: "usbc_4_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "18": {
+                NAME: "usbc_4_priority",  # 1 normal, 2 prioritized
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         },
@@ -3525,7 +3564,19 @@ _A2345_0a00 = {
                 NAME: "usba_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "18": {
+                NAME: "usba_priority",  # 0 no priority
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         },
+    },
+    "b1": {
+        NAME: "usage_mode",  # 1 (AI Power), 2 (Connection Prio), 3 (Dual Laptop), 4 (Low power)
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    "b3": {
+        NAME: "display_brightness",  # Brightness in %, 20-100 % step 5 %
+        TYPE: DeviceHexDataTypes.ui.value,
     },
     "fe": {NAME: "msg_timestamp"},
 }
@@ -6007,6 +6058,8 @@ SOLIXMQTTMAP: Final[dict] = {
     # Prime Charger 250W
     "A2345": {
         "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
+        "0204": CMD_DISPLAY_BRIGHTNESS,  # Display brightness 20-100 %, step 5 %
+        "0206": CMD_CHARGER_USAGE_MODE,  # mode: 1 (AI Power mode), 2 (Connection Prio), 3 (Dual Laptop mode), 4 (Low power mode)
         "0207": {
             # USB port switch command. Same command, but selected port is a parameter
             COMMAND_LIST: [
@@ -6076,6 +6129,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "020b": {
             k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
         },
+        "020c": CMD_PORT_PRIORITY,  # Set the port priorities for given port bitmask
         # Interval: Upon change of the referred port toggle, usable by data extractor to adjust correct port state
         "0302": {
             "a2": {NAME: "set_port_switch_select"},
@@ -6084,6 +6138,11 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~1 second, but only with realtime trigger. Consumption data, all data fields are also in 0a00 message
         "0303": _A2345_0303,
+        # Interval: Upon change of the priority
+        "030f": {
+            "a3": {NAME: "port_priority"},
+            "fe": {NAME: "msg_timestamp"},
+        },
         # Interval: only with status request command. Contains all settings and consumption data
         "0a00": _A2345_0a00,
     },

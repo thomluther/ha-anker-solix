@@ -95,6 +95,7 @@ class SolixMqttCommands:
     display_switch: str = "display_switch"
     display_mode_select: str = "display_mode_select"
     display_timeout_seconds: str = "display_timeout_seconds"
+    display_brightness: str = "display_brightness"
     light_switch: str = "light_switch"
     light_mode_select: str = "light_mode_select"
     port_memory_switch: str = "port_memory_switch"
@@ -153,6 +154,8 @@ class SolixMqttCommands:
     car_battery_type: str = "car_battery_type"
     battery_charge_limits: str = "battery_charge_limits"
     reverse_charge_limits: str = "reverse_charge_limits"
+    charger_usage_mode: str = "charger_usage_mode"
+    port_priority: str = "port_priority"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -1554,5 +1557,63 @@ CMD_CAR_BATTERY_TYPE = CMD_COMMON_V2 | {
         STATE_NAME: "car_battery_voltage_type",
         VALUE_OPTIONS: {"12_v": 0, "24_v": 1},
         VALUE_STATE: "car_battery_voltage_type",
+    },
+}
+
+CMD_DISPLAY_BRIGHTNESS = CMD_COMMON | {
+    # Command: Set display brightness 20-100 %, step 5 %
+    COMMAND_NAME: SolixMqttCommands.display_brightness,
+    "a2": {
+        NAME: "set_display_brightness",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "display_brightness",
+        VALUE_MIN: 20,
+        VALUE_MAX: 100,
+        VALUE_STEP: 5,
+    },
+}
+
+CMD_CHARGER_USAGE_MODE = CMD_COMMON | {
+    # Command: Set charger mode: 1 (AI Power mode), 2 (Connection Prio), 3 (Dual Laptop mode), 4 (Low power mode)
+    COMMAND_NAME: SolixMqttCommands.charger_usage_mode,
+    "a2": {
+        NAME: "set_usage_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "usage_mode",
+        VALUE_OPTIONS: {
+            "ai_power": 1,
+            "connection_priority": 2,
+            "dual_laptop": 3,
+            "low_power": 4,
+        },
+    },
+}
+
+CMD_PORT_PRIORITY = CMD_COMMON | {
+    # Command: Set charger port priority 4 Bit mask
+    # Bitmask 0000 1111 to activate prio (usb c1, c2, c3, c4)
+    COMMAND_NAME: SolixMqttCommands.port_priority,
+    "a2": {
+        NAME: "set_port_priority",  # 4 Bit mask
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "port_priority",
+        VALUE_OPTIONS: {
+            "off": 0,
+            "c4": 1,
+            "c3": 2,
+            "c3c4": 3,
+            "c2": 4,
+            "c2c4": 5,
+            "c2c3": 6,
+            "c2c3c4": 7,
+            "c1": 8,
+            "c1c4": 9,
+            "c1c3": 10,
+            "c1c3c4": 11,
+            "c1c2": 12,
+            "c1c2c4": 13,
+            "c1c2c3": 14,
+            "c1c2c3c4": 15,
+        },
     },
 }

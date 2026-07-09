@@ -36,8 +36,7 @@ API_COUNTRIES: Final[dict] = {
         "BR",
         "HK",
         "IN",
-        "JP",
-        "MX",
+        "MX",  # TODO (#162): May need EU assignment
         "NG",
         "NZ",
         "RU",
@@ -94,7 +93,8 @@ API_COUNTRIES: Final[dict] = {
         "BY",
         "AZ",
         "IL",
-        "RO",
+        "RO",  # See #250, HA #443, #410
+        "JP",  # See #317, HA #557
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 

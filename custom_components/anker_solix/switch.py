@@ -1024,6 +1024,14 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         socSwitch=enable ^ self.entity_description.inverted,
                         toFile=self.coordinator.client.testmode(),
                     )
+                    # Combiner box requires additional command with type 2 to apply cloud settings only
+                    if resp and data.get("type") == SolixDeviceType.COMBINER_BOX.value:
+                        resp = resp | await self.coordinator.client.api.set_station_parm(
+                            deviceSn=self.coordinator_context,
+                            socSwitch=enable ^ self.entity_description.inverted,
+                            cmdType=2,
+                            toFile=self.coordinator.client.testmode(),
+                        )
                 if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
                         "%s: Applied settings for '%s' change to '%s':\n%s",

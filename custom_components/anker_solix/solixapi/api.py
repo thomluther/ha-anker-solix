@@ -1533,6 +1533,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         The id must be one of the ids listed with the get_power_cutoff endpoint.
         SOC min and max require appropriate firmware level of device. SB2 does not support backup_reserve settings
         NOTE: SB2 models must use this query since site_device_parm query with station parameter does not work for them yet
+        cmd_type 1 will apply new SOC parameters, while default of 0 will apply legacy SOC parameters
         """
         data = {
             "device_sn": deviceSn,
@@ -1546,7 +1547,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if isinstance(socMax, float | int):
             data["charge_upper_limit"] = round(min(100, max(80, socMax)))
             data["cmd_type"] = cmdType
-        if "cmd_Type" in data:
+        if "cmd_type" in data:
             # Add new soc setting parameters for SB2 not supporting backup soc
             data["backup_reserve"] = 0
             data["backup_reserve_switch"] = 0
@@ -1608,6 +1609,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         socMax: int | None = None,
         socBackup: int | None = None,
         socSwitch: bool | None = None,
+        cmdType: int = 1,
         gridExport: bool | None = None,
         gridExportLimit: int | None = None,
         toFile: bool = False,
@@ -1615,7 +1617,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """Set various parm for the station.
 
         Note: socMin, socMax socBackup and socSwitch settings depend on firmware level of devices
-
+        cmdType 0 will apply legacy SOC parameters without MQTT commands from cloud
+        cmdType 1 will apply new SOC parameters and cause the cloud to drive device MQTT commands
+        cmdType 2 is additionally required to apply new SOC parameters to power dock system cloud (no MQTT commands driven)
         Example input:
         {'siteId': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'socReserve': 10}
         The socReserve must be in the soc list reported by the station settings. The specified site must support station settings and have admin permission.
@@ -1680,10 +1684,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             )
             if "discharge_lower_limit" in station_settings:
                 data["discharge_lower_limit"] = socMin
-                data["cmd_type"] = 1
+                data["cmd_type"] = cmdType
             if "charge_upper_limit" in station_settings:
                 data["charge_upper_limit"] = socMax if socMax > socMin else 100
-                data["cmd_type"] = 1
+                data["cmd_type"] = cmdType
 
             # existing 0 backup soc may indicate backup not supported
             backup_supported = bool(station_settings.get("backup_reserve"))
@@ -1701,7 +1705,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     if isinstance(socSwitch, bool)
                     else bool(station_settings.get("backup_reserve_switch"))
                 )
-                data["cmd_type"] = 1
+                data["cmd_type"] = cmdType
             # check and adjust new or existing backup value
             backup = round(
                 min(
@@ -1724,7 +1728,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     data["backup_reserve"] = (
                         50 if station_settings.get("backup_reserve") else 0
                     )
-                data["cmd_type"] = 1
+                data["cmd_type"] = cmdType
 
         if not (data or station_settings):
             return False

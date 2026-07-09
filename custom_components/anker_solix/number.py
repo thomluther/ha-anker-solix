@@ -1241,48 +1241,23 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             else None,
                             toFile=self.coordinator.client.testmode(),
                         )
-                        # NOTE: Power dock systems reset the backup reserve switch after some time
-                        # MQTT not required if station managed:
-                        # if (
-                        #     resp
-                        #     and data.get("type") == SolixDeviceType.COMBINER_BOX.value
-                        #     and self.entity_description.mqtt_cmd in mdev.controls
-                        # ):
-                        #     resp_data = resp.get("param_data") or {}
-                        #     resp |= {
-                        #         f"mqtt_control_{mdev.sn}": await self._async_mqtt_value(
-                        #             mdev=mdev,
-                        #             value=value,
-                        #             cmd=self.entity_description.mqtt_cmd,
-                        #             parm=self.entity_description.mqtt_cmd_parm,
-                        #             # add the returned defaults for backup since states not included in MQTT data cache
-                        #             parm_map={
-                        #                 "set_backup_soc_switch": resp_data.get(
-                        #                     "backup_reserve_switch"
-                        #                 )
-                        #                 or 0,
-                        #             }
-                        #             | (
-                        #                 {
-                        #                     "set_min_soc": resp_data.get(
-                        #                         "discharge_lower_limit"
-                        #                     )
-                        #                 }
-                        #                 if self._attribute_name != "sb_min_soc"
-                        #                 else {}
-                        #             )
-                        #             | (
-                        #                 {"set_max_soc": resp_data.get("charge_upper_limit")}
-                        #                 if self._attribute_name != "sb_max_soc"
-                        #                 else {}
-                        #             )
-                        #             | (
-                        #                 {"set_backup_soc": resp_data.get("backup_reserve")}
-                        #                 if self._attribute_name != "sb_backup_soc"
-                        #                 else {}
-                        #             ),
-                        #         )
-                        #     }
+                        # NOTE: Power dock systems do not apply the backup reserve switch in the cloud with cmd_type 1
+                        # They need the same command with cmd_type 2 to apply cloud settings only
+                        if resp and data.get("type") == SolixDeviceType.COMBINER_BOX.value:
+                            resp = resp | await self.coordinator.client.api.set_station_parm(
+                                deviceSn=self.coordinator_context,
+                                socMin=value
+                                if self._attribute_name == "sb_min_soc"
+                                else None,
+                                socMax=value
+                                if self._attribute_name == "sb_max_soc"
+                                else None,
+                                socBackup=value
+                                if self._attribute_name == "sb_backup_soc"
+                                else None,
+                                cmdType=2,
+                                toFile=self.coordinator.client.testmode(),
+                            )
                     else:
                         # control via individual device setting + MQTT command
                         # legacy set_power_cutoff query does not trigger cloud to send MQTT commands
