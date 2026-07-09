@@ -305,7 +305,7 @@ Device controls via station controls have been implemented by Anker to manage So
 
 Following settings may require the hybrid approach:
 - SOC reserve (min SOC) - same for all Solarbank devices in Multisystems, must also be set on Power Dock device if available
-- New Min and Max SOC settings (MQTT required for Solarbank 2 systems without station support). This requires also appropriate device firmare.
+- New Min and Max SOC settings (MQTT required for Solarbank 2 systems without station support). This requires also appropriate device firmware.
 - PV input limit - individual per Solarbank
 - AC input limit (AC charge limit) - individual per Solarbank
 - AC output limit (max home load) - overall limit across all Solarbank devices in system, must also be set on Power Dock device if available
@@ -442,7 +442,7 @@ Depending on how devices publish their data in regular, status request or real t
 Integration version 3.5.0 added control entities for MQTT manageable devices. If the various MQTT commands for the device model have been decoded and described by the community, the integration can now control those devices as well and provide similar management experience as the mobile app.
 
 > [!IMPORTANT]
-> Most of those controls cannot be validated by the developer since they require owner access to the real device type. Use the controls with care and validate them appropriately. You may open an issue with a system export and you have to use the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to analyse the MQTT commands from your mobile app for debugging and problem fixing.
+> Most of those controls cannot be validated by the developer since they require owner access to the real device type. Use the controls with care and validate them appropriately. You may open an issue with a system export and you have to use the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to analyze the MQTT commands from your mobile app for debugging and problem fixing.
 
 Integration version 3.6.3 added full support for devices in 'MQTT local mode' and their embedded MQTT messages provided by the control hub device. Such devices cannot be controlled directly through MQTT, neither through the integration nor through the Anker mobile App. For more details, see [devices in MQTT local mode](INFO.md#devices-in-mqtt-local-mode) in the [User Guide](INFO.md).
 
@@ -528,7 +528,7 @@ If you don't find any data for your owned devices although you enabled the MQTT 
 
 ## Attribution
 
-- [Anker Solix Api library - Cloud Api and MQTT interface only (Inofficial)][anker-solix-api]
+- [Anker Solix Api library - Cloud Api and MQTT interface only (Unofficial)][anker-solix-api]
 - [solix2mqtt project](https://github.com/tomquist/solix2mqtt)
 - [Solaredge HA core integration](https://github.com/home-assistant/core/tree/dev/homeassistant/components/solaredge)
 - [ha-hoymiles-wifi custom integration](https://github.com/suaveolent/ha-hoymiles-wifi)
