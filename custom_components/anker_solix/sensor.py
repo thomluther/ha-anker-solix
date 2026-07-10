@@ -477,6 +477,31 @@ DEVICE_SENSORS = [
         )
         for idx in range(1, 7)
     ],
+    # repeated element
+    *[
+        AnkerSolixSensorDescription(
+            key=f"device_{idx}_battery_power",
+            translation_key="device_x_battery_power",
+            translation_placeholders={"id": f"{idx}"},
+            json_key=f"device_{idx}_battery_power",
+            native_unit_of_measurement=UnitOfPower.WATT,
+            device_class=SensorDeviceClass.POWER,
+            state_class=SensorStateClass.MEASUREMENT,
+            suggested_display_precision=0,
+            attrib_fn=lambda d, _, idx=idx: (
+                ({"state_of_charge": v} if (v := d.get(f"device_{idx}_soc")) else {})
+                | ({"expansions": v} if (v := d.get(f"device_{idx}_exp_packs")) else {})
+            ),
+            exclude_fn=lambda s, d, idx=idx: (
+                not (
+                    ({d.get("type")} - s)
+                    and d.get("mqtt_data", {}).get(f"device_{idx}_sn")
+                )
+            ),
+            mqtt=True,
+        )
+        for idx in range(1, 7)
+    ],
     AnkerSolixSensorDescription(
         key="battery_power_signed",
         translation_key="battery_power_signed",
@@ -556,18 +581,6 @@ DEVICE_SENSORS = [
         check_invalid=True,
         mqtt=True,
     ),
-    AnkerSolixSensorDescription(
-        key="home_demand_total",
-        translation_key="home_load_power",
-        json_key="home_demand_total",
-        native_unit_of_measurement=UnitOfPower.WATT,
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        value_fn=lambda d, jk, _: d.get(jk) or d.get("home_demand"),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-    ),
     # repeated element
     *[
         AnkerSolixSensorDescription(
@@ -586,6 +599,40 @@ DEVICE_SENSORS = [
         )
         for idx in range(1, 13)
     ],
+    AnkerSolixSensorDescription(
+        key="home_demand_circuit_total",
+        translation_key="home_demand_circuit_total",
+        json_key="home_demand_circuit_total",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="home_demand_other",
+        translation_key="home_demand_other",
+        json_key="home_demand_other",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="home_demand_total",
+        translation_key="home_load_power",
+        json_key="home_demand_total",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=lambda d, jk, _: d.get(jk) or d.get("home_demand"),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
     AnkerSolixSensorDescription(
         key="ac_generate_power",
         translation_key="ac_generate_power",
@@ -980,6 +1027,27 @@ DEVICE_SENSORS = [
             mqtt=True,
         )
         for idx in range(1, 6)
+    ],
+    # repeated element
+    *[
+        AnkerSolixSensorDescription(
+            key=f"device_{idx}_temperature",
+            translation_key="device_x_temperature",
+            translation_placeholders={"id": f"{idx}"},
+            json_key=f"device_{idx}_temperature",
+            native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+            device_class=SensorDeviceClass.TEMPERATURE,
+            state_class=SensorStateClass.MEASUREMENT,
+            suggested_display_precision=0,
+            exclude_fn=lambda s, d, idx=idx: (
+                not (
+                    ({d.get("type")} - s)
+                    and d.get("mqtt_data", {}).get(f"device_{idx}_sn")
+                )
+            ),
+            mqtt=True,
+        )
+        for idx in range(1, 7)
     ],
     AnkerSolixSensorDescription(
         key="sub_package_num",
@@ -1930,7 +1998,6 @@ DEVICE_SENSORS = [
                 else {}
             )
             | ({"state_of_charge": v} if (v := d.get("device_1_soc")) else {})
-            | ({"temperature": v} if (v := d.get("device_1_temperature")) else {})
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,

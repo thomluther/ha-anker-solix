@@ -53,7 +53,12 @@ from .entity import (
     get_AnkerSolixSystemInfo,
     get_AnkerSolixVehicleInfo,
 )
-from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
+from .solixapi.apitypes import (
+    ApiCategories,
+    SolarbankDeviceMetrics,
+    SolixDefaults,
+    SolixDeviceType,
+)
 from .solixapi.helpers import round_by_factor
 from .solixapi.mqtt_device import SolixMqttDevice
 from .solixapi.mqttcmdmap import VALUE_MAX, VALUE_MIN, VALUE_STEP, SolixMqttCommands
@@ -184,8 +189,8 @@ DEVICE_NUMBERS = [
         translation_key="min_soc",
         json_key="discharge_lower_limit",
         entity_category=EntityCategory.CONFIG,
-        unit_of_measurement=PERCENTAGE,
-        mode=NumberMode.BOX,
+        native_unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.SLIDER,
         native_min_value=1,
         native_max_value=20,
         native_step=1,
@@ -210,7 +215,7 @@ DEVICE_NUMBERS = [
                     }
                 )
                 and {ApiCategories.solarbank_cutoff} - s
-                and str(d.get("discharge_lower_limit",""))
+                and str(d.get("discharge_lower_limit", ""))
                 and (d.get("generation", 3) > 2 or d.get("mqtt_data"))
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
@@ -227,8 +232,8 @@ DEVICE_NUMBERS = [
         translation_key="max_soc",
         json_key="charge_upper_limit",
         entity_category=EntityCategory.CONFIG,
-        unit_of_measurement=PERCENTAGE,
-        mode=NumberMode.BOX,
+        native_unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.SLIDER,
         native_min_value=80,
         native_max_value=100,
         native_step=1,
@@ -270,8 +275,8 @@ DEVICE_NUMBERS = [
         translation_key="backup_soc",
         json_key="backup_reserve",
         entity_category=EntityCategory.CONFIG,
-        unit_of_measurement=PERCENTAGE,
-        mode=NumberMode.BOX,
+        native_unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.SLIDER,
         native_min_value=0,
         native_max_value=100,
         native_step=1,
@@ -299,6 +304,12 @@ DEVICE_NUMBERS = [
                 and ({ApiCategories.solarbank_cutoff} - s)
                 and (d.get("generation", 3) > 2)
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+                and "backup_reserve"
+                in getattr(
+                    SolarbankDeviceMetrics,
+                    d.get("device_pn") or "",
+                    {},
+                )
             )
         ),
         mqtt=True,
@@ -865,14 +876,14 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     self.native_min_value = (
                         int(v)
                         if (v := str(data.get("discharge_lower_limit", ""))).isdigit()
-                        else (self.native_min_value or 0)
+                        else 0
                     ) + 1
                     self.native_max_value = max(
                         self.native_min_value,
                         (
                             int(v)
                             if (v := str(data.get("charge_upper_limit", ""))).isdigit()
-                            else (self.native_max_value or 100)
+                            else 100
                         )
                         - 1,
                     )
@@ -1223,6 +1234,53 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     self.entity_description.mqtt_cmd == SolixMqttCommands.sb_soc_limits
                 ):
                     resp = None
+                    # prioritize MQTT value for other values since it is potentially the most current setting
+                    mdata = (
+                        mdev.get_combined_cache(
+                            api_prio=not data.get(MQTT_OVERLAY),
+                            fromFile=self.coordinator.client.testmode(),
+                        )
+                        if mdev
+                        else data
+                    )
+                    soc_min = (
+                        value
+                        if self._attribute_name == "sb_min_soc"
+                        else int(v)
+                        if (
+                            v := (
+                                str(mdata.get("power_cutoff", ""))
+                                or str(mdata.get("discharge_lower_limit", ""))
+                            )
+                            if mdata.get(MQTT_OVERLAY)
+                            else (
+                                str(mdata.get("discharge_lower_limit", ""))
+                                or str(mdata.get("power_cutoff", ""))
+                            )
+                        )
+                        else None
+                    )
+                    soc_max = (
+                        value
+                        if self._attribute_name == "sb_max_soc"
+                        else int(v)
+                        if (
+                            v := (
+                                str(mdata.get("max_soc", ""))
+                                or str(mdata.get("charge_upper_limit", ""))
+                            )
+                            if mdata.get(MQTT_OVERLAY)
+                            else (
+                                str(mdata.get("charge_upper_limit", ""))
+                                or str(mdata.get("max_soc", ""))
+                            )
+                        )
+                        else None
+                    )
+                    # skip existing backup SOC value to avoid enabling the switch
+                    soc_backup = (
+                        value if self._attribute_name == "sb_backup_soc" else None
+                    )
                     if (
                         data.get("type") == SolixDeviceType.COMBINER_BOX.value
                         or data.get("station_sn") is not None
@@ -1230,56 +1288,67 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         # control only via station setting which will issue required device MQTT commands
                         resp = await self.coordinator.client.api.set_station_parm(
                             deviceSn=self.coordinator_context,
-                            socMin=value
-                            if self._attribute_name == "sb_min_soc"
-                            else None,
-                            socMax=value
-                            if self._attribute_name == "sb_max_soc"
-                            else None,
-                            socBackup=value
-                            if self._attribute_name == "sb_backup_soc"
-                            else None,
+                            socMin=soc_min,
+                            socMax=soc_max,
+                            socBackup=soc_backup,
                             toFile=self.coordinator.client.testmode(),
                         )
                         # NOTE: Power dock systems do not apply the backup reserve switch in the cloud with cmd_type 1
                         # They need the same command with cmd_type 2 to apply cloud settings only
-                        if resp and data.get("type") == SolixDeviceType.COMBINER_BOX.value:
-                            resp = resp | await self.coordinator.client.api.set_station_parm(
-                                deviceSn=self.coordinator_context,
-                                socMin=value
-                                if self._attribute_name == "sb_min_soc"
-                                else None,
-                                socMax=value
-                                if self._attribute_name == "sb_max_soc"
-                                else None,
-                                socBackup=value
-                                if self._attribute_name == "sb_backup_soc"
-                                else None,
-                                cmdType=2,
-                                toFile=self.coordinator.client.testmode(),
+                        if (
+                            resp
+                            and data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                        ):
+                            resp = (
+                                resp
+                                | await self.coordinator.client.api.set_station_parm(
+                                    deviceSn=self.coordinator_context,
+                                    socMin=soc_min,
+                                    socMax=soc_max,
+                                    socBackup=soc_backup,
+                                    cmdType=2,
+                                    toFile=self.coordinator.client.testmode(),
+                                )
                             )
                     else:
                         # control via individual device setting + MQTT command
                         # legacy set_power_cutoff query does not trigger cloud to send MQTT commands
                         resp = await self.coordinator.client.api.set_power_cutoff(
                             deviceSn=self.coordinator_context,
-                            socMin=value
-                            if self._attribute_name == "sb_min_soc"
-                            else None,
-                            socMax=value
-                            if self._attribute_name == "sb_max_soc"
-                            else None,
+                            socMin=soc_min,
+                            socMax=soc_max,
                             toFile=self.coordinator.client.testmode(),
                         )
-                        if resp and self.entity_description.mqtt_cmd in mdev.controls:
+                        if (
+                            resp
+                            and mdev
+                            and self.entity_description.mqtt_cmd in mdev.controls
+                        ):
                             resp |= {
                                 f"mqtt_control_{mdev.sn}": await self._async_mqtt_value(
                                     mdev=mdev,
                                     value=value,
                                     cmd=self.entity_description.mqtt_cmd,
-                                    parm=self.entity_description.mqtt_cmd_parm,
-                                    # add the returned defaults for backup since states not included in MQTT data cache
-                                    parm_map={
+                                    # add the returned values or defaults for backup since states not included in MQTT data cache
+                                    parm_map=(
+                                        {"set_min_soc": int(v)}
+                                        if (
+                                            v := str(
+                                                resp.get("discharge_lower_limit", "")
+                                            )
+                                            or soc_min
+                                        )
+                                        else {}
+                                    )
+                                    | (
+                                        {"set_max_soc": int(v)}
+                                        if (
+                                            v := str(resp.get("charge_upper_limit", ""))
+                                            or soc_max
+                                        )
+                                        else {}
+                                    )
+                                    | {
                                         "set_backup_soc": resp.get("backup_reserve")
                                         or 0,
                                         "set_backup_soc_switch": resp.get(

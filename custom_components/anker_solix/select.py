@@ -494,9 +494,13 @@ DEVICE_SELECTS = [
         unit_of_measurement=PERCENTAGE,
         exclude_fn=lambda s, d: (
             not (
-                {d.get("type")}
-                - s
-                - {SolixDeviceType.SOLARBANK.value, SolixDeviceType.COMBINER_BOX.value}
+                ({d.get("type")} - s)
+                and "backup_reserve"
+                not in getattr(
+                    SolarbankDeviceMetrics,
+                    d.get("device_pn") or "",
+                    {},
+                )
             )
         ),
         mqtt=True,

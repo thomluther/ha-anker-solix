@@ -461,6 +461,9 @@
             "battery_power_signed_total": {
                 "default": "mdi:battery-charging"
             },
+            "device_x_battery_power": {
+                "default": "mdi:battery-charging"
+            },
             "dc_output_power": {
                 "default": "mdi:home-battery-outline"
             },

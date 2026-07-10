@@ -976,7 +976,18 @@
             "battery_power_signed_total": {
                 "name": "Puissance de la batterie totale"
             },
-            "other_solar_power": {
+            "device_x_battery_power": {
+                "name": "Appareil {id} puissance de la batterie",
+                "state_attributes": {
+                    "state_of_charge": {
+                        "name": "Niveau de charge %"
+                    },
+                    "expansions": {
+                        "name": "Extensions"
+                    }
+                }
+            },
+             "other_solar_power": {
                 "name": "Tierce partie solaire"
             },
             "solar_power_total": {
@@ -1138,6 +1149,12 @@
                         "name": "Circuits couplés"
                     }
                 }
+            },
+            "home_demand_circuit_total": {
+                "name": "Circuits totale"
+            },
+            "home_demand_other": {
+                "name": "Autre demande"
             },
             "ac_generate_power": {
                 "name": "Alimentation AC"
@@ -1348,6 +1365,9 @@
             },
             "temperature": {
                 "name": "Température"
+            },
+            "device_x_temperature": {
+                "name": "Appareil {id} température"
             },
             "solar_list": {
                 "name": "Onduleur"

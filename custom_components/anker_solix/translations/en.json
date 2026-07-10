@@ -976,6 +976,17 @@
             "battery_power_signed_total": {
                 "name": "Battery power total"
             },
+            "device_x_battery_power": {
+                "name": "Device {id} battery power",
+                "state_attributes": {
+                    "state_of_charge": {
+                        "name": "SoC %"
+                    },
+                    "expansions": {
+                        "name": "Expansions"
+                    }
+                }
+            },
             "other_solar_power": {
                 "name": "Solar 3rd party"
             },
@@ -1138,6 +1149,12 @@
                         "name": "Coupled circuits"
                     }
                 }
+            },
+            "home_demand_circuit_total": {
+                "name": "Circuits total"
+            },
+            "home_demand_other": {
+                "name": "Other demand"
             },
             "ac_generate_power": {
                 "name": "AC power"
@@ -1348,6 +1365,9 @@
             },
             "temperature": {
                 "name": "Temperature"
+            },
+            "device_x_temperature": {
+                "name": "Device {id} temperature"
             },
             "solar_list": {
                 "name": "Inverter"
