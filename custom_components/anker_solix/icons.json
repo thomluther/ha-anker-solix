@@ -46,6 +46,20 @@
             }
         },
         "binary_sensor": {
+            "silent_mode": {
+                "default": "mdi:volume-off",
+                "state": {
+                    "on": "mdi:volume-off",
+                    "off": "mdi:volume-high"
+                }
+            },
+            "custom_mode": {
+                "default": "mdi:calendar-clock",
+                "state": {
+                    "on": "mdi:calendar-clock",
+                    "off": "mdi:calendar-blank-outline"
+                }
+            },
             "wifi_connection": {
                 "default": "mdi:wifi-alert",
                 "state": {
@@ -526,6 +540,21 @@
             },
             "ac_input_power": {
                 "default": "mdi:power-plug-battery-outline"
+            },
+            "ac_output_working_mode": {
+                "default": "mdi:home-lightning-bolt-outline",
+                "state": {
+                    "standard": "mdi:power-plug-outline",
+                    "time_of_use": "mdi:cash-clock",
+                    "self_consumption": "mdi:home-battery-outline",
+                    "custom": "mdi:calendar-edit"
+                }
+            },
+            "backup_power_soc": {
+                "default": "mdi:battery-lock"
+            },
+            "smart_ac_output_timeout": {
+                "default": "mdi:timer-cog-outline"
             },
             "ac_input_power_total": {
                 "default": "mdi:power-plug-battery-outline"

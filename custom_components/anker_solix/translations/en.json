@@ -295,6 +295,39 @@
             }
         },
         "binary_sensor": {
+            "silent_mode": {
+                "name": "Silent mode",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                },
+                "state_attributes": {
+                    "weekdays": {
+                        "name": "Weekdays"
+                    },
+                    "start": {
+                        "name": "Start"
+                    },
+                    "end": {
+                        "name": "End"
+                    }
+                }
+            },
+            "custom_mode": {
+                "name": "Custom mode schedule",
+                "state": {
+                    "on": "On",
+                    "off": "Off"
+                },
+                "state_attributes": {
+                    "weekdays": {
+                        "name": "Weekdays"
+                    },
+                    "slots": {
+                        "name": "Slots"
+                    }
+                }
+            },
             "wifi_connection": {
                 "name": "Wifi connection",
                 "state": {
@@ -1084,6 +1117,35 @@
             },
             "ac_input_power": {
                 "name": "AC input power"
+            },
+            "ac_output_working_mode": {
+                "name": "AC output working mode",
+                "state": {
+                    "standard": "Standard (UPS)",
+                    "time_of_use": "Time of Use",
+                    "self_consumption": "Self-Consumption",
+                    "custom": "Custom"
+                },
+                "state_attributes": {
+                    "mode_code": {
+                        "name": "Mode code"
+                    },
+                    "backup_power_soc": {
+                        "name": "Backup reserve %"
+                    },
+                    "max_soc": {
+                        "name": "Max SOC %"
+                    },
+                    "tou_period_count": {
+                        "name": "TOU periods"
+                    }
+                }
+            },
+            "backup_power_soc": {
+                "name": "Backup power reserve"
+            },
+            "smart_ac_output_timeout": {
+                "name": "Smart AC output timeout"
             },
             "ac_input_power_total": {
                 "name": "AC input power_total"

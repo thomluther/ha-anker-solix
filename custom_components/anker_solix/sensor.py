@@ -2042,6 +2042,59 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
+    AnkerSolixSensorDescription(
+        # AS220 (S2000) active AC output working mode (from d9 telemetry)
+        key="ac_output_working_mode",
+        translation_key="ac_output_working_mode",
+        json_key="output_mode",
+        force_creation_fn=lambda d: d.get("device_pn") == "AS220",
+        device_class=SensorDeviceClass.ENUM,
+        options=["standard", "time_of_use", "self_consumption", "custom"],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: {
+            0: "standard",
+            1: "time_of_use",
+            2: "self_consumption",
+            3: "custom",
+        }.get(d.get(jk)),
+        attrib_fn=lambda d, _: {
+            k: v
+            for k, v in {
+                "mode_code": d.get("output_mode_raw"),
+                "backup_power_soc": d.get("backup_power_soc"),
+                "max_soc": d.get("max_soc"),
+                "tou_period_count": d.get("tou_period_count"),
+            }.items()
+            if v is not None
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        # AS220 (S2000) backup power reserve setpoint
+        key="backup_power_soc",
+        translation_key="backup_power_soc",
+        json_key="backup_power_soc",
+        force_creation_fn=lambda d: d.get("device_pn") == "AS220",
+        native_unit_of_measurement=PERCENTAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        # AS220 (S2000) smart AC output auto-off timeout
+        key="smart_ac_output_timeout",
+        translation_key="smart_ac_output_timeout",
+        json_key="smart_ac_output_timeout",
+        force_creation_fn=lambda d: d.get("device_pn") == "AS220",
+        value_fn=lambda d, jk, _: (
+            None if (v := d.get(jk)) is None else timedelta(minutes=v)
+        ),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
     # repeated element
     *[
         AnkerSolixSensorDescription(

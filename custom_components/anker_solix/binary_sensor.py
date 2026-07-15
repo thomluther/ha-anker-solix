@@ -45,6 +45,25 @@ from .solixapi.apitypes import SolarbankAiemsStatus, SolixDeviceType, SolixNetwo
 from .solixapi.helpers import get_enum_name
 from .solixapi.mqtt_device import SolixMqttDevice
 
+_WEEKDAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def _weekday_names(mask: int | None) -> str | None:
+    """Return comma-joined weekday names from a bit0=Mon..bit6=Sun bitmask."""
+    if mask is None:
+        return None
+    return (
+        ",".join(name for i, name in enumerate(_WEEKDAY_NAMES) if int(mask) & (1 << i))
+        or "none"
+    )
+
+
+def _min_to_hhmm(minutes: int | None) -> str | None:
+    """Return HH:MM from a minutes-of-day value."""
+    if minutes is None:
+        return None
+    return f"{int(minutes) // 60:02d}:{int(minutes) % 60:02d}"
+
 
 @dataclass(frozen=True)
 class AnkerSolixBinarySensorDescription(
@@ -78,6 +97,51 @@ DEVICE_SENSORS = [
             "wireless_type": d.get("wireless_type"),
         },
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixBinarySensorDescription(
+        # AS220 (S2000) silent-mode schedule (df telemetry)
+        key="silent_mode",
+        translation_key="silent_mode",
+        json_key="silent_mode_enabled",
+        value_fn=lambda d, jk: (
+            d.get(jk)
+            if d.get(jk) is not None
+            else (False if d.get("device_pn") == "AS220" else None)
+        ),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        attrib_fn=lambda d: {
+            k: v
+            for k, v in {
+                "weekdays": _weekday_names(d.get("silent_mode_weekdays")),
+                "start": _min_to_hhmm(d.get("silent_mode_start_min")),
+                "end": _min_to_hhmm(d.get("silent_mode_end_min")),
+            }.items()
+            if v is not None
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixBinarySensorDescription(
+        # AS220 (S2000) custom charge/discharge schedule (dd telemetry)
+        key="custom_mode",
+        translation_key="custom_mode",
+        json_key="custom_mode_enabled",
+        value_fn=lambda d, jk: (
+            d.get(jk)
+            if d.get(jk) is not None
+            else (False if d.get("device_pn") == "AS220" else None)
+        ),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        attrib_fn=lambda d: {
+            k: v
+            for k, v in {
+                "weekdays": _weekday_names(d.get("custom_mode_weekdays")),
+                "slots": d.get("custom_mode_slot_count"),
+            }.items()
+            if v is not None
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
     ),
     AnkerSolixBinarySensorDescription(
         key="wired_connection",
