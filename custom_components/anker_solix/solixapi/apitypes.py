@@ -745,6 +745,7 @@ AE1R0  Anker SOLIX P1 Meter                     Accessory
 AE1X0  Smart Meter Gen 2                        Accessory
 AS100  C1000 Gen 2 LE                           Portable Power Station
 AS200  Alternator Charger                       Charger
+AS220  SOLIX S2000                              Portable Power Station
 AX1S0  Power Dock Pro                           Residential Storage System
 AX170  Power Dock                               Home Backup System
 A17E1  Anker SOLIX E10                          Home Backup System
@@ -1221,6 +1222,7 @@ class SolixDeviceCapacity:
     A1785: int = (
         2048  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
     )
+    AS220: int = 2000  # SOLIX S2000 Portable Power Station (2009.6 Wh)
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
@@ -1352,6 +1354,7 @@ class SolixDeviceCategory:
     A1785: str = (
         SolixDeviceType.PPS.value
     )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
+    AS220: str = SolixDeviceType.PPS.value  # SOLIX S2000 Portable Power Station
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Solarbank PPS devices

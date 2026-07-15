@@ -40,6 +40,7 @@ MODELS = {
     "A1783",  # SOLIX C2000 Gen 2
     "A1790",  # SOLIX F3800 Power Panel PPS
     "A1790P",  # SOLIX F3800 Plus Power Panel PPS
+    "AS220",  # SOLIX S2000
 }
 
 # Define possible controls per Model
