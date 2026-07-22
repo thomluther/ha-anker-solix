@@ -680,7 +680,10 @@ class SolixMqttDevice:
                     err,
                 )
                 return None
-        self._logger.info("MQTT device %s (%s) %s", self.sn, self.pn, description)
+        if toFile:
+            self._logger.info("TESTMODE: MQTT device %s (%s) %s", self.sn, self.pn, description)
+        else:
+            self._logger.debug("MQTT device %s (%s) %s", self.sn, self.pn, description)
         return hexdata.hex()
 
     async def run_command(  # noqa: C901
