@@ -952,6 +952,312 @@ _A1783_0421 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+# S2000 forked from _A1783_0421 (C2000 Gen 2); extra AS220-only tags TBD
+_AS220_0421 = {
+    "a2": {
+        BYTES: {
+            "01": {
+                NAME: "device_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "20": {
+                NAME: "device_pn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a3": {
+        BYTES: {
+            "00": {
+                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "ac_input_limit_max",  # Max supported charge limit, seems fix
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                NAME: "unknown_a3_06",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "07": {
+                NAME: "unknown_a3_07",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "unknown_a3_08",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "10": {
+                NAME: "unknown_a3_10",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a4": {
+        BYTES: {
+            "04": {
+                NAME: "ac_input_limit",  # AC charge limit: 100-2400 W, step: 100
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                NAME: "ac_frequency",  # 60 / 50 Hz
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "13": {
+                NAME: "device_timeout_minutes",  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "15": {
+                NAME: "display_timeout_seconds",  # 0 (Never), 10, 30, 60, 300, 1800
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "17": {
+                NAME: "display_mode",  # Low (1), Medium (2), High (3)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "19": {
+                NAME: "temp_unit_fahrenheit",  # Celsius (0) or Fahrenheit (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "20": {
+                NAME: "ac_fast_charge_switch",  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "display_switch",  # Off (0), On (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                NAME: "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "23": {
+                NAME: "max_soc",  # max_soc %
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "24": {
+                NAME: "min_soc",  # min_soc %
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "28": {
+                NAME: "ac_output_timeout_minutes",  # minutes; AS220 replaces ac_output_timeout_seconds (live: 240=4h, 720=12h)
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a5": {
+        BYTES: {
+            "00": {
+                NAME: "temperature",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "charging_status_a5_1",  # (0-3): Mirrors a3
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "battery_soc",  # Battery SOC
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "battery_soh",  # Battery SOH
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a6": {
+        BYTES: {
+            "00": {
+                NAME: "output_power_total",  # Output power total (AC + DC)
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "02": {
+                NAME: "ac_input_power",  # Input power total charge
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "04": {
+                NAME: "dc_input_power_total",  # # DC input power (solar + car charging)
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                NAME: "remaining_time_hours",  # hours with factor 0.1
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+                SIGNED: False,
+            },
+            "08": {
+                NAME: "main_battery_soc",  # SOC of main battery only?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "10": {
+                NAME: "ac_input_plug_status",  # 0: Disconnected, 1: connected
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "11": {
+                NAME: "input_power_total",  # AC and DC input power combined
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        },
+    },
+    "a7": {
+        BYTES: {
+            "00": {
+                NAME: "ac_output_power_switch",  # Off (0), On (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "ac_output_power",  # AC Output power
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "03": {
+                NAME: "ac_input_power_switch",  # AC input / charging active (0/1) - live-confirmed: 0->1 when charging
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "ac_input_power_dup?",  # AC input power (dup of a6 ac_input_power) - live-confirmed = input W
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "aa": {
+        BYTES: {
+            "00": {
+                NAME: "usb_status",  # USB total status: Inactive (0), Discharging (1), Charging (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usb_power",  # Total USB power
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "d9": {
+        # AS220: AC-output mode selector + backup + Time-of-Use plan (layout differs from A1783).
+        BYTES: (
+            {
+                "00": {
+                    NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "01": {
+                    NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "02": {
+                    NAME: "backup_soc",  # backup reserve % (discharge floor)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "03": {
+                    NAME: "max_soc_dup?",  # max_soc %
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "04": {
+                    NAME: "min_soc_dup?",  # min_soc %
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "05": {
+                    NAME: "tou_slot_count",  # number of Time-of-Use periods following at byte 6+
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+            }
+            # Byte 6+ holds the TOU schedule: {tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr} x tou_slot_count
+            | {
+                k: v
+                for idx in range(1, 8)
+                for k, v in {
+                    f"{6 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_tariff",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{7 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_start_hour",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{8 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_end_hour",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                }.items()
+            }
+        )
+    },
+    "dd": {
+        # Custom-mode charge/discharge schedule (live-confirmed vs app).
+        BYTES: (
+            {
+                "00": {
+                    NAME: "custom_mode_switch",  # 0/1
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "01": {
+                    NAME: "custom_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "02": {
+                    NAME: "custom_slot_count",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+            }
+            # Byte 3+ holds slots: {mode(1=charge,2=discharge), start_min(u16 LE), end_min(u16 LE)} x custom_slot_count.
+            | {
+                k: v
+                for idx in range(1, 6)
+                for k, v in {
+                    f"{3 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_load_mode",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{4 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_start_minutes",
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        SIGNED: False,
+                    },
+                    f"{6 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_end_minutes",
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        SIGNED: False,
+                    },
+                }.items()
+            }
+        )
+    },
+    "df": {
+        # Silent-mode schedule (live-confirmed vs app)
+        BYTES: {
+            "00": {
+                NAME: "silent_mode_switch",  # 0/1
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "silent_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "silent_mode_start_minutes",  # start, minutes of day (u16 LE)
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "04": {
+                NAME: "silent_mode_end_minutes",  # end, minutes of day (u16 LE)
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+        }
+    },
+    "f0": {
+        BYTES: {
+            "00": {
+                NAME: "ac_output_power_switch_f0",  # dup of ac_output_power_switch - live-confirmed via isolation test
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "fd": {NAME: "unknown_fd_timestamp"},
+    "fe": {NAME: "msg_timestamp"},
+}
+
 _A1780_0405 = {
     # F2000(P) param info
     TOPIC: "param_info",
@@ -5104,6 +5410,59 @@ SOLIXMQTTMAP: Final[dict] = {
         "0830": _PPS_VERSIONS_0830,
         # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
         "0900": _A1783_0421,
+    },
+    "AS220": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
+        "0402": {
+            "a2": {
+                NAME: "device_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "fe": {NAME: "msg_timestamp"},
+        },
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0421": _AS220_0421,
+        # Interval: Irregular, triggered on app actions
+        "0504": {
+            "a2": {
+                BYTES: {
+                    "00": {
+                        NAME: "dc_input_power_total?",  # # DC input power (solar + car charging)
+                        TYPE: DeviceHexDataTypes.sile.value,
+                    },
+                    "02": {
+                        NAME: "remaining_time_hours?",  # hours with factor 0.1
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        FACTOR: 0.1,
+                        SIGNED: False,
+                    },
+                    "04": {
+                        NAME: "main_battery_soc?",  # SOC of main battery only?
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                }
+            },
+            "fd": {NAME: "utc_timestamp"},
+            "fe": {NAME: "msg_timestamp"},
+        },
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
+        # Interval: Only as response to status request, same content as 0421
+        "0900": _AS220_0421,
     },
     # PPS F2000
     "A1780": {
