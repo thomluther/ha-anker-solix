@@ -561,7 +561,7 @@ CMD_USB_PORT_SWITCH = {
 
 CMD_AC_PORT_SWITCH = CMD_COMMON | {
     # Command: Charger AC port switch setting
-    # COMMAND_NAME: Must be added depdning on which port is to be switched,
+    # COMMAND_NAME: Must be added depending on which port is to be switched,
     "a2": {
         NAME: "set_ac_port_switch_select",
         TYPE: DeviceHexDataTypes.ui.value,
@@ -863,7 +863,7 @@ CMD_SB_DISABLE_GRID_EXPORT_SWITCH = CMD_COMMON | {
 }
 
 CMD_SB_PV_LIMIT = CMD_COMMON | {
-    # Command: Solarbank Set max photovoltaik input limit (MPPT limit)
+    # Command: Solarbank Set max photovoltaic input limit (MPPT limit)
     COMMAND_NAME: SolixMqttCommands.sb_pv_limit_select,
     "a7": {
         NAME: "set_sb_pv_limit_select",  # 2000 or 3600
