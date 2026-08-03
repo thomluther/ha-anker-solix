@@ -196,9 +196,13 @@ API_ENDPOINTS: Final[dict] = {
     # Endpoints for standalone Anker power charger devices
     "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list",  # {"device_sn": deviceSn}
     "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
-    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
+    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"} # working day str format unknown
     "charger_get_device_setting": "mini_power/v1/app/setting/get_device_setting",  # {"device_sn": deviceSn}
-    "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"device_sn": deviceSn, "product_code": "A2345"} => Prime charger
+    "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"product_code": "A2345"} => Prime charger
+    "charger_get_manual_screensavers": "mini_power/v1/app/style/get_manual_clock_screensavers",  # {"sn": deviceSn} # empty if no manual screensavers defined for device
+    "charger_get_port_remarks": "mini_power/v1/app/setting/get_port_remarks",  # list applied port labels {"device_sn": deviceSn}
+    "charger_set_port_remark": "mini_power/v1/app/setting/set_port_remark",  # label a port {"device_sn": deviceSn, "port_name": "C3", "remark": "test"}
+    "charger_get_protocol_status": "mini_power/v1/app/setting/get_protocol_status",  # get protocol details per mode {"device_sn": deviceSn})
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -492,33 +496,29 @@ related to what, seem to work with Power Panel sites: 3 + 4 used => 7 total
     'charging_disaster_prepared/quit_disaster_prepare',
     'charging_disaster_prepared/disaster_detail', # 404 page not found (verified on A17B1)
 
-related to Prime charger models: 22 + 9 used => 31 total
+related to Prime charger models: 18 + 13 used => 31 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
     'mini_power/v1/app/setting/set_charging_mode_status',
-    'mini_power/v1/app/setting/get_port_remark',
-    'mini_power/v1/app/setting/set_port_remark',
     'mini_power/v1/app/setting/get_charging_device_identity_new_status',
     'mini_power/v1/app/setting/set_charging_device_identity_new_status',
     'mini_power/v1/app/setting/set_charging_device_identity_status',
     'mini_power/v1/app/setting/get_charging_device_identity_status_default_true',
     'mini_power/v1/app/setting/set_charging_device_identity_status_default_true',
-    'mini_power/v1/app/setting/get_power_range_support_protocols',
-    'mini_power/v1/app/setting/get_protocol_status',
+    'mini_power/v1/app/setting/get_power_range_support_protocols',  # {"device_model": "A2345"} list empty
     'mini_power/v1/app/setting/set_protocol_status',
     'mini_power/v1/app/setting/get_port_protocol_status',
     'mini_power/v1/app/setting/set_port_protocol_status',
     'mini_power/v1/app/setting/set_mode_sub_status',
+    'mini_power/v1/app/setting/set_compatibility_status',
     'mini_power/v1/app/egg/add_easter_egg_trigger_record',
     'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
-    'mini_power/v1/app/setting/set_compatibility_status',
-    'mini_power/v1/app/style/get_manual_clock_screensavers',
     'mini_power/v1/app/style/add_manual_clock_screensavers',
     'mini_power/v1/app/style/delete_manual_clock_screensavers',
-    'mini_power/v1/app/style/get_url',
-    'mini_power/v1/app/style/get_screensaver_img_url',
-    'mini_power/v1/app/style/set_manual_clock_screensaver_name',
+    'mini_power/v1/app/style/get_url', # get long from short url {"sn": deviceSn, "short_url": "/anker_power/edge/screen_saver/2026/07/27/4724xxxxxxxAsGf1ur.cropped_image.jpg"}
+    'mini_power/v1/app/style/get_screensaver_img_url', # get long url from id {"sn": deviceSn, "id": 41043, "type": "manual"}
+    'mini_power/v1/app/style/set_manual_clock_screensaver_name', # {"sn": deviceSn, "screensaver_id": 41043, "name": "Fireworks"}
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -619,6 +619,9 @@ API_FILEPREFIXES: Final[dict] = {
     "charger_get_statistics": "charger_statistics",
     "charger_get_device_setting": "charger_device_setting",
     "charger_get_screensavers": "charger_screensavers",
+    "charger_get_manual_screensavers": "charger_manual_screensavers",
+    "charger_get_port_remarks": "charger_port_remarks",
+    "charger_get_protocol_status": "charger_protocol_status",
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
@@ -744,6 +747,7 @@ AE100  SOLIX Power Dock                         Plug-in Home Battery
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 AE1X0  Smart Meter Gen 2                        Accessory
 AS100  C1000 Gen 2 LE                           Portable Power Station
+AS220  SOLIX S2000                              Portable Power Station
 AS200  Alternator Charger                       Charger
 AX1S0  Power Dock Pro                           Residential Storage System
 AX170  Power Dock                               Home Backup System
@@ -1015,10 +1019,15 @@ class SolixParmType(Enum):
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
     SOLARBANK_POWERDOCK = "16"  # get power dock SN
-    SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
+    SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock, Not used with Gen 4
     SOLARBANK_POWER_LIMIT = "19"  # cannot be queried, but only set. get_power_limit query will show active data
     # SOLARBANK_EV_CHARGER = "23" # EV Charger switch?
     SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
+    SOLARBANK_SOC = "27"  # Gen 4 SOC settings (no longer in 18)
+    SOLARBANK_GRID_EXPORT = "28"  # Gen 4 grid export settings (no longer in 18)
+    SOLARBANK_PEAK_SHAVING = (
+        "30"  # Gen 4 peak_shaving_soc, peak_shaving_switch\, peak_shaving_upper_limit
+    )
     # SOLARBANK_BACKUP = "33" # backup install and ats setting
 
 
@@ -1156,6 +1165,7 @@ class ApiCategories:
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
     charger_energy: str = "charger_energy"
+    charger_usb_settings: str = "charger_usb_settings"
     powerpanel_energy: str = "powerpanel_energy"
     powerpanel_avg_power: str = "powerpanel_avg_power"
     hes_energy: str = "hes_energy"
@@ -1205,6 +1215,7 @@ class SolixDeviceCapacity:
     A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
     AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
+    AS220: int = 2010  # SOLIX S2000 Portable Power Station
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -1308,56 +1319,43 @@ class SolixDeviceCategory:
     A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug Gen 1/2
     SHPPS: str = SolixDeviceType.SMARTPLUG.value  # Shelly Smart Plug
     # Portable Power Stations (PPS)
-    A1720: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 521 Portable Power Station
-    A1722: str = SolixDeviceType.PPS.value  # SOLIX C300 Portable Power Station
-    A1723: str = SolixDeviceType.PPS.value  # SOLIX C300X Portable Power Station
-    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200(X) Portable Power Station
-    A1726: str = SolixDeviceType.PPS.value  # SOLIX C300 DC Portable Power Station
-    A1727: str = SolixDeviceType.PPS.value  # SOLIX C200 DC Portable Power Station
-    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X DC Portable Power Station
-    A1729: str = SolixDeviceType.PPS.value  # SOLIX C200X DC Portable Power Station
-    A1751: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 535 Portable Power Station
-    A1753: str = SolixDeviceType.PPS.value  # SOLIX C800 Portable Power Station
-    A1754: str = SolixDeviceType.PPS.value  # SOLIX C800 Plus Portable Power Station
-    A1755: str = SolixDeviceType.PPS.value  # SOLIX C800X Portable Power Station
-    A1760: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 555 Portable Power Station
-    A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) Portable Power Station
-    A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
-    A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 Portable Power Station
-    A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 Portable Power Station
-    AS100: str = (
-        SolixDeviceType.PPS.value
-    )  # SOLIX C1000X Gen 2 LE Portable Power Station
-    A1770: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 757 Portable Power Station
-    A1771: str = SolixDeviceType.PPS.value  # SOLIX F1200 Portable Power Station
-    A1772: str = SolixDeviceType.PPS.value  # SOLIX F1500 Portable Power Station
-    A1780: str = (
-        SolixDeviceType.PPS.value
-    )  # SOLIX F2000 Portable Power Station (PowerHouse 767) with Wifi
-    A1780P: str = (
-        SolixDeviceType.PPS.value
-    )  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767)
-    A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
+    A1720: str = SolixDeviceType.PPS.value  # Anker PowerHouse 521 PPS
+    A1722: str = SolixDeviceType.PPS.value  # SOLIX C300 PPS
+    A1723: str = SolixDeviceType.PPS.value  # SOLIX C300X PPS
+    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200(X) PPS
+    A1726: str = SolixDeviceType.PPS.value  # SOLIX C300 DC PPS
+    A1727: str = SolixDeviceType.PPS.value  # SOLIX C200 DC PPS
+    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X DC PPS
+    A1729: str = SolixDeviceType.PPS.value  # SOLIX C200X DC PPS
+    A1751: str = SolixDeviceType.PPS.value  # Anker PowerHouse 535 PPS
+    A1753: str = SolixDeviceType.PPS.value  # SOLIX C800 PPS
+    A1754: str = SolixDeviceType.PPS.value  # SOLIX C800 Plus PPS
+    A1755: str = SolixDeviceType.PPS.value  # SOLIX C800X PPS
+    A1760: str = SolixDeviceType.PPS.value  # Anker PowerHouse 555 PPS
+    A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) PPS
+    A1762: str = SolixDeviceType.PPS.value  # SOLIX PPS 1000
+    A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 PPS
+    A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 PPS
+    AS100: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 LE PPS
+    AS220: str = SolixDeviceType.PPS.value  # SOLIX S2000 PPS
+    A1770: str = SolixDeviceType.PPS.value  # Anker PowerHouse 757 PPS
+    A1771: str = SolixDeviceType.PPS.value  # SOLIX F1200 PPS
+    A1772: str = SolixDeviceType.PPS.value  # SOLIX F1500 PPS
+    A1780: str = SolixDeviceType.PPS.value  # SOLIX F2000 PPS (PowerHouse 767) with Wifi
+    A1780P: str = SolixDeviceType.PPS.value  # SOLIX F2000 Plus PPS (PowerHouse 767)
+    A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 PPS
     A1783: str = (
         SolixDeviceType.PPS.value
-    )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    )  # SOLIX C2000 Gen 2 PPS with Smart Meter support
     A1785: str = (
         SolixDeviceType.PPS.value
-    )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
-    A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
-    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
+    )  # SOLIX C2000X Gen 2 PPS with Smart Meter support
+    A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 PPS
+    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus PPS
     # Solarbank PPS devices
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX F3000 Portable Power Station with SM support (US Market)
+    )  # SOLIX F3000 PPS with SM support (US Market)
     # Power Panels (Home_backup)
     A17B1: str = (
         SolixDeviceType.POWERPANEL.value
@@ -1459,6 +1457,44 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "solar_power_3",
         "solar_power_4",
+        "ac_power",
+        "to_home_load",
+        "pei_heating_power",
+        "grid_to_battery_power",
+        "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
+        "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
+        "backup_reserve",
+        "backup_reserve_switch",
+    }
+    # SOLIX Solarbank 4 E5000, with 4 MPPT channel and AC socket
+    AE103: ClassVar[set[str]] = {
+        "sub_package_num",
+        "solar_power_1",
+        "solar_power_2",
+        "solar_power_3",
+        "solar_power_4",
+        "ac_power",
+        "to_home_load",
+        "pei_heating_power",
+        "grid_to_battery_power",
+        "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
+        "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
+        "backup_reserve",
+        "backup_reserve_switch",
+    }
+    # SOLIX Solarbank Max AC
+    A17E2: ClassVar[set[str]] = {
+        "sub_package_num",
         "ac_power",
         "to_home_load",
         "pei_heating_power",
@@ -1707,6 +1743,14 @@ class SolixBatteryStatus(StrEnum):
     sleep = "3"
     unknown = "unknown"
 
+class SolixPpsBatteryStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS battery status."""
+
+    inactive = "0"
+    discharging = "1"
+    charging = "2"
+    unknown = "unknown"
+
 
 class SolixRoleStatus(StrEnum):
     """Str Enumeration for Anker Solix role status of devices."""
@@ -1740,6 +1784,55 @@ class SolixMode(StrEnum):
     off = "0"
     on = "1"
     auto = "2"
+    unknown = "unknown"
+
+
+class SolixPpsUsageMode(StrEnum):
+    """Str Enumeration for Anker Solix PPS usage mode."""
+
+    # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+    standard = "0" # UPS mode
+    time_of_use = "1"
+    self_consumption = "2"
+    custom = "3"
+    unknown = "unknown"
+
+
+class SolixChargerUsageMode(StrEnum):
+    """Str Enumeration for Anker Solix charger usage mode."""
+
+    ai_power = "1"
+    port_priority = "2"
+    dual_laptop = "3"
+    low_power = "4"
+    custom = "5" # Only available if charging_mode_status enabled in device settings of A2345
+    unknown = "unknown"
+
+
+class SolixKnobMode(StrEnum):
+    """Str Enumeration for Anker Solix Knob mode."""
+
+    forward = "0"
+    backward = "1"
+    unknown = "unknown"
+
+
+class SolixClockMode(StrEnum):
+    """Str Enumeration for Anker Solix Clock mode."""
+
+    _12h = "0"
+    _24h = "1"
+    unknown = "unknown"
+
+
+class SolixDisplayTimeoutMode(StrEnum):
+    """Str Enumeration for Anker Solix display timeout mode."""
+
+    _0 = "0"
+    _30 = "1"
+    _60 = "2"
+    _300 = "3"
+    _1800 = "4"
     unknown = "unknown"
 
 
@@ -1780,6 +1873,15 @@ class SolixPpsOutputModeV2(StrEnum):
 
     normal = "0"
     smart = "1"
+    unknown = "unknown"
+
+
+class SolixPpsLoadMode(StrEnum):
+    """Str Enumeration for Anker Solix PPS load mode."""
+
+    # 1: Charge; 2: Discharge
+    charge = "1"
+    discharge = "2"
     unknown = "unknown"
 
 
@@ -1974,6 +2076,34 @@ class SolixPlugTimerMode(StrEnum):
     start = "1"
     paused = "2"
     running = "3"
+    unknown = "unknown"
+
+
+class SolixPortId(StrEnum):
+    """Str Enumeration for Solix Port Identifiers."""
+
+    usbc_1 = "0"
+    usbc_2 = "1"
+    usbc_3 = "2"
+    usbc_4 = "3"
+    usba = "4"
+    unknown = "unknown"
+
+
+class SolixPortPriority(StrEnum):
+    """Str Enumeration for Solix Port Priorities."""
+
+    off = "0"
+    c1 = "1"
+    c2 = "2"
+    c1_c2 = "3"
+    c3 = "4"
+    c1_c3 = "5"
+    c2_c3 = "6"
+    c4 = "8"
+    c1_c4 = "9"
+    c2_c4 = "10"
+    c3_c4 = "12"
     unknown = "unknown"
 
 

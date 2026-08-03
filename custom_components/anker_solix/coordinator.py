@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, callback, HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_call_later
@@ -92,7 +92,9 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                     logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
                     "Coordinator %s found additional %s, reloading platforms to setup entities",
                     self.client.api.apisession.nickname,
-                    "MQTT values" if mcount > self.mqtt_values else "devices",
+                    f"MQTT values ({diff})"
+                    if (diff := max(0, mcount - self.mqtt_values))
+                    else f"devices ({len(ids - self.registered_devices)})",
                 )
                 await self.async_reload_config(register_devices=data)
             # trigger device removal if not found anymore
@@ -210,7 +212,6 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             ):
                 await self.async_remove_device(devices=removed)
 
-    @callback
     def update_callback(self, sn: str | None = None, **args) -> None:
         """Define callback for coordinator updates upon MQTT value changes."""
         LOGGER.debug(

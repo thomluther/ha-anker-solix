@@ -216,6 +216,9 @@
             },
             "charge_voltage_limit": {
                 "default": "mdi:speedometer"
+            },
+            "display_brightness": {
+                "default": "mdi:brightness-percent"
             }
         },
         "select": {
@@ -329,6 +332,15 @@
                     "smart": "mdi:flash-auto"
                 }
             },
+            "pps_usage_mode": {
+                "default": "mdi:cog-play",
+                "state": {
+                    "standard": "mdi:power-plug",
+                    "time_of_use": "mdi:battery-clock",
+                    "self_consumption": "mdi:refresh-auto",
+                    "custom": "mdi:account-clock"
+                }
+            },
             "max_evcharge_current": {
                 "default": "mdi:arrow-collapse-up"
             },
@@ -376,6 +388,9 @@
                     "different": "mdi:calendar-weekend"
                 }
             },
+            "charger_usage_mode": {
+                "default": "mdi:cog-play"
+            },
             "charger_mode": {
                 "default": "mdi:car-battery",
                 "state": {
@@ -407,6 +422,22 @@
             },
             "vehicle_variant": {
                 "default": "mdi:car-info"
+            },
+            "display_theme": {
+                "default": "mdi:panorama-variant-outline"
+            },
+            "knob_mode": {
+                "default": "mdi:knob"
+            },
+            "clock_mode": {
+                "default": "mdi:progress-clock",
+                "state": {
+                    "12h": "mdi:hours-12",
+                    "24h": "mdi:hours-24"
+                }
+            },
+            "charger_port_priority": {
+                "default": "mdi:priority-high"
             }
         },
         "sensor": {
@@ -913,12 +944,6 @@
             "mqtt_statistic": {
                 "default": "mdi:chart-bar-stacked"
             },
-            "usbc_x_power": {
-                "default": "mdi:usb-c-port"
-            },
-            "usba_x_power": {
-                "default": "mdi:usb-port"
-            },
             "dc_12v_x_power": {
                 "default": "mdi:record-circle-outline"
             },
@@ -1065,7 +1090,7 @@
             "usbc_x_switch": {
                 "default": "mdi:usb-c-port"
             },
-            "usba_switch": {
+            "usba_x_switch": {
                 "default": "mdi:usb-port"
             },
             "plug_lock_switch": {
@@ -1133,6 +1158,57 @@
                     "on": "mdi:timer-play-outline",
                     "off": "mdi:timer-remove-outline"
                 }
+            },
+            "clock_switch": {
+                "default": "mdi:clock-remove-outline",
+                "state": {
+                    "on": "mdi:clock-digital",
+                    "off": "mdi:clock-remove-outline"
+                }
+            },
+            "holiday_switch": {
+                "default": "mdi:firework-off",
+                "state": {
+                    "on": "mdi:firework",
+                    "off": "mdi:firework-off"
+                }
+            },
+            "usb_x_timer_switch": {
+                "default": "mdi:timer-remove-outline",
+                "state": {
+                    "on": "mdi:timer-play-outline",
+                    "off": "mdi:timer-remove-outline"
+                }
+            },
+            "usb_x_start_switch": {
+                "default": "mdi:clock-start"
+            },
+            "usb_x_end_switch": {
+                "default": "mdi:clock-end"
+            },
+            "silent_mode_switch": {
+                "default": "mdi:volume-high",
+                "state": {
+                    "on": "mdi:volume-off",
+                    "off": "mdi:volume-high"
+                }
+            }
+        },
+        "text":{
+            "port_x_remark": {
+                "default": "mdi:note-text-outline"
+            },
+            "clock_display_weekdays": {
+                "default": "mdi:calendar-multiselect"
+            },
+            "usb_x_start_weekdays": {
+                "default": "mdi:calendar-multiselect"
+            },
+            "usb_x_end_weekdays": {
+                "default": "mdi:calendar-multiselect"
+            },
+            "silent_mode_weekdays": {
+                "default": "mdi:calendar-multiselect"
             }
         },
         "time":{
@@ -1152,6 +1228,27 @@
                 "default": "mdi:clock-start"
             },
             "weekend_end_time": {
+                "default": "mdi:clock-end"
+            },
+            "clock_display_start_time": {
+                "default": "mdi:clock-start"
+            },
+            "clock_display_end_time": {
+                "default": "mdi:clock-end"
+            },
+            "usb_x_timer_seconds": {
+                "default": "mdi:timer-edit-outline"
+            },
+            "usb_x_start_time": {
+                "default": "mdi:clock-start"
+            },
+            "usb_x_end_time": {
+                "default": "mdi:clock-end"
+            },
+            "silent_mode_start_minutes": {
+                "default": "mdi:clock-start"
+            },
+            "silent_mode_end_minutes": {
                 "default": "mdi:clock-end"
             }
         }

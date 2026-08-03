@@ -297,6 +297,16 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                     AnkerSolixPicturePath, dev_type
                 ):
                     self._attr_entity_picture = getattr(AnkerSolixPicturePath, dev_type)
+                # replace picture with web image or None if no local file available
+                if (
+                    self._attr_entity_picture
+                    and not Path(
+                        self._attr_entity_picture.replace(
+                            AnkerSolixPicturePath.LOCALPATH, wwwroot
+                        )
+                    ).is_file()
+                ):
+                    self._attr_entity_picture = data.get("img_url") or None
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}

@@ -40,12 +40,14 @@ MODELS = {
     "A1783",  # SOLIX C2000 Gen 2
     "A1790",  # SOLIX F3800 Power Panel PPS
     "A1790P",  # SOLIX F3800 Plus Power Panel PPS
+    "AS220",  # SOLIX S2000
 }
 
 # Define possible controls per Model
 # Those commands are only supported once also described for a message type in the model mapping (except realtime trigger)
 # Models can be removed from a feature to block command usage even if message type is described in the mapping
 FEATURES = {
+    SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
     SolixMqttCommands.temp_unit_switch: MODELS,
     SolixMqttCommands.device_max_load: MODELS,
@@ -56,6 +58,7 @@ FEATURES = {
     SolixMqttCommands.ac_fast_charge_switch: MODELS,
     SolixMqttCommands.ac_output_mode_select: MODELS,
     SolixMqttCommands.ac_output_timeout_seconds: MODELS,
+    SolixMqttCommands.ac_output_timeout_minutes: MODELS,
     SolixMqttCommands.dc_output_switch: MODELS,
     SolixMqttCommands.dc_12v_output_mode_select: MODELS,
     SolixMqttCommands.dc_output_timeout_seconds: MODELS,
@@ -67,6 +70,11 @@ FEATURES = {
     SolixMqttCommands.light_mode_select: MODELS,
     SolixMqttCommands.port_memory_switch: MODELS,
     SolixMqttCommands.soc_limits: MODELS,
+    SolixMqttCommands.pps_usage_mode: MODELS,
+    SolixMqttCommands.silent_schedule: MODELS,
+    # SolixMqttCommands.pps_custom_schedule: MODELS,  # TODO: Enable once fully supported
+    # SolixMqttCommands.pps_tou_schedule: MODELS,  # TODO: Enable once fully supported
+    # SolixMqttCommands.backup_soc: MODELS,  # TODO: Enable once fully supported
 }
 
 
@@ -78,6 +86,58 @@ class SolixMqttDevicePps(SolixMqttDevice):
         self.models = MODELS
         self.features = FEATURES
         super().__init__(api_instance=api_instance, device_sn=device_sn)
+
+    def update_device(
+        self, device: dict, dynamic_descriptions: dict | None = None
+    ) -> None:
+        """Define callback for Api device updates."""
+        super().update_device(device=device, dynamic_descriptions=dynamic_descriptions)
+        # TODO: Call methods to extract actual presets from plans if available
+
+    def update_custom_plan_presets(
+        self,
+        fromFile: bool = False,
+    ) -> dict | None:
+        """Update the presets from actual custom plan based on time.
+
+        Args:
+            fromFile: If True, consider the mocked cache
+
+        Returns:
+            dict: Custom plan presets as updated in mqttdata. None will be returned upon error.
+
+        Example output:
+            {"preset_load_mode": 1}
+
+        """
+
+        cache = self.get_status(fromFile=fromFile)
+        presets = {}
+        schedule = cache.get("custom_mode_schedule") or {}  # noqa: F841
+        # TODO: Add code to extract active preset
+        return presets
+
+    def update_tou_plan_presets(
+        self,
+        fromFile: bool = False,
+    ) -> dict | None:
+        """Update the presets from actual time of use plan based on time.
+
+        Args:
+            fromFile: If True, consider the mocked cache
+
+        Returns:
+            dict: TOU plan presets as updated in mqttdata. None will be returned upon error.
+
+        Example output:
+            {"preset_tariff": 1}
+
+        """
+        cache = self.get_status(fromFile=fromFile)
+        presets = {}
+        schedule = cache.get("tou_mode_schedule") or {}  # noqa: F841
+        # TODO: Add code to extract active preset
+        return presets
 
     async def set_ac_output(
         self,

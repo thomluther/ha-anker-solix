@@ -1,6 +1,7 @@
 """Binary sensor platform for anker_solix."""
 
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from random import randrange
 from typing import Any
@@ -56,7 +57,7 @@ class AnkerSolixBinarySensorDescription(
     mqtt: bool = False
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], bool | None] = lambda d, jk: d.get(jk)
-    attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
@@ -67,7 +68,7 @@ DEVICE_SENSORS = [
         json_key="wifi_online",
         entity_category=EntityCategory.DIAGNOSTIC,
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
-        attrib_fn=lambda d: {
+        attrib_fn=lambda d, _: {
             "wifi_ssid": d.get("wifi_name"),
             "wifi_signal": " ".join([d.get("wifi_signal") or "--", PERCENTAGE]),
             "rssi": " ".join(
@@ -94,7 +95,7 @@ DEVICE_SENSORS = [
         translation_key="ai_ems_enabled",
         json_key="enable",
         value_fn=lambda d, jk: ((d.get("schedule") or {}).get("ai_ems") or {}).get(jk),
-        attrib_fn=lambda d: {
+        attrib_fn=lambda d, _: {
             "status_code": (
                 code := ((d.get("schedule") or {}).get("ai_ems") or {}).get("status")
             ),
@@ -115,7 +116,7 @@ DEVICE_SENSORS = [
         key="auto_switch",
         translation_key="auto_switch",
         json_key="auto_switch",
-        attrib_fn=lambda d: {
+        attrib_fn=lambda d, _: {
             "priority": d.get("priority"),
             "running_time": d.get("running_time"),
         },
@@ -137,7 +138,7 @@ DEVICE_SENSORS = [
         translation_key="protection_status",
         json_key="protection_status",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        attrib_fn=lambda d: {
+        attrib_fn=lambda d, _: {
             "charge_threshold": d.get("charge_protect_threshold"),
             "discharge_threshold": d.get("discharge_protect_threshold"),
         },
@@ -211,7 +212,7 @@ SITE_SENSORS = [
         json_key="connected",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         value_fn=lambda d, jk: (d.get("hes_info") or {}).get(jk),
-        attrib_fn=lambda d: {
+        attrib_fn=lambda d, _: {
             "network": get_enum_name(
                 SolixNetworkStatus,
                 str((d.get("hes_info") or {}).get("net")),
@@ -231,7 +232,7 @@ ACCOUNT_SENSORS = [
         translation_key="has_unread_msg",
         json_key="has_unread_msg",
         # entity_category=EntityCategory.DIAGNOSTIC,
-        attrib_fn=lambda d: {
+        attrib_fn=lambda d, _: {
             "system_msg": None
             if (val := d.get("system_msg")) is None
             else "on"
@@ -491,7 +492,10 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
                     api_prio=not mdev.device.get(MQTT_OVERLAY),
                     fromFile=self.coordinator.client.testmode(),
                 )
-            self._attr_extra_state_attributes = self.entity_description.attrib_fn(data)
+            with suppress(ValueError, TypeError):
+                self._attr_extra_state_attributes = self.entity_description.attrib_fn(
+                    data, self.entity_description.json_key
+                )
         return self._attr_extra_state_attributes
 
     def update_state_value(self):

@@ -1,13 +1,12 @@
-"""Time platform for anker_solix."""
+"""Text platform for anker_solix."""
 
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import datetime, time
 import json
 from typing import Any
 
-from homeassistant.components.time import TimeEntity, TimeEntityDescription
+from homeassistant.components.text import TextEntity, TextEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EXCLUDE, EntityCategory
 from homeassistant.core import HomeAssistant, callback
@@ -16,7 +15,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-# from homeassistant.util.dt import UTC
 from .const import (
     ALLOW_TESTMODE,
     ATTRIBUTION,
@@ -36,18 +34,16 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import ApiCategories, SolixDeviceType
-from .solixapi.helpers import convert_time_minutes, convert_time_seconds
 from .solixapi.mqtt_device import SolixMqttDevice
 from .solixapi.mqttcmdmap import SolixMqttCommands
 
 
 @dataclass(frozen=True)
-class AnkerSolixTimeDescription(
-    TimeEntityDescription, AnkerSolixEntityRequiredKeyMixin
+class AnkerSolixTextDescription(
+    TextEntityDescription, AnkerSolixEntityRequiredKeyMixin
 ):
-    """Time entity description with optional keys."""
+    """Text entity description with optional keys."""
 
-    force_creation: bool = False
     mqtt: bool = False
     mqtt_cmd: str | None = None
     mqtt_cmd_parm: str | None = None
@@ -55,173 +51,70 @@ class AnkerSolixTimeDescription(
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
     attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
+    force_creation_fn: Callable[[dict], bool] = lambda d: False
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
-DEVICE_TIMES = [
-    AnkerSolixTimeDescription(
-        key="light_off_start_time",
-        translation_key="light_off_start_time",
-        json_key="light_off_start_time",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.light_off_schedule,
-        mqtt_cmd_parm="set_light_off_start_time",
-    ),
-    AnkerSolixTimeDescription(
-        key="light_off_end_time",
-        translation_key="light_off_end_time",
-        json_key="light_off_end_time",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.light_off_schedule,
-        mqtt_cmd_parm="set_light_off_end_time",
-    ),
-    AnkerSolixTimeDescription(
-        key="week_start_time",
-        translation_key="week_start_time",
-        json_key="week_start_time",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
-        mqtt_cmd_parm="set_week_start_time",
-    ),
-    AnkerSolixTimeDescription(
-        key="week_end_time",
-        translation_key="week_end_time",
-        json_key="week_end_time",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
-        mqtt_cmd_parm="set_week_end_time",
-    ),
-    AnkerSolixTimeDescription(
-        key="weekend_start_time",
-        translation_key="weekend_start_time",
-        json_key="weekend_start_time",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
-        mqtt_cmd_parm="set_weekend_start_time",
-    ),
-    AnkerSolixTimeDescription(
-        key="weekend_end_time",
-        translation_key="weekend_end_time",
-        json_key="weekend_end_time",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time.fromisoformat(str(v)) if (v := d.get(jk, "")) else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.ev_charger_schedule_times,
-        mqtt_cmd_parm="set_weekend_end_time",
-    ),
-    AnkerSolixTimeDescription(
-        key="clock_display_start_time",
-        translation_key="clock_display_start_time",
-        json_key="clock_display_start_hour",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time(hour=v, minute=d.get("clock_display_start_minute", 0))
-            if str(v := d.get(jk, ""))
-            else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
-    ),
-    AnkerSolixTimeDescription(
-        key="clock_display_end_time",
-        translation_key="clock_display_end_time",
-        json_key="clock_display_end_hour",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            time(hour=v, minute=d.get("clock_display_end_minute", 0))
-            if str(v := d.get(jk, ""))
-            else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
-    ),
+DEVICE_TEXTS = [
     # repeated element
     *[
-        AnkerSolixTimeDescription(
-            key=f"{idx}_timer_seconds",
-            translation_key="usb_x_timer_seconds",
-            translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
-            },
-            json_key=f"{idx}_timer_seconds",
-            value_fn=lambda d, jk: (
-                convert_time_seconds(v) if str(v := d.get(jk, "")) else None
-            ),
-            attrib_fn=lambda d, _, idx=idx: (
-                {
-                    "remaining_time": (
-                        convert_time_seconds(
-                            max(
-                                0,
-                                int(rem - datetime.now().timestamp() + ts),
-                            )
-                        )
-                    )
-                }
-                if str(rem := d.get(f"{idx}_timer_remaining_seconds", ""))
-                and str(ts := d.get(f"{idx}_timer_remaining_timestamp", ""))
-                else {}
-            ),
+        AnkerSolixTextDescription(
+            key=f"port_{idx.lower()}_remark",
+            translation_key="port_x_remark",
+            translation_placeholders={"id": f"{idx}"},
+            json_key="remark",
+            native_max=30,
+            entity_category=EntityCategory.CONFIG,
+            value_fn=lambda d, jk, idx=idx: next(
+                iter(
+                    item
+                    for item in (d.get("port_remarks") or [])
+                    if item.get("port_name") == f"{idx}"
+                ),
+                {},
+            ).get(jk),
+            force_creation_fn=lambda d: bool("port_remarks" in d),
             exclude_fn=lambda s, d: (
-                not (
-                    ({d.get("type")} - s) and ({ApiCategories.charger_usb_settings} - s)
-                )
+                not (({d.get("type")} - s) and ({ApiCategories.charger_usb_settings} - s))
             ),
-            mqtt=True,
-            mqtt_cmd=getattr(SolixMqttCommands, f"{idx}_port_timer", None),
-            mqtt_cmd_parm="set_port_timer_seconds",
         )
         for idx in [
-            "usbc_1",
-            "usbc_2",
-            "usbc_3",
-            "usbc_4",
-            "usba",
+            "C1",
+            "C2",
+            "C3",
+            "C4",
+            "A1",
+            "A2",
         ]
     ],
+    AnkerSolixTextDescription(
+        key="clock_display_weekdays",
+        translation_key="clock_display_weekdays",
+        json_key="clock_display_weekdays",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda d, jk: (
+            val.strip("[]").replace("'", "").replace(" ", "").title()
+            if (val := str(d.get(jk, "")))
+            else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        mqtt_cmd_parm="set_clock_display_weekdays",
+    ),
     # repeated element
     *[
-        AnkerSolixTimeDescription(
-            key=f"{idx}_start_time",
-            translation_key="usb_x_start_time",
+        AnkerSolixTextDescription(
+            key=f"{idx}_start_weekdays",
+            translation_key="usb_x_start_weekdays",
             translation_placeholders={
                 "id": f"{idx.strip('usb').replace('_', '').upper()}"
             },
-            json_key=f"{idx}_start_hour",
+            json_key=f"{idx}_start_weekdays",
             entity_category=EntityCategory.CONFIG,
-            value_fn=lambda d, jk, idx=idx: (
-                time(hour=v, minute=d.get(f"{idx}_start_minute", 0))
-                if str(v := d.get(jk, ""))
+            value_fn=lambda d, jk: (
+                val.strip("[]").replace("'", "").replace(" ", "").title()
+                if (val := str(d.get(jk, "")))
                 else None
             ),
             exclude_fn=lambda s, d: (
@@ -231,6 +124,7 @@ DEVICE_TIMES = [
             ),
             mqtt=True,
             mqtt_cmd=getattr(SolixMqttCommands, f"{idx}_start_time", None),
+            mqtt_cmd_parm="set_port_time_weekdays",
         )
         for idx in [
             "usbc_1",
@@ -242,17 +136,17 @@ DEVICE_TIMES = [
     ],
     # repeated element
     *[
-        AnkerSolixTimeDescription(
-            key=f"{idx}_end_time",
-            translation_key="usb_x_end_time",
+        AnkerSolixTextDescription(
+            key=f"{idx}_end_weekdays",
+            translation_key="usb_x_end_weekdays",
             translation_placeholders={
                 "id": f"{idx.strip('usb').replace('_', '').upper()}"
             },
-            json_key=f"{idx}_end_hour",
+            json_key=f"{idx}_end_weekdays",
             entity_category=EntityCategory.CONFIG,
-            value_fn=lambda d, jk, idx=idx: (
-                time(hour=v, minute=d.get(f"{idx}_end_minute", 0))
-                if str(v := d.get(jk, ""))
+            value_fn=lambda d, jk: (
+                val.strip("[]").replace("'", "").replace(" ", "").title()
+                if (val := str(d.get(jk, "")))
                 else None
             ),
             exclude_fn=lambda s, d: (
@@ -262,6 +156,7 @@ DEVICE_TIMES = [
             ),
             mqtt=True,
             mqtt_cmd=getattr(SolixMqttCommands, f"{idx}_end_time", None),
+            mqtt_cmd_parm="set_port_time_weekdays",
         )
         for idx in [
             "usbc_1",
@@ -271,39 +166,28 @@ DEVICE_TIMES = [
             "usba",
         ]
     ],
-    AnkerSolixTimeDescription(
-        key="silent_mode_start_minutes",
-        translation_key="silent_mode_start_minutes",
-        json_key="silent_mode_start_minutes",
+    AnkerSolixTextDescription(
+        key="silent_mode_weekdays",
+        translation_key="silent_mode_weekdays",
+        json_key="silent_mode_weekdays",
         entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: (
-            convert_time_minutes(v) if str(v := d.get(jk, "")) else None
+            val.strip("[]").replace("'", "").replace(" ", "").title()
+            if (val := str(d.get(jk, "")))
+            else None
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.silent_schedule,
-        mqtt_cmd_parm="set_silent_mode_start_minutes",
-    ),
-    AnkerSolixTimeDescription(
-        key="silent_mode_end_minutes",
-        translation_key="silent_mode_end_minutes",
-        json_key="silent_mode_end_minutes",
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda d, jk: (
-            convert_time_minutes(v) if str(v := d.get(jk, "")) else None
-        ),
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.silent_schedule,
-        mqtt_cmd_parm="set_silent_mode_end_minutes",
+        mqtt_cmd_parm="set_silent_mode_weekdays",
     ),
 ]
 
-SITE_TIMES = []
+SITE_TEXTS = []
 
-ACCOUNT_TIMES = []
+ACCOUNT_TEXTS = []
 
-VEHICLE_TIMES = []
+VEHICLE_TEXTS = []
 
 
 async def async_setup_entry(
@@ -311,7 +195,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up time platform."""
+    """Set up text platform."""
 
     coordinator = hass.data[DOMAIN].get(entry.entry_id)
     entities = []
@@ -325,19 +209,19 @@ async def async_setup_entry(
             if (data_type := data.get("type")) == SolixDeviceType.SYSTEM.value:
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
-                entity_list = SITE_TIMES
+                entity_list = SITE_TEXTS
             elif data_type == SolixDeviceType.ACCOUNT.value:
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
-                entity_list = ACCOUNT_TIMES
+                entity_list = ACCOUNT_TEXTS
             elif data_type == SolixDeviceType.VEHICLE.value:
                 # vehicle entry in data
                 entity_type = AnkerSolixEntityType.VEHICLE
-                entity_list = VEHICLE_TIMES
+                entity_list = VEHICLE_TEXTS
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
-                entity_list = DEVICE_TIMES
+                entity_list = DEVICE_TEXTS
                 # get MQTT device combined values for creation of entities
                 if mdev := coordinator.client.get_mqtt_device(sn=context):
                     mdata = mdev.get_combined_cache(
@@ -351,7 +235,7 @@ async def async_setup_entry(
                 or (
                     not desc.exclude_fn(set(entry.options.get(CONF_EXCLUDE, [])), data)
                     and (
-                        desc.force_creation
+                        desc.force_creation_fn(data)
                         # filter MQTT entities and provide combined or only api cache
                         # Entities that should not be created without MQTT data need to use exclude option
                         or (
@@ -366,25 +250,25 @@ async def async_setup_entry(
                     )
                 )
             ):
-                entity = AnkerSolixTime(coordinator, description, context, entity_type)
+                entity = AnkerSolixText(coordinator, description, context, entity_type)
                 entities.append(entity)
 
     # create the entities from the list
     async_add_entities(entities)
 
 
-class AnkerSolixTime(CoordinatorEntity, TimeEntity):
-    """anker_solix time class."""
+class AnkerSolixText(CoordinatorEntity, TextEntity):
+    """anker_solix text class."""
 
     coordinator: AnkerSolixDataUpdateCoordinator
-    entity_description: AnkerSolixTimeDescription
+    entity_description: AnkerSolixTextDescription
     _attr_has_entity_name = True
     _unrecorded_attributes = frozenset()
 
     def __init__(
         self,
         coordinator: AnkerSolixDataUpdateCoordinator,
-        description: AnkerSolixTimeDescription,
+        description: AnkerSolixTextDescription,
         context: str,
         entity_type: str,
     ) -> None:
@@ -500,24 +384,25 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
         # Mark availability based on value
         self._attr_available = self._native_value is not None
 
-    async def async_set_value(self, value: time) -> None:
+    async def async_set_value(self, value: str) -> None:
         """Set the value of the entity.
 
         Args:
-            value (time): The value to set.
+            value (str): The value to set.
 
         """
         if (
-            self.coordinator
-            and self.coordinator_context in self.coordinator.data
-            and self._native_value is not None
+            self.coordinator and self.coordinator_context in self.coordinator.data
+            # and self._native_value is not None
         ):
             # data = self.coordinator.data.get(self.coordinator_context) or {}
             # Raise alert to frontend if change not allowed in testmode
             if (
                 self.coordinator.client.testmode()
                 and not self.entity_description.mqtt_cmd
-                # and self._attribute_name != "" # Exclude Api entites that can be changed in testmode
+                and not self._attribute_name.endswith(
+                    "_remark"
+                )  # Exclude Api entites that can be changed in testmode
             ):
                 raise ServiceValidationError(
                     f"{self.entity_id} cannot be used while configuration is running in testmode",
@@ -542,14 +427,18 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
                     translation_placeholders={"entity_id": self.entity_id},
                 )
             # Trigger Api calls depending on changed entity
-            if self._attribute_name == "":
-                # Insert Api commands here once required
+            if self._attribute_name.endswith("_remark"):
                 LOGGER.debug(
                     "'%s' change to '%s' will be applied",
                     self.entity_id,
                     str(value),
                 )
-                resp = None
+                resp = await self.coordinator.client.api.set_charger_port_remark(
+                    deviceSn=self.coordinator_context,
+                    portName=self._attribute_name.split("_")[1],
+                    remark=str(value),
+                    toFile=self.coordinator.client.testmode(),
+                )
                 if isinstance(resp, dict) and ALLOW_TESTMODE:
                     LOGGER.info(
                         "%s: Applied settings for '%s' change to '%s':\n%s",
@@ -571,53 +460,20 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
                     str(value),
                     self.entity_description.mqtt_cmd,
                 )
-                if self._attribute_name.startswith(
-                    "clock"
-                ) and self._attribute_name.endswith("_time"):
-                    await self._async_mqtt_time(
-                        mdev=mdev,
-                        parm_map={
-                            f"set_{self._attribute_name.replace('_time', '')}_hour": value.hour,
-                            f"set_{self._attribute_name.replace('_time', '')}_minute": value.minute,
-                        },
-                    )
-                elif self._attribute_name.startswith(
-                    "usb"
-                ) and self._attribute_name.endswith("_time"):
-                    await self._async_mqtt_time(
-                        mdev=mdev,
-                        parm_map={
-                            "set_port_time_hour": value.hour,
-                            "set_port_time_minute": value.minute,
-                        },
-                    )
-                elif self._attribute_name.endswith("_timer_seconds"):
-                    # convert time into seconds
-                    await self._async_mqtt_time(
-                        mdev=mdev,
-                        value=convert_time_seconds(value),
-                    )
-                elif self._attribute_name.endswith("_minutes"):
-                    # convert time into minutes
-                    await self._async_mqtt_time(
-                        mdev=mdev,
-                        value=convert_time_minutes(value),
-                    )
-                else:
-                    await self._async_mqtt_time(mdev=mdev, value=value)
+                await self._async_mqtt_text(mdev=mdev, value=value)
 
             # trigger coordinator update with api dictionary data
             await self.coordinator.async_refresh_data_from_apidict()
 
-    async def _async_mqtt_time(
+    async def _async_mqtt_text(
         self,
         mdev: SolixMqttDevice,
-        value: str | time | int | None = None,
+        value: str,
         cmd: str | None = None,
         parm: str | None = None,
         parm_map: dict | None = None,
     ) -> dict | None:
-        """Use MQTT device control to modify time setting."""
+        """Use MQTT device control to modify text setting."""
         resp = None
         if not isinstance(cmd, str):
             cmd = self.entity_description.mqtt_cmd
@@ -626,47 +482,24 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
         if not isinstance(parm_map, dict):
             parm_map = {}
         try:
-            if isinstance(value, time):
-                cmdvalue = value.isoformat()
-            else:
-                cmdvalue = value
-            # Use helper methods for certain MQTT commands that require special handling
-            if self._attribute_name in [
-                "week_start_time",
-                "week_end_time",
-                "weekend_start_time",
-                "weekend_end_time",
-            ]:
-                # change dependend times and weekend mode upon time changes
-                resp = await mdev.set_ev_charger_schedule(
-                    week_start_time=parm_map.get(self.entity_description.mqtt_cmd_parm)
-                    or cmdvalue
-                    if self._attribute_name == "week_start_time"
-                    else None,
-                    week_end_time=parm_map.get(self.entity_description.mqtt_cmd_parm)
-                    or cmdvalue
-                    if self._attribute_name == "week_end_time"
-                    else None,
-                    weekend_start_time=parm_map.get(
-                        self.entity_description.mqtt_cmd_parm
-                    )
-                    or cmdvalue
-                    if self._attribute_name == "weekend_start_time"
-                    else None,
-                    weekend_end_time=parm_map.get(self.entity_description.mqtt_cmd_parm)
-                    or cmdvalue
-                    if self._attribute_name == "weekend_end_time"
-                    else None,
-                    toFile=self.coordinator.client.testmode(),
+            if str(parm).endswith("_weekdays") or str(cmd).endswith("_weekdays"):
+                # convert value into list
+                cmdvalue = (
+                    str(value)
+                    .strip("[]()")
+                    .replace(";", ",")
+                    .replace(" ", "")
+                    .split(",")
                 )
             else:
-                resp = await mdev.run_command(
-                    cmd=cmd,
-                    parm=parm,
-                    value=cmdvalue,
-                    parm_map=parm_map,
-                    toFile=self.coordinator.client.testmode(),
-                )
+                cmdvalue = str(value)
+            resp = await mdev.run_command(
+                cmd=cmd,
+                parm=parm,
+                value=cmdvalue,
+                parm_map=parm_map,
+                toFile=self.coordinator.client.testmode(),
+            )
             if isinstance(resp, dict):
                 if ALLOW_TESTMODE:
                     LOGGER.info(

@@ -25,6 +25,8 @@ from .mqttcmdmap import (
     COMMAND_NAME,
     EMBEDDED,
     LENGTH,
+    MASK_STATE,
+    MASK_VALUE,
     NAME,
     OFFSET,
     TYPE,
@@ -1103,14 +1105,15 @@ def generate_mqtt_command(
                     # use all subfields to update datafield
                     pos = 0
                     length = 0
+                    mask_state = None
                     for key, subfield in (
                         enumerate(subfields)
                         if isinstance(subfields, list)
                         else subfields.items()
                     ):
-                        name = subfield.get(NAME)
-                        value = parameters.get(name)
-                        if isinstance(key, int):
+                        if isinstance(key, int) and isinstance(subfield, dict):
+                            name = subfield.get(NAME)
+                            value = parameters.get(name)
                             # relative byte position last position
                             pos += length + int(subfield.get(OFFSET, 0))
                             typ = subfield.get(TYPE)
@@ -1139,11 +1142,26 @@ def generate_mqtt_command(
                         else:
                             pos = int(key)
 
-                        datafield.update(
-                            value=value,
-                            offset=pos,
-                            desc=subfield | dynamic_descriptions.get(name, {}),
-                        )
+                        # use all bitmask fields if defined as list
+                        for bitfield in (
+                            subfield if isinstance(subfield, list) else [subfield]
+                        ):
+                            name = bitfield.get(NAME)
+                            value = parameters.get(name)
+                            ms = bitfield.get(MASK_STATE)
+                            # Init datafield with old byte value if bitmask control and new mask_state
+                            if ms != mask_state and (mask_state := ms):
+                                if (ms_value := dynamic_descriptions.get(name,{}).get(
+                                    MASK_VALUE)) is not None:
+                                    # Extend with zeros if needed
+                                    if len(datafield.f_value) < pos + 1:
+                                        datafield.f_value.extend(b"\x00" * (pos + 1 - len(datafield.f_value)))
+                                    datafield.f_value[pos] = ms_value
+                            datafield.update(
+                                value=value,
+                                offset=pos,  # use same position for bitmask updates
+                                desc=bitfield | dynamic_descriptions.get(name, {}),
+                            )
                     hexdata.update_field(datafield)
                 else:
                     value = parameters.get(name)

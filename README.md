@@ -65,6 +65,7 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Power Panels](#power-panels)
    * [Home Energy Systems (HES)](#home-energy-systems-hes)
    * [Home Backup Systems](#home-backup-systems)
+   * [250W Prime Charger](#250w-prime-charger)
    * [Other devices](#other-devices)
 1. **[MQTT managed devices](#mqtt-managed-devices)**
 1. **[Installation via HACS (recommended)](#installation-via-hacs-recommended)**
@@ -153,11 +154,11 @@ Device type | Description
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- A17X7US: Anker Smart Meter for US grid **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
-`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1725/A1727/A1729: C200(X) (DC) Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1781: F2600 Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
+`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1725/A1727/A1729: C200(X) (DC) Portable Power Station **(MQTT monitoring & control)**<br>- A1753/A1754/A1755: C800(P/X) Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1781: F2600 Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**- AS220: S2000 Portable Power Station **(MQTT monitoring & control)**<br>
 `solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(basic Api & MQTT monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
-`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(MQTT monitoring & partial control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & partial control)**<br>- AS200: Alternator Charger **(MQTT monitoring & control)**
+`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(Api & MQTT monitoring & control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & partial control)**<br>- AS200: Alternator Charger **(MQTT monitoring & control)**
 `ev_charger` | Anker Solix EV charger devices:<br>- A5191: V1 Smart EV Charger **(MQTT monitoring & control)**
 `home_backup` | Anker Solix Home Backup devices:<br>- A17E1: Solix E10 (US market) **(Basic MQTT monitoring)**<br>- AX170: Power Dock for Solix E10 (US market) **(Basic MQTT monitoring)**
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the Anker Solix V1 EV Charger.
@@ -406,6 +407,22 @@ Anker released new device types for the US market that fall into this new [Home 
 The power dock publishes MQTT messages received from the connected devices as embedded messages. This data and the state of the control entities is represented with the originating E10 device. For more details, see [devices in MQTT local mode](INFO.md#devices-in-mqtt-local-mode) in the [User Guide](INFO.md).
 
 
+### 250W Prime Charger
+
+The 250W Prime Charger A2345 is an USB charger device which is primarily managed through MQTT. However, it is unique to some regard and provides customization capabilities for the display themes and charging modes or USB port protocols and remarks, which are stored in the cloud via the Api. Version 3.8.0 of the integration added full support for these enhanced customizations in the cloud, and allows to apply them via new MQTT controls that have been added.
+The integration also added and provides all USB port control entities per default, which may now clutter your device panel. Beside the previous 5 port switches, there are now 9 additional control entities per port (~45 port control entities), allowing you to adjust:
+- Timer time and activation
+- Start and End times, weekdays and their activation
+- Port Remarks
+
+If you want to clean unused control entities, you can either manually deactivate them for a selective cleanup, or exclude the 'Charger USB settings' category from your hub configuration. If the category is excluded, all port controls (except the power switches) will be removed from HA.
+
+Since weekdays entities require multiple or any day selection, there is no single entity type provided by HA to cover such multiple choice states. Therefore a simple text entity is used to display the selected weekdays. To modify weekdays, a comma separated list of 3 char day abbreviations in English is required. To select all weekdays, you can optionally enter 'all'. Any order and character case in the input is supported, while unsupported options will be dropped once the entity is modified.
+
+> [!IMPORTANT]
+> Customizations can only be created and modified through the mobile app. The integration only allows to apply customizations with their actual setting details as saved in the cloud. Those cloud customizations are only refreshed within the device details update interval of your hub configuration, that runs only every 10 update intervals per default (so every 10 minutes). If you modify the customizations through the mobile app and want them being available immediately in the integration, you can enforce a device details refresh cycle for your hub configuration through any hub device details refresh button.
+
+
 ### Other devices
 
 Other devices not listed in the support table are neither supported nor tested with the Api library or the HA integration. Be aware that devices are only supported by the Anker cloud Api if they can be added into a Power System. Stand alone devices such as portable power stations (PPS), power charger or power cooler, can only be controlled through the MQTT server, and therefore require usage of the owner account and a description for all relevant MQTT message and command types that are being used by each particular device model.
@@ -442,7 +459,7 @@ Depending on how devices publish their data in regular, status request or real t
 Integration version 3.5.0 added control entities for MQTT manageable devices. If the various MQTT commands for the device model have been decoded and described by the community, the integration can now control those devices as well and provide similar management experience as the mobile app.
 
 > [!IMPORTANT]
-> Most of those controls cannot be validated by the developer since they require owner access to the real device type. Use the controls with care and validate them appropriately. You may open an issue with a system export and you have to use the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to analyze the MQTT commands from your mobile app for debugging and problem fixing.
+> Most of those controls cannot be validated by the developer since they require owner access to the real device type. Use the controls with care and validate them appropriately. You may open an issue with an anonymized [system export](INFO.md#export-systems-action) and you have to use the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) to analyze the MQTT commands from your mobile app for debugging and problem fixing.
 
 Integration version 3.6.3 added full support for devices in 'MQTT local mode' and their embedded MQTT messages provided by the control hub device. Such devices cannot be controlled directly through MQTT, neither through the integration nor through the Anker mobile App. For more details, see [devices in MQTT local mode](INFO.md#devices-in-mqtt-local-mode) in the [User Guide](INFO.md).
 
@@ -607,3 +624,29 @@ Spoiler: This shows integration capabilities before Solarbank 2 was supported wi
 [![6 Monate Anker SOLIX mit Home Assistant](https://img.youtube.com/vi/_0wyATg7nnk/mqdefault.jpg)](https://www.youtube.com/watch?v=_0wyATg7nnk)
 
 Spoiler: Alkly explains his experience with Solarbank 1 and 2, the HA integration 2.4.1 and 0 grid export. Furthermore he shows how to integrate the solarbank into the energy dashboard, based on [this discussion](https://github.com/thomluther/ha-anker-solix/discussions/16)
+
+
+### Featured energy cards and integrations
+
+While there are plenty of energy cards available in the HA Community Store HACS, I want to highlight few of them that may provide unique visualization.
+
+#### Helios Energy card and forecast integration
+
+Highly recommended energy card from user @ReikanYsora to visualize the sun movement around YOUR home with building shadows, including live power flow and forecast data.
+
+<p align="left">
+<img src="doc/helios-energy-card.png" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px"/>
+</p>
+
+It is super easy to install and configure and primarily uses your existing **HA energy dashboard recorder data** to visualize your energy history. Try it out, you will love it. It is available on HACS. For more details on the card and the self learning forecast integration, including HACS installation links, please visit the [Helios home page](https://helios-ha.org/de/).
+
+
+#### Lumina Energy card
+
+A very nice dashboard card from user @Giorgio866 to visualize your power flow, including configuration capabilities for switches and other controls right from the card.
+
+<p align="left">
+<img src="https://raw.githubusercontent.com/Giorgio866/lumina-energy-card/main/Images/screen.jpeg" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px"/>
+</p>
+
+

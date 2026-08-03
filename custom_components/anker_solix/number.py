@@ -80,7 +80,7 @@ class AnkerSolixNumberDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
-    attrib_fn: Callable[[dict, str], dict | None] = lambda d, ctx: None
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
     force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
 
@@ -169,14 +169,14 @@ DEVICE_NUMBERS = [
         native_step=1,
         mode=NumberMode.BOX,
         value_fn=lambda d, jk: (d.get("customized") or {}).get(jk) or d.get(jk),
-        attrib_fn=lambda d, _: (
+        attrib_fn=lambda d, jk: (
             {
                 "expansions": d.get("sub_package_num"),
-                "calculated": d.get("battery_capacity"),
+                "calculated": d.get(jk),
             }
             | (
                 {"customized": c}
-                if (c := (d.get("customized") or {}).get("battery_capacity"))
+                if (c := (d.get("customized") or {}).get(jk))
                 else {}
             )
         ),
@@ -330,6 +330,17 @@ DEVICE_NUMBERS = [
         mqtt_cmd=SolixMqttCommands.ac_output_timeout_seconds,
     ),
     AnkerSolixNumberDescription(
+        key="ac_output_timeout",
+        translation_key="ac_output_timeout",
+        json_key="ac_output_timeout_minutes",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=NumberDeviceClass.DURATION,
+        entity_category=EntityCategory.CONFIG,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_output_timeout_minutes,
+    ),
+    AnkerSolixNumberDescription(
         key="dc_output_timeout",
         translation_key="dc_output_timeout",
         json_key="dc_output_timeout_seconds",
@@ -436,6 +447,18 @@ DEVICE_NUMBERS = [
         dynamic_options=True,
         ignore_opt_count=True,
     ),
+    AnkerSolixNumberDescription(
+        # Display brightness
+        key="display_brightness",
+        translation_key="display_brightness",
+        json_key="display_brightness",
+        entity_category=EntityCategory.CONFIG,
+        native_unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.SLIDER,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.display_brightness,
+        ignore_opt_count=True,
+    ),
 ]
 
 SITE_NUMBERS = [
@@ -467,9 +490,9 @@ SITE_NUMBERS = [
             ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(jk)
             or None
         ),
-        attrib_fn=lambda d, _: (
+        attrib_fn=lambda d, jk: (
             {"customized": c}
-            if (c := (d.get("customized") or {}).get("dynamic_price_fee"))
+            if (c := (d.get("customized") or {}).get(jk))
             else {}
         ),
         native_min_value=0,
@@ -492,9 +515,9 @@ SITE_NUMBERS = [
             ((d.get("site_details") or {}).get("dynamic_price_details") or {}).get(jk)
             or None
         ),
-        attrib_fn=lambda d, _: (
+        attrib_fn=lambda d, jk: (
             {"customized": c}
-            if (c := (d.get("customized") or {}).get("dynamic_price_vat"))
+            if (c := (d.get("customized") or {}).get(jk))
             else {}
         ),
         native_min_value=0,
@@ -729,7 +752,10 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 {},
             )
         # define number range from control description
-        if self._attribute_name in ["ac_output_timeout", "dc_output_timeout"]:
+        if self._attribute_name in [
+            "ac_output_timeout",
+            "dc_output_timeout",
+        ] and self.entity_description.json_key.endswith("seconds"):
             # convert seconds to minutes for easier usage in HA
             self.native_min_value = (
                 round(num / 60)
@@ -789,7 +815,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 )
             with suppress(ValueError, TypeError):
                 self._attr_extra_state_attributes = self.entity_description.attrib_fn(
-                    data, self.coordinator_context
+                    data, self.entity_description.json_key
                 )
         return self._attr_extra_state_attributes
 
@@ -888,7 +914,10 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         - 1,
                     )
                 # convert seconds to minutes
-                elif self._attribute_name in ["ac_output_timeout", "dc_output_timeout"]:
+                elif self._attribute_name in [
+                    "ac_output_timeout",
+                    "dc_output_timeout",
+                ] and self.entity_description.json_key.endswith("seconds"):
                     if self._native_value is not None:
                         self._native_value = round(self._native_value / 60)
         else:
@@ -1382,7 +1411,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     if self._attribute_name in [
                         "ac_output_timeout",
                         "dc_output_timeout",
-                    ]:
+                    ] and self.entity_description.json_key.endswith("seconds"):
                         value = round(value * 60)
                     await self._async_mqtt_value(mdev=mdev, value=value)
             else:

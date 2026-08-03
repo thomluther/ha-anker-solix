@@ -47,7 +47,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.7.0.0"
+VERSION: str = "3.7.1.0"
 
 
 class AnkerSolixApiExport:
@@ -494,7 +494,7 @@ class AnkerSolixApiExport:
             for model in {
                 dev.get("device_pn")
                 for dev in self.api_power.devices.values()
-                if dev.get("device_pn") in ["A17C5", "A5101", "A5102", "A5103"]
+                if dev.get("device_pn") in ["A17C5", "A5101", "A5102", "A5103", "AE103", "A17E2"]
             }:
                 self._logger.info(
                     "Exporting dynamic price providers for model '%s'...", model
@@ -948,6 +948,7 @@ class AnkerSolixApiExport:
                 )
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
+                screensavers = None
 
                 if device.get("type") == api.SolixDeviceType.SOLARBANK.value:
                     self._logger.info("Exporting solar info settings for solarbank...")
@@ -1179,6 +1180,16 @@ class AnkerSolixApiExport:
 
                 # export data for Charger devices
                 if device.get("type") == api.SolixDeviceType.CHARGER.value:
+                    # query screensavers once for all supported models
+                    if screensavers is None:
+                        screensavers = True
+                        for model in ["A2345"]:
+                            self._logger.info("Exporting screensavers for model '%s'...", model)
+                            await self.query(
+                                endpoint=API_ENDPOINTS["charger_get_screensavers"],
+                                filename=f"{API_FILEPREFIXES['charger_get_screensavers']}_{model}.json",
+                                payload={"product_code": model},
+                            )
                     model = device.get("device_pn") or ""
                     self._logger.info(
                         "Exporting Power Charger specific data for device %s SN %s...",
@@ -1186,28 +1197,46 @@ class AnkerSolixApiExport:
                         self._randomize(sn, "_sn"),
                     )
                     await self.query(
-                        endpoint=API_ENDPOINTS["charger_get_screensavers"],
-                        filename=f"{API_FILEPREFIXES['charger_get_screensavers']}_{self._randomize(sn, '_sn')}.json",
-                        payload={"device_sn": sn, "product_code": model},
+                        endpoint=API_ENDPOINTS["charger_get_manual_screensavers"],
+                        filename=f"{API_FILEPREFIXES['charger_get_manual_screensavers']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"sn": sn},
                         replace=[(sn, "<deviceSn>")],
+                        admin=admin,
                     )
                     await self.query(
                         endpoint=API_ENDPOINTS["charger_get_charging_modes"],
                         filename=f"{API_FILEPREFIXES['charger_get_charging_modes']}_{self._randomize(sn, '_sn')}.json",
                         payload={"device_sn": sn},
                         replace=[(sn, "<deviceSn>")],
+                        admin=admin,
                     )
                     await self.query(
                         endpoint=API_ENDPOINTS["charger_get_triggers"],
                         filename=f"{API_FILEPREFIXES['charger_get_triggers']}_{self._randomize(sn, '_sn')}.json",
                         payload={"device_sn": sn},
                         replace=[(sn, "<deviceSn>")],
+                        admin=admin,
                     )
                     await self.query(
                         endpoint=API_ENDPOINTS["charger_get_device_setting"],
                         filename=f"{API_FILEPREFIXES['charger_get_device_setting']}_{self._randomize(sn, '_sn')}.json",
                         payload={"device_sn": sn},
                         replace=[(sn, "<deviceSn>")],
+                        admin=admin,
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["charger_get_port_remarks"],
+                        filename=f"{API_FILEPREFIXES['charger_get_port_remarks']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                        admin=admin,
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["charger_get_protocol_status"],
+                        filename=f"{API_FILEPREFIXES['charger_get_protocol_status']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                        admin=admin,
                     )
 
         except (errors.AnkerSolixError, ClientError) as err:

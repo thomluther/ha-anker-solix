@@ -654,6 +654,7 @@ async def async_check_and_remove_devices(
             SolixDeviceType.EV_CHARGER.value,
             SolixDeviceType.CHARGER.value,
             SolixDeviceType.COMBINER_BOX.value,
+            SolixDeviceType.HOME_BACKUP,
             ApiCategories.solarbank_energy,
             ApiCategories.smartmeter_energy,
             ApiCategories.smartplug_energy,
@@ -680,6 +681,11 @@ async def async_check_and_remove_devices(
             ApiCategories.smartmeter_energy,
         } & excluded:
             excluded = excluded | {SolixDeviceType.SMARTMETER.value}
+        # Subcategories for mini Charger only
+        if {
+            ApiCategories.charger_usb_settings,
+        } & excluded:
+            excluded = excluded | {SolixDeviceType.CHARGER.value}
         # Subcategories for Power Panels only
         if {
             ApiCategories.powerpanel_avg_power,
@@ -710,6 +716,7 @@ async def async_check_and_remove_devices(
                 SolixDeviceType.EV_CHARGER.value,
                 SolixDeviceType.CHARGER.value,
                 SolixDeviceType.COMBINER_BOX.value,
+                SolixDeviceType.HOME_BACKUP,
                 SolixDeviceType.POWERBANK.value,
                 SolixDeviceType.POWERCOOLER.value,
             }

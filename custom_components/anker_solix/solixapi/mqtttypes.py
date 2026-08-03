@@ -8,16 +8,18 @@ import struct
 from typing import Any, Self
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
-from .helpers import round_by_factor
+from .helpers import convert_time, convert_timestamp, convert_weekdays, round_by_factor
 from .mqttcmdmap import (
     BYTES,
     COMMAND_LIST,
     EMBEDDED,
     FACTOR,
     LENGTH,
+    MASK,
     NAME,
     OFFSET,
     SIGNED,
+    STATE_CONVERTER,
     STATE_NAME,
     TYPE,
     VALUE_DEFAULT,
@@ -390,6 +392,24 @@ class DeviceHexDataField:
         values = values or {}
         if not hexdata:
             return values
+        # allow direct type overwrites, recursive calls with modified type won't modify type again
+        if (
+            fieldtype != DeviceHexDataTypes.strb.value
+            and isinstance(fieldmap, dict)
+            and (typ := fieldmap.get(TYPE))
+        ):
+            fieldtype = (
+                typ
+                if typ
+                in [
+                    DeviceHexDataTypes.str.value,
+                    DeviceHexDataTypes.ui.value,
+                    DeviceHexDataTypes.sile.value,
+                    DeviceHexDataTypes.var.value,
+                    DeviceHexDataTypes.bin.value,
+                ]
+                else fieldtype
+            )
         match fieldtype:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, string (Base type), use only printable part
@@ -405,17 +425,30 @@ class DeviceHexDataField:
                             if c.isprintable()
                         )
             case DeviceHexDataTypes.ui.value:
-                # 1 byte fix, unsigned int (Base type)
-                if name := fieldmap.get(NAME):
-                    factor = fieldmap.get(FACTOR, 1)
-                    values[name] = round_by_factor(
-                        int.from_bytes(
-                            hexdata,
-                            signed=fieldmap.get(SIGNED) is True,
+                if fieldmap.get(BYTES, {}):
+                    # extract found bytes description like DeviceHexDataTypes.bin
+                    values.update(
+                        self.extract_value(
+                            hexdata=hexdata,
+                            fieldtype=DeviceHexDataTypes.bin.value,
+                            fieldmap=fieldmap.get(BYTES, {}),
                         )
-                        * factor,
-                        factor,
                     )
+                elif name := fieldmap.get(NAME):
+                    # 1 byte fix, unsigned int (Base type)
+                    if name.endswith("_weekdays"):
+                        # special case for weekday bitmask
+                        values[name] = convert_weekdays(hexdata)
+                    else:
+                        factor = fieldmap.get(FACTOR, 1)
+                        values[name] = round_by_factor(
+                            int.from_bytes(
+                                hexdata,
+                                signed=fieldmap.get(SIGNED) is True,
+                            )
+                            * factor,
+                            factor,
+                        )
             case DeviceHexDataTypes.sile.value:
                 # sile can also be a 2 byte str for some fields (weird), this should then be described like a binary field
                 if fieldmap.get(BYTES, {}):
@@ -529,7 +562,7 @@ class DeviceHexDataField:
                             fieldmap=flds,
                         )
                     )
-                else:
+                elif flds:
                     # fix bytemap position from mapping
                     for key, bytemap in flds.items():
                         pos = int(key)
@@ -557,6 +590,21 @@ class DeviceHexDataField:
                                     fieldmap={key: bytemap},
                                 )
                             )
+                elif name := fieldmap.get(NAME):
+                    # Extract binary field structure
+                    if (converter := fieldmap.get(STATE_CONVERTER)) and callable(
+                        converter
+                    ):
+                        values[name] = converter(hexdata, None, None)
+                        # add used extracted binary to provide valid hex field for extracted length
+                        if (
+                            fieldmap.get(LENGTH) is None
+                            and not 1 <= self.f_length - len(hexdata) <= 2
+                        ):
+                            values[f"{name}_hex"] = converter(None, values[name], None)
+                    else:
+                        values[name] = hexdata
+
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 if len(hexdata) == 4 and (name := fieldmap.get(NAME, "")):
@@ -606,18 +654,23 @@ class DeviceHexDataField:
                     else:
                         length = bytemap.get(LENGTH, 0)
                     if length == 0:
-                        # first byte is length of bytes following for field
-                        length = int.from_bytes(self.f_value[pos : pos + 1])
-                        pos += 1
-                        values.update(
-                            self.extract_value(
-                                hexdata=self.f_value[pos : pos + length],
-                                fieldtype=bytemap.get(
-                                    TYPE, DeviceHexDataTypes.unk.value
-                                ),
-                                fieldmap=bytemap,
-                            )
+                        # if type binary, length may vary and be unknown
+                        if ftype == DeviceHexDataTypes.bin.value:
+                            length = max(0, len(self.f_value) - pos)
+                        else:
+                            # first byte is length of bytes following for field
+                            length = int.from_bytes(self.f_value[pos : pos + 1])
+                            pos += 1
+                        extracted = self.extract_value(
+                            hexdata=self.f_value[pos : pos + length],
+                            fieldtype=bytemap.get(TYPE, DeviceHexDataTypes.unk.value),
+                            fieldmap=bytemap,
                         )
+                        if ftype == DeviceHexDataTypes.bin.value:
+                            length = len(
+                                extracted.pop(f"{bytemap.get(NAME, '')}_hex", {})
+                            )
+                        values.update(extracted)
                     else:
                         values.update(
                             self.extract_value(
@@ -673,16 +726,27 @@ class DeviceHexDataField:
             raise TypeError(
                 "Error updating DeviceHexDataField: Missing field identifier"
             )
+        if not isinstance(desc, dict):
+            desc = {}
+        # check if field is a bitmask
+        mask = desc.get(MASK)
         try:
             if offset is None:
-                self.f_value = self.encode_value(
-                    value=value, fieldtype=fieldtype, desc=desc
-                )
+                val = self.encode_value(value=value, fieldtype=fieldtype, desc=desc)
+                # merge bitmask with existing field value if required
+                if mask and val and len(val) == 1:
+                    self.f_value = bytearray(
+                        (
+                            (val[0] & mask) | ((self.f_value[:1] or [0])[0] & ~mask)
+                        ).to_bytes()
+                    )
+                else:
+                    self.f_value = val
             # update only subfield value for requested byte offset and subfield type
             elif val := self.encode_value(
                 value=value, fieldtype=desc.get(TYPE), desc=desc
             ):
-                # Extend with zeros if needed
+                # Extend with zeros if needed to fill gap
                 if len(self.f_value) < offset:
                     self.f_value.extend(b"\x00" * (offset - len(self.f_value)))
                 # avoid str field exceeds overall field length
@@ -695,6 +759,14 @@ class DeviceHexDataField:
                     # check if field has length byte and adjust it
                     if desc.get(LENGTH, 1) <= 0:
                         val[0] = len(val) - 1
+                # merge bitmask with existing field value if required
+                if mask and val and len(val) == 1:
+                    val = bytearray(
+                        (
+                            (val[0] & mask)
+                            | ((self.f_value[offset : offset + 1] or [0])[0] & ~mask)
+                        ).to_bytes()
+                    )
                 self.f_value[offset : offset + len(val)] = val
             # Update data length
             self.f_length = len(self.f_type) + len(self.f_value)
@@ -708,20 +780,24 @@ class DeviceHexDataField:
         else:
             return self
 
-    def encode_value(
+    def encode_value(  # noqa: C901
         self,
-        value: float | str | dict,
+        value: Any,
         fieldtype: bytearray | bytes | None = None,
         desc: dict | None = None,
     ) -> bytearray | None:
         """Return the encoded hex value according to existing or provided base type and field description."""
-        if not isinstance(fieldtype, bytearray | bytes):
-            fieldtype = self.f_type
         if not isinstance(desc, dict):
             desc = {}
+        # check if field is a bitmask
+        mask = desc.get(MASK)
+        if not isinstance(fieldtype, bytearray | bytes):
+            # default to single byte ui value if bitmask
+            fieldtype = DeviceHexDataTypes.ui.value if mask else self.f_type
         # Ignore options for fields following, since their value was already updated during validation
         options = None if desc.get(VALUE_FOLLOWS) else desc.get(VALUE_OPTIONS)
-        if (desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
+        name = desc.get(NAME, "") or desc.get(STATE_NAME, "")
+        if name.endswith("_time"):
             # special case for time strings HH:MM[:SS], convert to bytes already
             fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
         elif isinstance(value, str | int | float):
@@ -745,9 +821,12 @@ class DeviceHexDataField:
                 if value != desc.get(VALUE_DEFAULT)
                 else value
             )
-        # use json as is
-        elif isinstance(value, dict):
-            fieldvalue = value
+        # use json and binary as is or convert as described
+        elif isinstance(value, dict | list | bytearray | bytes):
+            if (converter := desc.get(STATE_CONVERTER)) and callable(converter):
+                fieldvalue = converter(None, value, None)
+            else:
+                fieldvalue = value
         # use default value if defined in fieldmap
         elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
             raise ValueError(
@@ -779,6 +858,18 @@ class DeviceHexDataField:
                             signed=desc.get(SIGNED) is True,
                         )
                     )
+                # special case for provided binary fieldvalues
+                elif isinstance(fieldvalue, bytes | bytearray):
+                    # ensure 1 byte length if requirded
+                    hexvalue = bytearray(fieldvalue[:1])
+                # shift value if bitmask
+                if mask and hexvalue:
+                    value = hexvalue[0]
+                    # shift mask and value until LSB of mask is one, then value reflects correct byte value
+                    while (mask & 1) == 0:
+                        mask >>= 1
+                        value <<= 1
+                    hexvalue[0] = value & 0xFF  # limit to 1 byte
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
                 if isinstance(fieldvalue, int | float):
@@ -811,6 +902,9 @@ class DeviceHexDataField:
                 # '<f' little-endian 32-bit float (4 Bytes, single)
                 if isinstance(fieldvalue, int | float):
                     hexvalue = bytearray(struct.pack("<f", fieldvalue / divider))
+            case DeviceHexDataTypes.bin.value:
+                # Provided binary fieldvalues with any structure
+                hexvalue = None if fieldvalue is None else bytearray(fieldvalue)
             case DeviceHexDataTypes.json.value:
                 hexvalue = bytearray(
                     json.dumps(fieldvalue, separators=(",", ":")), "utf-8"
@@ -819,7 +913,7 @@ class DeviceHexDataField:
                 raise TypeError(
                     f"Field type not supported for encoding, got {fieldtype!s}"
                 )
-        if not hexvalue:
+        if hexvalue is None:
             raise TypeError(
                 f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter '{desc.get(NAME, '')}' was {type(value)}: {value!s}, with value options: {options!s}"
             )
@@ -968,7 +1062,7 @@ class DeviceHexData:
                         and f.f_type
                         in [DeviceHexDataTypes.str.value, DeviceHexDataTypes.var.value]
                     ):
-                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
+                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value)) or 0).strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}"
                     if name:
                         s += (
@@ -1588,67 +1682,3 @@ class MqttCmdValidator:
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
         return asdict(self)
-
-
-def convert_timestamp(
-    value: float | bytes | bytearray, ms: bool = False
-) -> float | bytes | None:
-    """Convert the input value between bytes and float value according to the formats used in MQTT messages."""
-    # traditional timestamp format with field type var with 4 bytes little endian representing the timestamp in seconds
-    # new format is timestamp in milliseconds as string formatted field
-    if isinstance(value, float | int):
-        # convert to bytes
-        if ms:
-            # convert timestamp to ms and strin prior encoding
-            return str(int(value * 1000)).encode()
-        # encode timestamp as little endian integer
-        return int(value).to_bytes(4, byteorder="little")
-    if isinstance(value, bytes | bytearray):
-        # convert to float timestamp in seconds
-        if ms or len(value) > 4:
-            msec = "".join(
-                c for c in value.decode(errors="ignore").strip() if c.isprintable()
-            ).rstrip("?")
-            if msec.replace(".", "", 1).isdigit():
-                return float(msec) / 1000
-        else:
-            return float(int.from_bytes(value, byteorder="little", signed=True))
-    return None
-
-
-def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
-    """Convert time between bytes used in MQTT messages and string formats.
-
-    Automatically detects input value type and converts accordingly.
-
-    Args:
-        value: Time data in bytes format (2-3 bytes in little endian: ([seconds,] minutes, hours))
-              or string format (HH:MM or HH:MM:SS).
-
-    Returns:
-        String in HH:MM[:SS] format if input is bytes/bytearray.
-        2-3 Bytes ([seconds,] minutes, hours) if input is string.
-        None if input is invalid or unsupported type.
-
-    """
-    if isinstance(value, bytes | bytearray) and (2 <= len(value) <= 3):
-        # Convert bytes to string
-        parts = [f"{x:02d}" for x in value]
-        parts.reverse()  # reverse to little endian
-        return ":".join(parts)
-    if (
-        isinstance(value, str)
-        and (parts := value.split(":"))
-        and (2 <= len(parts) <= 3)
-    ):
-        # Convert string to bytes
-        if (
-            (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
-            and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
-            and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
-        ):
-            return bytes(
-                ([int(parts[2])] if len(parts) > 2 else [])
-                + [int(parts[1]), int(parts[0])]
-            )
-    return None

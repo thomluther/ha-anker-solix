@@ -44,7 +44,7 @@ class AnkerSolixUpdateDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
-    attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
@@ -225,7 +225,7 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
                 )
             with suppress(ValueError, TypeError):
                 self._attr_extra_state_attributes = self.entity_description.attrib_fn(
-                    data, self.coordinator_context
+                    data, self.entity_description.json_key
                 )
         return self._attr_extra_state_attributes
 

@@ -230,9 +230,17 @@ async def get_device_parm(
     {"param_data": {"soc_list": [{"id": 1,"is_selected": 1,"soc": 10},{"id": 2,"is_selected": 0,"soc": 5}],"switch_0w": 0,"enable_0w": 0,"enable_0w_change":false,"feed-in_power_limit":0,
         "feed_times":null,"charge_upper_limit": 100,"discharge_lower_limit": 0,"backup_reserve": 50,"backup_reserve_switch": 0,"cmd_type": 0}
     Example data for provided site_id with param_type 23:
-    {"param_data": "{\"switch\": 0}"}
+    {"param_data": {"switch": 0}}
     Example data for provided site_id with param_type 26:
-    {"param_data": "{\"third_part_pv_setting\": 1, \"show_third_party_pv_panel\": 1}"}
+    {"param_data": {"third_part_pv_setting": 1, "show_third_party_pv_panel": 1}}
+    Example data for provided site_id with param_type 27: SB4
+    {"param_data": {"backup_reserve": 10, "charge_upper_limit": 100, "backup_reserve_switch": 0, "discharge_lower_limit": 10, "soc_calibration_enable": 1}"
+    Example data for provided site_id with param_type 28:
+    {"param_data": {"feeder_0w": 0, "feed_times": null, "feed_switch": 0, "cached_power": 0, "feed_upper_limit": 4294967295}}
+    Example data for provided site_id with param_type 29:
+    {"param_data": {"master_used": 0, "third_party_pv_install": 1}}
+    Example data for provided site_id with param_type 30:
+    {"param_data": {"peak_shaving_soc": 0,"peak_shaving_switch": 0,"peak_shaving_upper_limit": 0}}
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None

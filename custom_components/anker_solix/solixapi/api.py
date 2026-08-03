@@ -56,6 +56,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     """Define the API class to handle API data for Anker balcony power sites and devices using power_service endpoints."""
 
     # import outsourced methods
+    from .charger import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+        get_charger_custom_mode_list,
+        get_charger_custom_mode_options,
+        get_charger_custom_mode_profile,
+        get_charger_device_setting,
+        get_charger_manual_screensavers,
+        get_charger_port_remarks,
+        get_charger_protocol_status,
+        get_charger_screensavers,
+        get_charger_theme_options,
+        get_charger_themes,
+        set_charger_port_remark,
+    )
     from .energy import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         device_pv_energy_daily,
         energy_analysis,
@@ -304,6 +317,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "time_zone",
                             "grid_export_limit",
                             "owner_user_id",
+                            "img_url",
                         ]
                         and value
                     ):
@@ -1115,6 +1129,31 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 }
                             )
 
+                    # Mini charger specific keys
+                    elif key in [
+                        "protocol_status",
+                        "port_remarks",
+                        "device_setting",
+                        "custom_modes",
+                        "screensaver",
+                        "modes",
+                    ]:
+                        device[key] = value
+                        # update selected theme if custom theme
+                        if (
+                            key == "screensaver"
+                            and (
+                                theme_id := device.get("mqtt_data", {}).get("theme_id")
+                            )
+                            and (theme := (value or {}).get(str(theme_id), {}))
+                        ):
+                            device["display_theme"] = theme
+                    elif key == "theme_id" and value is not None:
+                        # update only if cached value different
+                        if str(value) != device.get("display_theme", {}).get("id"):
+                            device["display_theme"] = self.get_charger_themes(
+                                deviceSn=sn
+                            ).get(str(value), {})
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
                         "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",

@@ -97,6 +97,8 @@ from .solixapi.apitypes import (
     SolixParmType,
     SolixPhaseMode,
     SolixPlantStatus,
+    SolixPpsBatteryStatus,
+    SolixPpsChargingStatus,
     SolixPpsDcChargingStatus,
     SolixPpsPortStatus,
     SolixRoleStatus,
@@ -299,6 +301,11 @@ DEVICE_SENSORS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        attrib_fn=lambda d, _: (
+            {"ac_input_plug_status": v}
+            if (v := str(d.get("ac_input_plug_status", "")))
+            else {}
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
@@ -1913,8 +1920,10 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"{idx}_power",
-            translation_key=f"{idx[:-2]}_x_power",
-            translation_placeholders={"id": idx[-1:]},
+            translation_key=f"{(idx[:-2] if '_' in idx else idx).rstrip('ac')}_x_power",
+            translation_placeholders={
+                "id": f"{'-' if idx.startswith(('usbc', 'usba')) else ' ' if idx.startswith('usb') else ''}{idx.strip('usb').replace('dc_12v_', '').replace('_', '').upper()}"
+            },
             json_key=f"{idx}_power",
             native_unit_of_measurement=UnitOfPower.WATT,
             device_class=SensorDeviceClass.POWER,
@@ -1956,6 +1965,7 @@ DEVICE_SENSORS = [
             mqtt=True,
         )
         for idx in [
+            "usb",
             "usbc_1",
             "usbc_2",
             "usbc_3",
@@ -2097,25 +2107,29 @@ DEVICE_SENSORS = [
         translation_key="battery_status",
         json_key="battery_status",
         device_class=SensorDeviceClass.ENUM,
-        options=[status.name for status in SolixBatteryStatus],
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: get_enum_name(SolixBatteryStatus, str(d.get(jk, ""))),
-        attrib_fn=lambda d, _: {"status": d.get("battery_status")},
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        mqtt=True,
-    ),
-    AnkerSolixSensorDescription(
-        key="charging_status",
-        translation_key="battery_status",
-        json_key="charging_status",
-        device_class=SensorDeviceClass.ENUM,
-        options=[status.name for status in SolixPpsPortStatus],
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d, jk, _: get_enum_name(SolixPpsPortStatus, str(d.get(jk, ""))),
-        attrib_fn=lambda d, _: {"status": d.get("charging_status")},
-        exclude_fn=lambda s, d: (
-            not ({d.get("type")} - s and "charging_status_desc" not in d)
+        options=list(
+            {status.name for status in SolixBatteryStatus}
+            | {status.name for status in SolixPpsBatteryStatus}
         ),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: get_enum_name(
+            SolixPpsBatteryStatus
+            if d.get("type")
+            in [SolixDeviceType.PPS.value, SolixDeviceType.CHARGER.value]
+            else SolixBatteryStatus,
+            str(d.get(jk, "")),
+        ),
+        attrib_fn=lambda d, _: (
+            {"status": d.get("battery_status")}
+            | (
+                {
+                    "charging_status": get_enum_name(SolixPpsChargingStatus, v),
+                }
+                if (v := str(d.get("charging_status", "")))
+                else {}
+            )
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
     ),
     AnkerSolixSensorDescription(
@@ -3894,6 +3908,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
     _unrecorded_attributes = frozenset(
         {
             "advantage",
+            "ac_input_plug_status",
             "ac_frequency",
             "avg_today",
             "avg_tomorrow",
@@ -3903,6 +3918,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "bytes_sent",
             "current",
             "charge_count",
+            "charging_status",
             "co2_saving",
             "device_sn",
             "device_name",
@@ -4210,13 +4226,11 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     and self._native_value == ""
                 ):
                     self._native_value = None
-
                 # perform potential value conversions in testmode
                 if (
                     self.coordinator.client.testmode()
                     and TEST_NUMBERVARIANCE
                     and self._native_value is not None
-                    and float(self._native_value)
                 ):
                     # When running in Test mode, simulate some variance for sensors with set device class
                     if self.device_class:

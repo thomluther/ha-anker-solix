@@ -32,6 +32,7 @@
                 "ev_charger": "EV Charger",
                 "charger": "Power charger",
                 "charger_energy": "Charger energy stats",
+                "charger_usb_settings": "Charger USB settings",
                 "generator": "Generator",
                 "home_backup": "Home Backup"
             }
@@ -616,6 +617,9 @@
             },
             "charge_voltage_limit": {
                 "name": "Charge voltage limit"
+            },
+            "display_brightness": {
+                "name": "Display brightness"
             }
         },
         "select": {
@@ -631,7 +635,7 @@
                     "backup": "Backup charge",
                     "use_time": "Time of Use",
                     "smart": "Smart",
-                    "time_slot": "Time slot"
+                    "time_slot": "Dynamic tariff"
                 },
                 "state_attributes": {
                     "mode": {
@@ -769,6 +773,15 @@
                     "smart": "Smart"
                 }
             },
+            "pps_usage_mode": {
+                "name": "Usage mode",
+                "state": {
+                    "standard": "Standard (UPS)",
+                    "time_of_use": "Time of Use",
+                    "self_consumption": "Self consumption",
+                    "custom": "Custom"
+                }
+            },
             "dc_12v_output_mode": {
                 "name": "DC 12V output mode",
                 "state": {
@@ -857,6 +870,29 @@
                     "unknown": "Unknown"
                 }
             },
+            "charger_usage_mode": {
+                "name": "Usage mode",
+                "state": {
+                    "ai_power": "AI Power",
+                    "port_priority": "Port priority",
+                    "dual_laptop": "Dual Laptop",
+                    "low_power": "Low power",
+                    "custom:1": "Custom:1",
+                    "custom:2": "Custom:2",
+                    "custom:3": "Custom:3",
+                    "custom:4": "Custom:4",
+                    "custom:5": "Custom:5",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "custom_mode": {
+                        "name": "Custom mode"
+                    },
+                    "custom_profile": {
+                        "name": "Custom profile"
+                    }
+                }
+            },
             "charger_mode": {
                 "name": "Charger mode",
                 "state": {
@@ -898,6 +934,46 @@
             },
             "vehicle_variant": {
                 "name": "4. Variant (ID/Cap/AC)"
+            },
+            "display_theme": {
+                "name": "Display theme",
+                "state_attributes": {
+                    "id": {
+                        "name": "ID"
+                    }
+                }
+            },
+            "knob_mode": {
+                "name": "Knob orientation",
+                "state": {
+                    "forward": "Forward",
+                    "backward": "Backward",
+                    "unknown": "Unknown"
+                }
+            },
+            "clock_mode": {
+                "name": "Clock format",
+                "state": {
+                    "12h": "12h",
+                    "24h": "24h"
+                }
+            },
+            "charger_port_priority": {
+                "name": "Port priority",
+                "state": {
+                    "off": "Off",
+                    "c1": "C1",
+                    "c2": "C2",
+                    "c1_c2": "C1 C2",
+                    "c3": "C3",
+                    "c1_c3": "C1 C3",
+                    "c2_c3": "C2 C3",
+                    "c4": "C4",
+                    "c1_c4": "C1 C4",
+                    "c2_c4": "C2 C4",
+                    "c3_c4": "C3 C4",
+                    "unknown": "Unknown"
+                }
             }
         },
         "sensor": {
@@ -1083,7 +1159,12 @@
                 "name": "DC input power total"
             },
             "ac_input_power": {
-                "name": "AC input power"
+                "name": "AC input power",
+                "state_attributes": {
+                    "ac_input_plug_status": {
+                        "name": "Plug status"
+                    }
+                }
             },
             "ac_input_power_total": {
                 "name": "AC input power_total"
@@ -1429,7 +1510,7 @@
                     "backup": "Backup charge",
                     "use_time": "Time of Use",
                     "smart": "Smart",
-                    "time_slot": "Time slot"
+                    "time_slot": "Dynamic tariff"
                 },
                 "state_attributes": {
                     "mode_type": {
@@ -2063,27 +2144,8 @@
                     }
                 }
             },
-            "usbc_x_power": {
-                "name": "USB-C port {id}",
-                "state_attributes": {
-                    "port_status": {
-                        "name": "Port status",
-                        "state": {
-                            "inactive": "Inactive",
-                            "charging": "Charging",
-                            "discharging": "Discharging"
-                        }
-                    },
-                    "voltage": {
-                        "name": "Volt"
-                    },
-                    "current": {
-                        "name": "Ampere"
-                    }
-                }
-            },
-            "usba_x_power": {
-                "name": "USB-A port {id}",
+            "usb_x_power": {
+                "name": "USB{id} power",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port status",
@@ -2102,7 +2164,7 @@
                 }
             },
             "dc_12v_x_power": {
-                "name": "DC 12V port {id}",
+                "name": "DC 12V port {id} power",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port status",
@@ -2425,10 +2487,10 @@
                 "name": "Port memory"
             },
             "usbc_x_switch": {
-                "name": "USB-C port {id}"
+                "name": "USB-{id} port"
             },
-            "usba_switch": {
-                "name": "USB-A ports"
+            "usba_x_switch": {
+                "name": "USB-{id} port"
             },
             "ac_1_switch": {
                 "name": "Outlet 1"
@@ -2485,26 +2547,82 @@
             },
             "default_vehicle": {
                 "name": "Default vehicle"
+            },
+            "clock_switch": {
+                "name": "Clock display"
+            },
+            "holiday_switch": {
+                "name": "Clock display holidays"
+            },
+            "usb_x_timer_switch": {
+                "name": "USB-{id} timer"
+            },
+            "usb_x_start_switch": {
+                "name": "USB-{id} start time"
+            },
+            "usb_x_end_switch": {
+                "name": "USB-{id} end time"
+            },
+            "silent_mode_switch": {
+                "name": "Silent mode"
+            }
+        },
+        "text":{
+            "port_x_remark": {
+                "name": "USB-{id} remark"
+            },
+            "clock_display_weekdays": {
+                "name": "Clock display weekdays"
+            },
+            "usb_x_start_weekdays": {
+                "name": "USB-{id} start weekdays"
+            },
+            "usb_x_end_weekdays": {
+                "name": "USB-{id} end weekdays"
+            },
+            "silent_mode_weekdays": {
+                "name": "Silent mode weekdays"
             }
         },
         "time":{
             "light_off_start_time": {
-                "name": "LED off start"
+                "name": "LED off start time"
             },
             "light_off_end_time": {
-                "name": "LED off end"
+                "name": "LED off end time"
             },
             "week_start_time": {
-                "name": "Schedule weekday start"
+                "name": "Schedule weekday start time"
             },
             "week_end_time": {
-                "name": "Schedule weekday end"
+                "name": "Schedule weekday end time"
             },
             "weekend_start_time": {
-                "name": "Schedule weekend start"
+                "name": "Schedule weekend start time"
             },
             "weekend_end_time": {
-                "name": "Schedule weekend end"
+                "name": "Schedule weekend end time"
+            },
+            "clock_display_start_time": {
+                "name": "Clock display start time"
+            },
+            "clock_display_end_time": {
+                "name": "Clock display end time"
+            },
+            "usb_x_timer_seconds": {
+                "name": "USB-{id} timer"
+            },
+            "usb_x_start_time": {
+                "name": "USB-{id} start time"
+            },
+            "usb_x_end_time": {
+                "name": "USB-{id} end time"
+            },
+            "silent_mode_start_minutes": {
+                "name": "Silent mode start time"
+            },
+            "silent_mode_end_minutes": {
+                "name": "Silent mode end time"
             }
         },
         "update":{

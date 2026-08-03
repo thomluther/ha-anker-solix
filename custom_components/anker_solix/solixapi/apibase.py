@@ -16,12 +16,14 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     SolixDefaults,
+    SolixDeviceCategory,
     SolixDeviceNames,
     SolixDeviceType,
+    SolixPortId,
     SolixPriceProvider,
     SolixPriceTypes,
 )
-from .helpers import get_solix_product_code
+from .helpers import get_enum_name, get_solix_product_code
 from .mqtt import AnkerSolixMqttSession, MessageCallback
 from .mqttcmdmap import EMBEDDED
 from .session import AnkerSolixClientSession
@@ -550,6 +552,7 @@ class AnkerSolixBaseApi:
                 # get old MQTT data of device
                 device_mqtt = device.get("mqtt_data") or {}
                 oldsize = len(device_mqtt)
+                model = device.get("device_pn", "")
                 # use values or check if newer MQTT data is available from last message timestamp
                 # use copy of MQTT dict for device because it may be modified upon received messages
                 if (
@@ -596,6 +599,7 @@ class AnkerSolixBaseApi:
                                     "week_end_time",
                                     "weekend_start_time",
                                     "weekend_end_time",
+                                    "theme_url",
                                     "load_balance_monitor_device",  # not used in HA
                                     "solar_evcharge_monitor_device",  # not used in HA
                                     "load_balance_setting_d5",  # Unknown control parameter state value
@@ -607,6 +611,7 @@ class AnkerSolixBaseApi:
                                     )
                                     and (key.endswith(("_sn", "_pn", "_type")))
                                 )
+                                or (key.endswith("country_code"))
                             )
                             and value is not None
                         ):
@@ -644,9 +649,6 @@ class AnkerSolixBaseApi:
                                 "generator_to_battery_power",
                                 "generator_to_home_power",
                                 "generator_power",
-                                "charge_priority_limit",
-                                "pv_limit",
-                                "ac_input_limit",
                                 "ac_input_limit_max",
                                 "min_load",
                                 "max_load",
@@ -664,13 +666,13 @@ class AnkerSolixBaseApi:
                                 "power_l1",
                                 "power_l2",
                                 "power_l3",
-                                "min_current_limit",
-                                "max_current_limit",
-                                "main_breaker_limit",
                                 "max_evcharge_current",
                                 "solar_evcharge_min_current",
                                 "light_brightness",
+                                "display_brightness",
                             ]
+                            or (
+                                key.endswith("_limit"))
                             or (
                                 key.startswith(("device_", "pv_"))
                                 and (
@@ -694,6 +696,7 @@ class AnkerSolixBaseApi:
                                         "ac_output_power",
                                         "dc_input_power",
                                         "dc_output_power",
+                                        "input_power",
                                         "output_power",
                                         "home_demand",
                                     )
@@ -713,9 +716,11 @@ class AnkerSolixBaseApi:
                             ):
                                 device_mqtt[key] = f"{float(-1 * value):.0f}"
                             # Remove circuit power while circuit setup unknown
-                            elif key.startswith(
-                                "home_demand_circuit"
-                            ) and not circuits and not device_mqtt.get("circuits", {}):
+                            elif (
+                                key.startswith("home_demand_circuit")
+                                and not circuits
+                                and not device_mqtt.get("circuits", {})
+                            ):
                                 device_mqtt.pop(key, None)
                             # calculate device PV total if not included in MQTT data
                             elif any(
@@ -769,6 +774,28 @@ class AnkerSolixBaseApi:
                             ".", "", 1
                         ).isdigit():
                             device_mqtt[key] = f"{float(value):.3f}"
+                            # accumulate overall port power if not in data
+                            if (
+                                key == "usbc_1_power"
+                                and "dc_output_power_total" not in check_values
+                                and getattr(SolixDeviceCategory, model, None)
+                                == SolixDeviceType.CHARGER.value
+                            ):
+                                power = 0
+                                for i in [
+                                    "usbc_1",
+                                    "usbc_2",
+                                    "usbc_3",
+                                    "usbc_4",
+                                    "usba_1",
+                                    "usba_2",
+                                    "dc_12v_1",
+                                    "dc_12v_2",
+                                ]:
+                                    power += float(check_values.get(f"{i}_power") or 0)
+                                device_mqtt["dc_output_power_total"] = (
+                                    f"{float(power):.3f}"
+                                )
                         elif (
                             key
                             in [
@@ -813,6 +840,7 @@ class AnkerSolixBaseApi:
                                 "car_battery_type",
                                 "car_battery_voltage_type",
                                 "xt60i_cable",
+                                "theme_id",
                             ]
                             or (
                                 str(key).endswith(
@@ -823,8 +851,17 @@ class AnkerSolixBaseApi:
                                         "_seconds",
                                         "_minutes",
                                         "_hours",
+                                        "_weekdays",
+                                        "_hour",
+                                        "_minute",
                                         "_timestamp",
                                         "_packs",
+                                        "_priority",
+                                        "_tariff",
+                                        "_count",
+                                        "_schedule",
+                                        "_protocols",
+                                        "_settings",
                                         # "?", # Add for decoder testing in monitor
                                     )
                                 )
@@ -857,6 +894,20 @@ class AnkerSolixBaseApi:
                                 # consolidate values depending on active charger mode
                                 device_mqtt["remaining_time_hours"] = value
                                 check_values["remaining_time_hours"] = value
+                            elif key.endswith("_remaining_seconds"):
+                                # add timestamp of remaining seconds
+                                device_mqtt[key.replace("_seconds", "_timestamp")] = (
+                                    int(datetime.now().timestamp()) if value > 0 else 0
+                                )
+                            elif key == "set_port_priority":
+                                device_mqtt["port_priority"] = value
+                                # update port priority based on bitmask
+                                for bit, idx in enumerate(
+                                    ["usbc_1", "usbc_2", "usbc_3", "usbc_4"]
+                                ):
+                                    device_mqtt[f"{idx}_priority"] = 1 + int(
+                                        bool(1 & (value >> bit))
+                                    )
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
@@ -892,37 +943,68 @@ class AnkerSolixBaseApi:
                         elif key in [
                             "set_port_switch_select",
                             "set_ac_port_switch_select",
+                            "set_port_timer_select",
                         ]:
                             # update charger port state based on toggle command or confirmation msg for cache update upon passive change
                             if (
                                 (
-                                    switch_name := {
-                                        0: "usbc_1_switch",
-                                        1: "usbc_2_switch",
-                                        2: "usbc_3_switch",
-                                        3: "usbc_4_switch",
-                                        4: "usba_switch",
-                                    }.get(value)
+                                    (
+                                        switch_value := check_values.get(
+                                            "set_port_switch"
+                                        )
+                                    )
+                                    is not None
+                                    and (
+                                        port_name := get_enum_name(
+                                            SolixPortId, str(value)
+                                        )
+                                    )
+                                    and (switch_name := f"{port_name}_switch")
                                 )
-                                and (
-                                    switch_value := check_values.get("set_port_switch")
-                                )
-                                is not None
-                            ) or (
-                                (
-                                    switch_name := {
-                                        0: "ac_1_switch",
-                                        1: "ac_2_switch",
-                                    }.get(value)
-                                )
-                                and (
-                                    switch_value := check_values.get(
-                                        "set_ac_port_switch"
+                                or (
+                                    (
+                                        switch_value := check_values.get(
+                                            "set_port_timer_switch"
+                                        )
+                                    )
+                                    is not None
+                                    and (
+                                        (
+                                            port_name := get_enum_name(
+                                                SolixPortId, str(value)
+                                            )
+                                        )
+                                        and (switch_name := f"{port_name}_timer_switch")
                                     )
                                 )
-                                is not None
+                                or (
+                                    (
+                                        switch_value := check_values.get(
+                                            "set_ac_port_switch"
+                                        )
+                                    )
+                                    is not None
+                                    and (
+                                        switch_name := {
+                                            0: "ac_1_switch",
+                                            1: "ac_2_switch",
+                                        }.get(value)
+                                    )
+                                )
                             ):
                                 device_mqtt[switch_name] = switch_value
+                                if key == "set_port_timer_select":
+                                    device_mqtt[f"{port_name}_timer_seconds"] = (
+                                        check_values.get("port_timer_seconds", 0)
+                                    )
+                                    device_mqtt[
+                                        f"{port_name}_timer_remaining_seconds"
+                                    ] = check_values.get(
+                                        "port_timer_remaining_seconds", 0
+                                    )
+                                    device_mqtt[
+                                        f"{port_name}_timer_remaining_timestamp"
+                                    ] = int(datetime.now().timestamp())
                         else:
                             value_updated = False
                         updated = updated or value_updated
@@ -989,7 +1071,11 @@ class AnkerSolixBaseApi:
                         device_mqtt["circuits"] = circuits
                     if "home_demand_circuit_01" in check_values:
                         # Paired circuits must be consecutive and are limited to 2
-                        for physicals in [p for p in device_mqtt.get("circuits", {}).values() if len(p) > 1]:
+                        for physicals in [
+                            p
+                            for p in device_mqtt.get("circuits", {}).values()
+                            if len(p) > 1
+                        ]:
                             combined = 0
                             with contextlib.suppress(ValueError):
                                 combined = int(
@@ -1007,6 +1093,16 @@ class AnkerSolixBaseApi:
                                 device_mqtt[f"peers_circuit_{physicals[0]}"] = list(
                                     map(int, physicals[1:])
                                 )
+                    elif "usbc_1_priority" in check_values:
+                        # update bitmask field for actual priority setting
+                        bitmask = 0
+                        for bit, idx in enumerate(
+                            ["usbc_1", "usbc_2", "usbc_3", "usbc_4"]
+                        ):
+                            bitmask += (
+                                int(check_values.get(f"{idx}_priority", 0) > 1) >> bit
+                            )
+                        device_mqtt["port_priority"] = bitmask
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if calc_capacity and (cap := device.get("battery_capacity")):
@@ -1055,6 +1151,18 @@ class AnkerSolixBaseApi:
                             else:
                                 api = self
                             api._update_dev({"device_sn": sn, "battery_capacity": cap})
+                    # trigger device cache update for display theme
+                    if "theme_id" in check_values:
+                        # update only if cached value different
+                        if str(check_values.get("theme_id")) != device.get(
+                            "display_theme", {}
+                        ).get("id"):
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "theme_id": check_values.get("theme_id"),
+                                }
+                            )
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed
@@ -1069,7 +1177,15 @@ class AnkerSolixBaseApi:
                             # flag to trigger update if dynamic description value changed
                             dyn_desc = True
                             break
-                    if oldsize == 0 or dyn_desc:
+                    # callback registered MQTT device if required
+                    if (
+                        oldsize == 0
+                        or dyn_desc
+                        or any(
+                            key in check_values
+                            for key in ["tou_mode_schedule", "custom_mode_schedule"]
+                        )
+                    ):
                         self.notify_device(deviceSn=sn)
             # update MQTT statistic in account cache, convert datetime to json compatible format
             stats = self.mqttsession.mqtt_stats.asdict()

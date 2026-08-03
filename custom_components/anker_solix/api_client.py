@@ -40,6 +40,7 @@ from .solixapi.api import AnkerSolixApi
 from .solixapi.apitypes import ApiCategories, SolixDefaults, SolixDeviceType
 from .solixapi.mqtt_device import SolixMqttDevice
 from .solixapi.mqtt_factory import SolixMqttDeviceFactory
+from .solixapi.mqttcmdmap import SolixMqttCommands
 
 _LOGGER = LOGGER
 # min device refresh delay in seconds
@@ -81,6 +82,7 @@ API_CATEGORIES: list = [
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
     ApiCategories.charger_energy,
+    ApiCategories.charger_usb_settings,
     ApiCategories.powerpanel_energy,
     ApiCategories.powerpanel_avg_power,
     ApiCategories.hes_energy,
@@ -794,6 +796,15 @@ class AnkerSolixApiClient:
                             ).create_device()
                         ):
                             self.mqtt_devices[sn] = mdev
+                            # Do initial MQTT commands as required per device type
+                            # Note: Single status requests or RT triggers should not be done once, since that may cause stale enties if not repeated
+                            if mdev.pn == "A2345":
+                                # trigger A2345 theme request to initialize theme detail settings not returned otherwise
+                                await mdev.run_command(
+                                    cmd=SolixMqttCommands.theme_request,
+                                    toFile=self._testmode,
+                                )
+
                     # Note: The method for update callback will be checked and set during coordinator updates
                 else:
                     _LOGGER.error(

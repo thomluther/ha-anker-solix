@@ -49,7 +49,7 @@ class AnkerSolixDateTimeDescription(
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
-    attrib_fn: Callable[[dict], dict | None] = lambda d: None
+    attrib_fn: Callable[[dict, str], dict | None] = lambda d, jk: None
     exclude_fn: Callable[[set, dict], bool] = lambda s, d: False
 
 
@@ -273,7 +273,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                 )
             with suppress(ValueError, TypeError):
                 self._attr_extra_state_attributes = self.entity_description.attrib_fn(
-                    data, self.coordinator_context
+                    data, self.entity_description.json_key
                 )
         return self._attr_extra_state_attributes
 
@@ -349,7 +349,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                 )
             ):
                 LOGGER.debug("%s change to %s will be applied", self.entity_id, value)
-                siteId = data.get("site_id") or ""
+                site_id = data.get("site_id") or ""
                 resp = None
                 # Note: Each field change in UI triggers value update. To avoid to many Api requests are sent for start and end time changes,
                 # those changes will only be done in the Api cache and the backup switch will be disabled. Just when the backup switch entity
@@ -357,7 +357,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                 # Attention: Times in cache may be updated by regular schedule refresh from Api prior the backup switch is being activated
                 if self._attribute_name == "preset_manual_backup_start":
                     resp = await self.coordinator.client.api.set_sb2_ac_charge(
-                        siteId=siteId,
+                        siteId=site_id,
                         deviceSn=self.coordinator_context,
                         backup_start=value,
                         backup_switch=False,
@@ -367,7 +367,7 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                     )
                 elif self._attribute_name == "preset_manual_backup_end":
                     resp = await self.coordinator.client.api.set_sb2_ac_charge(
-                        siteId=siteId,
+                        siteId=site_id,
                         deviceSn=self.coordinator_context,
                         backup_end=value,
                         backup_switch=False,

@@ -32,6 +32,7 @@
                 "ev_charger": "EV Ladestationen",
                 "charger": "Power Ladestationen",
                 "charger_energy": "Ladestation Energiestatistik",
+                "charger_usb_settings": "Ladestation USB Einstellungen",
                 "generator": "Generator",
                 "home_backup": "Heimsicherung"
             }
@@ -616,6 +617,9 @@
             },
             "charge_voltage_limit": {
                 "name": "Ladespannungslimit"
+            },
+            "display_brightness": {
+                "name": "Bildschirmhelligkeit"
             }
         },
         "select": {
@@ -631,7 +635,7 @@
                     "backup": "Notstromladung",
                     "use_time": "Nutzungszeit",
                     "smart": "Smart",
-                    "time_slot": "Zeitfenster"
+                    "time_slot": "Dynamischer Tarif"
                 },
                 "state_attributes": {
                     "mode": {
@@ -776,6 +780,15 @@
                     "smart": "Smart"
                 }
             },
+            "pps_usage_mode": {
+                "name": "Benutzermodus",
+                "state": {
+                    "standard": "Standard (UPS)",
+                    "time_of_use": "Nutzungszeit",
+                    "self_consumption": "Eigenverbrauch",
+                    "custom": "Benutzerdefiniert"
+                }
+            },
             "max_evcharge_current": {
                 "name": "Max EV Ladestrom"
             },
@@ -857,6 +870,29 @@
                     "unknown": "Unbekannt"
                 }
             },
+            "charger_usage_mode": {
+                "name": "Betriebsmodus",
+                "state": {
+                    "ai_power": "AI Power",
+                    "port_priority": "Portpriorität",
+                    "dual_laptop": "Dual Laptop",
+                    "low_power": "Niedrigleistung",
+                    "custom:1": "Benutzerdefiniert:1",
+                    "custom:2": "Benutzerdefiniert:2",
+                    "custom:3": "Benutzerdefiniert:3",
+                    "custom:4": "Benutzerdefiniert:4",
+                    "custom:5": "Benutzerdefiniert:5",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "custom_mode": {
+                        "name": "Benutzerdefinierter Modus"
+                    },
+                    "custom_profile": {
+                        "name": "Benutzerdefiniertes Profil"
+                    }
+                }
+            },
             "charger_mode": {
                 "name": "Lademodus",
                 "state": {
@@ -898,6 +934,46 @@
             },
             "vehicle_variant": {
                 "name": "4. Variante (ID/Kap/AC)"
+            },
+            "display_theme": {
+                "name": "Bildschirmthema",
+                "state_attributes": {
+                    "id": {
+                        "name": "ID"
+                    }
+                }
+            },
+            "knob_mode": {
+                "name": "Knopfrichtung",
+                "state": {
+                    "forward": "Vorwärts",
+                    "backward": "Rückwärts",
+                    "unknown": "Unknown"
+                }
+            },
+            "clock_mode": {
+                "name": "Uhrformat",
+                "state": {
+                    "12h": "12h",
+                    "24h": "24h"
+                }
+            },
+            "charger_port_priority": {
+                "name": "Port Priorität",
+                "state": {
+                    "off": "Aus",
+                    "c1": "C1",
+                    "c2": "C2",
+                    "c1_c2": "C1 C2",
+                    "c3": "C3",
+                    "c1_c3": "C1 C3",
+                    "c2_c3": "C2 C3",
+                    "c4": "C4",
+                    "c1_c4": "C1 C4",
+                    "c2_c4": "C2 C4",
+                    "c3_c4": "C3 C4",
+                    "unknown": "Unbekannt"
+                }
             }
         },
         "sensor": {
@@ -1083,7 +1159,12 @@
                 "name": "DC Eingangsleistung gesamt"
             },
             "ac_input_power": {
-                "name": "AC Eingangsleistung"
+                "name": "AC Eingangsleistung",
+                "state_attributes": {
+                    "ac_input_plug_status": {
+                        "name": "Steckerstatus"
+                    }
+                }
             },
             "ac_input_power_total": {
                 "name": "AC Eingangsleistung gesamt"
@@ -1429,7 +1510,7 @@
                     "backup": "Notstromladung",
                     "use_time": "Nutzungszeit",
                     "smart": "Smart",
-                    "time_slot": "Zeitfenster"
+                    "time_slot": "Dynamischer Tarif"
                 },
                 "state_attributes": {
                     "mode_type": {
@@ -2063,27 +2144,8 @@
                     }
                 }
             },
-            "usbc_x_power": {
-                "name": "USB-C Port {id}",
-                "state_attributes": {
-                    "port_status": {
-                        "name": "Port Status",
-                        "state": {
-                            "inactive": "Inaktiv",
-                            "charging": "Lädt",
-                            "discharging": "Entlädt"
-                        }
-                    },
-                    "voltage": {
-                        "name": "Volt"
-                    },
-                    "current": {
-                        "name": "Ampere"
-                    }
-                }
-            },
-            "usba_x_power": {
-                "name": "USB-A Port {id}",
+            "usb_x_power": {
+                "name": "USB-{id} power",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port Status",
@@ -2102,7 +2164,7 @@
                 }
             },
             "dc_12v_x_power": {
-                "name": "DC 12V Port {id}",
+                "name": "DC 12V Port {id} Leistung",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port Status",
@@ -2425,10 +2487,10 @@
                 "name": "Ausgangsanschlussspeicher"
             },
             "usbc_x_switch": {
-                "name": "USB-C Port {id}"
+                "name": "USB-{id} Port"
             },
-            "usba_switch": {
-                "name": "USB-A Ports"
+            "usba_x_switch": {
+                "name": "USB-{id} Port"
             },
             "ac_1_switch": {
                 "name": "Steckdose 1"
@@ -2485,26 +2547,82 @@
             },
             "default_vehicle": {
                 "name": "Standardfahrzeug"
+            },
+            "clock_switch": {
+                "name": "Uhranzeige"
+            },
+            "holiday_switch": {
+                "name": "Uhranzeige Festtage"
+            },
+            "usb_x_timer_switch": {
+                "name": "USB-{id} Timer"
+            },
+            "usb_x_start_switch": {
+                "name": "USB-{id} Startzeit"
+            },
+            "usb_x_end_switch": {
+                "name": "USB-{id} Endzeit"
+            },
+            "silent_mode_switch": {
+                "name": "Lautlosmodus"
+            }
+        },
+        "text":{
+            "port_x_remark": {
+                "name": "USB-{id} Notiz"
+            },
+            "clock_display_weekdays": {
+                "name": "Uhranzeige Wochentage"
+            },
+            "usb_x_start_weekdays": {
+                "name": "USB-{id} Start Wochentage"
+            },
+            "usb_x_end_weekdays": {
+                "name": "USB-{id} Ende Wochentage"
+            },
+            "silent_mode_weekdays": {
+                "name": "Lautlosmodus Wochentage"
             }
         },
         "time":{
             "light_off_start_time": {
-                "name": "LED Abschaltung Start"
+                "name": "LED Abschaltung Startzeit"
             },
             "light_off_end_time": {
-                "name": "LED Abschaltung Ende"
+                "name": "LED Abschaltung Endzeit"
             },
             "week_start_time": {
-                "name": "Ladezeitplan Start"
+                "name": "Ladezeitplan Startzeit"
             },
             "week_end_time": {
-                "name": "Ladezeitplan Ende"
+                "name": "Ladezeitplan Endzeit"
             },
             "weekend_start_time": {
-                "name": "Ladezeitplan WE Start"
+                "name": "Ladezeitplan WE Startzeit"
             },
             "weekend_end_time": {
-                "name": "Ladezeitplan WE Ende"
+                "name": "Ladezeitplan WE Endzeit"
+            },
+            "clock_display_start_time": {
+                "name": "Uhranzeige Startzeit"
+            },
+            "clock_display_end_time": {
+                "name": "Uhranzeige Endzeit"
+            },
+            "usb_x_timer_seconds": {
+                "name": "USB-{id} Timer"
+            },
+            "usb_x_start_time": {
+                "name": "USB-{id} Startzeit"
+            },
+            "usb_x_end_time": {
+                "name": "USB-{id} Endzeit"
+            },
+            "silent_mode_start_minutes": {
+                "name": "Lautlosmodus Startzeit"
+            },
+            "silent_mode_end_minutes": {
+                "name": "Lautlosmodus Endzeit"
             }
         },
         "update":{

@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
+from .helpers import convert_port_protocols, convert_weekdays
 
 # common mapping keys to be used for status and command descriptions
 EMBEDDED: Final[str] = (
@@ -28,6 +29,12 @@ LENGTH: Final[str] = (
 )
 MASK: Final[str] = (
     "mask"  # Define a bit mask value to be used for decoding the data value. Required if a single byte may reflect multiple data fields/settings
+)
+MASK_STATE: Final[str] = (
+    "mask_state"  # Define a state name to obtain initial bitmask field value
+)
+MASK_VALUE: Final[str] = (
+    "mask_value"  # Field to save the last state found as defined with mask_state value
 )
 OFFSET: Final[str] = (
     "offset"  # Key word to indicate byte offset to use from beginning of field
@@ -77,6 +84,7 @@ class SolixMqttCommands:
     """Dataclass for used Anker Solix MQTT command names."""
 
     status_request: str = "status_request"
+    theme_request: str = "theme_request"
     realtime_trigger: str = "realtime_trigger"
     timer_request: str = "timer_request"
     temp_unit_switch: str = "temp_unit_switch"
@@ -88,6 +96,7 @@ class SolixMqttCommands:
     ac_output_switch: str = "ac_output_switch"
     ac_output_mode_select: str = "ac_output_mode_select"
     ac_output_timeout_seconds: str = "ac_output_timeout_seconds"
+    ac_output_timeout_minutes: str = "ac_output_timeout_minutes"
     dc_output_switch: str = "dc_output_switch"
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
     dc_output_timeout_seconds: str = "dc_output_timeout_seconds"
@@ -95,6 +104,7 @@ class SolixMqttCommands:
     display_switch: str = "display_switch"
     display_mode_select: str = "display_mode_select"
     display_timeout_seconds: str = "display_timeout_seconds"
+    display_timeout_mode_select: str = "display_timeout_mode_select"
     display_brightness: str = "display_brightness"
     light_switch: str = "light_switch"
     light_mode_select: str = "light_mode_select"
@@ -106,7 +116,28 @@ class SolixMqttCommands:
     usba_port_switch: str = "usba_port_switch"
     ac_1_port_switch: str = "ac_1_port_switch"
     ac_2_port_switch: str = "ac_2_port_switch"
+    usbc_1_port_timer: str = "usbc_1_port_timer"
+    usbc_2_port_timer: str = "usbc_2_port_timer"
+    usbc_3_port_timer: str = "usbc_3_port_timer"
+    usbc_4_port_timer: str = "usbc_4_port_timer"
+    usba_port_timer: str = "usba_port_timer"
+    usbc_1_start_time: str = "usbc_1_start_time"
+    usbc_2_start_time: str = "usbc_2_start_time"
+    usbc_3_start_time: str = "usbc_3_start_time"
+    usbc_4_start_time: str = "usbc_4_start_time"
+    usba_start_time: str = "usba_start_time"
+    usbc_1_end_time: str = "usbc_1_end_time"
+    usbc_2_end_time: str = "usbc_2_end_time"
+    usbc_3_end_time: str = "usbc_3_end_time"
+    usbc_4_end_time: str = "usbc_4_end_time"
+    usba_end_time: str = "usba_end_time"
     soc_limits: str = "soc_limits"
+    backup_soc: str = "backup_soc"
+    pps_usage_mode: str = "pps_usage_mode"
+    pps_tou_schedule: str = "tou_schedule"
+    pps_custom_schedule: str = "pps_custom_schedule"
+    silent_schedule: str = "silent_schedule"
+    storm_guard_switch: str = "storm_guard_switch"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
     sb_min_soc_select: str = "sb_min_soc_select"  # Old command: Does not change App station wide setting, needs Api request as well
@@ -155,7 +186,15 @@ class SolixMqttCommands:
     battery_charge_limits: str = "battery_charge_limits"
     reverse_charge_limits: str = "reverse_charge_limits"
     charger_usage_mode: str = "charger_usage_mode"
+    charger_custom_usage_mode: str = "charger_custom_usage_mode"
     port_priority: str = "port_priority"
+    knob_mode_select: str = "knob_mode_select"
+    clock_mode_select: str = "clock_mode_select"
+    clock_display_schedule: str = "clock_display_schedule"
+    clock_holiday_switch: str = "clock_holiday_switch"
+    charger_theme: str = "charger_theme"
+    charger_theme_custom: str = "charger_theme_custom"
+    tbd_switch: str = "tbd_switch"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -196,7 +235,7 @@ TIMESTAMP_FE_NOTYPE = {
 }
 
 TIME_SILE = {
-    # Time format in 2 byte value min;hour
+    # Time format in 2 byte value min:hour
     # 00:00 - 23:59, step 1 min, encoded as hour * 256 + minute
     TYPE: DeviceHexDataTypes.sile.value,
     VALUE_MIN: 0,
@@ -205,7 +244,7 @@ TIME_SILE = {
 }
 
 TIME_VAR = {
-    # Time format in 3 byte value sec;min;hour
+    # Time format in 3 byte value sec:min:hour
     # 00:00:00 - 23:59:59, step 1 sec, encoded as hour * 256 * 256 + minute * 256 + second
     TYPE: DeviceHexDataTypes.var.value,
     LENGTH: 3,
@@ -336,7 +375,7 @@ CMD_AC_FAST_CHARGE_SWITCH = CMD_COMMON | {
     "a2": {
         NAME: "set_ac_fast_charge_switch",  # Disable (0) | Enable (1)
         TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "fast_charge_switch",
+        STATE_NAME: "ac_fast_charge_switch",
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }
@@ -493,25 +532,31 @@ CMD_PORT_MEMORY_SWITCH = CMD_COMMON | {
     },
 }
 
-CMD_USB_PORT_SWITCH = CMD_COMMON | {
-    # Command: Charger USB port switch setting
-    # COMMAND_NAME: Must be added depdning on which port is to be switched,
-    "a2": {
-        NAME: "set_port_switch_select",
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {
-            "usbc_1_switch": 0,
-            "usbc_2_switch": 1,
-            "usbc_3_switch": 2,
-            "usbc_4_switch": 3,
-            "usba_switch": 4,
+CMD_USB_PORT_SWITCH = {
+    port: CMD_COMMON
+    | {
+        # Command: Charger USB port switch setting
+        # COMMAND_NAME: Must be added depending on which port is to be selected,
+        "a2": {
+            NAME: "set_port_switch_select",
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {
+                "usbc_1": 0,
+                "usbc_2": 1,
+                "usbc_3": 2,
+                "usbc_4": 3,
+                "usba": 4,
+            },
+            VALUE_DEFAULT: idx,  # same pattern but different default option for port
         },
-    },
-    "a3": {
-        NAME: "set_port_switch",
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
+        "a3": {
+            NAME: "set_port_switch",
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+            STATE_NAME: f"{port}_switch",
+        },
+    }
+    for idx, port in enumerate(["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"])
 }
 
 CMD_AC_PORT_SWITCH = CMD_COMMON | {
@@ -1027,7 +1072,7 @@ CMD_PLUG_SCHEDULE = (
         },
         "a5": TIME_SILE
         | {
-            NAME: "set_plug_schedule_time",  # min;hour as byte pair
+            NAME: "set_plug_schedule_time",  # min:hour as byte pair
         },
         "a6": {
             NAME: "set_plug_schedule_switch",  # Off (0), On (1)
@@ -1574,7 +1619,7 @@ CMD_DISPLAY_BRIGHTNESS = CMD_COMMON | {
 }
 
 CMD_CHARGER_USAGE_MODE = CMD_COMMON | {
-    # Command: Set charger mode: 1 (AI Power mode), 2 (Connection Prio), 3 (Dual Laptop mode), 4 (Low power mode)
+    # Command: Set charger mode: 1 (AI Power mode), 2 (Connection Prio), 3 (Dual Laptop mode), 4 (Low power mode), 5 (Custom)
     COMMAND_NAME: SolixMqttCommands.charger_usage_mode,
     "a2": {
         NAME: "set_usage_mode",
@@ -1582,16 +1627,474 @@ CMD_CHARGER_USAGE_MODE = CMD_COMMON | {
         STATE_NAME: "usage_mode",
         VALUE_OPTIONS: {
             "ai_power": 1,
-            "connection_priority": 2,
+            "port_priority": 2,
             "dual_laptop": 3,
             "low_power": 4,
         },
     },
 }
 
+CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
+    # Command: Set charger custom usage mode: 5 with additional port settings
+    COMMAND_NAME: SolixMqttCommands.charger_custom_usage_mode,
+    "a2": {
+        NAME: "set_usage_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "usage_mode",
+        VALUE_OPTIONS: {"custom": 5},
+        VALUE_DEFAULT: 5,
+    },
+    "a3": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # Byte pattern: profile_number:auto_exit:c1_pwr:c2_pwr:c3_pwr:c4_pwr:a_pwr
+        # Example: 02:01:1e:1c:2c:35:18
+        LENGTH: 7,
+        BYTES: {
+            "00": {
+                NAME: "set_custom_profile_number",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 255,
+                STATE_NAME: "custom_profile_number",
+            },
+            "01": {
+                NAME: "set_auto_exit_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_OPTIONS: {"on": 1, "off": 0},
+                STATE_NAME: "auto_exit_switch",
+            },
+            "02": {
+                NAME: "set_usb_c1_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 140,
+                VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c1_power_limit",
+            },
+            "03": {
+                NAME: "set_usb_c2_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 100,
+                VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c2_power_limit",
+            },
+            "04": {
+                NAME: "set_usb_c3_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 100,
+                VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c3_power_limit",
+            },
+            "05": {
+                NAME: "set_usb_c4_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 100,
+                VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c4_power_limit",
+            },
+            "06": {
+                NAME: "set_usb_a_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 24,
+                VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_a_power_limit",
+            },
+        },
+    },
+    "a4": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # USB-C Port protocols, 3 bytes each port
+        # Protocol bitmask: xiaomi:huawei:pps20v:pps16v:pps11v:pd12v:ufcs:scp
+        # Example: 08:00:00:0b:00:00:0b:00:00:02:00:00
+        LENGTH: 12,
+        BYTES: {
+            f"{0 + idx * 3:02d}": {
+                NAME: f"set_usb_{port}_protocols",
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                STATE_NAME: f"custom_usb_{port}_protocols",
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_port_protocols(value)
+                    if value is not None
+                    else convert_port_protocols(state)
+                ),
+            }
+            for idx, port in enumerate(["c1", "c2", "c3", "c4"])
+        },
+    },
+}
+
+
+CMD_CHARGER_CLOCK_MODE = CMD_COMMON | {
+    # Command: Set charger clock mode: 0 (12h), 1 (24h)
+    COMMAND_NAME: SolixMqttCommands.clock_mode_select,
+    "a2": {
+        NAME: "set_clock_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "clock_mode",
+        VALUE_OPTIONS: {
+            "12h": 0,
+            "24h": 1,
+        },
+    },
+}
+
+CMD_CHARGER_CLOCK_DISPLAY = (
+    CMD_COMMON
+    | {
+        # Command: Charger clock display schedule
+        COMMAND_NAME: SolixMqttCommands.clock_display_schedule,
+        "a2": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 5,
+            BYTES: {
+                "00": {
+                    NAME: "set_clock_display_start_hour",  # hour
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 23,
+                    STATE_NAME: "clock_display_start_hour",
+                    VALUE_STATE: "clock_display_start_hour",
+                },
+                "01": {
+                    NAME: "set_clock_display_start_minute",  # min
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 59,
+                    STATE_NAME: "clock_display_start_minute",
+                    VALUE_STATE: "clock_display_start_minute",
+                },
+                "02": {
+                    NAME: "set_clock_display_end_hour",  # hour
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 23,
+                    STATE_NAME: "clock_display_end_hour",
+                    VALUE_STATE: "clock_display_end_hour",
+                },
+                "03": {
+                    NAME: "set_clock_display_end_minute",  # min
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 59,
+                    STATE_NAME: "clock_display_end_minute",
+                    VALUE_STATE: "clock_display_end_minute",
+                },
+                "04": {
+                    NAME: "set_clock_display_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    LENGTH: 1,
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        convert_weekdays(value)
+                        if value is not None
+                        else convert_weekdays(state)
+                    ),
+                    STATE_NAME: "clock_display_weekdays",
+                    VALUE_STATE: "clock_display_weekdays",
+                },
+            },
+        },
+    }
+)
+
+CMD_CHARGER_THEME = CMD_COMMON | {
+    # Command: Set charger theme and display options
+    "a2": {
+        TYPE: DeviceHexDataTypes.ui.value,
+        BYTES: {
+            "00": [
+                {
+                    NAME: "set_clock_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                    MASK: 0x80,
+                    MASK_STATE: "clock_settings",
+                    STATE_NAME: "clock_switch",
+                    VALUE_STATE: "clock_switch",
+                },
+                {
+                    NAME: "set_holiday_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                    MASK: 0x40,
+                    MASK_STATE: "clock_settings",
+                    STATE_NAME: "holiday_switch",
+                    VALUE_STATE: "holiday_switch",
+                },
+            ]
+        },
+    },
+    "a3": {
+        NAME: "set_theme_id",
+        TYPE: DeviceHexDataTypes.var.value,
+        SIGNED: False,
+        STATE_NAME: "theme_id",
+        VALUE_STATE: "theme_id",
+        VALUE_MIN: 0,
+        VALUE_MAX: 0xFFFFFFFF,
+    },
+    "a4": {
+        NAME: "set_theme_hash",
+        TYPE: DeviceHexDataTypes.var.value,
+        SIGNED: False,
+        STATE_NAME: "theme_hash",
+        VALUE_STATE: "theme_hash",
+        VALUE_MIN: 0,
+        VALUE_MAX: 0xFFFFFFFF,
+    },
+    "a5": {
+        NAME: "set_unknown_a5",  # only FFFFFFFF seen
+        TYPE: DeviceHexDataTypes.var.value,
+        SIGNED: False,
+        VALUE_MIN: 0,
+        VALUE_MAX: 0xFFFFFFFF,
+        VALUE_DEFAULT: 0xFFFFFFFF,
+    },
+    "a6": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        BYTES: {
+            "00": {
+                NAME: "set_theme_url",
+                TYPE: DeviceHexDataTypes.str.value,
+                STATE_NAME: "theme_url",
+                VALUE_STATE: "theme_url",
+            }
+        },
+    },
+}
+
+CMD_CHARGER_CLOCK_HOLIDAY = CMD_COMMON | {
+    # Command: Enable / disable clock holiday switch
+    COMMAND_NAME: SolixMqttCommands.clock_holiday_switch,
+    "a2": {
+        NAME: "set_holiday_switch",  # Disable (0) | Enable (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "holiday_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
+CMD_CHARGER_KNOB_MODE = CMD_COMMON | {
+    # Command: Set charger know mode: 0 forward, 1 backward
+    COMMAND_NAME: SolixMqttCommands.knob_mode_select,
+    "a2": {
+        NAME: "set_knob_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "knob_mode",
+        VALUE_OPTIONS: {
+            "forward": 0,
+            "backward": 1,
+        },
+    },
+}
+
+CMD_DISPLAY_TIMEOUT_MODE = CMD_COMMON | {
+    # Command: Set charger display timeout mode: 0 (Never), 1 (30 sec), 2 (60 sec), 3 (5 min), 4 (30 min)
+    COMMAND_NAME: SolixMqttCommands.display_timeout_mode_select,
+    "a2": {
+        NAME: "set_display_timeout_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "display_timeout_mode",
+        VALUE_OPTIONS: {
+            "0": 0,
+            "30": 1,
+            "60": 2,
+            "300": 3,
+            "1800": 4,
+        },
+    },
+}
+
+CMD_PORT_TIMER = {
+    port: CMD_COMMON
+    | {
+        # Command: USB Port Timer setting
+        # COMMAND_NAME: Must be added depending on which port is to be selected,
+        "a2": {
+            NAME: "set_port_timer_select",
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {
+                "usbc_1": 0,
+                "usbc_2": 1,
+                "usbc_3": 2,
+                "usbc_4": 3,
+                "usba": 4,
+            },
+            VALUE_DEFAULT: idx,  # same pattern but different default option for port
+        },
+        "a3": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 5,
+            BYTES: {
+                "00": {
+                    NAME: "set_port_timer_switch",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                    STATE_NAME: f"{port}_timer_switch",
+                    VALUE_STATE: f"{port}_timer_switch",
+                },
+                "01": {
+                    NAME: "set_port_timer_seconds",  # Timer seconds, custom range: 0-86100, step 300
+                    TYPE: DeviceHexDataTypes.var.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 86100,
+                    VALUE_STEP: 300,
+                    STATE_NAME: f"{port}_timer_seconds",
+                    VALUE_STATE: f"{port}_timer_seconds",
+                },
+            },
+        },
+    }
+    for idx, port in enumerate(["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"])
+}
+
+CMD_PORT_SCHEDULE = CMD_COMMON | {
+    # Command: USB Port start time setting
+    # COMMAND_NAME: Must be added depending on which port and time type is to be selected,
+    "a2": {
+        NAME: "set_port_time_select",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {
+            "usbc_1": 0,
+            "usbc_2": 1,
+            "usbc_3": 2,
+            "usbc_4": 3,
+            "usba": 4,
+        },
+    },
+    "a3": {
+        NAME: "set_port_time_type_select",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {
+            "end": 0,
+            "start": 1,
+        },
+    },
+    "a4": {
+        TYPE: DeviceHexDataTypes.var.value,
+        BYTES: {
+            "00": {
+                NAME: "set_port_time_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_OPTIONS: {"off": 0, "on": 1, "undefined": 255},
+            },
+            "01": {
+                NAME: "set_port_time_hour",  # hour
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 23,
+            },
+            "02": {
+                NAME: "set_port_time_minute",  # min
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 59,
+            },
+            "03": {
+                NAME: "set_port_time_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_weekdays(value)
+                    if value is not None
+                    else convert_weekdays(state)
+                ),
+            },
+        },
+    },
+}
+
+CMD_PORT_START = {
+    port: {
+        **CMD_PORT_SCHEDULE
+        | {
+            "a2": {
+                **CMD_PORT_SCHEDULE["a2"],
+                VALUE_DEFAULT: idx,  # same pattern but different default option for port
+            },
+            "a3": {
+                **CMD_PORT_SCHEDULE["a3"],
+                VALUE_DEFAULT: 1,  # same pattern but different default option for start time
+            },
+            "a4": {
+                **CMD_PORT_SCHEDULE["a4"],
+                BYTES: {
+                    **CMD_PORT_SCHEDULE["a4"][BYTES],
+                    "00": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["00"],
+                        STATE_NAME: f"{port}_start_switch",
+                        VALUE_STATE: f"{port}_start_switch",
+                    },
+                    "01": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["01"],
+                        STATE_NAME: f"{port}_start_hour",
+                        VALUE_STATE: f"{port}_start_hour",
+                    },
+                    "02": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["02"],
+                        STATE_NAME: f"{port}_start_minute",
+                        VALUE_STATE: f"{port}_start_minute",
+                    },
+                    "03": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["03"],
+                        STATE_NAME: f"{port}_start_weekdays",
+                        VALUE_STATE: f"{port}_start_weekdays",
+                    },
+                },
+            },
+        },
+    }
+    for idx, port in enumerate(["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"])
+}
+
+CMD_PORT_END = {
+    port: {
+        **CMD_PORT_SCHEDULE
+        | {
+            "a2": {
+                **CMD_PORT_SCHEDULE["a2"],
+                VALUE_DEFAULT: idx,  # same pattern but different default option for port
+            },
+            "a3": {
+                **CMD_PORT_SCHEDULE["a3"],
+                VALUE_DEFAULT: 0,  # same pattern but different default option for start time
+            },
+            "a4": {
+                **CMD_PORT_SCHEDULE["a4"],
+                BYTES: {
+                    **CMD_PORT_SCHEDULE["a4"][BYTES],
+                    "00": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["00"],
+                        STATE_NAME: f"{port}_end_switch",
+                        VALUE_STATE: f"{port}_end_switch",
+                    },
+                    "01": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["01"],
+                        STATE_NAME: f"{port}_end_hour",
+                        VALUE_STATE: f"{port}_end_hour",
+                    },
+                    "02": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["02"],
+                        STATE_NAME: f"{port}_end_minute",
+                        VALUE_STATE: f"{port}_end_minute",
+                    },
+                    "03": {
+                        **CMD_PORT_SCHEDULE["a4"][BYTES]["03"],
+                        STATE_NAME: f"{port}_end_weekdays",
+                        VALUE_STATE: f"{port}_end_weekdays",
+                    },
+                },
+            },
+        },
+    }
+    for idx, port in enumerate(["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"])
+}
+
 CMD_PORT_PRIORITY = CMD_COMMON | {
     # Command: Set charger port priority 4 Bit mask
-    # Bitmask 0000 1111 to activate prio (usb c1, c2, c3, c4)
+    # Bitmask 0000 1111 to activate prio (usb c1, c2, c3, c4), only 2 ports possible at a time
     COMMAND_NAME: SolixMqttCommands.port_priority,
     "a2": {
         NAME: "set_port_priority",  # 4 Bit mask
@@ -1599,21 +2102,27 @@ CMD_PORT_PRIORITY = CMD_COMMON | {
         STATE_NAME: "port_priority",
         VALUE_OPTIONS: {
             "off": 0,
-            "c4": 1,
-            "c3": 2,
-            "c3c4": 3,
-            "c2": 4,
-            "c2c4": 5,
-            "c2c3": 6,
-            "c2c3c4": 7,
-            "c1": 8,
-            "c1c4": 9,
-            "c1c3": 10,
-            "c1c3c4": 11,
-            "c1c2": 12,
-            "c1c2c4": 13,
-            "c1c2c3": 14,
-            "c1c2c3c4": 15,
+            "c1": 1,
+            "c2": 2,
+            "c1_c2": 3,
+            "c3": 4,
+            "c1_c3": 5,
+            "c2_c3": 6,
+            "c4": 8,
+            "c1_c4": 9,
+            "c2_c4": 10,
+            "c3_c4": 12,
         },
+    },
+}
+
+CMD_TBD_SWITCH = CMD_COMMON | {
+    # Command: Generic switch command with unknown effect
+    COMMAND_NAME: SolixMqttCommands.tbd_switch,
+    "a2": {
+        NAME: "set_tbd_switch",  # Disable (0) | Enable (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "tbd_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }
