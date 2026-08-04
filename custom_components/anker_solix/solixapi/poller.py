@@ -1307,7 +1307,7 @@ async def poll_device_details(  # noqa: C901
                                         "file_hash": theme.get("file_crc32"),
                                         "image_url": theme.get("image_url"),
                                         "id": theme_id,
-                                        "theme_name": f"{name}:{theme.get('title')}",
+                                        "theme_name": f"{name} - {theme.get('title')}",
                                     }
                     if ids:
                         screensavers[pn] = {

@@ -311,7 +311,7 @@ async def get_charger_manual_screensavers(
                 "file_hash": theme.get("hash_code"),
                 "image_url": theme.get("img_url"),
                 "id": theme_id,
-                "theme_name": f"Custom:{theme.get('name')}",
+                "theme_name": f"Custom - {theme.get('name')}",
             }
     if ids:
         self._update_dev({"device_sn": deviceSn, "screensaver": ids})

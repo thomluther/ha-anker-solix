@@ -52,7 +52,6 @@ FEATURES = {
     SolixMqttCommands.temp_unit_switch: MODELS,
     SolixMqttCommands.device_max_load: MODELS,
     SolixMqttCommands.device_timeout_minutes: MODELS,
-    SolixMqttCommands.ac_charge_switch: MODELS,
     SolixMqttCommands.ac_charge_limit: MODELS,
     SolixMqttCommands.ac_output_switch: MODELS,
     SolixMqttCommands.ac_fast_charge_switch: MODELS,
@@ -74,7 +73,7 @@ FEATURES = {
     SolixMqttCommands.silent_schedule: MODELS,
     # SolixMqttCommands.pps_custom_schedule: MODELS,  # TODO: Enable once fully supported
     # SolixMqttCommands.pps_tou_schedule: MODELS,  # TODO: Enable once fully supported
-    # SolixMqttCommands.backup_soc: MODELS,  # TODO: Enable once fully supported
+    SolixMqttCommands.backup_soc: MODELS,
 }
 
 
@@ -341,10 +340,10 @@ class SolixMqttDevicePps(SolixMqttDevice):
         enabled: bool | None = None,
         toFile: bool = False,
     ) -> dict | None:
-        """Control backup charge mode via MQTT.
+        """Control backup charge / fast charge mode via MQTT.
 
         Args:
-            enabled: True to enable backup charge mode, False to disable
+            enabled: True to enable backup charge (Fast Charge) mode, False to disable
             toFile: If True, save mock response (for testing compatibility)
 
         Returns:
@@ -356,7 +355,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         """
         # response and commands
         resp = {}
-        cmd1 = SolixMqttCommands.ac_charge_switch
+        cmd1 = SolixMqttCommands.ac_fast_charge_switch
         # Validate and run command
         if enabled is not None:
             if (

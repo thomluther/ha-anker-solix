@@ -265,15 +265,6 @@ DEVICE_SWITCHES = [
         mqtt_cmd=SolixMqttCommands.energy_saving_switch,
     ),
     AnkerSolixSwitchDescription(
-        key="ac_charge_switch",
-        translation_key="ac_charge_switch",
-        json_key="ac_charge_switch",
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        device_class=SwitchDeviceClass.SWITCH,
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.ac_charge_switch,
-    ),
-    AnkerSolixSwitchDescription(
         key="ac_fast_charge_switch",
         translation_key="ac_fast_charge_switch",
         json_key="ac_fast_charge_switch",
@@ -1127,7 +1118,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 # change command depending on actual theme setting category
                 # prepare parameter map and correct command
                 theme = data.get("display_theme", {})
-                category = theme.get("theme_name", "").split(":")[:1][0]
+                category = theme.get("theme_name", "").split("-")[:1][0].strip()
                 await self._async_mqtt_toggle(
                     mdev=mdev,
                     enable=enable,

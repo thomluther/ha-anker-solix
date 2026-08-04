@@ -1869,11 +1869,15 @@ class SolixPpsOutputMode(StrEnum):
 
 
 class SolixPpsOutputModeV2(StrEnum):
-    """Str Enumeration for Anker Solix PPS output modes."""
+    """Str Enumeration for new Anker Solix PPS output modes including models that use it."""
 
     normal = "0"
     smart = "1"
     unknown = "unknown"
+    A1763 = "A1763"
+    A1782 = "A1782"
+    A1783 = "A1783"
+
 
 
 class SolixPpsLoadMode(StrEnum):

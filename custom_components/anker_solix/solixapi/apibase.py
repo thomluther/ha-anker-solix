@@ -841,6 +841,7 @@ class AnkerSolixBaseApi:
                                 "car_battery_voltage_type",
                                 "xt60i_cable",
                                 "theme_id",
+                                "custom_profile_number",
                             ]
                             or (
                                 str(key).endswith(

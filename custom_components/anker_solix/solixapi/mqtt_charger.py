@@ -33,6 +33,7 @@ MODELS = {
 FEATURES = {
     SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
+    SolixMqttCommands.temp_unit_switch: MODELS,
     SolixMqttCommands.usbc_1_port_switch: MODELS,
     SolixMqttCommands.usbc_2_port_switch: MODELS,
     SolixMqttCommands.usbc_3_port_switch: MODELS,
@@ -93,7 +94,6 @@ FEATURES = {
     SolixMqttCommands.reverse_charge_limits: MODELS,
     SolixMqttCommands.device_switch: MODELS,
     SolixMqttCommands.device_timeout_minutes: MODELS,
-    SolixMqttCommands.temp_unit_switch: MODELS,
     SolixMqttCommands.tbd_switch: MODELS,
 }
 

@@ -417,7 +417,7 @@ The integration also added and provides all USB port control entities per defaul
 
 If you want to clean unused control entities, you can either manually deactivate them for a selective cleanup, or exclude the 'Charger USB settings' category from your hub configuration. If the category is excluded, all port controls (except the power switches) will be removed from HA.
 
-Since weekdays entities require multiple or any day selection, there is no single entity type provided by HA to cover such multiple choice states. Therefore a simple text entity is used to display the selected weekdays. To modify weekdays, a comma separated list of 3 char day abbreviations in English is required. To select all weekdays, you can optionally enter 'all'. Any order and character case in the input is supported, while unsupported options will be dropped once the entity is modified.
+Since weekdays entities require multiple or any day selection, there is no single entity type provided by HA to cover such multiple choice states. Therefore a simple text entity is used to display the selected weekdays. To modify weekdays, a comma separated list of 3 char day abbreviations in English is required. To select all weekdays, you can optionally enter 'all'. Any day order and character case in the input is supported, while unsupported options will be dropped once the entity is modified.
 
 > [!IMPORTANT]
 > Customizations can only be created and modified through the mobile app. The integration only allows to apply customizations with their actual setting details as saved in the cloud. Those cloud customizations are only refreshed within the device details update interval of your hub configuration, that runs only every 10 update intervals per default (so every 10 minutes). If you modify the customizations through the mobile app and want them being available immediately in the integration, you can enforce a device details refresh cycle for your hub configuration through any hub device details refresh button.
@@ -634,9 +634,10 @@ While there are plenty of energy cards available in the HA Community Store HACS,
 
 Highly recommended energy card from user @ReikanYsora to visualize the sun movement around YOUR home with building shadows, including live power flow and forecast data.
 
-<p align="left">
-<img src="doc/helios-energy-card.png" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px"/>
-</p>
+<figure>
+<img src="doc/helios-energy-card.png" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px" />
+<br clear="left"/>
+</figure>
 
 It is super easy to install and configure and primarily uses your existing **HA energy dashboard recorder data** to visualize your energy history. Try it out, you will love it. It is available on HACS. For more details on the card and the self learning forecast integration, including HACS installation links, please visit the [Helios home page](https://helios-ha.org/de/).
 
@@ -645,8 +646,9 @@ It is super easy to install and configure and primarily uses your existing **HA 
 
 A very nice dashboard card from user @Giorgio866 to visualize your power flow, including configuration capabilities for switches and other controls right from the card.
 
-<p align="left">
-<img src="https://raw.githubusercontent.com/Giorgio866/lumina-energy-card/main/Images/screen.jpeg" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px"/>
-</p>
+<figure>
+<img src="https://raw.githubusercontent.com/Giorgio866/lumina-energy-card/main/Images/screen.jpeg" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px" />
+<br clear="left"/>
+</figure>
 
 

@@ -64,6 +64,8 @@ from .solixapi.apitypes import (
     SolarbankSchedulePresetType,
     SolarbankUsageMode,
     SolixDeviceType,
+    SolixPpsOutputMode,
+    SolixPpsOutputModeV2,
     SolixPriceProvider,
     SolixPriceTypes,
     SolixTariffTypes,
@@ -388,6 +390,16 @@ DEVICE_SELECTS = [
         mqtt_cmd=SolixMqttCommands.device_timeout_minutes,
     ),
     AnkerSolixSelectDescription(
+        key="ac_output_timeout",
+        translation_key="ac_output_timeout",
+        json_key="ac_output_timeout_minutes",
+        unit_of_measurement=UnitOfTime.MINUTES,
+        entity_category=EntityCategory.CONFIG,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_output_timeout_minutes,
+    ),
+    AnkerSolixSelectDescription(
         key="temp_unit",
         translation_key="temp_unit",
         json_key="temp_unit_fahrenheit",
@@ -506,7 +518,7 @@ DEVICE_SELECTS = [
         unit_of_measurement=PERCENTAGE,
         exclude_fn=lambda s, d: (
             not (
-                ({d.get("type")} - s)
+                ({d.get("type")} - s - {SolixDeviceType.PPS.value})
                 and "backup_reserve"
                 not in getattr(
                     SolarbankDeviceMetrics,
@@ -525,7 +537,19 @@ DEVICE_SELECTS = [
         json_key="usage_mode",
         # option values are mdev functions, depending on charger feature settings
         value_fn=lambda d, jk: d.get(jk),
-        attrib_fn=lambda d, jk: {"mode": d.get(jk)},
+        attrib_fn=lambda d, jk: (
+            {"mode": d.get(jk)}
+            | (
+                {"custom_mode_schedule": val}
+                if str(val := d.get("custom_mode_schedule", ""))
+                else {}
+            )
+            | (
+                {"tou_mode_schedule": val}
+                if str(val := d.get("tou_mode_schedule", ""))
+                else {}
+            )
+        ),
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
         ),
@@ -1015,6 +1039,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             "customized",
             "custom_profile",
             "custom_mode",
+            "custom_mode_schedule",
             "current_mode",
             "id",
             "mode",
@@ -1022,6 +1047,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             "power_cutoff",
             "start_countdown",
             "tariff",
+            "tou_mode_schedule",
             "type",
         }
     )
@@ -1320,7 +1346,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         parm=self.entity_description.mqtt_cmd_parm,
                     ).keys()
                 ) | {
-                    f"custom:{number}"
+                    f"custom-{number}"
                     for number in self.coordinator.client.api.get_charger_custom_mode_options(
                         deviceSn=self.coordinator_context, by_number=True
                     )
@@ -1473,9 +1499,19 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 # expand charger custom mode state since that needs also different MQTT command
                 elif (
                     self._attribute_name == "charger_usage_mode"
-                    and self.entity_description.value_fn(data, key) == 5 # custom mode
+                    and self.entity_description.value_fn(data, key) == 5  # custom mode
                 ):
-                    data[key] = f"custom:{data.get('custom_profile_number', '')!s}"
+                    data[key] = f"custom-{data.get('custom_profile_number', '')!s}"
+                elif self._attribute_name in ["ac_output_mode", "dc_12v_output_mode"]:
+                    # These entities may have different states across PPS models and than the switch setting
+                    # The entity state cannot be obtained from the command parameter values
+                    data[key] = get_enum_name(
+                        SolixPpsOutputModeV2
+                        if get_enum_name(SolixPpsOutputModeV2, mdev.pn)
+                        else SolixPpsOutputMode,
+                        str(self.entity_description.value_fn(data, key)),
+                        SolixPpsOutputMode.unknown.value,
+                    )
                 # convert MQTT state code into descriptive option
                 elif self.entity_description.mqtt_cmd:
                     data.update(
@@ -2089,8 +2125,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     self.entity_description.mqtt_cmd,
                 )
                 # prepare parameter map and correct command
-                keys = option.split(":")
-                number = keys[-1:][0]
+                keys = option.split("-")
+                number = keys[-1:][0].strip()
                 if (
                     profile
                     := self.coordinator.client.api.get_charger_custom_mode_profile(
@@ -2161,9 +2197,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     self.entity_description.mqtt_cmd,
                 )
                 # prepare parameter map and correct command
-                keys = option.split(":")
-                category = keys[:1][0]
-                title = keys[-1:][0]
+                keys = option.split("-")
+                category = keys[:1][0].strip()
+                title = "-".join(keys[1:]).strip()
                 # lookup new theme
                 if theme := (
                     [

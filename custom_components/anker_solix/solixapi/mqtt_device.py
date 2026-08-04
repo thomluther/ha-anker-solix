@@ -329,7 +329,7 @@ class SolixMqttDevice:
                 self.mqttdata = device.get("mqtt_data", {})
                 # update dynamic descriptions and controls if state values are changed
                 # prefer provided description states if any
-                merged = self.mqttdata | dynamic_descriptions
+                merged = self.get_status(fromFile=True) | dynamic_descriptions
                 for state_name, dd in self.dynamic_descriptions.items():
                     if (
                         (state := merged.get(state_name)) is not None
@@ -350,11 +350,31 @@ class SolixMqttDevice:
                                 .replace(".", "", 1)
                                 .isdigit()
                             ):
-                                desc[key] = round_by_factor(
-                                    float(state), desc.get(VALUE_STEP, 1)
-                                )
-                        # save applied state
-                        dd["last_value"] = state
+                                # adjust min and max values if there is a converter with deviations from states
+                                if key in [VALUE_MIN, VALUE_MAX] and (
+                                    converter := desc.get(STATE_CONVERTER)
+                                ):
+                                    # convert state to field value using converter
+                                    val = converter(
+                                        None,
+                                        float(state),
+                                        merged,
+                                    )
+                                    desc[key] = round_by_factor(
+                                        float(
+                                            val
+                                            if isinstance(val, int | float)
+                                            else state
+                                        ),
+                                        desc.get(VALUE_STEP, 1),
+                                    )
+                                else:
+                                    desc[key] = round_by_factor(
+                                        float(state), desc.get(VALUE_STEP, 1)
+                                    )
+                        # save applied state only if not mocked state to prevent update trigger from file messages
+                        if state_name not in self._filedata:
+                            dd["last_value"] = state
             else:
                 self._logger.error(
                     "Device %s (%s) is not in supported models %s for MQTT control",
@@ -380,6 +400,10 @@ class SolixMqttDevice:
     def is_passive(self) -> bool:
         """Return actual MQTT control state for device."""
         return bool(self.device.get("is_passive", False))
+
+    def get_filedata(self) -> dict:
+        """Return actual filedata cache for mocked states."""
+        return self._filedata
 
     def get_cmd_parms(
         self,
@@ -476,7 +500,7 @@ class SolixMqttDevice:
             ):
                 # convert state to command option value
                 if callable(converter := desc.get(STATE_CONVERTER)):
-                    value = converter(None, value)
+                    value = converter(None, value, None)
                 return {
                     state_name: next(
                         iter(k for k, v in options.items() if v == value), value
@@ -611,6 +635,9 @@ class SolixMqttDevice:
             .isdigit()
         ):
             value = float(val)
+        # otherwise convert state value if converter defined but not an option parameter
+        elif (converter := desc.get(STATE_CONVERTER)) and callable(converter) and VALUE_OPTIONS not in desc:
+            value = converter(None, value, self.get_status(fromFile=True))
         if value is None:
             if desc:
                 self._logger.error(
@@ -830,6 +857,7 @@ class SolixMqttDevice:
                     parameters[par] = fieldvalue
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
+                        dynamic_descriptions |= state_name in self.dynamic_descriptions
                         converter = desc.get(STATE_CONVERTER)
                         state_value = (
                             converter(
@@ -909,6 +937,7 @@ class SolixMqttDevice:
                         parameters[par] = state
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
+                        dynamic_descriptions |= state_name in self.dynamic_descriptions
                         converter = desc.get(STATE_CONVERTER)
                         state_value = (
                             converter(
@@ -948,9 +977,9 @@ class SolixMqttDevice:
                     req_parms.discard(par)
             # finally add command parameters that follow another parameter and convert their state
             for par, desc in self.get_cmd_parms(cmd=cmd, follow_parms=True).items():
+                converter = desc.get(STATE_CONVERTER)
                 if par not in parameters:
                     follows = desc.get(VALUE_FOLLOWS, "")
-                    converter = desc.get(STATE_CONVERTER)
                     if isinstance(options := desc.get(VALUE_OPTIONS), dict):
                         # get follow state from option map
                         state = options.get(parameters.get(follows, ""))
@@ -959,7 +988,7 @@ class SolixMqttDevice:
                         state = parameters.get(follows)
                     state = (
                         converter(
-                            state, None, self.get_status(fromFile=True) | parameters
+                            None, state, self.get_status(fromFile=True) | parameters
                         )
                         if callable(converter)
                         else state
@@ -976,26 +1005,36 @@ class SolixMqttDevice:
                         )
                     else:
                         parameters[par] = state
-                    # Mock state
-                    if state_name := desc.get(STATE_NAME):
-                        state_fields[state_name] = parameters[par]
-                        # keep mocking of mask_value fields while bits are changed
-                        if (mask_value := desc.get(MASK_VALUE, "")) and (
-                            mask_state := desc.get(MASK_STATE, "")
-                        ):
-                            # actual mocked mask_value is tracked in state_fields
-                            val = self._mock_mask_state(
-                                value=parameters[par],
-                                mask_value=int(
-                                    str(state_fields.get(mask_state, ""))
-                                    or str(mask_value)
-                                    or 0
-                                ),
-                                description=desc,
-                            )
-                            if val is not None:
-                                state_fields[mask_state] = val
-                                dynamic_descriptions = True
+                else:
+                    # Convert state again for Follow parms with given value to consider all final set parameters
+                    parameters[par] = (
+                        converter(
+                            None, parameters[par], self.get_status(fromFile=True) | parameters
+                        )
+                        if callable(converter)
+                        else parameters[par]
+                    )
+                # Mock state
+                if state_name := desc.get(STATE_NAME):
+                    dynamic_descriptions |= state_name in self.dynamic_descriptions
+                    state_fields[state_name] = parameters[par]
+                    # keep mocking of mask_value fields while bits are changed
+                    if (mask_value := desc.get(MASK_VALUE, "")) and (
+                        mask_state := desc.get(MASK_STATE, "")
+                    ):
+                        # actual mocked mask_value is tracked in state_fields
+                        val = self._mock_mask_state(
+                            value=parameters[par],
+                            mask_value=int(
+                                str(state_fields.get(mask_state, ""))
+                                or str(mask_value)
+                                or 0
+                            ),
+                            description=desc,
+                        )
+                        if val is not None:
+                            state_fields[mask_state] = val
+                            dynamic_descriptions = True
             # check if all required parameters are specified
             if req_parms:
                 self._logger.error(
@@ -1019,7 +1058,7 @@ class SolixMqttDevice:
                 # add mock states for fields with depending values
                 if toFile:
                     self._filedata.update(resp)
-                    # Trigger mocked bitmask state value updates in parameter descriptions
+                    # Trigger mocked dynamic description updates
                     if dynamic_descriptions:
                         self.update_device(self.device, resp)
         return resp

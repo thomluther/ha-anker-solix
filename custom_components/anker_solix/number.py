@@ -174,11 +174,7 @@ DEVICE_NUMBERS = [
                 "expansions": d.get("sub_package_num"),
                 "calculated": d.get(jk),
             }
-            | (
-                {"customized": c}
-                if (c := (d.get("customized") or {}).get(jk))
-                else {}
-            )
+            | ({"customized": c} if (c := (d.get("customized") or {}).get(jk)) else {})
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         restore=True,
@@ -316,6 +312,32 @@ DEVICE_NUMBERS = [
         mqtt_cmd=SolixMqttCommands.sb_soc_limits,
         mqtt_cmd_parm="set_backup_soc",
         api_cmd=True,
+        ignore_opt_count=True,
+    ),
+    AnkerSolixNumberDescription(
+        # PPS backup soc setting
+        key="pps_backup_soc",
+        translation_key="backup_soc",
+        json_key="backup_soc",
+        entity_category=EntityCategory.CONFIG,
+        native_unit_of_measurement=PERCENTAGE,
+        mode=NumberMode.SLIDER,
+        native_min_value=10,
+        native_max_value=100,
+        native_step=1,
+        # Excludde for non PPS
+        exclude_fn=lambda s, d: (
+            not (
+                ({d.get("type")} - s)
+                & {
+                    SolixDeviceType.PPS.value,
+                }
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.backup_soc,
+        mqtt_cmd_parm="set_backup_soc",
+        dynamic_options=True,
         ignore_opt_count=True,
     ),
     AnkerSolixNumberDescription(
@@ -491,9 +513,7 @@ SITE_NUMBERS = [
             or None
         ),
         attrib_fn=lambda d, jk: (
-            {"customized": c}
-            if (c := (d.get("customized") or {}).get(jk))
-            else {}
+            {"customized": c} if (c := (d.get("customized") or {}).get(jk)) else {}
         ),
         native_min_value=0,
         native_max_value=100,
@@ -516,9 +536,7 @@ SITE_NUMBERS = [
             or None
         ),
         attrib_fn=lambda d, jk: (
-            {"customized": c}
-            if (c := (d.get("customized") or {}).get(jk))
-            else {}
+            {"customized": c} if (c := (d.get("customized") or {}).get(jk)) else {}
         ),
         native_min_value=0,
         native_max_value=100,
@@ -913,7 +931,6 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                         - 1,
                     )
-                # convert seconds to minutes
                 elif self._attribute_name in [
                     "ac_output_timeout",
                     "dc_output_timeout",

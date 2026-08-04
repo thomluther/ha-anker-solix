@@ -90,7 +90,6 @@ class SolixMqttCommands:
     temp_unit_switch: str = "temp_unit_switch"
     device_max_load: str = "device_max_load"
     device_timeout_minutes: str = "device_timeout_minutes"
-    ac_charge_switch: str = "ac_charge_switch"
     ac_fast_charge_switch: str = "ac_fast_charge_switch"
     ac_charge_limit: str = "ac_charge_limit"
     ac_output_switch: str = "ac_output_switch"
@@ -337,17 +336,6 @@ CMD_DEVICE_TIMEOUT_MIN = CMD_COMMON | {
     },
 }
 
-CMD_AC_CHARGE_SWITCH = CMD_COMMON | {
-    # Command: Enable AC backup charge
-    COMMAND_NAME: SolixMqttCommands.ac_charge_switch,
-    "a2": {
-        NAME: "set_ac_charge_switch",  # Disable (0) | Enable (1)
-        TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "backup_charge_switch",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-}
-
 CMD_AC_CHARGE_LIMIT = CMD_COMMON | {
     # Command: Set AC backup charge limit
     COMMAND_NAME: SolixMqttCommands.ac_charge_limit,
@@ -384,17 +372,34 @@ CMD_AC_OUTPUT_MODE = CMD_COMMON | {
     # Command: PPS AC output mode setting
     COMMAND_NAME: SolixMqttCommands.ac_output_mode_select,
     "a2": {
+        NAME: "set_ac_output_mode",   # Normal (0), Smart (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ac_output_mode",
+        STATE_CONVERTER: lambda value, state, _: (
+            {1: 2, 0: 1}.get(value, 1) # switch to state conversion for mocked state
+            if value is not None
+            else state # do not convert state, since that is the provided switch value
+        ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
+        VALUE_OPTIONS: {"smart": 1, "normal": 0},
+    },
+}
+
+CMD_AC_OUTPUT_MODE_INV = CMD_COMMON | {
+    # Command: PPS AC output mode setting
+    COMMAND_NAME: SolixMqttCommands.ac_output_mode_select,
+    "a2": {
         NAME: "set_ac_output_mode",  # Normal (1), Smart (0)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_output_mode",
-        STATE_CONVERTER: lambda value, state: (
-            {0: 2, 1: 1}.get(value, 2)
+        STATE_CONVERTER: lambda value, state, _: (
+            {0: 2, 1: 1}.get(value, 1) # switch to state conversion for mocked state
             if value is not None
-            else {2: 0, 1: 1}.get(state, 0)
-        ),  # Smart setting represented with state 2
+            else state # do not convert state, since that is the provided switch value
+        ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
 }
+
 
 CMD_AC_OUTPUT_TIMEOUT_SEC = (
     CMD_COMMON
@@ -427,14 +432,30 @@ CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
     # Command: PPS 12V DC output mode setting
     COMMAND_NAME: SolixMqttCommands.dc_12v_output_mode_select,
     "a2": {
+        NAME: "set_dc_12v_output_mode",  # Normal (0), Smart (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "dc_12v_output_mode",
+        STATE_CONVERTER: lambda value, state, _: (
+            {1: 2, 0: 1}.get(value, 1) # switch to state conversion for mocked state
+            if value is not None
+            else state
+        ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
+        VALUE_OPTIONS: {"smart": 1, "normal": 0},
+    },
+}
+
+CMD_DC_12V_OUTPUT_MODE_INV = CMD_COMMON | {
+    # Command: PPS 12V DC output mode setting inverted
+    COMMAND_NAME: SolixMqttCommands.dc_12v_output_mode_select,
+    "a2": {
         NAME: "set_dc_12v_output_mode",  # Normal (1), Smart (0)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "dc_12v_output_mode",
-        STATE_CONVERTER: lambda value, state: (
-            {0: 2, 1: 1}.get(value, 2)
+        STATE_CONVERTER: lambda value, state, _: (
+            {0: 2, 1: 1}.get(value, 1) # switch to state conversion for mocked state
             if value is not None
-            else {2: 0, 1: 1}.get(state, 0)
-        ),  # Smart setting represented with state 2
+            else state
+        ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
 }
@@ -713,23 +734,28 @@ CMD_SB_SOC_LIMITS = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "backup_soc",
         VALUE_MIN: 0,
-        VALUE_MAX: 99,
+        VALUE_MAX: 100,
+        VALUE_MIN_STATE: "power_cutoff",
+        VALUE_MAX_STATE: "max_soc",
         VALUE_FOLLOWS: "backup_soc",
         STATE_CONVERTER: lambda value, state, cache: (
             value
             if value is not None
-            # ensure backup is min < backup < max if not specified
+            # ensure backup is min + 1 < backup < max -1
             else min(
                 int(cache.get("set_max_soc", cache.get("max_soc") or 1)) - 1,
                 max(
                     int(cache.get("set_min_soc", cache.get("power_cutoff") or -1)) + 1,
-                    int(cache.get("backup_soc")),
+                    #int(cache.get("backup_soc") or 0),
+                    state,
                 ),
             )
-            if cache.get("backup_soc") and state is None
-            else 0
-            if state is None
-            else state
+            if state is not None
+            else int(cache.get("backup_soc") or 0)
+            # if cache.get("backup_soc") and state is None
+            # else 0
+            # if state is None
+            # else state
         ),
     },
     "a7": {

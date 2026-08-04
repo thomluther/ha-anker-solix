@@ -15,6 +15,7 @@ from .mqttcmdmap import (
     CMD_AC_DC_MODE,
     CMD_AC_FAST_CHARGE_SWITCH,
     CMD_AC_OUTPUT_MODE,
+    CMD_AC_OUTPUT_MODE_INV,
     CMD_AC_OUTPUT_SWITCH,
     CMD_AC_OUTPUT_TIMEOUT_SEC,
     CMD_AC_PORT_SWITCH,
@@ -30,6 +31,7 @@ from .mqttcmdmap import (
     CMD_COMMON,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
+    CMD_DC_12V_OUTPUT_MODE_INV,
     CMD_DC_OUTPUT_SWITCH,
     CMD_DC_OUTPUT_TIMEOUT_SEC,
     # CMD_DEVICE_MAX_LOAD,
@@ -396,7 +398,7 @@ _A1753_0405 = {
     "d0": {NAME: "device_sn"},  # Device serial number
     "d1": {
         NAME: "ac_input_limit"
-    },  # Max AC charge setting (W), verified 750/600/300/200
+    },  # Max AC charge setting (W), 750/700/600/500/400/300/200
     "d2": {
         NAME: "device_timeout_minutes"
     },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
@@ -408,6 +410,7 @@ _A1753_0405 = {
     "dc": {NAME: "light_mode"},  # LED bar: Off (0), Low (1), Medium (2), High (3)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "e5": {NAME: "ac_fast_charge_switch"},  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
     "f8": {
         BYTES: {
             "00": {
@@ -488,7 +491,7 @@ _A1761_0405 = {
     },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
-    "e5": {NAME: "backup_charge_switch"},  # Off (0) or On (1)
+    "e5": {NAME: "ac_fast_charge_switch"},  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
     "f8": {
         BYTES: {
             "00": {
@@ -1145,7 +1148,7 @@ _A1780_0405 = {
     "dc": {NAME: "light_mode"},  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
-    "e5": {NAME: "backup_charge_switch"},  # Off (0) or On (1)
+    "e5": {NAME: "ac_fast_charge_switch"},  # Off (0) or On (1)
     "f8": {
         BYTES: {
             "00": {
@@ -4363,8 +4366,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # status field de verified
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
-        # "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
-        # "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
+        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status!! Normal (1), Smart (2)
+        "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status!! Normal (1), Smart (2)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4397,8 +4400,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
-        # "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
-        # "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
+        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status!! Normal (1), Smart (2)
+        "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status!! Normal (1), Smart (2)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4431,8 +4434,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
-        # "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
-        # "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
+        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status!! Normal (1), Smart (2)
+        "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status!! Normal (1), Smart (2)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4461,8 +4464,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
-        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
-        "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
+        "0076": CMD_DC_12V_OUTPUT_MODE_INV,  # Normal (1), Smart (0)
+        "0077": CMD_AC_OUTPUT_MODE_INV,  # Normal (1), Smart (0); Status!! Normal (1), Smart (2)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1761_0405,
         # Interval: varies, probably upon change
@@ -4480,6 +4483,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.ac_output_timeout_seconds,  # field a3
                 SolixMqttCommands.ac_charge_limit,  # field a4
                 SolixMqttCommands.ac_output_mode_select,  # field a6
+                SolixMqttCommands.ac_fast_charge_switch,  # field a7
             ],
             SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
             | {
@@ -4519,6 +4523,15 @@ SOLIXMQTTMAP: Final[dict] = {
                     TYPE: DeviceHexDataTypes.ui.value,
                     STATE_NAME: "ac_output_mode",
                     VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                },
+            },
+            SolixMqttCommands.ac_fast_charge_switch: CMD_COMMON_V2
+            | {
+                "a7": {
+                    NAME: "set_ac_fast_charge_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_fast_charge_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
                 },
             },
         },
@@ -4643,6 +4656,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.ac_output_timeout_seconds,  # field a3
                 SolixMqttCommands.ac_charge_limit,  # field a4
                 SolixMqttCommands.ac_output_mode_select,  # field a6
+                SolixMqttCommands.ac_fast_charge_switch,  # field a7
             ],
             SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
             | {
@@ -4683,6 +4697,15 @@ SOLIXMQTTMAP: Final[dict] = {
                     TYPE: DeviceHexDataTypes.ui.value,
                     STATE_NAME: "ac_output_mode",
                     VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                },
+            },
+            SolixMqttCommands.ac_fast_charge_switch: CMD_COMMON_V2
+            | {
+                "a7": {
+                    NAME: "set_ac_fast_charge_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_fast_charge_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
                 },
             },
         },
@@ -4881,14 +4904,14 @@ SOLIXMQTTMAP: Final[dict] = {
                         else min(
                             int(cache.get("max_soc") or 80),
                             max(
-                                int(cache.get("min_soc") or 20) + 5,
+                                int(cache.get("power_cutoff") or 20) + 5,
                                 state,
                             ),
                         )
                         if state is not None
                         else None
                     ),
-                    VALUE_MIN_STATE: "min_soc",
+                    VALUE_MIN_STATE: "power_cutoff",
                     VALUE_MAX_STATE: "max_soc",
                 },
             },
@@ -4904,9 +4927,9 @@ SOLIXMQTTMAP: Final[dict] = {
                     NAME: "set_custom_mode_schedule",
                     TYPE: DeviceHexDataTypes.bin.value,
                     STATE_CONVERTER: lambda value, state, cache: (
-                        convert_pps_custom_schedule(state)
-                        if state is not None
-                        else value
+                        convert_pps_custom_schedule(value)
+                        if value is not None
+                        else convert_pps_custom_schedule(state)
                     ),
                 },
             },
@@ -5012,12 +5035,10 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.ac_output_timeout_minutes: CMD_COMMON_V2
             | {
                 "aa": {
-                    NAME: "set_ac_output_timeout_minutes",  # Timeout minutes, custom range: 0-1440, step 5
+                    NAME: "set_ac_output_timeout_minutes",  # App Smart AC Output Mode, Timeout Never(0), 15m, 30m, 1h, 2h, 4h, 6h, 8h, 10h, 12h, 24h
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "ac_output_timeout_minutes",
-                    VALUE_MIN: 0,
-                    VALUE_MAX: 1440,
-                    VALUE_STEP: 5,
+                    VALUE_OPTIONS: [0, 15, 30, 60, 120, 240, 360, 480, 600, 720, 1440],
                 },
             },
         },
@@ -5053,10 +5074,10 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.display_timeout_seconds: CMD_COMMON_V2
             | {
                 "a4": {
-                    NAME: "set_display_timeout_sec",  # 0 (Never), 10, 20, 30, 60, 300, 1800
+                    NAME: "set_display_timeout_sec",  # 10, 20, 30, 60, 300, 1800
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "display_timeout_seconds",
-                    VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
+                    VALUE_OPTIONS: [10, 20, 30, 60, 300, 1800],
                 },
             },
             SolixMqttCommands.temp_unit_switch: {  # field a5: Off (0), On (1)
@@ -5144,6 +5165,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1780_0405,
         # Interval: irregular, triggerd by wifi signal change?
@@ -5173,6 +5195,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1780_0405,
         # Interval: irregular, triggerd by wifi signal change?
@@ -5206,6 +5229,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1780_0405,
         # Interval: irregular, triggered by wifi signal change?
@@ -5236,8 +5260,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
-        "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
+        "0076": CMD_DC_12V_OUTPUT_MODE_INV,  # Normal (1), Smart (0)
+        "0077": CMD_AC_OUTPUT_MODE_INV,  # Normal (1), Smart (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Port Memory switch: Disabled (0) or Enabled (1)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1790_0405,
@@ -5275,8 +5299,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
-        "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
+        "0076": CMD_DC_12V_OUTPUT_MODE_INV,  # Normal (1), Smart (0)
+        "0077": CMD_AC_OUTPUT_MODE_INV,  # Normal (1), Smart (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1790_0405,
@@ -6388,8 +6412,8 @@ SOLIXMQTTMAP: Final[dict] = {
                                 cache.get("device_timeout_minutes"),
                             )
                         )
-                        if value is not None
-                        else state
+                        if state is not None
+                        else value
                     ),  # Smart setting represented with state 2
                     VALUE_MIN: 0,
                     VALUE_MAX: 1440,
