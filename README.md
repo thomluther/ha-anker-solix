@@ -635,7 +635,7 @@ While there are plenty of energy cards available in the HA Community Store HACS,
 Highly recommended energy card from user [@ReikanYsora](https://github.com/ReikanYsora) to visualize the sun movement around YOUR home with building shadows, including live power flow and forecast data.
 
 <figure>
-<img src="doc/helios-energy-card.png" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px" />
+<img src="https://github.com/thomluther/ha-anker-solix/blob/main/doc/helios-energy-card.png" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px" />
 <br clear="left"/>
 </figure>
 
