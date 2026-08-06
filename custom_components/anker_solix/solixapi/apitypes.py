@@ -109,7 +109,7 @@ API_ENDPOINTS: Final[dict] = {
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 24 25 26 27 28 29 30 31 32 33]
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 24 25 26 27 28 29 30 31 32 33 34]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)

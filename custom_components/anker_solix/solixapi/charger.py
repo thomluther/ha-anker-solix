@@ -51,7 +51,7 @@ async def get_charger_custom_mode_list(
     # Map custom mode IDs to dictionary for fast lookup
     for mode in data.get("charging_mode_list") or []:
         if (mode_id := mode.get("id")) is not None:
-            ids[mode_id] = mode
+            ids[str(mode_id)] = mode
     if ids:
         self._update_dev({"device_sn": deviceSn, "custom_modes": ids})
     return data
@@ -305,7 +305,7 @@ async def get_charger_manual_screensavers(
     # Flatten date to id dictionary for fast lookup and merge capability with flattened stock screensavers
     for theme in data.get("list") or []:
         if (theme_id := theme.get("id")) is not None:
-            ids[theme_id] = {
+            ids[str(theme_id)] = {
                 "category_name": "Custom",
                 "title": theme.get("name"),
                 "file_hash": theme.get("hash_code"),
@@ -339,11 +339,19 @@ def get_charger_theme_options(
     if isinstance(deviceSn, str):
         if not isinstance(theme_id, str | int):
             theme_id = None
+        else:
+            theme_id = str(theme_id)
         # prepare lookup mapping
-        if theme_id and (
-            (theme := self.devices.get(deviceSn, {}).get("display_theme", {})).get("id")
-            or None
-        ) == str(theme_id):
+        if (
+            theme_id
+            and str(
+                (theme := self.devices.get(deviceSn, {}).get("display_theme", {})).get(
+                    "id"
+                )
+                or None
+            )
+            == theme_id
+        ):
             themes = {theme_id: theme}
         else:
             themes = self.get_charger_themes(deviceSn)

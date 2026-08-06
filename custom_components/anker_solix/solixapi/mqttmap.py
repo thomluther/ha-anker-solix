@@ -5137,7 +5137,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     },
                 }
             },
-            "fd": {NAME: "utc_timestamp"},
+            "fd": {NAME: "local_timestamp"},
             "fe": {NAME: "msg_timestamp"},
         },
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -6238,7 +6238,7 @@ SOLIXMQTTMAP: Final[dict] = {
         # "0214": CMD_TBD_SWITCH,  # unknown client command, fields a2
         # "0223": CMD_TBD_SWITCH,  # unknown client command, fields a2
         "0300": {
-            "a4": {NAME: "usage_mode"},
+            "a4": {NAME: "unknown_0300_a4?"}, # does not seem to be usage_mode
             "fe": {NAME: "msg_timestamp"},
         },
         # Interval: Upon change of the referred port toggle, usable by data extractor to adjust correct port state

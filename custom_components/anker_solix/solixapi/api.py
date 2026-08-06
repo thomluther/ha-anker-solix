@@ -1150,7 +1150,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device["display_theme"] = theme
                     elif key == "theme_id" and value is not None:
                         # update only if cached value different
-                        if str(value) != device.get("display_theme", {}).get("id"):
+                        if str(value) != str(
+                            device.get("display_theme", {}).get("id", "")
+                        ):
                             device["display_theme"] = self.get_charger_themes(
                                 deviceSn=sn
                             ).get(str(value), {})

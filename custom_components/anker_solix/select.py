@@ -442,12 +442,12 @@ DEVICE_SELECTS = [
         mqtt_cmd=SolixMqttCommands.display_timeout_seconds,
     ),
     AnkerSolixSelectDescription(
-        # Display timeout minute options
+        # Display timeout second options
         key="display_timeout",
         translation_key="display_timeout",
         json_key="display_timeout_mode",
         entity_category=EntityCategory.CONFIG,
-        unit_of_measurement=UnitOfTime.MINUTES,
+        unit_of_measurement=UnitOfTime.SECONDS,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.display_timeout_mode_select,

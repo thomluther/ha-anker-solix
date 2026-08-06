@@ -1301,7 +1301,7 @@ async def poll_device_details(  # noqa: C901
                         if name := cat.get("category_name"):
                             for theme in cat.get("list") or []:
                                 if theme_id := theme.get("id"):
-                                    ids[theme_id] = {
+                                    ids[str(theme_id)] = {
                                         "category_name": name,
                                         "title": theme.get("title"),
                                         "file_hash": theme.get("file_crc32"),
