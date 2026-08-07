@@ -630,23 +630,27 @@ Spoiler: Alkly explains his experience with Solarbank 1 and 2, the HA integratio
 
 ### Featured energy cards and integrations
 
-While there are plenty of energy cards available in the HA Community Store HACS, I want to highlight few of them that may provide unique visualization.
+While there are plenty of energy cards available in the HA Community Store HACS, I want to highlight few of them that may provide unique visualization capabilities.
+
+> [!NOTE]
+> This is just a small selection of cards that I like. They are from the community and free to use. All credits go to the respective card owners.
+
 
 #### Helios Energy card and forecast integration
 
-Highly recommended energy card from user [@ReikanYsora](https://github.com/ReikanYsora) to visualize the sun movement around YOUR home with building shadows, including live power flow and forecast data.
+Highly recommended energy card from user [@ReikanYsora](https://github.com/ReikanYsora) to visualize the sun movement around **YOUR home** with surrounding buildings and their shadows depending on sun position. You can display any angle, the live power flow, replay the history data through the timeline and integrate forecast data, either from the self learning Helios forecast integration or from any other PV forecast integration.
 
 <figure align="center">
 <img src="https://github.com/thomluther/ha-anker-solix/blob/main/doc/helios-energy-card.png?raw=true" alt="Helios Energy Card" title="Helios Energy Card" width="400px" />
 </figure>
 
-It is super easy to install and to configure and primarily uses your existing **HA energy dashboard recorder data** to visualize your energy history. Try it out, it is available on HACS and you will love it 💕
+It is super easy to install and to configure and primarily uses your existing **HA energy dashboard recorder data** to visualize your energy history. Try it out, it is extremely helpful to understand various PV and sun situations at your home and it helps you to better understand your PV generation throughout the day. It is available on HACS, provides a real user experience and you will love it 💕
 For more details on the card and the self learning forecast integration, including HACS installation links, please visit the [Helios home page](https://helios-ha.org/de/).
 
 
 #### Lumina Energy card
 
-The [Lumia Energy card](https://github.com/Giorgio866/lumina-energy-card) is a very nice dashboard card from user [@Giorgio866](https://github.com/Giorgio866) to visualize your power flow, including configuration capabilities for switches and other controls right from the card.
+The [Lumia Energy card](https://github.com/Giorgio866/lumina-energy-card) is a very nice and unique dashboard card from user [@Giorgio866](https://github.com/Giorgio866) to visualize your power flow, including configuration capabilities for switches and other controls right from the card. It also provides a more  technical view to visualize a 2D movement of the sun over the power flow distribution.
 
 <figure align="center">
 <img src="https://raw.githubusercontent.com/Giorgio866/lumina-energy-card/main/Images/screen.jpeg" alt="Lumia Energy Card" title="Lumia Energy Card" width="400px" />
