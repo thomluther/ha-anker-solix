@@ -172,7 +172,7 @@ _A1722_0405 = {
     "aa": {NAME: "usba_1_power"},  # USB-A port 1 output power
     "ac": {NAME: "dc_input_power_total"},  # DC input power (solar/car charging)
     "ad": {NAME: "ac_input_power_total"},  # Total AC Input in W (int)
-    "ae": {NAME: "output_power_total"},  # Total Output in W (int)
+    "ae": {NAME: "ac_output_power_total"},  # AC Output in W (int)
     "b7": {
         NAME: "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
@@ -410,7 +410,9 @@ _A1753_0405 = {
     "dc": {NAME: "light_mode"},  # LED bar: Off (0), Low (1), Medium (2), High (3)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
-    "e5": {NAME: "ac_fast_charge_switch"},  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
+    "e5": {
+        NAME: "ac_fast_charge_switch"
+    },  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
     "f8": {
         BYTES: {
             "00": {
@@ -491,7 +493,9 @@ _A1761_0405 = {
     },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
-    "e5": {NAME: "ac_fast_charge_switch"},  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
+    "e5": {
+        NAME: "ac_fast_charge_switch"
+    },  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
     "f8": {
         BYTES: {
             "00": {
@@ -6238,7 +6242,7 @@ SOLIXMQTTMAP: Final[dict] = {
         # "0214": CMD_TBD_SWITCH,  # unknown client command, fields a2
         # "0223": CMD_TBD_SWITCH,  # unknown client command, fields a2
         "0300": {
-            "a4": {NAME: "unknown_0300_a4?"}, # does not seem to be usage_mode
+            "a4": {NAME: "unknown_0300_a4?"},  # does not seem to be usage_mode
             "fe": {NAME: "msg_timestamp"},
         },
         # Interval: Upon change of the referred port toggle, usable by data extractor to adjust correct port state
