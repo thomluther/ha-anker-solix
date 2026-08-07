@@ -636,9 +636,8 @@ While there are plenty of energy cards available in the HA Community Store HACS,
 
 Highly recommended energy card from user [@ReikanYsora](https://github.com/ReikanYsora) to visualize the sun movement around YOUR home with building shadows, including live power flow and forecast data.
 
-<figure>
-<img src="https://github.com/thomluther/ha-anker-solix/blob/main/doc/helios-energy-card.png?raw=true" alt="Helios Energy Card" title="Helios Energy Card" align="left" width="400px" />
-<br clear="left"/>
+<figure align="center">
+<img src="https://github.com/thomluther/ha-anker-solix/blob/main/doc/helios-energy-card.png?raw=true" alt="Helios Energy Card" title="Helios Energy Card" width="400px" />
 </figure>
 
 It is super easy to install and to configure and primarily uses your existing **HA energy dashboard recorder data** to visualize your energy history. Try it out, it is available on HACS and you will love it 💕
@@ -649,9 +648,8 @@ For more details on the card and the self learning forecast integration, includi
 
 The [Lumia Energy card](https://github.com/Giorgio866/lumina-energy-card) is a very nice dashboard card from user [@Giorgio866](https://github.com/Giorgio866) to visualize your power flow, including configuration capabilities for switches and other controls right from the card.
 
-<figure>
-<img src="https://raw.githubusercontent.com/Giorgio866/lumina-energy-card/main/Images/screen.jpeg" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px" />
-<br clear="left"/>
+<figure align="center">
+<img src="https://raw.githubusercontent.com/Giorgio866/lumina-energy-card/main/Images/screen.jpeg" alt="Lumia Energy Card" title="Lumia Energy Card" width="400px" />
 </figure>
 
 This card is highly customizable and also offers a premium version that even has more capabilities for customization, including flow rearrangements, custom images etc.
