@@ -79,6 +79,7 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Additional Resources](#additional-resources)**
    * [Blog-Posts](#blog-posts)
    * [Videos](#videos)
+   * [Featured HA energy cards and integrations](#featured-energy-cards-and-integrations)
 
 
 ## Anker Account Information
