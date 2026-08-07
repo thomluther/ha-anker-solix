@@ -142,6 +142,7 @@ Platform | Description
 `button` | Trigger device details refresh on demand
 `number` | Change values for certain entities
 `datetime` | Change date and time for certain entities
+`text` | Change text or weekday list for certain entities
 `time` | Change time for certain entities
 `update` | Update entities to reflect available firmware updates
 `service` | Various Solarbank schedule or Api related services/actions
@@ -636,7 +637,7 @@ While there are plenty of energy cards available in the HA Community Store HACS,
 Highly recommended energy card from user [@ReikanYsora](https://github.com/ReikanYsora) to visualize the sun movement around YOUR home with building shadows, including live power flow and forecast data.
 
 <figure>
-<img src="https://github.com/thomluther/ha-anker-solix/blob/main/doc/helios-energy-card.png" alt="Lumia Energy Card" title="Lumia Energy Card" align="left" width="400px" />
+<img src="https://github.com/thomluther/ha-anker-solix/blob/main/doc/helios-energy-card.png?raw=true" alt="Helios Energy Card" title="Helios Energy Card" align="left" width="400px" />
 <br clear="left"/>
 </figure>
 
