@@ -252,7 +252,7 @@ DEVICE_SELECTS = [
             None
             if (
                 v := (d.get(jk) or d.get("power_limit"))
-                if d.get(MQTT_OVERLAY)
+                if d.get(MQTT_OVERLAY) or d.get("device_pn") == "A17C5"
                 else (d.get("power_limit") or d.get(jk))
             )
             is None
@@ -987,6 +987,11 @@ async def async_setup_entry(
                             # include MQTT command select entities only if no switch and max 20 options or also using Api command
                             and (
                                 desc.api_cmd
+                                or (
+                                    desc.key == "max_load"
+                                    and data.get("device_pn") == "A17C5"
+                                    and desc.mqtt_cmd == SolixMqttCommands.sb_max_load
+                                )
                                 or not (
                                     mdev
                                     and desc.mqtt_cmd
@@ -1129,7 +1134,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             self._attr_options = list(options)
             self._attr_options.sort()
         elif mdev and (
-            self.entity_description.mqtt_cmd
+            data.get("device_pn") != "A17C5"
+            and self.entity_description.mqtt_cmd
             in [SolixMqttCommands.sb_max_load, SolixMqttCommands.sb_max_load_parallel]
             and isinstance(options := mdev.device.get("power_limit_option"), list)
         ):
@@ -1585,8 +1591,12 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         "entity_id": self.entity_id,
                     },
                 )
-            # Skip Api calls if entity does not change
-            if str(option) == str(self._attr_current_option):
+            # Skip calls if entity does not change, except A17C5 max_load where
+            # the cached cloud value can differ from the physical MQTT state.
+            if str(option) == str(self._attr_current_option) and not (
+                self._attribute_name == "max_load"
+                and data.get("device_pn") == "A17C5"
+            ):
                 return
             # Wait until client cache is valid before applying any api change
             await self.coordinator.client.validate_cache()
@@ -1704,6 +1714,29 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                     indent=2 if len(json.dumps(resp)) < 200 else None,
                                 ),
                             )
+
+            elif (
+                self._attribute_name == "max_load"
+                and data.get("device_pn") == "A17C5"
+                and mdev
+            ):
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied via MQTT",
+                    self.entity_id,
+                    option,
+                )
+                # Current A17C5 app changes the output limit with 005a/type 3
+                # followed by 0080/type 0.
+                await self._async_mqtt_option(
+                    mdev=mdev,
+                    option=option,
+                    cmd=SolixMqttCommands.sb_max_load_parallel,
+                )
+                await self._async_mqtt_option(
+                    mdev=mdev,
+                    option=option,
+                    cmd=SolixMqttCommands.sb_max_load,
+                )
 
             elif self._attribute_name in ["max_load", "max_load_total"]:
                 LOGGER.debug(

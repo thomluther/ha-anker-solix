@@ -5747,17 +5747,16 @@ SOLIXMQTTMAP: Final[dict] = {
     "A17C5": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        "005a": CMD_SB_MAX_LOAD  # first A17C5 max-load command used by current app
         | {
             COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
             "a2": {
                 **CMD_SB_MAX_LOAD["a2"],
-                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
-                VALUE_OPTIONS_STATE: "max_load_parallel_options",
+                VALUE_OPTIONS: list(range(100, 801, 10)),
             },
             "a3": {
                 **CMD_SB_MAX_LOAD["a3"],
-                VALUE_DEFAULT: 2,
+                VALUE_DEFAULT: 3,
             },
         },
         "005e": CMD_SB_USAGE_MODE,  # NOTE: Cmd not supported directly, but description used for msg decoding
@@ -5794,12 +5793,11 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.sb_pv_limit_select,  # field a7
                 SolixMqttCommands.sb_ac_input_limit,  # field a8
             ],
-            SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000,1200 W, may depend on country settings
+            SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # current A17C5: 100-800 W, step 10 W
             | {
                 "a2": {
                     **CMD_SB_MAX_LOAD["a2"],
-                    VALUE_OPTIONS: [350, 600, 800, 1000, 1200],
-                    VALUE_OPTIONS_STATE: "max_load_options",  # key to be used to provide valid options
+                    VALUE_OPTIONS: list(range(100, 801, 10)),
                 },
                 # Extra field a4 observed for SB3, which does not seem to be used for SB2?
                 "a4": {
