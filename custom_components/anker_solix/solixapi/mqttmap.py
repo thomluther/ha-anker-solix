@@ -4798,6 +4798,26 @@ SOLIXMQTTMAP: Final[dict] = {
             # aa = max_soc: 80, 85, 90, 95, 100 %
             # ab = min_soc: 1, 5, 10, 15, 20 %
         },
+        "0090": {
+            # TOU command group, same shape as the AS220 definition below.
+            COMMAND_LIST: [
+                SolixMqttCommands.pps_usage_mode,  # field a2
+            ],
+            SolixMqttCommands.pps_usage_mode: CMD_COMMON_V2
+            | {
+                "a2": {  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                    NAME: "set_usage_mode",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "usage_mode",
+                    VALUE_OPTIONS: {
+                        "standard": 0,  # UPS mode
+                        "time_of_use": 1,
+                        "self_consumption": 2,
+                        "custom": 3,
+                    },
+                },
+            },
+        },
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
         # Interval: Irregular, triggered on app actions, no fixed interval

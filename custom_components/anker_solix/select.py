@@ -536,7 +536,9 @@ DEVICE_SELECTS = [
         translation_key="pps_usage_mode",
         json_key="usage_mode",
         # option values are mdev functions, depending on charger feature settings
-        value_fn=lambda d, jk: d.get(jk),
+        # Fall back to the customized cache so models that never report
+        # usage_mode still show the mode that was last selected.
+        value_fn=lambda d, jk: d.get(jk) or (d.get("customized") or {}).get(jk),
         attrib_fn=lambda d, jk: (
             {"mode": d.get(jk)}
             | (
@@ -553,6 +555,11 @@ DEVICE_SELECTS = [
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
         ),
+        # A1783 accepts the 0090 usage mode command but never reports
+        # usage_mode in its telemetry, so neither entity creation nor the
+        # write path would otherwise run for it.
+        force_creation_fn=lambda d, _: d.get("device_pn") in {"A1783"},
+        restore=True,
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.pps_usage_mode,
     ),
