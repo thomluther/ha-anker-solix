@@ -426,7 +426,7 @@ class AnkerSolixClientSession:
             self._loggedIn = False
         return self._loggedIn
 
-    async def request(
+    async def request(  # noqa: C901
         self,
         method: str,
         endpoint: str,

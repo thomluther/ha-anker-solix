@@ -959,7 +959,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
         # Mark availability based on value
         self._attr_available = self._native_value is not None
 
-    async def async_set_native_value(self, value: float) -> None:
+    async def async_set_native_value(self, value: float) -> None:  # noqa: C901
         """Set the native value of the number entity.
 
         Args:
