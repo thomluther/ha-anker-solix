@@ -1,7 +1,5 @@
 """Adds config flow for Anker Solix."""
 
-from __future__ import annotations  # noqa: TID251
-
 from pathlib import Path
 from typing import Any
 
@@ -274,7 +272,7 @@ class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         self._data["nickname"] = client.api.apisession.nickname or ""
                         self.client = client
                         # update existing config entry
-                        return self.async_update_reload_and_abort(
+                        return self.async_update_and_abort(
                             entry=config_entry,
                             unique_id=account_user,
                             title=self.client.api.apisession.nickname
@@ -655,6 +653,9 @@ async def async_check_and_remove_devices(
             SolixDeviceType.CHARGER.value,
             SolixDeviceType.COMBINER_BOX.value,
             SolixDeviceType.HOME_BACKUP,
+            SolixDeviceType.POWERBANK.value,
+            SolixDeviceType.GENERATOR.value,
+            SolixDeviceType.POWERCOOLER.value,
             ApiCategories.solarbank_energy,
             ApiCategories.smartmeter_energy,
             ApiCategories.smartplug_energy,
@@ -719,6 +720,7 @@ async def async_check_and_remove_devices(
                 SolixDeviceType.HOME_BACKUP,
                 SolixDeviceType.POWERBANK.value,
                 SolixDeviceType.POWERCOOLER.value,
+                SolixDeviceType.GENERATOR.value,
             }
 
     # get all device entries for a domain

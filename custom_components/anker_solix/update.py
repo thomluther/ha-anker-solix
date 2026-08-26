@@ -166,13 +166,9 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -180,16 +176,14 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context) or {}).get("site_info") or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
-        self._attr_title = f"{data.get('name') or data.get("alias")} ({data.get('device_pn')})"
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
+        self._attr_title = (
+            f"{data.get('name') or data.get('alias')} ({data.get('device_pn')})"
+        )
         self.update_state_value()
 
     @callback
@@ -286,7 +280,7 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
             markdown += "Component|OTA-Version|Upgrade|Forced\n"
             markdown += "---|---|---|---\n"
             for child in (childs := data.get("ota_children") or []):
-                b = "**" if child.get('need_update') else ""
+                b = "**" if child.get("need_update") else ""
                 markdown += f"{child.get('device_type') or '-'}|{b}{child.get('rom_version_name') or '-'}{b}|{b}{'YES' if b else 'NO'}{b}|{'**YES**' if child.get('force_upgrade') else 'NO'}\n"
             return markdown if childs else None
         return None

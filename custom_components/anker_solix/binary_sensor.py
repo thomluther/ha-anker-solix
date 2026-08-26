@@ -170,6 +170,23 @@ DEVICE_SENSORS = [
             not ({d.get("type")} - s and d.get("mqtt_data") and d.get("is_passive"))
         ),
     ),
+    AnkerSolixBinarySensorDescription(
+        # PPS device disaster sensor
+        key="disaster_support",
+        translation_key="disaster_support",
+        json_key="support_auto_disaster",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk: d.get("disaster_support", {}).get(jk),
+        attrib_fn=lambda d, _: {
+            "countries": [
+                country.get("code")
+                for country in (
+                    d.get("disaster_support", {}).get("support_country_code") or []
+                )
+            ]
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
 ]
 
 SITE_SENSORS = [
@@ -223,6 +240,28 @@ SITE_SENSORS = [
         },
         entity_category=EntityCategory.DIAGNOSTIC,
         exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
+    ),
+    AnkerSolixBinarySensorDescription(
+        # site disaster sensor
+        key="disaster_support",
+        translation_key="disaster_support",
+        json_key="support_auto_disaster",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk: (
+            d.get("site_details", {}).get("disaster_support", {}).get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "countries": [
+                country.get("code")
+                for country in (
+                    d.get("site_details", {})
+                    .get("disaster_support", {})
+                    .get("support_country_code")
+                    or []
+                )
+            ]
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
 ]
 
@@ -293,7 +332,10 @@ async def async_setup_entry(
         # create entity based on type of entry in coordinator data, which consolidates the api.sites, api.devices and api.account dictionaries
         # the coordinator.data dict key is either account nickname, a site_id or device_sn and used as context for the entity to lookup its data
         # manually register parent devices to avoid core warning while processing first component setup with account via device that may not exist yet
+        # The device topology structure with device ids will be build in the first run, and the parent relation can be applied in a cycle through the
+        # device id structure, see also https://developers.home-assistant.io/blog/2026/07/21/device-registry-single-config-entry/
         device_registry = dr.async_get(hass)
+        topology = {}
         excluded = set(entry.options.get(CONF_EXCLUDE, []))
         for context, data in coordinator.data.items():
             mdev = None
@@ -302,50 +344,85 @@ async def async_setup_entry(
                 # Unique key for site_id entry in data
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SENSORS
-                device_registry.async_get_or_create(
+                dev_info = get_AnkerSolixSystemInfo(data, context)
+                dev_entry = device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
-                    identifiers=(
-                        get_AnkerSolixSystemInfo(
-                            data, context, coordinator.client.api.apisession.email
-                        )
-                    ).get("identifiers"),
+                    identifiers=dev_info.get("identifiers"),
+                    manufacturer=dev_info.get("manufacturer"),
+                    serial_number=dev_info.get("serial_number"),
+                    model=dev_info.get("model"),
+                    model_id=dev_info.get("model_id"),
+                    name=dev_info.get("name"),
                 )
+                topology[context] = {
+                    "device_id": dev_entry.id,
+                    "parent_context": coordinator.client.api.apisession.email,
+                }
             elif data_type == SolixDeviceType.ACCOUNT.value:
                 # Unique key for account entry in data
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_SENSORS
-                device_registry.async_get_or_create(
+                dev_info = get_AnkerSolixAccountInfo(data, context)
+                dev_entry = device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
-                    identifiers=(get_AnkerSolixAccountInfo(data, context)).get(
-                        "identifiers"
-                    ),
+                    identifiers=dev_info.get("identifiers"),
+                    manufacturer=dev_info.get("manufacturer"),
+                    serial_number=dev_info.get("serial_number"),
+                    model=dev_info.get("model"),
+                    model_id=dev_info.get("model_id"),
+                    name=dev_info.get("name"),
                 )
+                topology[context] = {
+                    "device_id": dev_entry.id,
+                }
             elif data_type == SolixDeviceType.VEHICLE.value:
                 # vehicle entry in data
                 entity_type = AnkerSolixEntityType.VEHICLE
                 entity_list = VEHICLE_SENSORS
-                device_registry.async_get_or_create(
+                dev_info = get_AnkerSolixVehicleInfo(data, context)
+                dev_entry = device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
-                    identifiers=(
-                        get_AnkerSolixVehicleInfo(
-                            data, context, coordinator.client.api.apisession.email
-                        )
-                    ).get("identifiers"),
+                    identifiers=dev_info.get("identifiers"),
+                    manufacturer=dev_info.get("manufacturer"),
+                    serial_number=dev_info.get("serial_number"),
+                    model=dev_info.get("model"),
+                    model_id=dev_info.get("model_id"),
+                    hw_version=dev_info.get("hw_version"),
+                    name=dev_info.get("name"),
                 )
+                topology[context] = {
+                    "device_id": dev_entry.id,
+                    "parent_context": coordinator.client.api.apisession.email,
+                }
             else:
                 # device_sn entry in data
                 entity_type = AnkerSolixEntityType.DEVICE
                 entity_list = DEVICE_SENSORS
-                # create device upfront only if not subdevice and not excluded to avoid empty device
-                if not data.get("is_subdevice") and {data.get("type") or ""} - excluded:
-                    device_registry.async_get_or_create(
+                # create device and subdevice only if not excluded to avoid empty devices
+                if {data.get("type") or ""} - excluded:
+                    if data.get("is_subdevice"):
+                        dev_info = get_AnkerSolixSubdeviceInfo(data, context)
+                    else:
+                        dev_info = get_AnkerSolixDeviceInfo(data, context)
+                    dev_entry = device_registry.async_get_or_create(
                         config_entry_id=entry.entry_id,
-                        identifiers=(
-                            get_AnkerSolixDeviceInfo(
-                                data, context, coordinator.client.api.apisession.email
-                            )
-                        ).get("identifiers"),
+                        identifiers=dev_info.get("identifiers"),
+                        manufacturer=dev_info.get("manufacturer"),
+                        serial_number=dev_info.get("serial_number"),
+                        model=dev_info.get("model"),
+                        model_id=dev_info.get("model_id"),
+                        sw_version=dev_info.get("sw_version"),
+                        name=dev_info.get("name"),
                     )
+                    topology[context] = {
+                        "device_id": dev_entry.id,
+                        "parent_context": data.get("main_sn")
+                        if data.get("is_subdevice")
+                        else (
+                            data.get("site_id")
+                            or coordinator.client.api.apisession.email
+                        ),
+                    }
                 # get MQTT device combined values for creation of entities
                 if mdev := coordinator.client.get_mqtt_device(sn=context):
                     mdata = mdev.get_combined_cache(
@@ -379,6 +456,14 @@ async def async_setup_entry(
                 )
                 entities.append(entity)
 
+        # update the topology in the created devices
+        for device in topology.values():
+            if parent := device.get("parent_context"):
+                device_registry.async_update_device(
+                    device_id=device.get("device_id"),
+                    via_device_id=topology.get(parent, {}).get("device_id"),
+                )
+
     # create the entities from the list
     async_add_entities(entities)
 
@@ -393,6 +478,7 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         {
             "bt_mac",
             "charge_threshold",
+            "countries",
             "discharge_threshold",
             "network",
             "network_code",
@@ -429,18 +515,13 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self.entity_description = description
         self.entity_type = entity_type
         self._attr_extra_state_attributes = None
-
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -448,15 +529,11 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
         self._attr_is_on = None
         self.update_state_value()

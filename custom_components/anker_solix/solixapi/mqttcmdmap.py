@@ -1,10 +1,16 @@
 """Define mapping for MQTT command messages and field conversions."""
 
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
-from .helpers import convert_port_protocols, convert_weekdays
+from .helpers import (
+    convert_circuit_setup,
+    convert_port_protocols,
+    convert_pps_tou_schedule,
+    convert_weekdays,
+)
 
 # common mapping keys to be used for status and command descriptions
 EMBEDDED: Final[str] = (
@@ -60,7 +66,10 @@ VALUE_OPTIONS: Final[str] = (
 )
 VALUE_DEFAULT: Final[str] = "value_default"  # Defines a default value for the field
 VALUE_FOLLOWS: Final[str] = (
-    "value_follows"  # defines setting name the value depends on, the options need to define a map for the dependencies
+    "value_follows"  # defines setting name the value depends on, the options may define a map for the dependencies or the state converter
+)
+VALUE_SKIP: Final[str] = (
+    "value_skip"  # optional lambda function (value, cache) to skip the value if function is true
 )
 VALUE_STATE: Final[str] = (
     "value_state"  # Defines a state name that should be used to obtain the value if found
@@ -96,6 +105,7 @@ class SolixMqttCommands:
     ac_output_mode_select: str = "ac_output_mode_select"
     ac_output_timeout_seconds: str = "ac_output_timeout_seconds"
     ac_output_timeout_minutes: str = "ac_output_timeout_minutes"
+    ac_output_timer: str = "ac_output_timer"
     dc_output_switch: str = "dc_output_switch"
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
     dc_output_timeout_seconds: str = "dc_output_timeout_seconds"
@@ -135,8 +145,8 @@ class SolixMqttCommands:
     pps_usage_mode: str = "pps_usage_mode"
     pps_tou_schedule: str = "tou_schedule"
     pps_custom_schedule: str = "pps_custom_schedule"
+    pps_output_schedule: str = "pps_output_schedule"
     silent_schedule: str = "silent_schedule"
-    storm_guard_switch: str = "storm_guard_switch"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
     sb_min_soc_select: str = "sb_min_soc_select"  # Old command: Does not change App station wide setting, needs Api request as well
@@ -193,6 +203,10 @@ class SolixMqttCommands:
     clock_holiday_switch: str = "clock_holiday_switch"
     charger_theme: str = "charger_theme"
     charger_theme_custom: str = "charger_theme_custom"
+    circuit_priority: str = "circuit_priority"
+    backup_charge_plan: str = "backup_charge_plan"
+    backup_charge_storm_guard: str = "backup_charge_storm_guard"
+    backup_charge_timestamps: str = "backup_charge_timestamps"
     tbd_switch: str = "tbd_switch"
 
     def asdict(self) -> dict:
@@ -307,7 +321,7 @@ CMD_TEMP_UNIT = CMD_COMMON | {
 CMD_TEMP_UNIT_V2 = CMD_COMMON_V2 | {
     # Command: Set temperature unit
     COMMAND_NAME: SolixMqttCommands.temp_unit_switch,
-    "b2": {
+    "a5": {
         NAME: "set_temp_unit_fahrenheit",  # Celsius (0) | Fahrenheit (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "temp_unit_fahrenheit",
@@ -372,13 +386,13 @@ CMD_AC_OUTPUT_MODE = CMD_COMMON | {
     # Command: PPS AC output mode setting
     COMMAND_NAME: SolixMqttCommands.ac_output_mode_select,
     "a2": {
-        NAME: "set_ac_output_mode",   # Normal (0), Smart (1)
+        NAME: "set_ac_output_mode",  # Normal (0), Smart (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {1: 2, 0: 1}.get(value, 1) # switch to state conversion for mocked state
+            {1: 2, 0: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
-            else state # do not convert state, since that is the provided switch value
+            else state  # do not convert state, since that is the provided switch value
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
         VALUE_OPTIONS: {"smart": 1, "normal": 0},
     },
@@ -392,9 +406,9 @@ CMD_AC_OUTPUT_MODE_INV = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {0: 2, 1: 1}.get(value, 1) # switch to state conversion for mocked state
+            {0: 2, 1: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
-            else state # do not convert state, since that is the provided switch value
+            else state  # do not convert state, since that is the provided switch value
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
@@ -436,7 +450,7 @@ CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "dc_12v_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {1: 2, 0: 1}.get(value, 1) # switch to state conversion for mocked state
+            {1: 2, 0: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
             else state
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
@@ -452,7 +466,7 @@ CMD_DC_12V_OUTPUT_MODE_INV = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "dc_12v_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {0: 2, 1: 1}.get(value, 1) # switch to state conversion for mocked state
+            {0: 2, 1: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
             else state
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
@@ -746,7 +760,7 @@ CMD_SB_SOC_LIMITS = CMD_COMMON | {
                 int(cache.get("set_max_soc", cache.get("max_soc") or 1)) - 1,
                 max(
                     int(cache.get("set_min_soc", cache.get("power_cutoff") or -1)) + 1,
-                    #int(cache.get("backup_soc") or 0),
+                    # int(cache.get("backup_soc") or 0),
                     state,
                 ),
             )
@@ -1010,6 +1024,7 @@ CMD_SB_USAGE_MODE = (
         "a6": {
             NAME: "set_timestamp_backup_start",
             TYPE: DeviceHexDataTypes.var.value,
+            SIGNED: False,
             STATE_NAME: "timestamp_backup_start",
         },
         "a6_mode_8": {
@@ -1070,6 +1085,7 @@ CMD_SB_USAGE_MODE = (
         "a7": {
             NAME: "set_timestamp_backup_end",
             TYPE: DeviceHexDataTypes.var.value,
+            SIGNED: False,
             STATE_NAME: "timestamp_backup_end",
         },
     }
@@ -1191,22 +1207,35 @@ CMD_PLUG_DELAYED_TOGGLE = (
     }
 )
 
-CMD_EV_CHARGER_MODE = CMD_COMMON | {
-    # Command: EV Charger mode selection
-    COMMAND_NAME: SolixMqttCommands.ev_charger_mode_select,
-    COMMAND_ENCODING: 2,  # encoding_type 2 seems to be required for this command message
-    # Charger Status: Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
-    "a2": {
-        NAME: "set_ev_charger_mode",  # Start(1), Stop(2), Skip Delay (3), Boost(4)
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {
-            "start_charge": 1,
-            "stop_charge": 2,
-            "skip_delay": 3,
-            "boost_charge": 4,
+CMD_EV_CHARGER_MODE = (
+    CMD_COMMON
+    | {
+        # Command: EV Charger mode selection
+        COMMAND_NAME: SolixMqttCommands.ev_charger_mode_select,
+        COMMAND_ENCODING: 2,  # encoding_type 2 seems to be required for this command message
+        # Charger Status: Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
+        "a2": {
+            NAME: "set_ev_charger_mode",  # Start(1), Stop(2), Skip Delay (3), Boost(4)
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {
+                "start_charge": 1,
+                "stop_charge": 2,
+                "skip_delay": 3,
+                "boost_charge": 4,
+            },
+            # Convert value back for mocked and different value state:
+            # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
+            STATE_NAME: "ev_charger_status",
+            STATE_CONVERTER: lambda value, state, _: (
+                {1: 2, 2: 0, 3: 2, 4: 2}.get(
+                    value, 0
+                )  # switch to state conversion for mocked state. Boost uses different name and cannot be mocked
+                if value is not None
+                else state  # do not convert state, since that is the provided command value
+            ),
         },
-    },
-}
+    }
+)
 
 CMD_DEVICE_POWER_MODE = CMD_COMMON | {
     # Command: EV Charger device power mode
@@ -1849,6 +1878,14 @@ CMD_CHARGER_THEME = CMD_COMMON | {
                     STATE_NAME: "holiday_switch",
                     VALUE_STATE: "holiday_switch",
                 },
+                {
+                    NAME: "set_theme_type",
+                    VALUE_OPTIONS: {"stock": 1, "custom": 2},
+                    MASK: 0x06,  # Stock is bit 1, custom is bit 2
+                    MASK_STATE: "clock_settings",
+                    STATE_NAME: "theme_type",
+                    VALUE_DEFAULT: 1,
+                },
             ]
         },
     },
@@ -2139,6 +2176,292 @@ CMD_PORT_PRIORITY = CMD_COMMON | {
             "c2_c4": 10,
             "c3_c4": 12,
         },
+    },
+}
+
+CMD_CIRCUIT_PRIORITY = CMD_COMMON | {
+    # Command: AX170 power dock circuit priority
+    COMMAND_NAME: SolixMqttCommands.circuit_priority,
+    "a2": {
+        NAME: "set_low_backup_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "low_backup_soc",
+        VALUE_MIN: 10,  # Range to be confirmed!
+        VALUE_MAX: 99,
+        VALUE_MAX_STATE: "high_backup_soc",
+        VALUE_STATE: "low_backup_soc",
+    },
+    "a3": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # Circuit Priority, group ID per circuit
+        # group ID must be assigned by algorithm (helper method)
+        # Counting starts from last to first circuit, each priority/circuit group start counting from 1
+        # Example: 01:08 01:07 01:06 01:05 01:04 01:04 02:01 01:03 01:02 01:02 01:01 01:01
+        LENGTH: 24,
+        NAME: "set_circuit_priority",
+        STATE_CONVERTER: lambda value, state, cache: (
+            convert_circuit_setup(
+                value, merge=(cache or {}).get("set_circuit_priority")
+            )  # provide old setup to merge mocked state
+            if value is not None
+            else convert_circuit_setup(state)
+        ),
+        STATE_NAME: "circuit_setup",
+        VALUE_STATE: "circuit_setup",
+    },
+    "a4": {
+        NAME: "set_high_backup_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "high_backup_soc",
+        VALUE_MIN: 11,  # Range to be confirmed!
+        VALUE_MAX: 100,
+        VALUE_MIN_STATE: "low_backup_soc",
+        VALUE_STATE: "high_backup_soc",
+    },
+}
+
+CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
+    # Command: backup charge plan
+    COMMAND_NAME: SolixMqttCommands.backup_charge_plan,
+    "a2": {
+        NAME: "set_plan_id",  # 4: backup_plan
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"backup": 4},
+        VALUE_DEFAULT: 4,
+    },
+    "a3": {
+        NAME: "set_backup_option_select",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"backup_switch": 0, "storm_guard_switch": 1},
+        # VALUE_DEFAULT must be set by corresponding command
+    },
+    "a4": {
+        NAME: "set_backup_option_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        # VALUE_STATE must be set by corresponding command
+    },
+    "a5": {
+        NAME: "set_backup_timestamps",  # Must provide a6 timestamps if enabled
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_DEFAULT: 1,
+    },
+    "a6": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # backup_max_soc, backup_min_soc,start_time,end_time
+        # Example: 64: 18: a8:bb:7c:6a: b8:c9:7c:6a
+        LENGTH: 10,
+        BYTES: {
+            "00": {
+                STATE_NAME: "set_target_backup_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_STATE: "high_backup_soc",
+                VALUE_MIN: 80,  # Range to be confirmed!
+                VALUE_MAX: 100,
+            },
+            "01": {
+                STATE_NAME: "set_unknown_backup_soc?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_STATE: "unknown_backup_soc",
+                VALUE_MIN: 10,  # Range to be confirmed!
+                VALUE_MAX: 50,
+            },
+            "02": {
+                NAME: "set_backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                STATE_NAME: "backup_start_timestamp",
+                VALUE_STATE: "backup_start_timestamp",
+            },
+            "06": {
+                NAME: "set_backup_end_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                STATE_NAME: "backup_end_timestamp",
+                VALUE_DEFAULT: 0xFFFFFFFF,
+            },
+        },
+    },
+}
+
+BACKUP_CHARGE_COMMON_V2 = CMD_COMMON_V2 | {
+    # Backup charge plan common fields as used for AS220, A1785
+    "a3": {
+        NAME: "set_plan_id",  # is this the actual usage plan ID being modified?
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {  # 3=backup_plan
+            "backup": 3,
+        },
+        VALUE_DEFAULT: 3,
+    },
+    "a4": {
+        NAME: "set_backup_option_select",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"backup_switch": 0, "storm_guard_switch": 1},
+        # VALUE_DEFAULT must be set by corresponding command
+    },
+    "a5": {
+        NAME: "set_backup_option_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        # VALUE_STATE must be set by corresponding command
+    },
+}
+
+CMD_BACKUP_STORM_GUARD_SWITCH_V2 = BACKUP_CHARGE_COMMON_V2 | {
+    "a4": BACKUP_CHARGE_COMMON_V2["a4"]
+    | {
+        VALUE_DEFAULT: 1,  # Storm Guard switch option
+    },
+    "a5": BACKUP_CHARGE_COMMON_V2["a5"]
+    | {
+        STATE_NAME: "storm_guard_switch",
+        VALUE_STATE: "storm_guard_switch",
+    },
+}
+
+CMD_BACKUP_SWITCH_V2 = BACKUP_CHARGE_COMMON_V2 | {
+    "a4": BACKUP_CHARGE_COMMON_V2["a4"]
+    | {
+        VALUE_DEFAULT: 0,  # backup switch option
+    },
+    "a5": BACKUP_CHARGE_COMMON_V2["a5"]
+    | {
+        STATE_NAME: "backup_switch",
+        VALUE_STATE: "backup_switch",
+    },
+}
+
+CMD_BACKUP_PLAN_TIMESTAMPS_V2 = CMD_BACKUP_SWITCH_V2 | {
+    "a6": {
+        NAME: "set_backup_timestamps",  # Must provide a7 timestamps if enabled
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_DEFAULT: 1,
+    },
+    "a7": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # backup_max_soc, backup_min_soc,start_time,end_time
+        # Example: 64: 18: a8:bb:7c:6a: b8:c9:7c:6a
+        # NOTE: Field is skipped completely if a6 = 0
+        LENGTH: 10,
+        BYTES: {
+            "00": {
+                NAME: "set_backup_charge_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_STATE: "max_soc",
+                VALUE_MIN: 80,
+                VALUE_MAX: 100,
+                VALUE_MAX_STATE: "max_soc",
+            },
+            "01": {
+                NAME: "set_backup_discharge_soc",  # 00 if not changeable for device
+                TYPE: DeviceHexDataTypes.ui.value,
+                # VALUE_FOLLOWS: "backup_soc",
+                VALUE_DEFAULT: 0,
+            },
+            "02": {
+                NAME: "set_backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    value
+                    if value is not None
+                    else int(max(datetime.now().astimezone().timestamp(), state))
+                    if state is not None
+                    else state
+                ),
+                STATE_NAME: "backup_start_timestamp",
+                VALUE_STATE: "backup_start_timestamp",
+            },
+            "06": {
+                NAME: "set_backup_end_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                VALUE_MIN_STATE: "backup_start_timestamp",
+                STATE_CONVERTER: lambda value, state, cache: (
+                    value
+                    if value is not None
+                    else int(
+                        max(
+                            (
+                                cache.get("set_backup_start_timestamp")
+                                or cache.get("backup_start_timestamp")
+                            )
+                            + 60,
+                            datetime.now().astimezone().timestamp() + 60,
+                            v,
+                        )
+                    )
+                    if (v := state or cache.get("backup_end_timestamp") or 0xFFFFFFFF)
+                    else state
+                ),
+                STATE_NAME: "backup_end_timestamp",
+            },
+        },
+    },
+}
+
+CMD_PPS_USAGE_MODE_V2 = CMD_COMMON_V2 | {
+    # PPS Usage mode and plan settings
+    "a2": {  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+        NAME: "set_usage_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "usage_mode",
+        VALUE_OPTIONS: {
+            "standard": 0,  # UPS mode
+            "time_of_use": 1,
+            "self_consumption": 2,
+            "custom": 3,
+        },
+    },
+}
+
+CMD_TOU_PLAN_V2 = CMD_PPS_USAGE_MODE_V2 | {
+    # TOU plan for AS220, A1785, typically sent via cloud
+    "a2": CMD_PPS_USAGE_MODE_V2["a2"]
+    | {
+        VALUE_DEFAULT: 1,  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+    },
+    "a3": {
+        NAME: "set_unknown_a3",  # is this the actual usage plan ID being modified?
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_DEFAULT: 0,
+    },
+    "a4": {
+        NAME: "set_unknown_a4",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_DEFAULT: 0,
+    },
+    "a6": {
+        NAME: "set_unknown_a6",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {
+            "4": 4,
+            "3": 3,
+        },
+    },
+    "a7": {
+        # 1st Byte is the tou schedule slot count and rest holds the TOU schedule with up to 6 slots a 3 bytes:
+        # (tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr) * tou_slot_count
+        NAME: "set_tou_mode_schedule",
+        TYPE: DeviceHexDataTypes.bin.value,
+        STATE_NAME: "tou_mode_schedule",
+        STATE_CONVERTER: lambda value, state, cache: (
+            # Define both conversions since length of schedule is flexible within binary
+            convert_pps_tou_schedule(value)
+            if value is not None
+            else convert_pps_tou_schedule(state)
+        ),
     },
 }
 

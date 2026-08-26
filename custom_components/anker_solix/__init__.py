@@ -109,6 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ) as exception:
         raise ConfigEntryAuthFailed(exception) from exception
     # Registers update listener to update config entry when options are updated.
+    # https://developers.home-assistant.io/blog/2026/05/07/config-entry-listener-together-with-reloading-methods/
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
     # check again if config shares devices with another config and also remove orphaned devices no longer contained in actual api data
@@ -175,7 +176,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Handle options update, triggered by update listener only."""
+    """Handle options update and performs a reload depending on changes, triggered by update listener only."""
     coordinator: AnkerSolixDataUpdateCoordinator = hass.data[DOMAIN].get(entry.entry_id)
     do_reload = True
     if coordinator and coordinator.client:

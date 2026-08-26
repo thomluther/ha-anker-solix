@@ -85,12 +85,14 @@ from .solixapi.apitypes import (
     SolarbankStatus,
     SolarbankTimeslot,
     SolarbankUsageMode,
+    SolixBackupStatus,
     SolixBatteryStatus,
     SolixChargerPortStatus,
     SolixConnectionStatus,
     SolixCpSignalStatus,
     SolixDeviceStatus,
     SolixDeviceType,
+    SolixDisasterStatus,
     SolixEvChargerStatus,
     SolixGridStatus,
     SolixOcppConnectionStatus,
@@ -101,6 +103,7 @@ from .solixapi.apitypes import (
     SolixPpsChargingStatus,
     SolixPpsDcChargingStatus,
     SolixPpsPortStatus,
+    SolixPpsWorkStatus,
     SolixRoleStatus,
     SolixWorkingStatus,
 )
@@ -286,6 +289,17 @@ DEVICE_SENSORS = [
         key="dc_input_power_total",
         translation_key="dc_input_power_total",
         json_key="dc_input_power_total",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="input_power_total",
+        translation_key="input_power_total",
+        json_key="input_power_total",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -899,12 +913,7 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY_STORAGE,
         suggested_display_precision=0,
-        # Capacity moved to number entities to allow customization
-        # attrib_fn=lambda d, _: {
-        #     "capacity": " ".join(
-        #         [str(d.get("battery_capacity") or "----"), UnitOfEnergy.WATT_HOUR]
-        #     )
-        # },
+        value_fn=lambda d, jk, _: str(d.get(jk, "")) or None,
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
@@ -1570,7 +1579,7 @@ DEVICE_SENSORS = [
             None
             if not (val := (d.get("average_power") or {}).get(jk) or "")
             else (
-                (tm := datetime.strptime(val, "%Y-%m-%d %H:%M:%S"))
+                (tm := datetime.strptime(val, "%Y-%m-%d %H:%M:%S").astimezone())
                 - timedelta(
                     minutes=tm.minute % 5,
                     seconds=tm.second,
@@ -1581,7 +1590,9 @@ DEVICE_SENSORS = [
         attrib_fn=lambda d, _: {
             "last_check": None
             if not (tm := (d.get("average_power") or {}).get("last_check"))
-            else datetime.strptime(tm, "%Y-%m-%d %H:%M:%S").isoformat(sep=" "),
+            else datetime.strptime(tm, "%Y-%m-%d %H:%M:%S")
+            .astimezone()
+            .isoformat(sep=" "),
         },
         exclude_fn=lambda s, _: (
             not (
@@ -1911,7 +1922,9 @@ DEVICE_SENSORS = [
         value_fn=lambda d, jk, _: (
             None
             if not (val := d.get(jk) or "")
-            else (datetime.strptime(val, "%Y-%m-%d %H:%M:%S")).isoformat(sep=" ")
+            else (datetime.strptime(val, "%Y-%m-%d %H:%M:%S"))
+            .astimezone()
+            .isoformat(sep=" ")
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -2153,7 +2166,55 @@ DEVICE_SENSORS = [
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d, jk, _: get_enum_name(SolixWorkingStatus, str(d.get(jk, ""))),
         attrib_fn=lambda d, _: {"status": d.get("working_status")},
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s - {SolixDeviceType.PPS.value}),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="pps_working_status",
+        translation_key="working_status",
+        json_key="working_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=[status.name for status in SolixPpsWorkStatus],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: get_enum_name(SolixPpsWorkStatus, str(d.get(jk, ""))),
+        attrib_fn=lambda d, _: {"status": d.get("working_status")},
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+        ),
+        mqtt=True,
+    ),
+    AnkerSolixSensorDescription(
+        key="pps_backup_status",
+        translation_key="backup_status",
+        json_key="backup_status",
+        device_class=SensorDeviceClass.ENUM,
+        options=[status.name for status in SolixBackupStatus],
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: get_enum_name(SolixBackupStatus, str(d.get(jk, ""))),
+        attrib_fn=lambda d, _: (
+            {"status": d.get("backup_status")}
+            | (
+                {
+                    "auto_backup_start": datetime.fromtimestamp(v)
+                    .astimezone()
+                    .isoformat(sep=" "),
+                }
+                if str(v := d.get("auto_backup_start_timestamp", ""))
+                else {}
+            )
+            | (
+                {
+                    "auto_backup_end": datetime.fromtimestamp(v)
+                    .astimezone()
+                    .isoformat(sep=" "),
+                }
+                if str(v := d.get("auto_backup_end_timestamp", ""))
+                else {}
+            )
+        ),
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+        ),
         mqtt=True,
     ),
     AnkerSolixSensorDescription(
@@ -2317,7 +2378,7 @@ DEVICE_SENSORS = [
         value_fn=lambda d, jk, _: (
             None
             if not str(val := d.get(jk, ""))
-            else datetime.fromtimestamp(val).isoformat(sep=" ")
+            else datetime.fromtimestamp(val).astimezone().isoformat(sep=" ")
         ),
         attrib_fn=lambda d, _: (
             {
@@ -2416,6 +2477,40 @@ DEVICE_SENSORS = [
             "total_km": d.get("total_stats", {}).get("mile_age"),
         },
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
+        # PPS device disaster sensor
+        key="disaster_status",
+        translation_key="disaster_status",
+        json_key="disaster_status",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: (
+            get_enum_name(
+                SolixDisasterStatus,
+                str(
+                    min((s or 0) for k, s in v.items() if k.endswith("disaster_status"))
+                ),
+                SolixDisasterStatus.unknown.name,
+            )
+            if (v := d.get("device_disaster_status", {}))
+            else None
+        ),
+        attrib_fn=lambda d, _: {
+            "storm_guard": (v := d.get("device_disaster_status", {})).get(
+                "auto_disaster_status"
+            ),
+            "manual": v.get("manual_disaster_status"),
+            "details": v.get("current_disaster_detail"),
+        },
+        # show device sensor only if storm guard supported since manual status not updated in cloud
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and d.get("site_details", {})
+                .get("disaster_support", {})
+                .get("support_auto_disaster")
+            )
+        ),
     ),
 ]
 
@@ -2658,7 +2753,7 @@ SITE_SENSORS = [
         key="solarbank_timestamp",
         translation_key="solarbank_timestamp",
         json_key="updated_time",
-        # value_fn=lambda d, jk, _: datetime.strptime((d.get("solarbank_info") or {}).get(jk), "%Y-%m-%d %H:%M:%S").astimezone().isoformat(),
+        # value_fn=lambda d, jk, _: datetime.strptime((d.get("solarbank_info") or {}).get(jk), "%Y-%m-%d %H:%M:%S").astimezone().isoformat(sep=" "),
         value_fn=lambda d, jk, _: (d.get("solarbank_info") or {}).get(jk),
         attrib_fn=lambda d, _: {"tz_offset_sec": d.get("energy_offset_tz") or 0},
         # exclude sensor if unused artifacts in structure
@@ -3734,6 +3829,37 @@ SITE_SENSORS = [
         value_fn=lambda d, jk, _: (d.get("hes_info") or {}).get(jk),
         exclude_fn=lambda s, d: not ({d.get("site_type")} - s),
     ),
+    AnkerSolixSensorDescription(
+        # site disaster sensor
+        key="disaster_status",
+        translation_key="disaster_status",
+        json_key="disaster_status",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk, _: (
+            get_enum_name(
+                SolixDisasterStatus,
+                str(
+                    min((s or 0) for k, s in v.items() if k.endswith("disaster_status"))
+                ),
+                SolixDisasterStatus.unknown.name,
+            )
+            if (v := d.get("site_details", {}).get("device_disaster_status", {}))
+            else None
+        ),
+        attrib_fn=lambda d, _: {
+            "storm_guard": (
+                v := d.get("site_details", {}).get("device_disaster_status", {})
+            ).get("auto_disaster_status"),
+            "manual": v.get("manual_disaster_status"),
+            "details": v.get("current_disaster_detail"),
+        },
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and d.get("site_details", {}).get("disaster_support", {})
+            )
+        ),
+    ),
 ]
 
 ACCOUNT_SENSORS = [
@@ -3794,7 +3920,7 @@ VEHICLE_SENSORS = [
         json_key="update_time",
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d, jk, _: (
-            datetime.fromtimestamp(int(d.get(jk))).isoformat(sep=" ")
+            datetime.fromtimestamp(int(d.get(jk))).astimezone().isoformat(sep=" ")
             if str(d.get(jk)).isdigit()
             else None
         ),
@@ -3910,6 +4036,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "advantage",
             "ac_input_plug_status",
             "ac_frequency",
+            "auto_backup_start",
+            "auto_backup_end",
             "avg_today",
             "avg_tomorrow",
             "branch_ct_number",
@@ -3920,6 +4048,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "charge_count",
             "charging_status",
             "co2_saving",
+            "details",
             "device_sn",
             "device_name",
             "device_pn",
@@ -3938,6 +4067,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "inverter_info",
             "main_ct_number",
             "main_branch_check_status",
+            "manual",
             "max_ampere",
             "message",
             "messages",
@@ -3980,6 +4110,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "station_id",
             "station_type",
             "status",
+            "storm_guard",
             "solar_brand",
             "solar_model",
             "solar_sn",
@@ -4042,15 +4173,20 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             data = coordinator.data.get(self._context_base) or {}
             if data.get("is_subdevice"):
                 self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, self._context_base, data.get("main_sn")
+                    data, self._context_base
                 )
             else:
                 self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, self._context_base, coordinator.client.api.apisession.email
+                    data, self._context_base
                 )
             # add service attribute for manageable devices
             self._attr_supported_features: AnkerSolixEntityFeature = (
-                description.feature if data.get("is_admin", False) else None
+                description.feature
+                if (
+                    data.get("is_admin", False)
+                    or (data.get("mqtt_data") and not data.get("is_passive", False))
+                )
+                else None
             )
             if self._attribute_name == "fittings":
                 # set the correct fitting type picture for the entity
@@ -4095,17 +4231,13 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(self._context_base) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, self._context_base, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, self._context_base)
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(self._context_base) or {}).get(
                 "site_info"
             ) or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, self._context_base, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, self._context_base)
             # add service attribute for site entities
             self._attr_supported_features: AnkerSolixEntityFeature = description.feature
 
@@ -4207,19 +4339,24 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     self._native_value = self.entity_description.value_fn(
                         data, key, self.coordinator_context
                     )
-                    if (
-                        self._native_value is not None
-                        and self.device_class == SensorDeviceClass.TEMPERATURE
-                    ):
-                        # Set unit of measurement as user option to allow automatic state conversion by HA core
-                        if data.get("temp_unit_fahrenheit"):
-                            self._sensor_option_unit_of_measurement = (
-                                UnitOfTemperature.FAHRENHEIT
-                            )
-                        else:
-                            self._sensor_option_unit_of_measurement = (
-                                UnitOfTemperature.CELSIUS
-                            )
+                    if self._native_value is not None:
+                        if self.device_class == SensorDeviceClass.TEMPERATURE:
+                            # Set unit of measurement as user option to allow automatic state conversion by HA core
+                            if data.get("temp_unit_fahrenheit"):
+                                self._sensor_option_unit_of_measurement = (
+                                    UnitOfTemperature.FAHRENHEIT
+                                )
+                            else:
+                                self._sensor_option_unit_of_measurement = (
+                                    UnitOfTemperature.CELSIUS
+                                )
+                        elif str(self.native_unit_of_measurement).lower() == "t":
+                            # convert ton to kg since ton not supported by HA
+                            self._attr_native_unit_of_measurement = "kg"
+                            if str(self._native_value).replace(".", "", 1).isdigit():
+                                self._native_value = (
+                                    f"{float(self._native_value) * 1000}"
+                                )
                 # Ensure to set power sensors to None if empty strings returned
                 if (
                     self.device_class == SensorDeviceClass.POWER

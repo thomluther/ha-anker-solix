@@ -143,6 +143,13 @@
                     "on": "mdi:cloud-cancel-outline",
                     "off": "mdi:cloud-upload-outline"
                 }
+            },
+            "disaster_support": {
+                "default": "mdi:earth-off",
+                "state": {
+                    "on": "mdi:earth",
+                    "off": "mdi:earth-off"
+                }
             }
         },
         "datetime": {
@@ -276,6 +283,9 @@
                 "default": "mdi:speedometer"
             },
             "device_timeout": {
+                "default": "mdi:clock-end"
+            },
+            "ac_smart_timeout": {
                 "default": "mdi:clock-end"
             },
             "ac_output_timeout": {
@@ -441,6 +451,13 @@
             },
             "charger_port_priority": {
                 "default": "mdi:priority-high"
+            },
+            "priority_circuit_x": {
+                "default": "mdi:priority-high",
+                "state": {
+                    "must_have": "mdi:priority-high",
+                    "nice_to_have": "mdi:priority-low"
+                }
             }
         },
         "sensor": {
@@ -852,7 +869,21 @@
                 "state": {
                     "standby": "mdi:timeline-clock",
                     "running": "mdi:timeline-check",
+                    "idle": "mdi:timeline-outline",
+                    "charging": "mdi:timeline-plus",
+                    "discharging": "mdi:timeline-minus-outline",
+                    "sleep": " mdi:power-sleep",
+                    "shutdown": "mdi:power-standby",
                     "unknown": "mdi:timeline-question"
+                }
+            },
+            "backup_status": {
+                "default": "mdi:battery-alert-variant-outline",
+                "state": {
+                    "inactive": "mdi:power-plug-battery-outline",
+                    "planned_charge": "mdi:clock-fast",
+                    "storm_guard": "mdi:weather-lightning-rainy",
+                    "unknown": "mdi:battery-alert-variant-outline"
                 }
             },
             "total_co2_saving": {
@@ -1003,6 +1034,14 @@
             },
             "battery_voltage": {
                 "default": "mdi:car-battery"
+            },
+            "disaster_status": {
+                "default": "mdi:earth-remove",
+                "state": {
+                    "inactive": "mdi:earth-remove",
+                    "progressing": "mdi:earth-box-plus",
+                    "unknown": "mdi:earth-plus"
+                }
             }
         },
         "switch": {
@@ -1032,6 +1071,13 @@
                 "state": {
                     "off": "mdi:power-plug-battery-outline",
                     "on": "mdi:power-plug-battery"
+                }
+            },
+            "storm_guard_switch": {
+                "default": "mdi:cloud-off-outline",
+                "state": {
+                    "off": "mdi:cloud-off-outline",
+                    "on": "mdi:weather-lightning-rainy"
                 }
             },
             "allow_grid_export": {
@@ -1108,6 +1154,9 @@
             },
             "random_delay_switch": {
                 "default": "mdi:clock-start"
+            },
+            "ev_charger_mode_switch": {
+                "default": "mdi:car-electric"
             },
             "modbus_switch": {
                 "default": "mdi:router-network-wireless"
@@ -1236,6 +1285,9 @@
             "clock_display_end_time": {
                 "default": "mdi:clock-end"
             },
+            "ac_output_timer_seconds": {
+                "default": "mdi:timer-edit-outline"
+            },
             "usb_x_timer_seconds": {
                 "default": "mdi:timer-edit-outline"
             },
@@ -1250,6 +1302,9 @@
             },
             "silent_mode_end_minutes": {
                 "default": "mdi:clock-end"
+            },
+            "ac_output_timer": {
+                "default": "mdi:timer-edit-outline"
             }
         }
     },

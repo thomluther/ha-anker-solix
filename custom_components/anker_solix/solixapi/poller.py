@@ -1,7 +1,6 @@
 """Data poller modules to create/update Api cache structure for the Anker Power/Solix Cloud API."""
-# ruff: noqa: N806
+# ruff: noqa: SLF001, N806
 
-# flake8: noqa: SLF001
 from __future__ import annotations  # noqa: TID251
 
 from asyncio import sleep
@@ -58,7 +57,7 @@ async def poll_sites(  # noqa: C901
     # define excluded categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
-    start_time = datetime.now()
+    start_time = datetime.now().astimezone()
     virtual_sites = [
         key
         for key, s in api.sites.items()
@@ -226,14 +225,16 @@ async def poll_sites(  # noqa: C901
                     oldstamp = (mysite.get("solarbank_info") or {}).get(
                         "updated_time"
                     ) or ""
-                    timestamp = datetime.now().replace(year=1970)
+                    timestamp = datetime.now().astimezone().replace(year=1970)
                     fmt = "%Y-%m-%d %H:%M:%S"
                     with contextlib.suppress(ValueError):
-                        timestamp = datetime.strptime(sb_info.get("updated_time"), fmt)
+                        timestamp = datetime.strptime(
+                            sb_info.get("updated_time"), fmt
+                        ).astimezone()
                     if timestamp.year == 1970:
                         # replace the field in the new scene referenced sb info
                         sb_info["updated_time"] = (
-                            datetime.now().strftime(fmt)
+                            datetime.now().astimezone().strftime(fmt)
                             if data_valid or not oldstamp
                             else oldstamp
                         )
@@ -249,8 +250,11 @@ async def poll_sites(  # noqa: C901
                             if offset.total_seconds() == 0
                             else offset,
                             # set offset few minutes before new data timestamp if smaller than previous offset and not aged more than one day
-                            timestamp - datetime.now() - timedelta(minutes=2)
-                            if (datetime.now() - timestamp) < timedelta(days=1)
+                            timestamp
+                            - datetime.now().astimezone()
+                            - timedelta(minutes=2)
+                            if (datetime.now().astimezone() - timestamp)
+                            < timedelta(days=1)
                             else timedelta(seconds=0),
                         )
                         #
@@ -258,7 +262,9 @@ async def poll_sites(  # noqa: C901
                         mysite.update(
                             {
                                 "energy_offset_seconds": round(offset.total_seconds()),
-                                "energy_offset_check": datetime.now().strftime(fmt),
+                                "energy_offset_check": datetime.now()
+                                .astimezone()
+                                .strftime(fmt),
                                 "energy_offset_tz": 1800
                                 * round(round(offset.total_seconds()) / 1800),
                             }
@@ -825,12 +831,11 @@ async def poll_sites(  # noqa: C901
                             api.notify_device(deviceSn=sn)
                         api._site_devices.add(sn)
                 # Extract actual dynamic price if supported and not excluded
-                if {ApiCategories.site_price} - exclude:
-                    if dp := api.extractPriceData(siteId=myid):
-                        # save the actual extracted dynamic price details
-                        api._update_site(
-                            siteId=myid, details={"dynamic_price_details": dp}
-                        )
+                if {ApiCategories.site_price} - exclude and (
+                    dp := api.extractPriceData(siteId=myid)
+                ):
+                    # save the actual extracted dynamic price details
+                    api._update_site(siteId=myid, details={"dynamic_price_details": dp})
                 # extract the actual forecast for sites containing pv_forecast data
                 api.extractSolarForecast(siteId=myid)
 
@@ -846,13 +851,20 @@ async def poll_sites(  # noqa: C901
         and {SolixDeviceType.INVERTER.value} - exclude
     ]:
         await api.get_device_pv_status(devices=inverters, fromFile=fromFile)
+
+    # update disaster status if supported
+    if api.powerpanelApi:
+        await api.powerpanelApi.update_disaster_status(fromFile=fromFile, exclude=exclude)
+
     # update account dictionary with Api metrics
     api._update_account(
         {
             "use_files": fromFile,
-            "sites_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "sites_poll_time": datetime.now()
+            .astimezone()
+            .strftime("%Y-%m-%d %H:%M:%S"),
             "sites_poll_seconds": round(
-                (datetime.now() - start_time).total_seconds(), 3
+                (datetime.now().astimezone() - start_time).total_seconds(), 3
             ),
         }
     )
@@ -975,7 +987,7 @@ async def poll_site_details(
                     if m in ["A17C5", "AE103", "A17E2"]
                 }:
                     # fetch provider list for supported models only once per day
-                    if (datetime.now().strftime("%Y-%m-%d")) != (
+                    if (datetime.now().astimezone().strftime("%Y-%m-%d")) != (
                         api.account.get(f"price_providers_{model}") or {}
                     ).get("date"):
                         api._logger.debug(
@@ -1025,7 +1037,7 @@ async def poll_device_details(  # noqa: C901
     # define excluded device types or categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
-    start_time = datetime.now()
+    start_time = datetime.now().astimezone()
     api._logger.debug(
         "Updating api %s device details",
         api.apisession.nickname,
@@ -1073,7 +1085,19 @@ async def poll_device_details(  # noqa: C901
                 vehicleId=vehicle.get("vehicle_id"), fromFile=fromFile
             )
 
-    # Get Power Panel device specific updates
+    # initialize power panel Api for standalone PPS that support storm guard auto disaster
+    if not api.powerpanelApi and (
+        pps := {
+            k: v
+            for k, v in api.devices.items()
+            if not v.get("site_id") and v.get("type") == SolixDeviceType.PPS.value
+        }
+    ):
+        api.powerpanelApi = AnkerSolixPowerpanelApi(apisession=api.apisession)
+        api.powerpanelApi.account = api.account
+        api.powerpanelApi.devices = pps
+
+    # Get Power Panel device specific updates and merge them
     if api.powerpanelApi:
         for sn, device in dict(
             await api.powerpanelApi.update_device_details(
@@ -1284,7 +1308,7 @@ async def poll_device_details(  # noqa: C901
                 # Fetch stock screensavers for model only once a day or theme_id not found previously
                 if pn_themes.get("poll_time", "").split(" ")[
                     0
-                ] != datetime.now().strftime("%Y-%m-%d") or (
+                ] != datetime.now().astimezone().strftime("%Y-%m-%d") or (
                     active_id and active_id != device.get("display_theme", {}).get("id")
                 ):
                     ids = {}
@@ -1311,7 +1335,9 @@ async def poll_device_details(  # noqa: C901
                                     }
                     if ids:
                         screensavers[pn] = {
-                            "poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "poll_time": datetime.now()
+                            .astimezone()
+                            .strftime("%Y-%m-%d %H:%M:%S"),
                             "themes": ids,
                         }
                         api._update_account({"screensaver": screensavers})
@@ -1335,6 +1361,9 @@ async def poll_device_details(  # noqa: C901
                     await api.get_charger_protocol_status(
                         deviceSn=sn, fromFile=fromFile
                     )
+            # Fetch other charger datails for supported models
+            else:
+                pass
 
         # Merge additional powerpanel data
         if api.powerpanelApi:
@@ -1352,9 +1381,11 @@ async def poll_device_details(  # noqa: C901
     api._update_account(
         {
             "use_files": fromFile,
-            "details_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "details_poll_time": datetime.now()
+            .astimezone()
+            .strftime("%Y-%m-%d %H:%M:%S"),
             "details_poll_seconds": round(
-                (datetime.now() - start_time).total_seconds(), 3
+                (datetime.now().astimezone() - start_time).total_seconds(), 3
             ),
         }
     )
@@ -1373,7 +1404,7 @@ async def poll_device_energy(  # noqa: C901
     # check exclusion list, default to all energy data
     if not exclude or not isinstance(exclude, set):
         exclude = set()
-    start_time = datetime.now()
+    start_time = datetime.now().astimezone()
     # First check if other api class sites available and use appropriate method to merge the energy stats at the end
     if api.powerpanelApi:
         await api.powerpanelApi.update_device_energy(fromFile=fromFile, exclude=exclude)
@@ -1410,7 +1441,9 @@ async def poll_device_energy(  # noqa: C901
                 # Cloud server energy stat updates may be delayed by 2-3 minutes
                 # min Offset to last energy data, reduce query time by 5 minutes to ensure last record is made
                 energy_offset = (site.get("energy_offset_seconds") or 0) - 300
-                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
+                time: datetime = datetime.now().astimezone() + timedelta(
+                    seconds=energy_offset
+                )
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
@@ -1419,7 +1452,7 @@ async def poll_device_energy(  # noqa: C901
                     data.update(
                         await api.device_pv_energy_daily(
                             deviceSn=sn,
-                            startDay=datetime.fromisoformat(yesterday),
+                            startDay=datetime.fromisoformat(yesterday).astimezone(),
                             numDays=2,
                             fromFile=fromFile,
                         )
@@ -1428,7 +1461,7 @@ async def poll_device_energy(  # noqa: C901
                     data.update(
                         await api.device_pv_energy_daily(
                             deviceSn=sn,
-                            startDay=datetime.fromisoformat(today),
+                            startDay=datetime.fromisoformat(today).astimezone(),
                             numDays=1,
                             fromFile=fromFile,
                         )
@@ -1567,7 +1600,9 @@ async def poll_device_energy(  # noqa: C901
                 # Cloud server energy stat updates may be delayed by 2-3 minutes
                 # min Offset to last energy data, reduce query time by 5 minutes to ensure last record is made
                 energy_offset = (site.get("energy_offset_seconds") or 0) - 300
-                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
+                time: datetime = datetime.now().astimezone() + timedelta(
+                    seconds=energy_offset
+                )
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
@@ -1577,7 +1612,9 @@ async def poll_device_energy(  # noqa: C901
                     await api.energy_daily(
                         siteId=site_id,
                         deviceSn=query_sn,
-                        startDay=datetime.fromisoformat(yesterday if both else today),
+                        startDay=datetime.fromisoformat(
+                            yesterday if both else today
+                        ).astimezone(),
                         numDays=2 if both else 1,
                         dayTotals=True,
                         devTypes=query_types,
@@ -1638,7 +1675,7 @@ async def poll_device_energy(  # noqa: C901
                             deviceSn=sn,
                             startDay=datetime.fromisoformat(
                                 yesterday if both else today
-                            ),
+                            ).astimezone(),
                             numDays=2 if both else 1,
                             dayTotals=False,  # No device breakdown for daytotals available
                             fromFile=fromFile,
@@ -1681,7 +1718,7 @@ async def poll_device_energy(  # noqa: C901
                                 deviceSn=sn,
                                 startDay=datetime.fromisoformat(
                                     yesterday if both else today
-                                ),
+                                ).astimezone(),
                                 numDays=2 if both else 1,
                                 dayTotals=True,
                                 devTypes=query_types,
@@ -1731,9 +1768,11 @@ async def poll_device_energy(  # noqa: C901
     api._update_account(
         {
             "use_files": fromFile,
-            "energy_poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "energy_poll_time": datetime.now()
+            .astimezone()
+            .strftime("%Y-%m-%d %H:%M:%S"),
             "energy_poll_seconds": round(
-                (datetime.now() - start_time).total_seconds(), 3
+                (datetime.now().astimezone() - start_time).total_seconds(), 3
             ),
         }
     )

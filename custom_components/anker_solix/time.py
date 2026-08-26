@@ -165,6 +165,32 @@ DEVICE_TIMES = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.clock_display_schedule,
     ),
+    AnkerSolixTimeDescription(
+        key="ac_output_timer_seconds",
+        translation_key="ac_output_timer_seconds",
+        json_key="ac_output_timer_seconds",
+        value_fn=lambda d, jk: (
+            convert_time_seconds(v) if str(v := d.get(jk, "")) else None
+        ),
+        attrib_fn=lambda d, _,: (
+            {
+                "remaining_time": (
+                    convert_time_seconds(
+                        max(
+                            0,
+                            int(rem - datetime.now().timestamp() + ts),
+                        )
+                    )
+                )
+            }
+            if str(rem := d.get("ac_output_timer_remaining_seconds", ""))
+            and str(ts := d.get("ac_output_timer_remaining_timestamp", ""))
+            else {}
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_output_timer,
+    ),
     # repeated element
     *[
         AnkerSolixTimeDescription(
@@ -402,13 +428,9 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -416,15 +438,11 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context) or {}).get("site_info") or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
         self._native_value = None
         self._assumed_state = False

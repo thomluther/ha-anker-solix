@@ -5,6 +5,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import logging
 from typing import Any
 
 from homeassistant.components.datetime import DateTimeEntity, DateTimeEntityDescription
@@ -36,6 +37,8 @@ from .entity import (
     get_AnkerSolixVehicleInfo,
 )
 from .solixapi.apitypes import SolixDeviceType
+from .solixapi.mqtt_device import SolixMqttDevice
+from .solixapi.mqttcmdmap import SolixMqttCommands
 
 
 @dataclass(frozen=True)
@@ -46,6 +49,9 @@ class AnkerSolixDateTimeDescription(
 
     force_creation: bool = False
     mqtt: bool = False
+    mqtt_cmd: str | None = None
+    mqtt_cmd_parm: str | None = None
+    api_cmd: bool | None = None
     # Use optionally to provide function for value calculation or lookup of nested values
     value_fn: Callable[[dict, str], StateType | None] = lambda d, jk: d.get(jk)
     unit_fn: Callable[[dict], str | None] = lambda d: None
@@ -61,9 +67,9 @@ DEVICE_DATETIMES = [
         value_fn=lambda d, jk: (
             datetime.fromtimestamp(int(v)).astimezone()
             if (
-                v := str(d.get("timestamp_backup_start", "")) or str(d.get(jk, ""))
+                v := str(d.get("backup_start_timestamp", "")) or str(d.get(jk, ""))
                 if d.get(MQTT_OVERLAY)
-                else str(d.get(jk, "")) or str(d.get("timestamp_backup_start", ""))
+                else str(d.get(jk, "")) or str(d.get("backup_start_timestamp", ""))
             )
             .replace(".", "", 1)
             .isdigit()
@@ -71,11 +77,17 @@ DEVICE_DATETIMES = [
         ),
         exclude_fn=lambda s, d: (
             not (
-                {d.get("type")} - s
+                ({d.get("type")} - s)
+                & {
+                    SolixDeviceType.SOLARBANK.value,
+                    SolixDeviceType.COMBINER_BOX.value,
+                }
+                and d.get("preset_manual_backup_start")
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
         ),
         mqtt=True,
+        api_cmd=True,
     ),
     AnkerSolixDateTimeDescription(
         key="preset_manual_backup_end",
@@ -84,9 +96,9 @@ DEVICE_DATETIMES = [
         value_fn=lambda d, jk: (
             datetime.fromtimestamp(int(v)).astimezone()
             if (
-                v := str(d.get("timestamp_backup_end", "")) or str(d.get(jk, ""))
+                v := str(d.get("backup_end_timestamp", "")) or str(d.get(jk, ""))
                 if d.get(MQTT_OVERLAY)
-                else str(d.get(jk, "")) or str(d.get("timestamp_backup_start", ""))
+                else str(d.get(jk, "")) or str(d.get("backup_end_timestamp", ""))
             )
             .replace(".", "", 1)
             .isdigit()
@@ -94,11 +106,65 @@ DEVICE_DATETIMES = [
         ),
         exclude_fn=lambda s, d: (
             not (
-                {d.get("type")} - s
+                ({d.get("type")} - s)
+                & {
+                    SolixDeviceType.SOLARBANK.value,
+                    SolixDeviceType.COMBINER_BOX.value,
+                }
+                and d.get("preset_manual_backup_end")
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
         ),
         mqtt=True,
+        api_cmd=True,
+    ),
+    AnkerSolixDateTimeDescription(
+        key="pps_manual_backup_start",
+        translation_key="preset_manual_backup_start",
+        json_key="backup_start_timestamp",
+        value_fn=lambda d, jk: (
+            datetime.fromtimestamp(int(v)).astimezone()
+            if str(
+                v := d.get("customized", {}).get("backup_plan", {}).get(jk, "")
+                or d.get(jk, "")
+            )
+            else None
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                ({d.get("type")} - s)
+                & {
+                    SolixDeviceType.PPS.value,
+                }
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.backup_charge_timestamps,
+        mqtt_cmd_parm="set_backup_start_timestamp",
+    ),
+    AnkerSolixDateTimeDescription(
+        key="pps_manual_backup_end",
+        translation_key="preset_manual_backup_end",
+        json_key="backup_end_timestamp",
+        value_fn=lambda d, jk: (
+            datetime.fromtimestamp(int(v)).astimezone()
+            if str(
+                v := d.get("customized", {}).get("backup_plan", {}).get(jk, "")
+                or d.get(jk, "")
+            )
+            else None
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                ({d.get("type")} - s)
+                & {
+                    SolixDeviceType.PPS.value,
+                }
+            )
+        ),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.backup_charge_timestamps,
+        mqtt_cmd_parm="set_backup_end_timestamp",
     ),
 ]
 
@@ -160,6 +226,17 @@ async def async_setup_entry(
                         or (
                             desc.mqtt
                             and desc.value_fn(mdata or data, desc.json_key) is not None
+                            # include MQTT command datetime entities only if number options or also using Api command
+                            and (
+                                desc.api_cmd
+                                or (
+                                    mdev
+                                    and desc.mqtt_cmd
+                                    and mdev.cmd_is_number(
+                                        cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
+                                    )
+                                )
+                            )
                         )
                         # filter API only entities
                         or (
@@ -207,13 +284,9 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -221,15 +294,11 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context) or {}).get("site_info") or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
         self._native_value = None
         self._assumed_state = False
@@ -318,10 +387,15 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             and self._native_value is not None
         ):
             data = self.coordinator.data.get(self.coordinator_context) or {}
-            if self.coordinator.client.testmode() and self._attribute_name not in [
-                "preset_manual_backup_start",
-                "preset_manual_backup_end",
-            ]:
+            if (
+                self.coordinator.client.testmode()
+                and not self.entity_description.mqtt_cmd
+                and self._attribute_name
+                not in [
+                    "preset_manual_backup_start",
+                    "preset_manual_backup_end",
+                ]
+            ):
                 # Raise alert to frontend
                 raise ServiceValidationError(
                     f"{self.entity_id} cannot be used while configuration is running in testmode",
@@ -335,7 +409,17 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
             if value == self._native_value:
                 return
             # Wait until client cache is valid before applying any api change
+            mdev = self.coordinator.client.get_mqtt_device(self.coordinator_context)
             await self.coordinator.client.validate_cache()
+            # raise error if MQTT control but device is passive
+            if self.entity_description.mqtt_cmd and mdev and mdev.is_passive():
+                raise ServiceValidationError(
+                    f"'{self.entity_id}' cannot be used while device is running in local mode",
+                    translation_domain=DOMAIN,
+                    translation_key="local_mode",
+                    translation_placeholders={"entity_id": self.entity_id},
+                )
+            # Trigger Api calls depending on changed entity
             if (
                 self._attribute_name
                 in [
@@ -387,6 +471,146 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                             resp, indent=2 if len(json.dumps(resp)) < 200 else None
                         ),
                     )
-        # trigger coordinator update with api dictionary data
-        await self.coordinator.async_refresh_data_from_apidict()
-        self._assumed_state = True
+            elif (
+                self._attribute_name
+                in [
+                    "pps_manual_backup_start",
+                    "pps_manual_backup_end",
+                ]
+                and isinstance(value, datetime)
+                and mdev
+                and mdev.get_status(fromFile=self.coordinator.client.testmode()).get(
+                    "backup_switch"
+                )
+                == 0
+            ):
+                LOGGER.log(
+                    logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
+                    "%s change to %s will be applied ONLY in device cache",
+                    self.entity_id,
+                    value,
+                )
+                # update timestamps only in cache to avoid unnecessary MQTT commands while backup is disabled
+                plan = data.get("customized", {}).get("backup_plan", {})
+                plan[
+                    "backup_start_timestamp"
+                    if self._attribute_name == "pps_manual_backup_start"
+                    else "backup_end_timestamp"
+                ] = int(value.timestamp())
+                self.coordinator.client.api.customizeCacheId(
+                    id=self.coordinator_context,
+                    key="backup_plan",
+                    value=plan,
+                )
+            # Trigger MQTT commands depending on changed entity
+            elif self.entity_description.mqtt_cmd and mdev:
+                LOGGER.debug(
+                    "'%s' change to '%s' will be applied via MQTT command '%s'",
+                    self.entity_id,
+                    str(value),
+                    self.entity_description.mqtt_cmd,
+                )
+                await self._async_mqtt_datetime(mdev=mdev, value=value.timestamp())
+
+            # trigger coordinator update with api dictionary data
+            await self.coordinator.async_refresh_data_from_apidict()
+
+    async def _async_mqtt_datetime(
+        self,
+        mdev: SolixMqttDevice,
+        value: str | datetime | float | None = None,
+        cmd: str | None = None,
+        parm: str | None = None,
+        parm_map: dict | None = None,
+    ) -> dict | None:
+        """Use MQTT device control to modify time setting."""
+        resp = None
+        if not isinstance(cmd, str):
+            cmd = self.entity_description.mqtt_cmd
+        if not isinstance(parm, str):
+            parm = self.entity_description.mqtt_cmd_parm
+        if not isinstance(parm_map, dict):
+            parm_map = {}
+        try:
+            if isinstance(value, datetime):
+                cmdvalue = int(value.timestamp())
+            elif isinstance(value, float | int):
+                cmdvalue = int(value)
+            elif isinstance(value, str):
+                cmdvalue = int(datetime.fromisoformat(value).astimezone().timestamp())
+            else:
+                cmdvalue = value
+            # Use helper methods for certain MQTT commands that require special handling
+            if self._attribute_name in [
+                "pps_manual_backup_start",
+                "pps_manual_backup_end",
+            ]:
+                # change dependend times and weekend mode upon time changes
+                resp = await mdev.set_backup_charge_plan(
+                    backup_start=parm_map.get(self.entity_description.mqtt_cmd_parm)
+                    or cmdvalue
+                    if self._attribute_name == "pps_manual_backup_start"
+                    else None,
+                    backup_end=parm_map.get(self.entity_description.mqtt_cmd_parm)
+                    or cmdvalue
+                    if self._attribute_name == "pps_manual_backup_end"
+                    else None,
+                    toFile=self.coordinator.client.testmode(),
+                )
+            else:
+                resp = await mdev.run_command(
+                    cmd=cmd,
+                    parm=parm,
+                    value=cmdvalue,
+                    parm_map=parm_map,
+                    toFile=self.coordinator.client.testmode(),
+                )
+            if isinstance(resp, dict):
+                if ALLOW_TESTMODE:
+                    LOGGER.info(
+                        "%s: Applied MQTT command '%s' for '%s' change to '%s':\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
+                        cmd,
+                        self.entity_id,
+                        str(value),
+                        json.dumps(
+                            resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                        ),
+                    )
+                # copy the changed state(s) of the mock response into device cache to avoid flip back of entity until real state is received
+                for key, val in resp.items():
+                    if key in mdev.mqttdata:
+                        mdev.mqttdata[key] = val
+                # trigger status request to get updated MQTT message
+                await mdev.status_request(toFile=self.coordinator.client.testmode())
+            else:
+                LOGGER.error(
+                    "'%s' could not be changed via MQTT command '%s'",
+                    self.entity_id,
+                    cmd,
+                )
+        except (ValueError, TypeError) as err:
+            LOGGER.error(
+                "'%s' could not be changed via MQTT command '%s':\n%s",
+                self.entity_id,
+                cmd,
+                str(err),
+            )
+        if not isinstance(resp, dict):
+            cmd_parm = f"{cmd!s}{(' with parm ' + str(parm)) if parm else ''}"
+            alias = mdev.device.get("alias") or ""
+            raise ServiceValidationError(
+                f"'{cmd_parm}' for {self.coordinator.client.api.apisession.nickname} device "
+                f"{alias} ({self.coordinator_context}) failed",
+                translation_domain=DOMAIN,
+                translation_key="mqtt_command_failed",
+                translation_placeholders={
+                    "command": cmd_parm,
+                    "coordinator": self.coordinator.client.api.apisession.nickname,
+                    "device_alias": alias,
+                    "device_sn": self.coordinator_context,
+                },
+            )
+        return resp

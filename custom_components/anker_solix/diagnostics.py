@@ -10,7 +10,17 @@ from homeassistant.helpers.device_registry import DeviceEntry
 from .const import DOMAIN
 from .coordinator import AnkerSolixDataUpdateCoordinator
 
-TO_REDACT = {"ip_address", "unique_id", "username", "password", "email", "owner_user_id", "bt_ble_mac", "wifi_mac", "wifi_name"}
+TO_REDACT = {
+    "ip_address",
+    "unique_id",
+    "username",
+    "password",
+    "email",
+    "owner_user_id",
+    "bt_ble_mac",
+    "wifi_mac",
+    "wifi_name",
+}
 
 
 async def async_get_config_entry_diagnostics(
@@ -24,7 +34,7 @@ async def async_get_config_entry_diagnostics(
         cache = coordinator.data or {}
         # redact keys from cache
         entry_dict = entry.as_dict()
-        cache["account"] = cache.pop(entry_dict.get("unique_id"),{})
+        cache["account"] = cache.pop(entry_dict.get("unique_id"), {})
         return {
             "config_entry": async_redact_data(entry_dict, TO_REDACT),
             "cached_data": async_redact_data(cache, TO_REDACT),

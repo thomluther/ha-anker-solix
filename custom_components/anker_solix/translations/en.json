@@ -17,6 +17,7 @@
                 "inverter": "Inverter",
                 "combiner_box": "Combiner boxes",
                 "pps": "Portable power stations",
+                "powerbank": "Powerbank",
                 "powerpanel": "Power panels",
                 "powerpanel_energy": "Power panel energy stats",
                 "powerpanel_avg_power": "Power panel ⌀-power",
@@ -520,6 +521,18 @@
                     "on": "Active",
                     "off": "Inactive"
                 }
+            },
+            "disaster_support": {
+                "name": "Disaster support",
+                "state": {
+                    "on": "Active",
+                    "off": "Inactive"
+                },
+                "state_attributes": {
+                    "countries": {
+                        "name": "Countries"
+                    }
+                }
             }
         },
         "datetime": {
@@ -583,7 +596,12 @@
                 }
             },
             "preset_ac_input_limit": {
-                "name": "AC input limit"
+                "name": "AC input limit",
+                "state_attributes": {
+                    "silent_charge_limit": {
+                        "name": "Silent charge limit W"
+                    }
+                }
             },
             "grid_export_limit": {
                 "name": "Grid export limit"
@@ -718,7 +736,12 @@
                 "name": "Output limit"
             },
             "preset_ac_input_limit": {
-                "name": "AC input limit"
+                "name": "AC input limit",
+                "state_attributes": {
+                    "silent_charge_limit": {
+                        "name": "Silent charge limit W"
+                    }
+                }
             },
             "preset_pv_input_limit": {
                 "name": "PV input limit"
@@ -783,6 +806,17 @@
                     "time_of_use": "Time of Use",
                     "self_consumption": "Self consumption",
                     "custom": "Custom"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
+                    },
+                    "custom_mode_schedule": {
+                        "name": "Custom schedule"
+                    },
+                    "tou_mode_schedule": {
+                        "name": "TOU schedule"
+                    }
                 }
             },
             "dc_12v_output_mode": {
@@ -977,6 +1011,13 @@
                     "c3_c4": "C3 C4",
                     "unknown": "Unknown"
                 }
+            },
+            "priority_circuit_x": {
+                "name": "Priority circuit {id}",
+                "state": {
+                    "must_have": "Must have",
+                    "nice_to_have": "Nice to have"
+                }
             }
         },
         "sensor": {
@@ -1161,6 +1202,9 @@
             "dc_input_power_total": {
                 "name": "DC input power total"
             },
+            "input_power_total": {
+                "name": "Input power total"
+            },
             "ac_input_power": {
                 "name": "AC input power",
                 "state_attributes": {
@@ -1170,7 +1214,7 @@
                 }
             },
             "ac_input_power_total": {
-                "name": "AC input power_total"
+                "name": "AC input power total"
             },
             "dc_output_power": {
                 "name": "DC output power",
@@ -1412,12 +1456,37 @@
                 "name": "Working status",
                 "state": {
                     "standby": "Standby",
+                    "idle": "Idle",
                     "running": "Running",
+                    "charging": "Charging",
+                    "discharging": "Discharging",
+                    "sleep": "Sleep",
+                    "shutdown": "Shutdown",
                     "unknown": "Unknown"
                 },
                 "state_attributes": {
                     "status": {
                         "name": "Status code"
+                    }
+                }
+            },
+            "backup_status": {
+                "name": "Backup status",
+                "state": {
+                    "inactive": "Inactive",
+                    "planned_charge": "Planned charge",
+                    "storm_guard": "Storm guard charge",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status code"
+                    },
+                    "auto_backup_start": {
+                        "name": "Auto backup start"
+                    },
+                    "auto_backup_end": {
+                        "name": "Auto backup end"
                     }
                 }
             },
@@ -1631,7 +1700,7 @@
                 }
             },
             "grid_to_home_power": {
-                "name": "Grid import"
+                "name": "Grid usage"
             },
             "photovoltaic_to_grid_power": {
                 "name": "Grid export"
@@ -2433,6 +2502,25 @@
             },
             "battery_voltage": {
                 "name": "Battery voltage"
+            },
+            "disaster_status": {
+                "name": "Disaster status",
+                "state": {
+                    "inactive": "Inactive",
+                    "progressing": "Progressing",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "storm_guard": {
+                        "name": "Storm guard"
+                    },
+                    "manual": {
+                        "name": "Manual backup"
+                    },
+                    "details": {
+                        "name": "Details"
+                    }
+                }
             }
         },
         "switch": {
@@ -2446,7 +2534,10 @@
                 "name": "Discharge priority"
             },
             "preset_backup_option": {
-                "name": "Backup option"
+                "name": "Backup plan"
+            },
+            "storm_guard_switch": {
+                "name": "Storm guard"
             },
             "allow_grid_export": {
                 "name": "Allow grid export"
@@ -2469,7 +2560,12 @@
                 "name": "LED Light"
             },
             "ac_output_power_switch": {
-                "name": "AC output"
+                "name": "AC output",
+                "state_attributes": {
+                    "ac_output_schedule": {
+                        "name": "AC output schedule"
+                    }
+                }
             },
             "dc_output_power_switch": {
                 "name": "DC output"
@@ -2509,6 +2605,9 @@
             },
             "random_delay_switch": {
                 "name": "Delayed start"
+            },
+            "ev_charger_mode_switch": {
+                "name": "Activate EV charge"
             },
             "modbus_switch": {
                 "name": "Modbus TCP"
@@ -2609,6 +2708,9 @@
             "clock_display_end_time": {
                 "name": "Clock display end time"
             },
+            "ac_output_timer_seconds": {
+                "name": "AC output timer"
+            },
             "usb_x_timer_seconds": {
                 "name": "USB-{id} timer"
             },
@@ -2623,6 +2725,9 @@
             },
             "silent_mode_end_minutes": {
                 "name": "Silent mode end time"
+            },
+            "ac_output_timer": {
+                "name": "AC output timer"
             }
         },
         "update":{
@@ -2831,11 +2936,11 @@
                 },
                 "backup_end": {
                     "name": "Backup end",
-                    "description": "End date and time of the backup period in the form YYYY-MM-DD HH:MM:SS. Default is active period end or now + 3 hours."
+                    "description": "End date and time of the backup period in the form YYYY-MM-DD HH:MM:SS. Default is active period end or now plus 1-3 hours (device dependent)."
                 },
                 "backup_duration": {
                     "name": "Backup duration",
-                    "description": "Duration of the backup period in the form HH:MM:SS. Used only if no backup end is specified instead of default duration of 3 hours."
+                    "description": "Duration of the backup period in the form HH:MM:SS. Used only if no backup end is specified instead of default duration of 1-3 hours (device dependent)."
                 },
                 "enable_backup": {
                     "name": "Enable backup period",

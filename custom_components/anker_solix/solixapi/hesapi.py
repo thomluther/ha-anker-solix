@@ -23,6 +23,8 @@ from .apitypes import (
 )
 from .errors import AnkerSolixError
 from .helpers import convertToKwh, get_solix_product_code
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -105,11 +107,47 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 if value := devData.get("owner_user_id"):
                     device["owner_user_id"] = value
             calc_capacity = False  # Flag whether capacity may need recalculation
+            site_id = device.get("site_id", "")
             for key, value in devData.items():
                 try:
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     if key in ["product_code", "device_pn"] and value:
                         device.update({"device_pn": str(value)})
+                        # Get device code features once
+                        if "device_code_features" not in device:
+                            device["device_code_features"] = (
+                                self.account.get("products", {})
+                                .get(str(value), {})
+                                .get("product_codes", {})
+                                .get(device.get("device_code", ""), {})
+                                .get("custom_fields", {})
+                            )
+                        # Flag device for supported mqtt trigger if admin and device not passive
+                        if (
+                            device.get("is_admin") or device.get("owner_user_id")
+                        ) and not (
+                            device.get("is_passive") or devData.get("is_passive")
+                        ):
+                            device["mqtt_supported"] = True
+                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            device["mqtt_overlay"] = bool(
+                                device.get("mqtt_overlay") or False
+                            )
+                            # check once if device supports status requests from description
+                            if "mqtt_status_request" not in device:
+                                device["mqtt_status_request"] = bool(
+                                    [
+                                        cmd
+                                        for cmd in SOLIXMQTTMAP.get(
+                                            str(value), {}
+                                        ).values()
+                                        if SolixMqttCommands.status_request
+                                        in [
+                                            cmd.get(COMMAND_NAME),
+                                            *cmd.get(COMMAND_LIST, []),
+                                        ]
+                                    ]
+                                )
                         # try to get capacity from category definitions
                         if (
                             hasattr(SolixDeviceCapacity, str(value))
@@ -158,6 +196,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             )
                     elif key == "alias_name" and value:
                         device["alias"] = str(value)
+                    elif key == "mqtt_overlay" and value is not None:
+                        # keys that are customized
+                        custom = (device.get("customized") or {}).get(key)
+                        device[key] = custom if custom is not None else value
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",
@@ -189,6 +231,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             "state_of_charge"
                         ) != value.get("state_of_charge")
                         device[key] = value
+                    elif key == "battery_soc" and value is not None:
+                        # This is a percentage value for the battery state of charge, not power
+                        calc_capacity |= device.get("battery_soc") != str(value)
+                        device["battery_soc"] = str(value)
                     elif key == "batCount" and str(value).isdigit():
                         calc_capacity |= device.get(key) != int(value)
                         device[key] = int(value)
@@ -196,100 +242,163 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # This key is used to trigger recalculation from customization
                         calc_capacity = True
                         device[key] = value
-                    # generate extra values when certain conditions are met
-                    if calc_capacity:
-                        # generate battery values for main device only when soc updated or battery modules count change
-                        # init calculated fields with 0 if not existing
-                        if "battery_capacity" not in device:
-                            device["battery_capacity"] = "0"
-                        is_primary = device.get("is_primary") or devData.get(
-                            "is_primary"
-                        )
-                        if (
-                            not (cap := device.get("battery_capacity")) or calc_capacity
-                        ) and is_primary:
-                            cap = 0
-                            for dev in [
-                                d
-                                for d in self.devices.values()
-                                if d.get("main_sn") == sn
-                                and d.get("is_subdevice")
-                                and str(d.get("battery_capacity")).isdigit()
-                            ]:
-                                # consider customized capacity for calculation
-                                cap += (
-                                    int(c)
-                                    if (
-                                        c := (dev.get("customized") or {}).get(
-                                            "battery_capacity"
-                                        )
-                                    )
-                                    and str(c).isdigit()
-                                    else int(dev.get("battery_capacity"))
-                                )
-                        device["battery_capacity"] = str(cap)
-                        # Calculate remaining energy in Wh and add values
-                        # Calculate energy only for primary device
-                        site_id = device.get("site_id", "")
-                        if is_primary:
-                            prim_dev = device
-                        else:
-                            prim_dev = next(
-                                iter(
-                                    [
-                                        d
-                                        for d in self.devices.values()
-                                        if site_id == d.get("site_id")
-                                        and d.get("is_primary")
-                                    ]
-                                ),
-                                {},
-                            )
-                        soc = (devData.get("average_power") or {}).get(
-                            "state_of_charge"
-                        ) or (prim_dev.get("average_power") or {}).get(
-                            "state_of_charge"
-                        )
-                        if prim_dev and soc and str(soc).isdigit():
-                            # Get optional customized capacity for correct energy calculation if adjusted externally
-                            custom_cap = 0
-                            # consider customized capacity for calculation from main devices only
-                            for dev in [
-                                d
-                                for d in self.devices.values()
-                                if site_id == d.get("site_id")
-                                and (d.get("batCount") or 0) > 0
-                                and str(d.get("battery_capacity")).isdigit()
-                            ]:
-                                custom_cap += (
-                                    int(c)
-                                    if (
-                                        c := (dev.get("customized") or {}).get(
-                                            "battery_capacity"
-                                        )
-                                    )
-                                    and str(c).isdigit()
-                                    else int(dev.get("battery_capacity"))
-                                )
-                            prim_dev["battery_energy"] = str(
-                                int(int(custom_cap) * int(soc) / 100)
-                            )
-                        calc_capacity = False
 
-                except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-                    self._logger.error(
-                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
+                except Exception:  # pylint: disable=broad-exception-caught
+                    self._logger.exception(
+                        "Api %s exception occurred when updating device details for key %s with value %s",
                         self.apisession.nickname,
-                        type(err),
                         key,
                         value,
-                        err,
                     )
+
+            # generate extra values when certain conditions are met
+            if calc_capacity:
+                # get some data optionally from mqtt data
+                mqtt = device.get("mqtt_data") or {}
+                # init calculated fields with 0 if not existing
+                if "battery_capacity" not in device:
+                    device["battery_capacity"] = "0"
+                if "battery_energy" not in device:
+                    # leave energy empty until it can be calculated
+                    device["battery_energy"] = ""
+                cap_change = False
+                # calculate size only once based on PN
+                if (size := device.get("battery_size")) is None:
+                    size = getattr(SolixDeviceCapacity, str(device.get("device_pn")), 0)
+                    device["battery_size"] = size
+                    cap_change = True
+                if (
+                    exp := device.get("sub_package_num")
+                    or mqtt.get("expansion_packs")
+                    or 0
+                ) != device.get("expansion_packs"):
+                    # update calculated exp number in Api cache
+                    device["expansion_packs"] = exp
+                    cap_change = True
+                # recalculate capacity if required
+                if cap_change and str(size).isdigit() and str(exp).isdigit():
+                    # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
+                    controller_bat = 0 if device.get("device_pn") == "A17E1" else 1
+                    device["battery_capacity"] = f"{size * (controller_bat + exp):.0f}"
+                # generate battery values for main device only when soc updated or battery modules count change
+                is_primary = bool(device.get("is_primary"))
+                # get primary device to update capacity and energy values as well
+                prim_dev = (
+                    (
+                        [
+                            d
+                            for d in self.devices.values()
+                            if site_id == d.get("site_id") and d.get("is_primary")
+                        ]
+                        or [{}]
+                    )[0]
+                    if not is_primary
+                    else {}
+                )
+                if (
+                    not (cap := device.get("battery_capacity"))
+                    or cap_change
+                    or (
+                        prim_dev
+                        and device.get("customized", {}).get("battery_capacity")
+                    )
+                ):
+                    # refresh (customized) capacity from sub devices in system
+                    if not (
+                        pri_cap := (device if is_primary else prim_dev)
+                        .get("customized", {})
+                        .get("battery_capacity", 0)
+                    ):
+                        # calculate only if primary dev has no customized capacity
+                        pri_cap = 0
+                        for dev in [
+                            d
+                            for d in self.devices.values()
+                            if d.get("main_sn") == (prim_dev.get("device_sn") or sn)
+                            and d.get("is_subdevice")
+                            and str(d.get("battery_capacity")).isdigit()
+                        ]:
+                            # consider customized capacity for calculation
+                            pri_cap += (
+                                int(c)
+                                if (
+                                    c := (dev.get("customized") or {}).get(
+                                        "battery_capacity"
+                                    )
+                                )
+                                and str(c).isdigit()
+                                else int(dev.get("battery_capacity"))
+                            )
+                    if is_primary:
+                        cap = pri_cap
+                    elif prim_dev:
+                        # refresh capacity of primary in system
+                        prim_dev["battery_capacity"] = str(pri_cap)
+                device["battery_capacity"] = str(cap)
+                # Calculate remaining energy in Wh and add values
+                apisoc = device.get("battery_soc", "") or device.get(
+                    "average_power", {}
+                ).get("state_of_charge", "")
+                # get total SOC, prefer value depending on overlay
+                soc = (
+                    (mqtt.get("battery_soc", "") or apisoc)
+                    if device.get("mqtt_overlay")
+                    else (apisoc or mqtt.get("battery_soc", ""))
+                )
+                custom_cap = (
+                    int(c)
+                    if (c := device.get("customized", {}).get("battery_capacity"))
+                    and str(c).isdigit()
+                    else int(device.get("battery_capacity") or 0)
+                )
+                if soc:
+                    device["battery_energy"] = str(
+                        int(int(custom_cap) * int(soc) / 100)
+                    )
+
+                # if not primary, update the primary dev energy as well
+                if prim_dev:
+                    apisoc = prim_dev.get("battery_soc", "") or prim_dev.get(
+                        "average_power", {}
+                    ).get("state_of_charge", "")
+                    # get total SOC, prefer value depending on overlay
+                    soc = (
+                        (prim_dev.get("mqtt_data", {}).get("battery_soc", "") or apisoc)
+                        if prim_dev.get("mqtt_overlay")
+                        else (
+                            apisoc
+                            or prim_dev.get("mqtt_data", {}).get("battery_soc", "")
+                        )
+                    )
+                    if soc and str(soc).isdigit():
+                        # Get optional customized capacity for correct energy calculation if adjusted externally
+                        custom_cap = 0
+                        # consider customized capacity for calculation from main devices only
+                        for dev in [
+                            d
+                            for d in self.devices.values()
+                            if site_id == d.get("site_id")
+                            and (d.get("batCount") or 0) > 0
+                            and str(d.get("battery_capacity")).isdigit()
+                        ]:
+                            custom_cap += (
+                                int(c)
+                                if (
+                                    c := (dev.get("customized") or {}).get(
+                                        "battery_capacity"
+                                    )
+                                )
+                                and str(c).isdigit()
+                                else int(dev.get("battery_capacity"))
+                            )
+                        prim_dev["battery_energy"] = str(
+                            int(int(custom_cap) * int(soc) / 100)
+                        )
 
             self.devices.update({str(sn): device})
         return sn
 
-    async def update_sites(  # noqa: C901
+    async def update_sites(
         self,
         siteId: str | None = None,
         fromFile: bool = False,
@@ -520,12 +629,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             (mysite.get("energy_details") or {}).pop("intraday", None)
 
                     # Extract actual dynamic price if supported and not excluded
-                    if {ApiCategories.site_price} - exclude:
-                        if dp := self.extractPriceData(siteId=myid):
-                            # save the actual extracted dynamic price details
-                            self._update_site(
-                                siteId=myid, details={"dynamic_price_details": dp}
-                            )
+                    if {ApiCategories.site_price} - exclude and (
+                        dp := self.extractPriceData(siteId=myid)
+                    ):
+                        # save the actual extracted dynamic price details
+                        self._update_site(
+                            siteId=myid, details={"dynamic_price_details": dp}
+                        )
 
                     new_sites.update({myid: mysite})
         # Write back the updated sites
@@ -564,14 +674,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             )
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
             # First fetch details that only work for site admins
-            if site.get("site_admin", False):
+            if site.get("site_admin", False) and {ApiCategories.site_price} - exclude:
                 # Fetch site price and CO2 settings
-                if {ApiCategories.site_price} - exclude:
-                    self._logger.debug(
-                        "Getting api %s price and CO2 settings for site",
-                        self.apisession.nickname,
-                    )
-                    await self.get_site_price(siteId=site_id, fromFile=fromFile)
+                self._logger.debug(
+                    "Getting api %s price and CO2 settings for site",
+                    self.apisession.nickname,
+                )
+                await self.get_site_price(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
             # Fetch CO2 Ranking if not excluded
             if not ({ApiCategories.hes_energy} & exclude):
@@ -591,7 +700,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     if m in ["A5101", "A5102", "A5103"]
                 }:
                     # fetch provider list for supported models only once per day
-                    if (datetime.now().strftime("%Y-%m-%d")) != (
+                    if (datetime.now().astimezone().strftime("%Y-%m-%d")) != (
                         self.account.get(f"price_providers_{model}") or {}
                     ).get("date"):
                         self._logger.debug(
@@ -670,7 +779,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 # Cloud server energy stat updates may be delayed by 3 minutes for HES
                 # min Offset in seconds to last valid record, reduce by 5 minutes to ensure last record is made
                 energy_offset = (site.get("energy_offset_seconds") or 0) - 300
-                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
+                time: datetime = datetime.now().astimezone() + timedelta(
+                    seconds=energy_offset
+                )
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
@@ -684,7 +795,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(yesterday),
+                            startDay=datetime.fromisoformat(yesterday).astimezone(),
                             numDays=1 if skip_today else 2,
                             dayTotals=True,
                             devTypes=query_types,
@@ -695,7 +806,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(today),
+                            startDay=datetime.fromisoformat(today).astimezone(),
                             numDays=1,
                             dayTotals=True,
                             devTypes=query_types,
@@ -739,6 +850,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     )
                     await self.get_hes_wifi_info(deviceSn=sn, fromFile=fromFile)
                 # Fetch details that work for shared accounts
+                else:
+                    pass
         return self.devices
 
     async def get_system_running_info(
@@ -875,7 +988,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         entry: dict = {}
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
-            datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
+            datetime.now().astimezone()
+            - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S").astimezone()
         ) >= timedelta(minutes=5):
             self._logger.debug(
                 "Updating api %s power average values from energy statistics of HES site ID %s",
@@ -883,7 +997,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 siteId,
             )
             offset = timedelta(seconds=avg_data.get("offset_seconds") or 0)
-            validtime = datetime.now() + offset
+            validtime = datetime.now().astimezone() + offset
             validdata = {}
             old_valid = avg_data.get("valid_time") or ""
             for source in ["hes", "solar", "home", "grid"] + (
@@ -921,20 +1035,21 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 endDay=checkdate,
                             )
                         # generate list of SOC timestamps different from 0 and pick last one
-                        if soclist := [
-                            item
-                            for item in (data.get("chargeLevel") or [])
-                            if (item.get("value") or "0") != "0"
-                        ]:
-                            if soclist[-1].get("time"):
-                                last = datetime.strptime(
-                                    checkdate.strftime("%Y-%m-%d")
-                                    + soclist[-1].get("time"),
-                                    "%Y-%m-%d%H:%M",
-                                )
-                                future: datetime = last + timedelta(minutes=5)
-                                validdata = data
-                                break
+                        if (
+                            soclist := [
+                                item
+                                for item in (data.get("chargeLevel") or [])
+                                if (item.get("value") or "0") != "0"
+                            ]
+                        ) and soclist[-1].get("time"):
+                            last = datetime.strptime(
+                                checkdate.strftime("%Y-%m-%d")
+                                + soclist[-1].get("time"),
+                                "%Y-%m-%d%H:%M",
+                            ).astimezone()
+                            future: datetime = last + timedelta(minutes=5)
+                            validdata = data
+                            break
                     # get min offset to first invalid timestamp to find best check time (smallest delay after new value from cloud)
                     if future:
                         offset = min(
@@ -942,12 +1057,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             timedelta(days=2)
                             if offset.total_seconds() == 0
                             # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
-                            or future - datetime.now() > offset + timedelta(minutes=6)
+                            or future - datetime.now().astimezone()
+                            > offset + timedelta(minutes=6)
                             else offset,
                             # set offset few seconds before future invalid time if smaller than previous offset
-                            future - datetime.now() - timedelta(seconds=5),
+                            future - datetime.now().astimezone() - timedelta(seconds=5),
                         )
-                        validtime = datetime.now() + offset
+                        validtime = datetime.now().astimezone() + offset
                         # reuse last valid data from timestamp check to get values
                         data = validdata
                         self._logger.debug(
@@ -988,16 +1104,17 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     future
                     and not fromFile
                     and (
-                        future - datetime.now() - timedelta(seconds=5) < offset
+                        future - datetime.now().astimezone() - timedelta(seconds=5)
+                        < offset
                         or offset.total_seconds == 0
                     )
                 ):
                     avg_data["last_check"] = (
-                        datetime.now() - timedelta(minutes=5)
+                        datetime.now().astimezone() - timedelta(minutes=5)
                     ).strftime("%Y-%m-%d %H:%M:%S")
                 else:
-                    avg_data["last_check"] = datetime.now().strftime(
-                        "%Y-%m-%d %H:%M:%S"
+                    avg_data["last_check"] = (
+                        datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
                     )
                 avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
                 avg_data["offset_seconds"] = round(offset.total_seconds())
@@ -1137,10 +1254,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "dateType": rangeType if rangeType in ["day", "week", "year"] else "day",
             "start": startDay.strftime("%Y-%m-%d")
             if startDay
-            else datetime.today().strftime("%Y-%m-%d"),
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
             "end": endDay.strftime("%Y-%m-%d")
             if endDay
-            else datetime.today().strftime("%Y-%m-%d"),
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
         }
         resp = await self.apisession.request(
             "post", API_HES_SVC_ENDPOINTS["energy_statistics"], json=data
@@ -1150,7 +1267,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
     async def energy_daily(  # noqa: C901
         self,
         siteId: str,
-        startDay: datetime = datetime.today(),
+        startDay: datetime | None = None,
         numDays: int = 1,
         dayTotals: bool = False,
         devTypes: set | None = None,
@@ -1166,9 +1283,14 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
         """
         table = {}
+        startDay = (
+            startDay.astimezone()
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone()
+        )
         if not devTypes or not isinstance(devTypes, set):
             devTypes = set()
-        future = datetime.today() + timedelta(days=7)
+        future = datetime.today().astimezone() + timedelta(days=7)
         # check daily range and limit to 1 year max and avoid future days in more than 1 week
         if startDay > future:
             startDay = future
@@ -1203,7 +1325,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1292,7 +1414,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1380,7 +1502,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1428,7 +1550,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1515,7 +1637,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -1771,6 +1893,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             ),
                         }
                     )
+                else:
+                    pass
         return entry
 
     async def get_hes_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
@@ -1811,7 +1935,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
     async def get_system_profit(
         self,
         siteId: str,
-        startDay: datetime = datetime.today(),
+        startDay: datetime | None = None,
         rangeType: str = "day",
         fromFile: bool = False,
     ) -> dict:
@@ -1826,7 +1950,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "title": "Proportion of self-use","value":"47%","unit":"","type":"","percent":"","imported":false,"showPercent":""}],
         "percents": [{"type": "hes","value": "27%"},{"type": "solar","value": "20%"},{"type": "grid","value": "53%"}],"selfPowerPercent": "47%"}
         """
-        startDay = startDay if isinstance(startDay, datetime) else datetime.today()
+        startDay = (
+            startDay.astimezone()
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone()
+        )
         # TODO: Format of start for week type is actually unknown and may have to be corrected
         data = {
             "siteId": siteId,

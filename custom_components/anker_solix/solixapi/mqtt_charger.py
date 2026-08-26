@@ -6,6 +6,8 @@ This module provides control features specific to the Anker Solix Solarbank devi
 from __future__ import annotations  # noqa: TID251
 
 from datetime import time
+import json
+import logging
 from typing import TYPE_CHECKING
 
 from .apitypes import SolixEvChargerMode, SolixEvChargerStatus, SolixScheduleWeekendMode
@@ -125,11 +127,12 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 # Remove plug lock control for cabled versions
                 self.controls.pop(SolixMqttCommands.plug_lock_switch, None)
 
-    def ev_charger_mode_state(self) -> str | None:
+    def ev_charger_mode_state(self, fromFile: bool = False) -> str | None:
         """Get the EV charger operational mode based on its status."""
-        if (status := self.mqttdata.get("ev_charger_status")) is not None:
+        cache = self.get_status(fromFile)
+        if (status := cache.get("ev_charger_status")) is not None:
             # First check if last command was boost
-            if bool(self.mqttdata.get("boost_status")):
+            if bool(cache.get("boost_status")):
                 return SolixEvChargerMode.boost_charge.name
             # Get last command from status
             # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
@@ -138,9 +141,9 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 SolixEvChargerStatus, str(status), SolixEvChargerStatus.unknown.name
             )
             if state == SolixEvChargerStatus.preparing.name:
-                if self.mqttdata.get("plug_countdown_seconds", 0) > 0:
+                if cache.get("plug_countdown_seconds", 0) > 0:
                     return SolixEvChargerMode.wait_plug.name
-                if self.mqttdata.get("start_countdown_seconds", 0) > 0:
+                if cache.get("start_countdown_seconds", 0) > 0:
                     return SolixEvChargerMode.wait_start.name
                 return SolixEvChargerMode.start_charge.name
             if state in [
@@ -152,15 +155,15 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             return SolixEvChargerMode.stop_charge.name
         return None
 
-    def ev_charger_mode_options(self) -> list:
+    def ev_charger_mode_options(self, fromFile: bool = False) -> list:
         """Get the EV charger operational mode options based on its state."""
         options = set()
         status = get_enum_name(
             SolixEvChargerStatus,
-            str(self.mqttdata.get("ev_charger_status")),
+            str(self.get_status(fromFile).get("ev_charger_status")),
             SolixEvChargerStatus.unknown.name,
         )
-        if state := self.ev_charger_mode_state():
+        if state := self.ev_charger_mode_state(fromFile):
             options.add(state)
             if state in [
                 SolixEvChargerMode.wait_plug.name,
@@ -269,4 +272,193 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             ) is None:
                 return None
             resp.update(result)
+        return resp or None
+
+    async def set_custom_usage_profile(
+        self,
+        name: str | None = None,
+        number: str | int | None = None,
+        profile_id: str | int | None = None,
+        toFile: bool = False,
+    ) -> dict | None:
+        """Set the prime charger custom usage mode with given profile name, number or id.
+
+        Args:
+            name: Name of the custom usage profile
+            number: Number of the custom usage profile
+            profile_id: ID of the custom usage profile
+            toFile: If True, save mock response (for testing compatibility)
+
+        Returns:
+            dict: Mocked state if successful, None otherwise
+
+        Example:
+            await mydevice.set_custom_usage_profile(number="1")
+
+        """
+        # response and commands
+        resp = {}
+        cmd1 = SolixMqttCommands.charger_custom_usage_mode
+        # find profile in Api cache
+        name = name if isinstance(name, str) and name else None
+        number = str(number) if isinstance(number, str | int) and str(number) else None
+        profile_id = (
+            str(profile_id)
+            if isinstance(profile_id, str | int) and str(profile_id)
+            else None
+        )
+        profile = next(
+            (
+                profile
+                for profile in self.device.get("custom_modes", {}).values()
+                if profile.get("name", "") == name
+                or str(profile.get("number", "")) == number
+                or str(profile.get("id", "")) == profile_id
+            ),
+            {},
+        )
+        # Custom profile structure as available in device Api cache
+        # {"id":24581,"number":1,"name":"test","total_power":30,"max_total_power":250,"auto_exit":0,"has_charge_protocol":1,"power_settings":[
+        #     {"name":"C1","power":0,"max_power":140,"input_power":0,"input_max_power":0,"scp":0,"ufcs":0,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
+        #     {"name":"C2","power":0,"max_power":100,"input_power":0,"input_max_power":0,"scp":0,"ufcs":0,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
+        #     {"name":"C3","power":0,"max_power":100,"input_power":0,"input_max_power":0,"scp":0,"ufcs":0,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
+        #     {"name":"C4","power":15,"max_power":100,"input_power":0,"input_max_power":0,"scp":0,"ufcs":1,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
+        #     {"name": "A","power": 15,"max_power": 24,"input_power": 0,"input_max_power": 0,"scp": 0,"ufcs": 0,"pps11v": 0,"pps16v": 0,"pps20v": 0,"pd12v": 0,"huawei": 0,"xiaomi": 0}]}
+        if profile:
+            self._logger.log(
+                logging.INFO if toFile else logging.DEBUG,
+                "%sDevice %s (%s) found profile '%s' in Api cache:\n%s",
+                "TESTMODE: " if toFile else "",
+                self.sn,
+                self.pn,
+                name or number or profile_id or "",
+                json.dumps(
+                    profile, indent=2 if len(json.dumps(profile)) < 200 else None
+                ),
+            )
+            # Build parameter map
+            parm_map = {
+                "set_custom_profile_number": int(profile.get("number") or 0),
+                "set_auto_exit_switch": int(profile.get("auto_exit") or 0),
+            }
+            for port in profile.get("power_settings", []):
+                port_name = str(port.get("name", "")).lower()
+                parm_map[f"set_usb_{port_name}_power_limit"] = int(
+                    port.get("power") or 0
+                )
+                if port_name != "a":
+                    parm_map[f"set_usb_{port_name}_protocols"] = [
+                        p
+                        for p in [
+                            "scp",
+                            "ufcs",
+                            "pd12v",
+                            "pps11v",
+                            "pps16v",
+                            "pps20v",
+                            "huawei",
+                            "xiaomi",
+                        ]
+                        if port.get(p)
+                    ]
+            if (
+                result := await self.run_command(
+                    cmd=cmd1,
+                    parm_map=parm_map,
+                    toFile=toFile,
+                )
+            ) is None:
+                return None
+            resp.update(result)
+        else:
+            self._logger.error(
+                "Device %s (%s) could not find custom profile '%s' in Api cache",
+                self.sn,
+                self.pn,
+                name or number or profile_id or "",
+            )
+        return resp or None
+
+    async def set_clock_theme(
+        self,
+        name: str | None = None,
+        theme_id: str | int | None = None,
+        toFile: bool = False,
+    ) -> dict | None:
+        """Set the prime charger clock theme by name, number or id.
+
+        Args:
+            name: Name of the theme, combined with category, e.g. "category - title"
+            theme_id: ID of the theme
+            toFile: If True, save mock response (for testing compatibility)
+
+        Returns:
+            dict: Mocked state if successful, None otherwise
+
+        Example:
+            await mydevice.set_clock_theme(name="custom - my theme")
+
+        """
+        # response and commands
+        resp = {}
+        # find profile in Api cache
+        name = name if isinstance(name, str) and name else None
+        theme_id = (
+            str(theme_id) if isinstance(theme_id, str | int) and str(theme_id) else None
+        )
+        # prepare parameter map and correct command
+        if name:
+            keys = name.split("-")
+            category = keys[:1][0].strip()
+            title = "-".join(keys[1:]).strip()
+        else:
+            category = title = None
+        # lookup new theme
+        if theme := (
+            [
+                item
+                for item in self.api.get_charger_themes(deviceSn=self.sn).values()
+                if str(theme_id) == str(item.get("id"))
+                or (
+                    item.get("category_name") == category and item.get("title") == title
+                )
+            ]
+            or [{}]
+        )[0]:
+            self._logger.log(
+                logging.INFO if toFile else logging.DEBUG,
+                "%sDevice %s (%s) found theme '%s' in Api cache:\n%s",
+                "TESTMODE: " if toFile else "",
+                self.sn,
+                self.pn,
+                name or theme_id or "",
+                json.dumps(theme, indent=2 if len(json.dumps(theme)) < 200 else None),
+            )
+            cmd1 = (
+                SolixMqttCommands.charger_theme_custom
+                if category.lower() == "custom"
+                else SolixMqttCommands.charger_theme
+            )
+            # Build parameter map
+            parm_map = {
+                "set_theme_id": int(theme.get("id") or 0),
+                "set_theme_hash": int(theme.get("file_hash") or 0, 16),
+                "set_theme_url": theme.get("image_url", ""),
+            }
+            if (
+                result := await self.run_command(
+                    cmd=cmd1,
+                    parm_map=parm_map,
+                    toFile=toFile,
+                )
+            ) is None:
+                return None
+            resp.update(result)
+        else:
+            self._logger.error(
+                "Device %s (%s) could not find theme '%s' in Api cache",
+                self.sn,
+                self.pn,
+                name or theme_id or "",
+            )
         return resp or None

@@ -24,7 +24,7 @@ async def energy_daily(  # noqa: C901
     self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
-    startDay: datetime = datetime.today(),
+    startDay: datetime | None = None,
     numDays: int = 1,
     dayTotals: bool = False,
     devTypes: set | None = None,
@@ -43,7 +43,10 @@ async def energy_daily(  # noqa: C901
     table = {}
     if not devTypes or not isinstance(devTypes, set):
         devTypes = set()
-    future = datetime.today() + timedelta(days=7)
+    if not isinstance(startDay, datetime):
+        startDay = datetime.today().astimezone()
+    startDay = startDay.astimezone()
+    future = datetime.today().astimezone() + timedelta(days=7)
     # check daily range and limit to 1 year max and avoid future days in more than 1 week
     if startDay > future:
         startDay = future
@@ -100,7 +103,7 @@ async def energy_daily(  # noqa: C901
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -226,7 +229,7 @@ async def energy_daily(  # noqa: C901
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -356,7 +359,7 @@ async def energy_daily(  # noqa: C901
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -382,7 +385,7 @@ async def energy_daily(  # noqa: C901
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -495,7 +498,8 @@ async def energy_daily(  # noqa: C901
                 # for file usage ensure that last item is used if today is included
                 start = (
                     len(items) - 1
-                    if fromFile and datetime.now().date() == startDay.date()
+                    if fromFile
+                    and datetime.now().astimezone().date() == startDay.date()
                     else 0
                 )
                 for idx, item in enumerate(items[start : start + numDays]):
@@ -558,7 +562,7 @@ async def energy_daily(  # noqa: C901
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -660,7 +664,7 @@ async def energy_daily(  # noqa: C901
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -841,7 +845,7 @@ async def energy_daily(  # noqa: C901
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -966,8 +970,11 @@ async def energy_analysis(
     Responses for grid:
     Daily: solar_to_grid, grid_to_home, Extra Totals: grid_to_battery, grid_imported, third_party_pv_to_grid
     """
-    if not isinstance(startDay, datetime):
-        startDay = datetime.today()
+    startDay = (
+        startDay.astimezone()
+        if isinstance(startDay, datetime)
+        else datetime.today().astimezone()
+    )
     data = {
         "site_id": siteId,
         "device_sn": deviceSn,
@@ -995,7 +1002,7 @@ async def energy_analysis(
         ),
         "end_time": ""
         if not isinstance(endDay, datetime)
-        else endDay.strftime(
+        else endDay.astimezone().strftime(
             "%Y-%m"
             if rangeType == "month"
             else "%Y"
@@ -1044,14 +1051,16 @@ async def refresh_pv_forecast(
         and (d.get("schedule") or {}).get("mode_type") == SolarbankUsageMode.smart.value
     ]
     # consider different timezone if recognized in energy data
-    now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
+    now = datetime.now().astimezone() + timedelta(
+        seconds=site.get("energy_offset_tz") or 0
+    )
     # get existing forecast information
     fcdetails = energy.get("pv_forecast_details") or {}
     # get last poll time or initialize with old date for first poll
     lastpoll = fcdetails.get("poll_time") or (now - timedelta(days=2)).strftime(
         "%Y-%m-%d %H:%M"
     )
-    lastpoll = datetime.fromisoformat(lastpoll)
+    lastpoll = datetime.fromisoformat(lastpoll).astimezone()
     trend = fcdetails.get("trend") or []
     new_trend = []
     energy_today = energy.get("today") or {}
@@ -1329,7 +1338,7 @@ async def get_energy_offset(
             offsetData["energy_offset_check"] = site.get("energy_offset_check")
     # verify last runtime and avoid re-query in less than 20 minutes since no new values available in energy stats
     if not (timestring := offsetData.get("energy_offset_check")) or (
-        datetime.now() - datetime.fromisoformat(timestring)
+        datetime.now().astimezone() - datetime.fromisoformat(timestring).astimezone()
     ) >= timedelta(minutes=20):
         self._logger.debug(
             "Updating api %s time offset from energy statistics of Solarbank_PPS site ID %s",
@@ -1337,7 +1346,7 @@ async def get_energy_offset(
             siteId,
         )
         offset = timedelta(seconds=offsetData.get("energy_offset_seconds") or 0)
-        validtime = datetime.now() + offset
+        validtime = datetime.now().astimezone() + offset
         source = "pps"
         # check for initial or updated min offset, using SOC value in pps data because that should never be 0 for a valid timestamp
         future = ""
@@ -1367,18 +1376,19 @@ async def get_energy_offset(
                     devType=source,
                 )
             # generate list of SOC timestamps different from 0 and pick last one
-            if soclist := [
-                item
-                for item in (data.get("charge_level") or [])
-                if (item.get("value") or "0") != "0"
-            ]:
-                if soclist[-1].get("time"):
-                    last = datetime.strptime(
-                        checkdate.strftime("%Y-%m-%d") + soclist[-1].get("time"),
-                        "%Y-%m-%d%H:%M",
-                    )
-                    future: datetime = last + timedelta(minutes=20)
-                    break
+            if (
+                soclist := [
+                    item
+                    for item in (data.get("charge_level") or [])
+                    if (item.get("value") or "0") != "0"
+                ]
+            ) and soclist[-1].get("time"):
+                last = datetime.strptime(
+                    checkdate.strftime("%Y-%m-%d") + soclist[-1].get("time"),
+                    "%Y-%m-%d%H:%M",
+                ).astimezone()
+                future: datetime = last + timedelta(minutes=20)
+                break
         # get min offset to first invalid timestamp to find best check time (smallest delay after new value from cloud)
         if future:
             offset = min(
@@ -1386,12 +1396,12 @@ async def get_energy_offset(
                 timedelta(days=2)
                 if offset.total_seconds() == 0
                 # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
-                or future - datetime.now() > offset + timedelta(minutes=21)
+                or future - datetime.now().astimezone() > offset + timedelta(minutes=21)
                 else offset,
                 # set offset few seconds before future invalid time if smaller than previous offset
-                future - datetime.now() - timedelta(seconds=5),
+                future - datetime.now().astimezone() - timedelta(seconds=5),
             )
-            validtime = datetime.now() + offset
+            validtime = datetime.now().astimezone() + offset
             # reuse last valid data from timestamp check to get values
             self._logger.debug(
                 "Found valid api %s %s entries until %s",
@@ -1404,16 +1414,16 @@ async def get_energy_offset(
             future
             and not fromFile
             and (
-                future - datetime.now() - timedelta(seconds=5) < offset
+                future - datetime.now().astimezone() - timedelta(seconds=5) < offset
                 or offset.total_seconds == 0
             )
         ):
             offsetData["energy_offset_check"] = (
-                datetime.now() - timedelta(minutes=20)
+                datetime.now().astimezone() - timedelta(minutes=20)
             ).strftime("%Y-%m-%d %H:%M:%S")
         else:
-            offsetData["energy_offset_check"] = datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
+            offsetData["energy_offset_check"] = (
+                datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
             )
         offsetData["energy_valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
         offsetData["energy_offset_seconds"] = round(offset.total_seconds())
@@ -1429,7 +1439,7 @@ async def get_energy_offset(
 async def device_pv_energy_daily(
     self: AnkerSolixApi,
     deviceSn: str,
-    startDay: datetime = datetime.today(),
+    startDay: datetime | None = None,
     numDays: int = 1,
     fromFile: bool = False,
     showProgress: bool = False,
@@ -1441,7 +1451,12 @@ async def device_pv_energy_daily(
     "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07"}}
     """
     table = {}
-    future = datetime.today() + timedelta(days=7)
+    startDay = (
+        startDay.astimezone()
+        if isinstance(startDay, datetime)
+        else datetime.today().astimezone()
+    )
+    future = datetime.today().astimezone() + timedelta(days=7)
     # check daily range and limit to 1 year max and avoid future days in more than 1 week
     if startDay > future:
         startDay = future
@@ -1513,8 +1528,12 @@ async def get_device_pv_statistics(
     """
 
     rangeType = rangeType if rangeType in ["week", "month", "year"] else "day"
-    startDay = startDay if isinstance(startDay, datetime) else datetime.today()
-    endDay = endDay if isinstance(endDay, datetime) else startDay
+    startDay = (
+        startDay.astimezone()
+        if isinstance(startDay, datetime)
+        else datetime.today().astimezone()
+    )
+    endDay = endDay.astimezone() if isinstance(endDay, datetime) else startDay
     data = {
         "sn": deviceSn,
         "type": rangeType,
@@ -1568,8 +1587,12 @@ async def get_device_charge_order_stats(
           "cost_saving": 4,"co2_saving": 7.228,"co2_saveing_unit": "kg","mile_age": 123.57}}]}
     """
     rangeType = rangeType if rangeType in ["week", "month", "year"] else "all"
-    startDay = startDay if isinstance(startDay, datetime) else datetime.now()
-    endDay = endDay if isinstance(endDay, datetime) else startDay
+    startDay = (
+        startDay.astimezone()
+        if isinstance(startDay, datetime)
+        else datetime.today().astimezone()
+    )
+    endDay = endDay.astimezone() if isinstance(endDay, datetime) else startDay
     data = {
         "device_sn": deviceSn,
         "date_type": rangeType,

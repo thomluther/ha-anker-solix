@@ -47,7 +47,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.7.1.0"
+VERSION: str = "3.8.1.0"
 
 
 class AnkerSolixApiExport:
@@ -94,7 +94,7 @@ class AnkerSolixApiExport:
             self._logger = _LOGGER
             self._logger.setLevel(logging.DEBUG)
 
-    async def export_data(  # noqa: C901
+    async def export_data(
         self,
         export_path: Path | str | None = None,
         export_folder: Path | str | None = None,
@@ -196,7 +196,7 @@ class AnkerSolixApiExport:
             self._logger.info(
                 "Using AnkerSolixApiExport Version: %s, Date: %s, Export Services: %s, MQTT Messages: %s",
                 VERSION,
-                datetime.now().strftime("%Y-%m-%d"),
+                datetime.now().astimezone().strftime("%Y-%m-%d"),
                 str(self.export_services),
                 str(self.mqttdata),
             )
@@ -210,10 +210,9 @@ class AnkerSolixApiExport:
                     self.request_delay,
                 )
             # Query common data for all service types to get sites and devices for account
-            if await self.query_common_data():
+            if await self.query_common_data() and self.mqttdata:
                 # start MQTT session if MQTT data requested and eligible devices exist
-                if self.mqttdata:
-                    mqtttask = self._loop.create_task(self.export_mqtt_data())
+                mqtttask = self._loop.create_task(self.export_mqtt_data())
             # Export common data for all service types and skip rest on error
             if await self.export_common_data():
                 # Export power_service endpoint data
@@ -357,7 +356,7 @@ class AnkerSolixApiExport:
                     zipname = "_".join(
                         [
                             str(self.export_path),
-                            datetime.now().strftime("%Y-%m-%d_%H%M"),
+                            datetime.now().astimezone().strftime("%Y-%m-%d_%H%M"),
                         ]
                     )
                     self.zipfilename = zipname + ".zip"
@@ -494,7 +493,8 @@ class AnkerSolixApiExport:
             for model in {
                 dev.get("device_pn")
                 for dev in self.api_power.devices.values()
-                if dev.get("device_pn") in ["A17C5", "A5101", "A5102", "A5103", "AE103", "A17E2"]
+                if dev.get("device_pn")
+                in ["A17C5", "A5101", "A5102", "A5103", "AE103", "A17E2"]
             }:
                 self._logger.info(
                     "Exporting dynamic price providers for model '%s'...", model
@@ -531,7 +531,7 @@ class AnkerSolixApiExport:
                     payload={
                         "company": provider.company,
                         "area": provider.area,
-                        "date": str(int(datetime.today().timestamp())),
+                        "date": str(int(datetime.today().astimezone().timestamp())),
                         "device_sn": "",
                     },
                 )
@@ -842,9 +842,11 @@ class AnkerSolixApiExport:
                             "type": "week",
                             "device_type": stat_type,
                             "start_time": (
-                                datetime.today() - timedelta(days=1)
+                                datetime.today().astimezone() - timedelta(days=1)
                             ).strftime("%Y-%m-%d"),
-                            "end_time": datetime.today().strftime("%Y-%m-%d"),
+                            "end_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
                         },
                         replace=[(siteId, "<siteId>")],
                     )
@@ -857,8 +859,12 @@ class AnkerSolixApiExport:
                             "device_sn": "",  # All data, device independent
                             "type": "day",
                             "device_type": stat_type,
-                            "start_time": datetime.today().strftime("%Y-%m-%d"),
-                            "end_time": datetime.today().strftime("%Y-%m-%d"),
+                            "start_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
+                            "end_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
                         },
                         replace=[(siteId, "<siteId>")],
                     )
@@ -902,9 +908,12 @@ class AnkerSolixApiExport:
                                     "type": "week",
                                     "device_type": stat_type,
                                     "start_time": (
-                                        datetime.today() - timedelta(days=1)
+                                        datetime.today().astimezone()
+                                        - timedelta(days=1)
                                     ).strftime("%Y-%m-%d"),
-                                    "end_time": datetime.today().strftime("%Y-%m-%d"),
+                                    "end_time": datetime.today()
+                                    .astimezone()
+                                    .strftime("%Y-%m-%d"),
                                 },
                                 replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                             )
@@ -926,9 +935,11 @@ class AnkerSolixApiExport:
                                 "type": "week",
                                 "device_type": f"solar_production_{ch}",
                                 "start_time": (
-                                    datetime.today() - timedelta(days=1)
+                                    datetime.today().astimezone() - timedelta(days=1)
                                 ).strftime("%Y-%m-%d"),
-                                "end_time": datetime.today().strftime("%Y-%m-%d"),
+                                "end_time": datetime.today()
+                                .astimezone()
+                                .strftime("%Y-%m-%d"),
                             },
                             replace=[(siteId, "<siteId>")],
                         )
@@ -1084,10 +1095,14 @@ class AnkerSolixApiExport:
                             payload={
                                 "device_sn": sn,
                                 "date_type": stat_type,
-                                "start_date": datetime.today().strftime("%Y-%m-%d")
+                                "start_date": datetime.today()
+                                .astimezone()
+                                .strftime("%Y-%m-%d")
                                 if stat_type == "week"
                                 else "",
-                                "end_date": datetime.today().strftime("%Y-%m-%d")
+                                "end_date": datetime.today()
+                                .astimezone()
+                                .strftime("%Y-%m-%d")
                                 if stat_type == "week"
                                 else "",
                             },
@@ -1157,7 +1172,7 @@ class AnkerSolixApiExport:
                         payload={
                             "sn": sn,
                             "type": "day",
-                            "start": datetime.today().strftime("%Y-%m-%d"),
+                            "start": datetime.today().astimezone().strftime("%Y-%m-%d"),
                             "end": "",
                             "version": "1",
                         },
@@ -1169,10 +1184,10 @@ class AnkerSolixApiExport:
                         payload={
                             "sn": sn,
                             "type": "week",
-                            "start": (datetime.today() - timedelta(days=1)).strftime(
-                                "%Y-%m-%d"
-                            ),
-                            "end": datetime.today().strftime("%Y-%m-%d"),
+                            "start": (
+                                datetime.today().astimezone() - timedelta(days=1)
+                            ).strftime("%Y-%m-%d"),
+                            "end": datetime.today().astimezone().strftime("%Y-%m-%d"),
                             "version": "1",
                         },
                         replace=[(sn, "<deviceSn>")],
@@ -1184,7 +1199,9 @@ class AnkerSolixApiExport:
                     if screensavers is None:
                         screensavers = True
                         for model in ["A2345"]:
-                            self._logger.info("Exporting screensavers for model '%s'...", model)
+                            self._logger.info(
+                                "Exporting screensavers for model '%s'...", model
+                            )
                             await self.query(
                                 endpoint=API_ENDPOINTS["charger_get_screensavers"],
                                 filename=f"{API_FILEPREFIXES['charger_get_screensavers']}_{model}.json",
@@ -1318,10 +1335,10 @@ class AnkerSolixApiExport:
                             "siteId": siteId,
                             "sourceType": stat_type,
                             "dateType": "week",
-                            "start": (datetime.today() - timedelta(days=1)).strftime(
-                                "%Y-%m-%d"
-                            ),
-                            "end": datetime.today().strftime("%Y-%m-%d"),
+                            "start": (
+                                datetime.today().astimezone() - timedelta(days=1)
+                            ).strftime("%Y-%m-%d"),
+                            "end": datetime.today().astimezone().strftime("%Y-%m-%d"),
                             "global": False,
                             "productCode": "",
                         },
@@ -1341,8 +1358,8 @@ class AnkerSolixApiExport:
                             "siteId": siteId,
                             "sourceType": stat_type,
                             "dateType": "day",
-                            "start": datetime.today().strftime("%Y-%m-%d"),
-                            "end": datetime.today().strftime("%Y-%m-%d"),
+                            "start": datetime.today().astimezone().strftime("%Y-%m-%d"),
+                            "end": datetime.today().astimezone().strftime("%Y-%m-%d"),
                             "global": False,
                             "productCode": "",
                         },
@@ -1359,7 +1376,7 @@ class AnkerSolixApiExport:
                         replace=[(siteId, "<siteId>")],
                     )
 
-                # Get site device disaster information
+                # Get site disaster information
                 self._logger.info("Exporting Charging site device disaster data...")
                 await self.query(
                     endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
@@ -1391,6 +1408,11 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
+
+            # Ensure stand alone devices may be queried
+            has_charging |= bool(
+                {k for k, d in self.api_power.devices.items() if not d.get("site_id")}
+            )
 
             # skip device queries if no charging system found and charging not enforced
             if not has_charging and not self.export_services & {
@@ -1483,7 +1505,7 @@ class AnkerSolixApiExport:
                             randomkeys=True,
                         )
 
-                # run for proper device types if site owner
+                # run for proper device types if eventually site owner
                 if dev_type in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.PPS.value,
@@ -1512,6 +1534,43 @@ class AnkerSolixApiExport:
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
+                    # Get device disaster information for devices not assigned to a site
+                    # Note: Only shared or owned standalone devices will be listed for account, admin does not need to be checked
+                    if not siteId:
+                        self._logger.info(
+                            "Exporting Charging device disaster data for standalone device..."
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS[
+                                "get_disaster_support_func"
+                            ],
+                            filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(sn, 'device_sn')}.json",
+                            payload={
+                                "identifier_id": sn,
+                                "type": 1,
+                            },  # Validated against shared S2000 device
+                            replace=[(sn, "<deviceSn>")],
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                            filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(sn, 'device_sn')}.json",
+                            payload={
+                                "identifier_id": sn,
+                                "type": 1,
+                            },  # Validated against shared S2000 device
+                            replace=[(sn, "<deviceSn>")],
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS[
+                                "get_site_device_disaster_status"
+                            ],
+                            filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(sn, 'device_sn')}.json",
+                            payload={
+                                "identifier_id": sn,
+                                "type": 1,
+                            },  # Validated against shared S2000 device
+                            replace=[(sn, "<deviceSn>")],
+                        )
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
@@ -1608,10 +1667,10 @@ class AnkerSolixApiExport:
                             "siteId": siteId,
                             "sourceType": stat_type,
                             "dateType": "week",
-                            "start": (datetime.today() - timedelta(days=1)).strftime(
-                                "%Y-%m-%d"
-                            ),
-                            "end": datetime.today().strftime("%Y-%m-%d"),
+                            "start": (
+                                datetime.today().astimezone() - timedelta(days=1)
+                            ).strftime("%Y-%m-%d"),
+                            "end": datetime.today().astimezone().strftime("%Y-%m-%d"),
                         },
                         replace=[(siteId, "<siteId>")],
                     )
@@ -1636,8 +1695,8 @@ class AnkerSolixApiExport:
                             "siteId": siteId,
                             "sourceType": stat_type,
                             "dateType": "day",
-                            "start": datetime.today().strftime("%Y-%m-%d"),
-                            "end": datetime.today().strftime("%Y-%m-%d"),
+                            "start": datetime.today().astimezone().strftime("%Y-%m-%d"),
+                            "end": datetime.today().astimezone().strftime("%Y-%m-%d"),
                         },
                         replace=[(siteId, "<siteId>")],
                     )
@@ -1653,9 +1712,9 @@ class AnkerSolixApiExport:
                         payload={
                             "siteId": siteId,
                             "dateType": stat_type,
-                            "start": datetime.today().strftime("%Y-%m-%d")
+                            "start": datetime.today().astimezone().strftime("%Y-%m-%d")
                             if stat_type == "day"
-                            else datetime.today().strftime("%Y"),
+                            else datetime.today().astimezone().strftime("%Y"),
                         },
                         replace=[(siteId, "<siteId>")],
                     )
@@ -1930,6 +1989,7 @@ class AnkerSolixApiExport:
                         "_password",
                         "_mac",
                         "err_msg",
+                        "google_code",
                     ]
                 )
                 or k == "sn"

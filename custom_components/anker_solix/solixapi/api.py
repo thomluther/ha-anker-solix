@@ -1,5 +1,5 @@
 """Class for interacting with the Anker Power / Solix API."""
-# ruff: noqa: N806
+# ruff: noqa: PLC0415, N806
 
 import contextlib
 from datetime import datetime, timedelta
@@ -56,7 +56,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     """Define the API class to handle API data for Anker balcony power sites and devices using power_service endpoints."""
 
     # import outsourced methods
-    from .charger import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .charger import (  # pylint: disable=import-outside-toplevel
         get_charger_custom_mode_list,
         get_charger_custom_mode_options,
         get_charger_custom_mode_profile,
@@ -69,7 +69,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         get_charger_themes,
         set_charger_port_remark,
     )
-    from .energy import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .energy import (  # pylint: disable=import-outside-toplevel
         device_pv_energy_daily,
         energy_analysis,
         energy_daily,
@@ -79,7 +79,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         home_load_chart,
         refresh_pv_forecast,
     )
-    from .schedule import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .schedule import (  # pylint: disable=import-outside-toplevel
         get_device_load,
         get_device_parm,
         set_device_load,
@@ -89,7 +89,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_sb2_home_load,
         set_sb2_use_time,
     )
-    from .vehicle import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .vehicle import (  # pylint: disable=import-outside-toplevel
         create_vehicle,
         get_brand_list,
         get_brand_models,
@@ -486,7 +486,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     ):
                         # handle Solarbank PPS charging status
                         device[key] = str(value)
-                        # TODO: Use proper status definitions once all state descriptions are known
                         description = get_enum_name(
                             SolarbankPpsStatus,
                             str(value),
@@ -725,13 +724,20 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         tz_offset = (
                             self.sites.get(device.get("site_id") or "") or {}
                         ).get("energy_offset_tz") or 0
-                        now = datetime.now() + timedelta(seconds=tz_offset)
+                        now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
                         now_time = now.time().replace(microsecond=0)
                         sys_power = None
                         dev_power = None
                         # set now to new daytime if close to end of day
-                        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-                            now_time = datetime.strptime("00:00", "%H:%M").time()
+                        if (
+                            now_time
+                            >= datetime.strptime("23:59:58", "%H:%M:%S")
+                            .astimezone()
+                            .time()
+                        ):
+                            now_time = (
+                                datetime.strptime("00:00", "%H:%M").astimezone().time()
+                            )
                         if generation >= 2:
                             # Solarbank 2+ schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
@@ -759,19 +765,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                             for slot in day_ranges:
                                 with contextlib.suppress(ValueError):
-                                    start_time = datetime.strptime(
-                                        slot.get("start_time") or "00:00", "%H:%M"
-                                    ).time()
+                                    start_time = (
+                                        datetime.strptime(
+                                            slot.get("start_time") or "00:00", "%H:%M"
+                                        )
+                                        .astimezone()
+                                        .time()
+                                    )
                                     end_time = slot.get("end_time") or "00:00"
                                     # "24:00" format not supported in strptime
                                     if end_time == "24:00":
-                                        end_time = datetime.strptime(
-                                            "23:59:59", "%H:%M:%S"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime("23:59:59", "%H:%M:%S")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     else:
-                                        end_time = datetime.strptime(
-                                            end_time, "%H:%M"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime(end_time, "%H:%M")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     if start_time <= now_time < end_time:
                                         sys_power = slot.get("power")
                                         device["preset_system_output_power"] = sys_power
@@ -865,19 +879,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # Solarbank 1 schedule
                             for slot in value.get("ranges") or []:
                                 with contextlib.suppress(ValueError):
-                                    start_time = datetime.strptime(
-                                        slot.get("start_time") or "00:00", "%H:%M"
-                                    ).time()
+                                    start_time = (
+                                        datetime.strptime(
+                                            slot.get("start_time") or "00:00", "%H:%M"
+                                        )
+                                        .astimezone()
+                                        .time()
+                                    )
                                     end_time = slot.get("end_time") or "00:00"
                                     # "24:00" format not supported in strptime
                                     if end_time == "24:00":
-                                        end_time = datetime.strptime(
-                                            "23:59:59", "%H:%M:%S"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime("23:59:59", "%H:%M:%S")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     else:
-                                        end_time = datetime.strptime(
-                                            end_time, "%H:%M"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime(end_time, "%H:%M")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     if start_time <= now_time < end_time:
                                         preset_power = (
                                             slot.get("appliance_loads") or [{}]
@@ -1156,14 +1178,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device["display_theme"] = self.get_charger_themes(
                                 deviceSn=sn
                             ).get(str(value), {})
-                except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-                    self._logger.error(
-                        "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",
+                except Exception:  # pylint: disable=broad-exception-caught
+                    self._logger.exception(
+                        "Api %s exception occurred when updating device details for key %s with value %s",
                         self.apisession.nickname,
-                        type(err),
                         key,
                         value,
-                        err,
                     )
 
             # generate extra values when certain conditions are met
@@ -1175,7 +1195,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     mqtt = device.get("mqtt_data") or {}
                     cap_change = False
                     # calculate size only once based on PN
-                    if not (size := device.get("battery_size")):
+                    if (size := device.get("battery_size")) is None:
                         size = getattr(
                             SolixDeviceCapacity, str(device.get("device_pn")), 0
                         )
@@ -1197,7 +1217,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device["battery_capacity"] = (
                             f"{size * (controller_bat + exp):.0f}"
                         )
-                    cap = device.get("battery_capacity")
+                    cap = int(device.get("battery_capacity") or 0)
                     # get total SOC, prefer value depending on overlay
                     soc = (
                         (mqtt.get("battery_soc", "") or device.get("battery_soc", ""))
@@ -1228,11 +1248,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             }
                         )
                 else:
-                    # init calculated fields with 0 if not existing
+                    # init calculated fields if not existing
                     if "battery_capacity" not in device:
                         device["battery_capacity"] = "0"
                     if "battery_energy" not in device:
-                        device["battery_energy"] = "0"
+                        # leave energy empty until it can be calculated
+                        device["battery_energy"] = ""
 
             self.devices[str(sn)] = device
         return sn
@@ -1276,28 +1297,31 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """Create/Update device details in api devices cache structure."""
         resp = await poll_device_details(self, fromFile=fromFile, exclude=exclude)
         # Clean up other api class devices cache if used
+        devices = set(self.devices.keys())
         if self.powerpanelApi:
-            self.powerpanelApi.recycleDevices(activeDevices=set(self.devices.keys()))
+            self.powerpanelApi.recycleDevices(
+                activeDevices=devices, extraDevices=devices
+            )
         if self.hesApi:
-            self.hesApi.recycleDevices(activeDevices=set(self.devices.keys()))
+            self.hesApi.recycleDevices(activeDevices=devices, extraDevices=devices)
         return resp
 
     def customizeCacheId(self, id: str, key: str, value: Any) -> None:
         """Customize a cache identifier with a key and value pair."""
         if isinstance(id, str) and isinstance(key, str):
-            # make sure to customize caches of sub instances and merge them again with Api
+            # make sure to customize shared caches of sub instances through that class
             if self.powerpanelApi and id in self.powerpanelApi.getCaches():
                 self.powerpanelApi.customizeCacheId(id=id, key=key, value=value)
                 if id in self.sites:
                     (self.sites.get(id)).update(self.powerpanelApi.sites.get(id))
-                elif id in self.devices:
-                    (self.devices.get(id)).update(self.powerpanelApi.devices.get(id))
+                # elif id in self.devices:
+                #     (self.devices.get(id)).update(self.powerpanelApi.devices.get(id))
             elif self.hesApi and id in self.hesApi.getCaches():
                 self.hesApi.customizeCacheId(id=id, key=key, value=value)
                 if id in self.sites:
                     (self.sites.get(id)).update(self.hesApi.sites.get(id))
-                elif id in self.devices:
-                    (self.devices.get(id)).update(self.hesApi.devices.get(id))
+                # elif id in self.devices:
+                #     (self.devices.get(id)).update(self.hesApi.devices.get(id))
             else:
                 super().customizeCacheId(id=id, key=key, value=value)
 

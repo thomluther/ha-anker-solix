@@ -573,6 +573,8 @@ async def set_device_parm(
                 await self.get_device_load(
                     siteId=siteId, deviceSn=casc_sn[0], fromFile=toFile
                 )
+            else:
+                pass
     return respdata
 
 
@@ -773,26 +775,36 @@ async def set_home_load(  # noqa: C901
     new_ranges = []
     # Consider time zone shifts of HA server to modify correct device time slot
     tz_offset = (self.sites.get(siteId) or {}).get("energy_offset_tz") or 0
-    now = datetime.now() + timedelta(seconds=tz_offset)
+    now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
     # update individual values in current slot or insert SolarbankTimeslot and adjust adjacent slots
     if not set_slot:
         now_time = now.time().replace(microsecond=0)
-        last_time = datetime.strptime("00:00", "%H:%M").time()
+        last_time = datetime.strptime("00:00", "%H:%M").astimezone().time()
         # set now to new daytime if close to end of day to determine which slot to modify
-        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-            now_time = datetime.strptime("00:00", "%H:%M").time()
+        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").astimezone().time():
+            now_time = datetime.strptime("00:00", "%H:%M").astimezone().time()
         next_start = None
         split_slot: dict = {}
         for idx, slot in enumerate(ranges, start=1):
             with contextlib.suppress(ValueError):
-                start_time = datetime.strptime(
-                    slot.get("start_time") or "00:00", "%H:%M"
-                ).time()
+                start_time = (
+                    datetime.strptime(slot.get("start_time") or "00:00", "%H:%M")
+                    .astimezone()
+                    .time()
+                )
                 # "24:00" format not supported in strptime
-                end_time = datetime.strptime(
-                    (str(slot.get("end_time") or "00:00").replace("24:00", "23:59")),
-                    "%H:%M",
-                ).time()
+                end_time = (
+                    datetime.strptime(
+                        (
+                            str(slot.get("end_time") or "00:00").replace(
+                                "24:00", "23:59"
+                            )
+                        ),
+                        "%H:%M",
+                    )
+                    .astimezone()
+                    .time()
+                )
                 # check slot timings to update current, or insert new and modify adjacent slots
                 insert: dict = {}
 
@@ -1093,7 +1105,12 @@ async def set_home_load(  # noqa: C901
                         pending_insert = False
                         if insert_slot.end_time.time() >= end_time:
                             # set start of next slot if not end of day
-                            if end_time < datetime.strptime("23:59", "%H:%M").time():
+                            if (
+                                end_time
+                                < datetime.strptime("23:59", "%H:%M")
+                                .astimezone()
+                                .time()
+                            ):
                                 next_start = insert_slot.end_time.time()
                             last_time = insert_slot.end_time.time()
                             # skip current slot since overlapped by insert slot
@@ -1294,7 +1311,9 @@ async def set_home_load(  # noqa: C901
                 <= datetime.strptime(
                     (slot.get("start_time") or "00:00").replace("24:00", "23:59"),
                     "%H:%M",
-                ).time()
+                )
+                .astimezone()
+                .time()
             ):
                 new_ranges.append(slot)
 
@@ -1308,22 +1327,26 @@ async def set_home_load(  # noqa: C901
                     split_slot = {}
 
             # Track end time of last appended slot in list
-            last_time = datetime.strptime(
-                (
-                    str(new_ranges[-1].get("end_time") or "00:00").replace(
-                        "24:00", "23:59"
-                    )
-                ),
-                "%H:%M",
-            ).time()
+            last_time = (
+                datetime.strptime(
+                    (
+                        str(new_ranges[-1].get("end_time") or "00:00").replace(
+                            "24:00", "23:59"
+                        )
+                    ),
+                    "%H:%M",
+                )
+                .astimezone()
+                .time()
+            )
 
     # If no slot exists or new slot to be set, set defaults or given set_slot parameters
     if len(new_ranges) == 0:
         if not set_slot:
             # fill set_slot with given parameters
             set_slot = SolarbankTimeslot(
-                start_time=datetime.strptime("00:00", "%H:%M"),
-                end_time=datetime.strptime("23:59", "%H:%M"),
+                start_time=datetime.strptime("00:00", "%H:%M").astimezone(),
+                end_time=datetime.strptime("23:59", "%H:%M").astimezone(),
                 appliance_load=preset,
                 device_load=dev_preset,
                 allow_export=export,
@@ -1614,7 +1637,7 @@ async def set_sb2_home_load(  # noqa: C901
     # identify week days to be used, default to todays weekday or all
     # Consider time zone shifts
     tz_offset = (self.sites.get(siteId) or {}).get("energy_offset_tz") or 0
-    now = datetime.now() + timedelta(seconds=tz_offset)
+    now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
     days: list[str] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
     weekdays = (
         {int(now.strftime("%w"))} if rate_plan and not delete_plan else set(range(7))
@@ -1730,22 +1753,32 @@ async def set_sb2_home_load(  # noqa: C901
         preset is not None or charging_type is not None or pending_insert
     ):
         now_time = now.time().replace(microsecond=0)
-        last_time = datetime.strptime("00:00", "%H:%M").time()
+        last_time = datetime.strptime("00:00", "%H:%M").astimezone().time()
         # set now to new daytime if close to end of day to determine which slot to modify
-        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-            now_time = datetime.strptime("00:00", "%H:%M").time()
+        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").astimezone().time():
+            now_time = datetime.strptime("00:00", "%H:%M").astimezone().time()
         next_start = None
         split_slot: dict = {}
         for idx, slot in enumerate(ranges, start=1):
             with contextlib.suppress(ValueError):
-                start_time = datetime.strptime(
-                    slot.get("start_time") or "00:00", "%H:%M"
-                ).time()
+                start_time = (
+                    datetime.strptime(slot.get("start_time") or "00:00", "%H:%M")
+                    .astimezone()
+                    .time()
+                )
                 # "24:00" format not supported in strptime
-                end_time = datetime.strptime(
-                    (str(slot.get("end_time") or "00:00").replace("24:00", "23:59")),
-                    "%H:%M",
-                ).time()
+                end_time = (
+                    datetime.strptime(
+                        (
+                            str(slot.get("end_time") or "00:00").replace(
+                                "24:00", "23:59"
+                            )
+                        ),
+                        "%H:%M",
+                    )
+                    .astimezone()
+                    .time()
+                )
                 # check slot timings to update current, or insert new and modify adjacent slots
                 insert: dict = {}
                 # Workaround to avoid None data for new field
@@ -1879,7 +1912,12 @@ async def set_sb2_home_load(  # noqa: C901
                         pending_insert = False
                         if insert_slot.end_time.time() >= end_time:
                             # set start of next slot if not end of day
-                            if end_time < datetime.strptime("23:59", "%H:%M").time():
+                            if (
+                                end_time
+                                < datetime.strptime("23:59", "%H:%M")
+                                .astimezone()
+                                .time()
+                            ):
                                 next_start = insert_slot.end_time.time()
                             last_time = insert_slot.end_time.time()
                             # skip current slot since overlapped by insert slot
@@ -1935,10 +1973,12 @@ async def set_sb2_home_load(  # noqa: C901
                         {"end_time": datetime.strftime(insert_slot.start_time, "%H:%M")}
                     )
                     # re-use old slot parms for insert if end time of insert slot is same as original slot
-                    if insert_slot.end_time.time() == end_time:
+                    if (
+                        insert_slot.end_time.time() == end_time
+                        and insert_slot.appliance_load is None
+                    ):
                         # reuse old appliance load
-                        if insert_slot.appliance_load is None:
-                            insert_slot.appliance_load = slot.get("power")
+                        insert_slot.appliance_load = slot.get("power")
 
                 elif next_start and next_start < end_time:
                     # delay start of slot following an insert if it falls into the slot
@@ -1979,7 +2019,9 @@ async def set_sb2_home_load(  # noqa: C901
                 <= datetime.strptime(
                     (slot.get("start_time") or "00:00").replace("24:00", "23:59"),
                     "%H:%M",
-                ).time()
+                )
+                .astimezone()
+                .time()
             ):
                 new_ranges.append(slot)
 
@@ -1993,14 +2035,18 @@ async def set_sb2_home_load(  # noqa: C901
                     split_slot: dict = {}
 
             # Track end time of last appended slot in list
-            last_time = datetime.strptime(
-                (
-                    str(new_ranges[-1].get("end_time") or "00:00").replace(
-                        "24:00", "23:59"
-                    )
-                ),
-                "%H:%M",
-            ).time()
+            last_time = (
+                datetime.strptime(
+                    (
+                        str(new_ranges[-1].get("end_time") or "00:00").replace(
+                            "24:00", "23:59"
+                        )
+                    ),
+                    "%H:%M",
+                )
+                .astimezone()
+                .time()
+            )
 
     # If no rate plan or new ranges exists or new slot to be set, set defaults or given set_slot parameters
     if (
@@ -2012,8 +2058,8 @@ async def set_sb2_home_load(  # noqa: C901
         if not set_slot:
             # fill set_slot with given parameters
             set_slot = Solarbank2Timeslot(
-                start_time=datetime.strptime("00:00", "%H:%M"),
-                end_time=datetime.strptime("23:59", "%H:%M"),
+                start_time=datetime.strptime("00:00", "%H:%M").astimezone(),
+                end_time=datetime.strptime("23:59", "%H:%M").astimezone(),
                 appliance_load=preset,
                 charging_type=charging_type,
             )
@@ -2188,7 +2234,12 @@ async def set_sb2_ac_charge(
     backup_end = backup_end.astimezone() if isinstance(backup_end, datetime) else None
     backup_switch = backup_switch if isinstance(backup_switch, bool) else None
     # fast quit if nothing to change
-    if backup_start is None and backup_end is None and backup_switch is None:
+    if (
+        backup_start is None
+        and backup_end is None
+        and backup_duration is None
+        and backup_switch is None
+    ):
         self._logger.error(
             "Api %s no valid AC charge options provided", self.apisession.nickname
         )
@@ -2463,7 +2514,7 @@ async def set_sb2_use_time(  # noqa: C901
         if (str(end_hour).isdigit() or isinstance(end_hour, int | float))
         else end_hour.hour
         if isinstance(end_hour, time)
-        and end_hour < datetime.strptime("23:59", "%H:%M").time()
+        and end_hour < datetime.strptime("23:59", "%H:%M").astimezone().time()
         else 24
         if isinstance(end_hour, time)
         else None
@@ -2526,7 +2577,7 @@ async def set_sb2_use_time(  # noqa: C901
     # set parameters for the lookup
     # Consider time zone shifts
     tz_offset = (self.sites.get(siteId) or {}).get("energy_offset_tz") or 0
-    now = datetime.now() + timedelta(seconds=tz_offset)
+    now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
     find_month = (
         start_month
         if start_month is not None
@@ -3066,13 +3117,14 @@ async def set_sb2_use_time(  # noqa: C901
         "price_type"
     )
     new_price_type = None
-    if mode_type in iter(SolarbankUsageMode) and price_type:
-        if (
-            mode_type == SolarbankUsageMode.use_time.value
-            and schedule.get(SolarbankRatePlan.use_time)
-            and price_type != SolixPriceTypes.USE_TIME.value
-        ):
-            new_price_type = SolixPriceTypes.USE_TIME.value
+    if (
+        mode_type in iter(SolarbankUsageMode)
+        and price_type
+        and mode_type == SolarbankUsageMode.use_time.value
+        and schedule.get(SolarbankRatePlan.use_time)
+        and price_type != SolixPriceTypes.USE_TIME.value
+    ):
+        new_price_type = SolixPriceTypes.USE_TIME.value
     if new_price_type:
         self._logger.debug(
             "Toggling api %s price type to: %s",

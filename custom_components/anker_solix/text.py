@@ -75,7 +75,9 @@ DEVICE_TEXTS = [
             ).get(jk),
             force_creation_fn=lambda d: bool("port_remarks" in d),
             exclude_fn=lambda s, d: (
-                not (({d.get("type")} - s) and ({ApiCategories.charger_usb_settings} - s))
+                not (
+                    ({d.get("type")} - s) and ({ApiCategories.charger_usb_settings} - s)
+                )
             ),
         )
         for idx in [
@@ -286,13 +288,9 @@ class AnkerSolixText(CoordinatorEntity, TextEntity):
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -300,15 +298,11 @@ class AnkerSolixText(CoordinatorEntity, TextEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context) or {}).get("site_info") or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
         self._native_value = None
         self._assumed_state = False

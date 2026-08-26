@@ -152,57 +152,41 @@ class AnkerSolixEntityFeature(IntFlag):
     AC_CHARGE = 8
 
 
-def get_AnkerSolixSubdeviceInfo(
-    data: dict, identifier: str, maindevice: str
-) -> DeviceInfo:
+def get_AnkerSolixSubdeviceInfo(data: dict, identifier: str) -> DeviceInfo:
     """Return an Anker Solix Sub Device DeviceInfo."""
 
     return DeviceInfo(
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
+        serial_number=data.get("device_sn"),
         model=data.get("name") or data.get("device_pn"),
         # Use new model_id attribute supported since core 2024.8.0
         model_id=data.get("device_pn"),
-        serial_number=data.get("device_sn"),
         name=data.get("alias") or data.get("name"),
         sw_version=str(data.get("sw_version") or "").lstrip("v"),
-        # map to main device
-        via_device=(DOMAIN, maindevice),
     )
 
 
-def get_AnkerSolixDeviceInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
+def get_AnkerSolixDeviceInfo(data: dict, identifier: str) -> DeviceInfo:
     """Return an Anker Solix End Device DeviceInfo."""
 
     return DeviceInfo(
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
+        serial_number=data.get("device_sn"),
         model=data.get("name") or data.get("device_pn"),
         # Use new model_id attribute supported since core 2024.8.0
         model_id=data.get("device_pn"),
-        serial_number=data.get("device_sn"),
         name=data.get("alias") or data.get("name"),
         sw_version=str(data.get("sw_version") or "").lstrip("v"),
-        # map to site, or map standalone devices to account device
-        via_device=(DOMAIN, data.get("site_id") or account),
     )
 
 
-def get_AnkerSolixSystemInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
+def get_AnkerSolixSystemInfo(data: dict, identifier: str) -> DeviceInfo:
     """Return an Anker Solix System DeviceInfo."""
 
     power_site_type = data.get("power_site_type")
     site_type = getattr(SolixSiteType, "t_" + str(power_site_type), "")
-    if account:
-        return DeviceInfo(
-            identifiers={(DOMAIN, identifier)},
-            manufacturer=MANUFACTURER,
-            serial_number=data.get("site_id"),
-            model=(str(site_type).capitalize() + " Site").strip(),
-            model_id=f"Type {data.get('power_site_type')}",
-            name=f"System {data.get('site_name')}",
-            via_device=(DOMAIN, account),
-        )
     return DeviceInfo(
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
@@ -213,10 +197,7 @@ def get_AnkerSolixSystemInfo(data: dict, identifier: str, account: str) -> Devic
     )
 
 
-def get_AnkerSolixAccountInfo(
-    data: dict,
-    identifier: str,
-) -> DeviceInfo:
+def get_AnkerSolixAccountInfo(data: dict, identifier: str) -> DeviceInfo:
     """Return an Anker Solix Account DeviceInfo."""
 
     return DeviceInfo(
@@ -229,7 +210,7 @@ def get_AnkerSolixAccountInfo(
     )
 
 
-def get_AnkerSolixVehicleInfo(data: dict, identifier: str, account: str) -> DeviceInfo:
+def get_AnkerSolixVehicleInfo(data: dict, identifier: str) -> DeviceInfo:
     """Return an Anker Solix Vehicle DeviceInfo."""
 
     return DeviceInfo(
@@ -240,5 +221,4 @@ def get_AnkerSolixVehicleInfo(data: dict, identifier: str, account: str) -> Devi
         model_id=data.get("model"),
         hw_version=str(data.get("productive_year")),
         name=data.get("vehicle_name"),
-        via_device=(DOMAIN, account),
     )

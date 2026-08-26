@@ -17,6 +17,7 @@
                 "inverter": "Wechselrichter",
                 "combiner_box": "Anschlussboxen",
                 "pps": "Power Stationen",
+                "powerbank": "Powerbank",
                 "powerpanel": "Power Panels",
                 "powerpanel_energy": "Power Panel Energiestatistik",
                 "powerpanel_avg_power": "Power Panel ⌀-Leistung",
@@ -520,6 +521,18 @@
                     "on": "Active",
                     "off": "Inactive"
                 }
+            },
+            "disaster_support": {
+                "name": "Katasstrophenunterstützung",
+                "state": {
+                    "on": "Aktiv",
+                    "off": "Inaktiv"
+                },
+                "state_attributes": {
+                    "countries": {
+                        "name": "Länder"
+                    }
+                }
             }
         },
         "datetime": {
@@ -583,7 +596,12 @@
                 }
             },
             "preset_ac_input_limit": {
-                "name": "AC Eingangslimit"
+                "name": "AC Eingangslimit",
+                "state_attributes": {
+                    "silent_charge_limit": {
+                        "name": "Lautlos Limit W"
+                    }
+                }
             },
             "grid_export_limit": {
                 "name": "Netz Einspeiselimit"
@@ -718,7 +736,12 @@
                 "name": "Abgabelimit"
             },
             "preset_ac_input_limit": {
-                "name": "AC Eingangslimit"
+                "name": "AC Eingangslimit",
+                "state_attributes": {
+                    "silent_charge_limit": {
+                        "name": "Lautlos Limit W"
+                    }
+                }
             },
             "preset_pv_input_limit": {
                 "name": "PV Eingangslimit"
@@ -790,6 +813,17 @@
                     "time_of_use": "Nutzungszeit",
                     "self_consumption": "Eigenverbrauch",
                     "custom": "Benutzerdefiniert"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Modus"
+                    },
+                    "custom_mode_schedule": {
+                        "name": "Benutzerdefinierter Zeitplan"
+                    },
+                    "tou_mode_schedule": {
+                        "name": "TOU Zeitplan"
+                    }
                 }
             },
             "max_evcharge_current": {
@@ -977,6 +1011,13 @@
                     "c3_c4": "C3 C4",
                     "unknown": "Unbekannt"
                 }
+            },
+            "priority_circuit_x": {
+                "name": "Priorität Stromkreis {id}",
+                "state": {
+                    "must_have": "Unverzichtbar",
+                    "nice_to_have": "Wünschenswert"
+                }
             }
         },
         "sensor": {
@@ -1160,6 +1201,9 @@
             },
             "dc_input_power_total": {
                 "name": "DC Eingangsleistung gesamt"
+            },
+            "input_power_total": {
+                "name": "Eingangsleistung gesamt"
             },
             "ac_input_power": {
                 "name": "AC Eingangsleistung",
@@ -1412,12 +1456,37 @@
                 "name": "Arbeitszustand",
                 "state": {
                     "standby": "Bereitschaft",
+                    "idle": "Leerlauf",
                     "running": "Läuft",
+                    "charging": "Aufladung",
+                    "discharging": "Entladung",
+                    "sleep": "Schlafend",
+                    "shutdown": "Ausgeschaltet",
                     "unknown": "Unbekannt"
                 },
                 "state_attributes": {
                     "status": {
                         "name": "Status Code"
+                    }
+                }
+            },
+            "backup_status": {
+                "name": "Notladestatus",
+                "state": {
+                    "inactive": "Inaktiv",
+                    "planned_charge": "Geplante Notladung",
+                    "storm_guard": "Sturmschutzladung",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status Code"
+                    },
+                    "auto_backup_start": {
+                        "name": "Auto Notladung Start"
+                    },
+                    "auto_backup_end": {
+                        "name": "Auto Notladung Ende"
                     }
                 }
             },
@@ -1631,7 +1700,7 @@
                 }
             },
             "grid_to_home_power": {
-                "name": "Netzbezug"
+                "name": "Netznutzung"
             },
             "photovoltaic_to_grid_power": {
                 "name": "Netzeinspeisung"
@@ -2433,6 +2502,25 @@
             },
             "battery_voltage": {
                 "name": "Batteriespannung"
+            },
+            "disaster_status": {
+                "name": "Katasstrophenstatus",
+                "state": {
+                    "inactive": "Inaktiv",
+                    "progressing": "Laufend",
+                    "unknown": "Unbekannt"
+                },
+                "state_attributes": {
+                    "storm_guard": {
+                        "name": "Sturmschutz"
+                    },
+                    "manual": {
+                        "name": "Manuell"
+                    },
+                    "details": {
+                        "name": "Details"
+                    }
+                }
             }
         },
         "switch": {
@@ -2446,7 +2534,10 @@
                 "name": "Entladepriorität"
             },
             "preset_backup_option": {
-                "name": "Notladeoption"
+                "name": "Notladeplan"
+            },
+            "storm_guard_switch": {
+                "name": "Sturmschutz"
             },
             "allow_grid_export": {
                 "name": "Erlaube Netzeinspeisung"
@@ -2469,7 +2560,12 @@
                 "name": "LED Licht"
             },
             "ac_output_power_switch": {
-                "name": "AC Ausgang"
+                "name": "AC Ausgang",
+                "state_attributes": {
+                    "ac_output_schedule": {
+                        "name": "AC Ausgang Zeitplan"
+                    }
+                }
             },
             "dc_output_power_switch": {
                 "name": "DC Ausgang"
@@ -2509,6 +2605,9 @@
             },
             "random_delay_switch": {
                 "name": "Verzögerter Ladestart"
+            },
+            "ev_charger_mode_switch": {
+                "name": "Aktiviere Ladevorgang"
             },
             "modbus_switch": {
                 "name": "Modbus TCP"
@@ -2609,6 +2708,9 @@
             "clock_display_end_time": {
                 "name": "Uhranzeige Endzeit"
             },
+            "ac_output_timer_seconds": {
+                "name": "AC Ausgangstimer"
+            },
             "usb_x_timer_seconds": {
                 "name": "USB-{id} Timer"
             },
@@ -2623,6 +2725,9 @@
             },
             "silent_mode_end_minutes": {
                 "name": "Lautlosmodus Endzeit"
+            },
+            "ac_output_timer": {
+                "name": "AC Ausgangstimer"
             }
         },
         "update":{
@@ -2831,11 +2936,11 @@
                 },
                 "backup_end": {
                     "name": "Notladung Ende",
-                    "description": "Enddatum und Zeit der AC-Notladung im Format JJJJ-MM-TT HH:MM:SS. Standard ist der Beginn des aktiven Zeitraums oder jetzt + 3 Stunden."
+                    "description": "Enddatum und Zeit der AC-Notladung im Format JJJJ-MM-TT HH:MM:SS. Standard ist der Beginn des aktiven Zeitraums oder jetzt plus 1-3 Stunden (geräteabhängig)."
                 },
                 "backup_duration": {
                     "name": "Notladung Dauer",
-                    "description": "Dauer der AC-Notladung im Format HH:MM:SS. Wird nur verwendet, wenn kein Notladungsende angegeben ist, anstelle der Standarddauer von 3 Stunden."
+                    "description": "Dauer der AC-Notladung im Format HH:MM:SS. Wird nur verwendet, wenn kein Notladungsende angegeben ist, anstelle der Standarddauer von 1-3 Stunden (geräteabhängig)."
                 },
                 "enable_backup": {
                     "name": "Aktivieren des Notladungszeitraums",

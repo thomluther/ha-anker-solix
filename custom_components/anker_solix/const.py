@@ -130,7 +130,7 @@ def extractNone(value: Any) -> None:
 
 
 VALID_DAYTIME = vol.All(
-    lambda v: datetime.strptime(":".join(str(v).split(":")[:2]), "%H:%M"),
+    lambda v: datetime.strptime(":".join(str(v).split(":")[:2]), "%H:%M").astimezone(),
 )
 VALID_LOAD_TYPE = vol.All(
     extractNone,
@@ -384,15 +384,23 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
                 vol.Any(
                     None,
                     vol.In(
-                        [item.value for item in SolixTariffTypes if item.name != "UNKNOWN"],
+                        [
+                            item.value
+                            for item in SolixTariffTypes
+                            if item.name != "UNKNOWN"
+                        ],
                     ),
                     vol.All(
                         vol.Lower,
                         vol.In(
-                            [item.name.lower() for item in SolixTariffTypes if item.name != "UNKNOWN"],
+                            [
+                                item.name.lower()
+                                for item in SolixTariffTypes
+                                if item.name != "UNKNOWN"
+                            ],
                         ),
                     ),
-                    msg=f"not in {[item.value for item in SolixTariffTypes if item.name != "UNKNOWN"] + [item.name.lower() for item in SolixTariffTypes if item.name != "UNKNOWN"]}",
+                    msg=f"not in {[item.value for item in SolixTariffTypes if item.name != 'UNKNOWN'] + [item.name.lower() for item in SolixTariffTypes if item.name != 'UNKNOWN']}",
                 ),
             ),
             vol.Optional(TARIFF_PRICE): vol.All(

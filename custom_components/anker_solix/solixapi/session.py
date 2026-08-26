@@ -298,7 +298,7 @@ class AnkerSolixClientSession:
             ]
             # delay at least 1 minute from oldest request
             throttle = (
-                65 - (datetime.now() - same_requests[0][0]).total_seconds()
+                65 - (datetime.now().astimezone() - same_requests[0][0]).total_seconds()
                 if len(same_requests) >= self._endpoint_limit
                 else 0
             )
@@ -314,7 +314,10 @@ class AnkerSolixClientSession:
             max(
                 0,
                 throttle,
-                delay - (datetime.now() - self._last_request_time).total_seconds()
+                delay
+                - (
+                    datetime.now().astimezone() - self._last_request_time
+                ).total_seconds()
                 if isinstance(self._last_request_time, datetime)
                 else 0,
             )
@@ -342,7 +345,7 @@ class AnkerSolixClientSession:
             self._logger.debug(
                 "Cached Login for %s from %s:",
                 self.mask_values(self._email),
-                datetime.fromtimestamp(self._authFileTime).isoformat(),
+                datetime.fromtimestamp(self._authFileTime).astimezone().isoformat(),
             )
             self._logger.debug(
                 "%s",
@@ -408,7 +411,7 @@ class AnkerSolixClientSession:
         if data.get("token_expires_at"):
             self._token_expiration = datetime.fromtimestamp(
                 data.get("token_expires_at")
-            )
+            ).astimezone()
         else:
             self._token_expiration = None
             self._loggedIn = False
@@ -423,7 +426,7 @@ class AnkerSolixClientSession:
             self._loggedIn = False
         return self._loggedIn
 
-    async def request(  # noqa: C901
+    async def request(
         self,
         method: str,
         endpoint: str,
@@ -439,7 +442,8 @@ class AnkerSolixClientSession:
         # check token expiration (7 days)
         if (
             self._token_expiration
-            and (self._token_expiration - datetime.now()).total_seconds() < 60
+            and (self._token_expiration - datetime.now().astimezone()).total_seconds()
+            < 60
         ):
             self._logger.warning(
                 "WARNING: Access token expired, fetching a new one%s",
@@ -564,7 +568,7 @@ class AnkerSolixClientSession:
                 # data=compress(str(json).encode()) if self.compress_data else None,
                 timeout=ClientTimeout(total=self._request_timeout),
             ) as resp:
-                self._last_request_time = datetime.now()
+                self._last_request_time = datetime.now().astimezone()
                 self.request_count.add(
                     request_time=self._last_request_time,
                     request_info=(f"{method.upper()} {url} {body_text}").strip(),
@@ -592,7 +596,7 @@ class AnkerSolixClientSession:
                         url,
                         body_text,
                     )
-                    raise ClientError(  # noqa: TRY301
+                    raise ClientError(
                         f"Api {self.nickname} no data response for request: {method.upper()} {url}"
                     )
                 if endpoint == API_LOGIN:
@@ -1029,7 +1033,7 @@ class AnkerEncryptionHandler:
                 data = await resp.json(content_type=None)
                 if not data:
                     self._logger.error("Response Text: %s", body_text)
-                    raise ClientError(  # noqa: TRY301
+                    raise ClientError(
                         f"No data response while requesting {API_KEY_EXCHANGE}"
                     )
                 self._logger.debug("Response Data: %s", data)

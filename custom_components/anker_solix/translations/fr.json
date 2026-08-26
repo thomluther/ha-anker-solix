@@ -17,6 +17,7 @@
                 "inverter": "Onduleurs",
                 "combiner_box": "Boîtes de jonction",
                 "pps": "Centrales électriques portables",
+                "powerbank": "Chargeur portable",
                 "powerpanel": "Panneaux électriques",
                 "powerpanel_energy": "Statistiques énergétiques du panneaux électriques",
                 "powerpanel_avg_power": "⌀-puissance du panneaux électriques",
@@ -520,6 +521,18 @@
                     "on": "Actif",
                     "off": "Inactif"
                 }
+            },
+            "disaster_support": {
+                "name": "Assistance de catastrophe",
+                "state": {
+                    "on": "Actif",
+                    "off": "Inactif"
+                },
+                "state_attributes": {
+                    "countries": {
+                        "name": "Pays"
+                    }
+                }
             }
         },
         "datetime": {
@@ -583,7 +596,12 @@
                 }
             },
             "preset_ac_input_limit": {
-                "name": "Limite d'entrée CA"
+                "name": "Limite d'entrée CA",
+                "state_attributes": {
+                    "silent_charge_limit": {
+                        "name": "Limite de charge silencieuse W"
+                    }
+                }
             },
             "grid_export_limit": {
                 "name": "Limite d'exportation du réseau"
@@ -718,7 +736,12 @@
                 "name": "Limite de sortie"
             },
             "preset_ac_input_limit": {
-                "name": "Limite d'entrée CA"
+                "name": "Limite d'entrée CA",
+                "state_attributes": {
+                    "silent_charge_limit": {
+                        "name": "Limite de charge silencieuse W"
+                    }
+                }
             },
             "preset_pv_input_limit": {
                 "name": "Limite d'entrée PV"
@@ -783,6 +806,17 @@
                     "time_of_use": "Heure d'utilisation",
                     "self_consumption": "Autoconsommation",
                     "custom": "Personnalisé"
+                },
+                "state_attributes": {
+                    "mode": {
+                        "name": "Mode"
+                    },
+                    "custom_mode_schedule": {
+                        "name": "Horaire personnalisé"
+                    },
+                    "tou_mode_schedule": {
+                        "name": "Horaire d'utilisation"
+                    }
                 }
             },
             "dc_12v_output_mode": {
@@ -977,6 +1011,13 @@
                     "c3_c4": "C3 C4",
                     "unknown": "Inconnue"
                 }
+            },
+            "priority_circuit_x": {
+                "name": "Priorité du circuit {id}",
+                "state": {
+                    "must_have": "Indispensable",
+                    "nice_to_have": "Souhaitable"
+                }
             }
         },
         "sensor": {
@@ -1160,6 +1201,9 @@
             },
             "dc_input_power_total": {
                 "name": "Puissance d'entrée CC totale"
+            },
+            "input_power_total": {
+                "name": "Puissance d'entrée totale"
             },
             "ac_input_power": {
                 "name": "Puissance d'entrée CA",
@@ -1413,11 +1457,36 @@
                 "state": {
                     "standby": "Veille",
                     "running": "En marche",
+                    "idle": "Au ralenti",
+                    "charging": "Recharge",
+                    "discharging": "Décharge",
+                    "sleep": "Sommeil",
+                    "shutdown": "Arrêt",
                     "unknown": "Inconnu"
                 },
                 "state_attributes": {
                     "status": {
                         "name": "Code d'état"
+                    }
+                }
+            },
+            "backup_status": {
+                "name": "État de la charge de secours",
+                "state": {
+                    "inactive": "Inactif",
+                    "planned_charge": "Chargement programmé",
+                    "storm_guard": "Chargement automatique",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    },
+                    "auto_backup_start": {
+                        "name": "Démarrage automatique"
+                    },
+                    "auto_backup_end": {
+                        "name": "Fin automatique"
                     }
                 }
             },
@@ -1631,10 +1700,10 @@
                 }
             },
             "grid_to_home_power": {
-                "name": "Achat sur le réseau"
+                "name": "Utilisation du réseau"
             },
             "photovoltaic_to_grid_power": {
-                "name": "Alimentation du réseau"
+                "name": "Injection dans le réseau"
             },
             "battery_to_grid_power": {
                 "name": "Batterie au réseau électrique"
@@ -2433,6 +2502,25 @@
             },
             "battery_voltage": {
                 "name": "Tension de la batterie"
+            },
+            "disaster_status": {
+                "name": "Situation de catastrophe",
+                "state": {
+                    "inactive": "Inactif",
+                    "progressing": "En cours",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "storm_guard": {
+                        "name": "Intempéries"
+                    },
+                    "manual": {
+                        "name": "Manuellement"
+                    },
+                    "details": {
+                        "name": "Détails"
+                    }
+                }
             }
         },
         "switch": {
@@ -2446,7 +2534,10 @@
                 "name": "Décharge prioritaire"
             },
             "preset_backup_option": {
-                "name": "Option charge de secours"
+                "name": "Plan de chargement d'urgence"
+            },
+            "storm_guard_switch": {
+                "name": "Protection contre les intempéries"
             },
             "allow_grid_export": {
                 "name": "Exporter vers le réseau"
@@ -2469,7 +2560,12 @@
                 "name": "Éclairage LED"
             },
             "ac_output_power_switch": {
-                "name": "Sortie CA"
+                "name": "Sortie CA",
+                "state_attributes": {
+                    "ac_output_schedule": {
+                        "name": "Horaire de sortie CA"
+                    }
+                }
             },
             "dc_output_power_switch": {
                 "name": "Sortie CC"
@@ -2509,6 +2605,9 @@
             },
             "random_delay_switch": {
                 "name": "Départ différé"
+            },
+            "ev_charger_mode_switch": {
+                "name": "Activer la recharge"
             },
             "modbus_switch": {
                 "name": "Modbus TCP"
@@ -2609,6 +2708,9 @@
             "clock_display_end_time": {
                 "name": "Affichage de l'heure fin"
             },
+            "ac_output_timer_seconds": {
+                "name": "Minuterie de sortie CA"
+            },
             "usb_x_timer_seconds": {
                 "name": "USB-{id} minuterie"
             },
@@ -2623,6 +2725,9 @@
             },
             "silent_mode_end_minutes": {
                 "name": "Mode silencieux heure de fin"
+            },
+            "ac_output_timer": {
+                "name": "Minuterie de sortie CA"
             }
         },
         "update":{
@@ -2831,11 +2936,11 @@
                 },
                 "backup_end": {
                     "name": "Fin de la sauvegarde",
-                    "description": "Date et heure de fin de la période de sauvegarde sous la forme AAAA-MM-JJ HH:MM:SS. La valeur par défaut est la fin de la période active ou maintenant + 3 heures."
+                    "description": "Date et heure de fin de la période de sauvegarde sous la forme AAAA-MM-JJ HH:MM:SS. La valeur par défaut est la fin de la période active ou maintenant plus 1 à 3 heures (selon l'appareil)."
                 },
                 "backup_duration": {
                     "name": "Durée de la sauvegarde",
-                    "description": "Durée de la période de sauvegarde sous la forme HH:MM:SS. Utilisé uniquement si aucune fin de sauvegarde n'est spécifiée au lieu de la durée par défaut de 3 heures."
+                    "description": "Durée de la période de sauvegarde sous la forme HH:MM:SS. Utilisé uniquement si aucune fin de sauvegarde n'est spécifiée au lieu de la durée par défaut de 1 à 3 heures (selon l'appareil)."
                 },
                 "enable_backup": {
                     "name": "Activer la période de sauvegarde",

@@ -149,6 +149,7 @@ API_ENDPOINTS: Final[dict] = {
     "get_device_charge_order_stats_list": "power_service/v1/app/order/get_charge_order_stats_list",  # works as member, date_type[week month year all], order_Status unknown, {"device_sn":deviceSn,"order_status":1,"date_type":"all","start_date":"","end_date":"","page":0,"page_size":10}
     "get_ocpp_endpoint_list": "power_service/v1/app/get_ocpp_endpoint_list",  # lists ocpp endpoints used by Anker, including source number per endpoint
     "get_device_ocpp_info": "power_service/v1/app/get_ocpp_info",  # works as member also for empty device SN, {"device_sn": deviceSn}, list device endpoint source number, default 0 if nothing found explicitly? (Useful only for EV charger devices)
+    "get_device_rfid_cards": "power_service/v1/rfid/get_device_cards",  # needs owner. get rfid cards (for EV charger?), {"device_sn": deviceSn}
     "get_vehicle_brands": "power_service/v1/app/get_brand_list",  # get vehicle brand list
     "get_vehicle_brand_models": "power_service/v1/app/get_models",  # get model list for given brand, {"brand_name": "BMW"}
     "get_vehicle_model_years": "power_service/v1/app/get_model_years",  # get productive year list for given model, {"brand_name": "BMW", "model_name": "iX3"}
@@ -192,7 +193,6 @@ API_ENDPOINTS: Final[dict] = {
     "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
     "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
     "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
-    "get_device_rfid_cards": "power_service/v1/rfid/get_device_cards",  # needs owner. get rfid cards (for EV charger?), {"device_sn": deviceSn}
     # Endpoints for standalone Anker power charger devices
     "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list",  # {"device_sn": deviceSn}
     "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
@@ -222,10 +222,10 @@ API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_sns": "charging_energy_service/get_sns",  # json={"main_sn": "POWERPANELSN","macs": ["F38001MAC001","F38002MAC002"]})) # needs owner account, Displays Serial Numbers of attached PPS in Home
     "get_monetary_units": "charging_energy_service/get_world_monetary_unit",  # monetary unit list for system, needs owner account
     # Power Panel disaster preparedness / backup mode (verified on A17B1 hardware, use type=2)
-    "get_disaster_support_func": "charging_disaster_prepared/get_support_func",  # {"identifier_id": siteId, "type": 2}
-    "get_site_device_disaster": "charging_disaster_prepared/get_site_device_disaster",  # {"identifier_id": siteId, "type": 2}
-    "get_site_device_disaster_status": "charging_disaster_prepared/get_site_device_disaster_status",  # {"identifier_id": siteId, "type": 2}
-    "set_site_device_disaster": "charging_disaster_prepared/set_site_device_disaster",  # ON: switch True + manual_disaster_detail; OFF: switch False, omit detail
+    "get_disaster_support_func": "charging_disaster_prepared/get_support_func",  # {"identifier_id": siteId, "type": 2} or {"identifier_id": deviceSn, "type": 1}
+    "get_site_device_disaster": "charging_disaster_prepared/get_site_device_disaster",  # {"identifier_id": siteId, "type": 2} or {"identifier_id": deviceSn, "type": 1}
+    "get_site_device_disaster_status": "charging_disaster_prepared/get_site_device_disaster_status",  # {"identifier_id": siteId, "type": 2} or {"identifier_id": deviceSn, "type": 1}
+    "set_site_device_disaster": "charging_disaster_prepared/set_site_device_disaster",  # Auto On/Off: switch true/false; Manual ON: switch True + manual_disaster_detail; Manual OFF: switch False, omit detail
 }
 
 """Following are the Anker Power/Solix Cloud API charging_hes_svc endpoints known so far. They are used for Home Energy Systems like X1."""
@@ -1743,12 +1743,42 @@ class SolixBatteryStatus(StrEnum):
     sleep = "3"
     unknown = "unknown"
 
+
 class SolixPpsBatteryStatus(StrEnum):
     """Str Enumeration for Anker Solix PPS battery status."""
 
     inactive = "0"
     discharging = "1"
     charging = "2"
+    unknown = "unknown"
+
+
+class SolixPpsWorkStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS working status."""
+
+    # 0: Idle; 1: Discharge; 2: Charging; 3: Sleep, 4: Shutdown
+    idle = "0"
+    discharging = "1"
+    charging = "2"
+    sleep = "3"
+    shutdown = "4"
+    unknown = "unknown"
+
+
+class SolixBackupStatus(StrEnum):
+    """Str Enumeration for Anker Solix backup status."""
+
+    inactive = "0"
+    planned_charge = "1"
+    storm_guard = "2"
+    unknown = "unknown"
+
+
+class SolixDisasterStatus(StrEnum):
+    """Str Enumeration for Anker Solix disaster status."""
+
+    progressing = "1"
+    inactive = "2"
     unknown = "unknown"
 
 
@@ -1791,7 +1821,7 @@ class SolixPpsUsageMode(StrEnum):
     """Str Enumeration for Anker Solix PPS usage mode."""
 
     # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-    standard = "0" # UPS mode
+    standard = "0"  # UPS mode
     time_of_use = "1"
     self_consumption = "2"
     custom = "3"
@@ -1805,7 +1835,7 @@ class SolixChargerUsageMode(StrEnum):
     port_priority = "2"
     dual_laptop = "3"
     low_power = "4"
-    custom = "5" # Only available if charging_mode_status enabled in device settings of A2345
+    custom = "5"  # Only available if charging_mode_status enabled in device settings of A2345
     unknown = "unknown"
 
 
@@ -1875,9 +1905,10 @@ class SolixPpsOutputModeV2(StrEnum):
     smart = "1"
     unknown = "unknown"
     A1763 = "A1763"
+    A1765 = "A1765"
     A1782 = "A1782"
     A1783 = "A1783"
-
+    A1785 = "A1785"
 
 
 class SolixPpsLoadMode(StrEnum):
@@ -2108,6 +2139,14 @@ class SolixPortPriority(StrEnum):
     c1_c4 = "9"
     c2_c4 = "10"
     c3_c4 = "12"
+    unknown = "unknown"
+
+
+class SolixCircuitPriority(StrEnum):
+    """Str Enumeration for Solix Circuit Priority."""
+
+    must_have = "1"
+    nice_to_have = "2"
     unknown = "unknown"
 
 

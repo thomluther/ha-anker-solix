@@ -171,9 +171,24 @@ DEVICE_NUMBERS = [
         value_fn=lambda d, jk: (d.get("customized") or {}).get(jk) or d.get(jk),
         attrib_fn=lambda d, jk: (
             {
-                "expansions": d.get("sub_package_num"),
                 "calculated": d.get(jk),
             }
+            | (
+                {"expansions": v}
+                if (
+                    v := (
+                        str(d.get("expansion_packs", ""))
+                        or str(d.get("sub_package_num", ""))
+                    )
+                    if d.get(MQTT_OVERLAY)
+                    else (
+                        str(d.get("sub_package_num", ""))
+                        or str(d.get("expansion_packs", ""))
+                    )
+                )
+                else {}
+            )
+            | ({"batteries": v} if (v := str(d.get("batCount", ""))) else {})
             | ({"customized": c} if (c := (d.get("customized") or {}).get(jk)) else {})
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
@@ -379,6 +394,11 @@ DEVICE_NUMBERS = [
         json_key="ac_input_limit",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=NumberDeviceClass.POWER,
+        attrib_fn=lambda d, jk: (
+            {"silent_charge_limit": val}
+            if str(val := d.get("silent_charge_power", ""))
+            else {}
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s and d.get("mqtt_data")),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.ac_charge_limit,
@@ -724,13 +744,9 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             # get the device data from device context entry of coordinator data
             data: dict = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
             # Setup number ranges for MQTT command numbers
             if self.entity_description.mqtt_cmd and (
                 mdev := self.coordinator.client.get_mqtt_device(context)
@@ -743,15 +759,11 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data: dict = (coordinator.data.get(context, {})).get("site_info") or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
         self._native_value = None
         self._assumed_state = False
@@ -931,19 +943,23 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                         - 1,
                     )
-                elif self._attribute_name in [
-                    "ac_output_timeout",
-                    "dc_output_timeout",
-                ] and self.entity_description.json_key.endswith("seconds"):
-                    if self._native_value is not None:
-                        self._native_value = round(self._native_value / 60)
+                elif (
+                    self._attribute_name
+                    in [
+                        "ac_output_timeout",
+                        "dc_output_timeout",
+                    ]
+                    and self.entity_description.json_key.endswith("seconds")
+                    and self._native_value is not None
+                ):
+                    self._native_value = round(self._native_value / 60)
         else:
             self._native_value = None
         self._assumed_state = False
         # Mark availability based on value
         self._attr_available = self._native_value is not None
 
-    async def async_set_native_value(self, value: float) -> None:  # noqa: C901
+    async def async_set_native_value(self, value: float) -> None:
         """Set the native value of the number entity.
 
         Args:
@@ -1548,22 +1564,21 @@ class AnkerSolixRestoreNumber(AnkerSolixNumber, RestoreNumber):
         await super().async_added_to_hass()
         if last_state := await self.async_get_last_state():
             # First try to get customization from state attributes if last state was unknown
-            if last_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
-                if customized := last_state.attributes.get("customized"):
-                    last_state.state = customized
+            if last_state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE) and (
+                customized := last_state.attributes.get("customized")
+            ):
+                last_state.state = customized
             if (
                 last_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
                 and self._native_value is not None
             ):
                 # set the customized value if it was modified
                 if self._native_value != last_state.state:
-                    if self._attribute_name == "battery_capacity":
+                    if self._attribute_name == "battery_capacity" and (
+                        last_state.attributes.get("calculated") != self._native_value
+                    ):
                         # skip value restore if config was changed, actual native value initially contains calculated value
-                        if (
-                            last_state.attributes.get("calculated")
-                            != self._native_value
-                        ):
-                            return
+                        return
                     self._native_value = last_state.state
                     LOGGER.info(
                         "Restored state value of entity '%s' to: %s",
@@ -1576,3 +1591,5 @@ class AnkerSolixRestoreNumber(AnkerSolixNumber, RestoreNumber):
                         value=str(last_state.state),
                     )
                     await self.coordinator.async_refresh_data_from_apidict(delayed=True)
+                else:
+                    pass

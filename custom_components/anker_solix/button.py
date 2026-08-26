@@ -276,13 +276,9 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
                 # add service attribute for device entities
                 self._attr_supported_features: AnkerSolixEntityFeature = (
                     description.feature
@@ -314,15 +310,11 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context, {})).get("site_info", {})
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
 
     @property
     def supported_features(self) -> AnkerSolixEntityFeature:

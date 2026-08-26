@@ -6,6 +6,7 @@ These methods provide comprehensive device control via MQTT commands.
 
 from __future__ import annotations  # noqa: TID251
 
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from .mqtt_device import SolixMqttDevice
@@ -38,6 +39,7 @@ MODELS = {
     "A1781",  # SOLIX F2600
     "A1782",  # SOLIX F3000 Solarbank PPS
     "A1783",  # SOLIX C2000 Gen 2
+    "A1785",  # SOLIX C2000X Gen 2
     "A1790",  # SOLIX F3800 Power Panel PPS
     "A1790P",  # SOLIX F3800 Plus Power Panel PPS
     "AS220",  # SOLIX S2000
@@ -58,6 +60,7 @@ FEATURES = {
     SolixMqttCommands.ac_output_mode_select: MODELS,
     SolixMqttCommands.ac_output_timeout_seconds: MODELS,
     SolixMqttCommands.ac_output_timeout_minutes: MODELS,
+    SolixMqttCommands.ac_output_timer: MODELS,
     SolixMqttCommands.dc_output_switch: MODELS,
     SolixMqttCommands.dc_12v_output_mode_select: MODELS,
     SolixMqttCommands.dc_output_timeout_seconds: MODELS,
@@ -73,7 +76,11 @@ FEATURES = {
     SolixMqttCommands.silent_schedule: MODELS,
     # SolixMqttCommands.pps_custom_schedule: MODELS,  # TODO: Enable once fully supported
     # SolixMqttCommands.pps_tou_schedule: MODELS,  # TODO: Enable once fully supported
+    # SolixMqttCommands.pps_output_schedule: MODELS,  # TODO: Enable once fully supported
     SolixMqttCommands.backup_soc: MODELS,
+    SolixMqttCommands.backup_charge_storm_guard: MODELS,
+    SolixMqttCommands.backup_charge_plan: MODELS,
+    SolixMqttCommands.backup_charge_timestamps: MODELS,
 }
 
 
@@ -137,6 +144,115 @@ class SolixMqttDevicePps(SolixMqttDevice):
         schedule = cache.get("tou_mode_schedule") or {}  # noqa: F841
         # TODO: Add code to extract active preset
         return presets
+
+    async def set_backup_charge_plan(
+        self,
+        backup_start: datetime | float | None = None,
+        backup_end: datetime | float | None = None,
+        backup_duration: timedelta | None = None,
+        backup_switch: bool | None = None,
+        toFile: bool = False,  # used for testing with files
+    ) -> dict | None:
+        """Set PPS manual backup charge parameters. Times will be rounded to minute granularity, and end time must be larger than start time.
+
+        If duration is specified, the start time will be set <= now and the end time will reflect the duration to ensure immediate start for
+        given duration if the switch will be enabled. If only the switch is enabled without future backup window, a default immediate duration
+        of 1h will be applied.
+
+        Args:
+            backup_start: Optional datetime or timestamp to update the manual backup start time.
+            backup_end: Optional datetime or timestamp to update the manual backup start time. M
+            backup_duration: Set backup window being active from at least now for given duration.
+            backup_switch: Enable or disable the manual backup option
+            toFile: If True, save mock response (for testing compatibility)
+
+        Returns:
+            dict: Mocked state if successful, None otherwise
+
+        Example:
+            await mydevice.set_backup_charge_plan(backup_duration=timedelta(hours=2), backup_switch=True)
+
+        """
+        # response and commands
+        resp = {}
+        cmd1 = SolixMqttCommands.backup_charge_timestamps
+        parm_map = {}
+        # validate parameters
+        def_duration = timedelta(hours=1)
+        backup_start = (
+            backup_start.astimezone()
+            if isinstance(backup_start, datetime)
+            else datetime.fromtimestamp(round(backup_start / 60) * 60).astimezone()
+            if isinstance(backup_start, float | int)
+            else None
+        )
+        backup_end = (
+            backup_end.astimezone()
+            if isinstance(backup_end, datetime)
+            else datetime.fromtimestamp(round(backup_end / 60) * 60).astimezone()
+            if isinstance(backup_end, float | int)
+            else None
+        )
+        backup_duration = (
+            max(backup_duration, timedelta(minutes=1))
+            if isinstance(backup_duration, timedelta)
+            else None
+        )
+        backup_switch = backup_switch if isinstance(backup_switch, bool) else None
+        # fast quit if nothing to change
+        if (
+            backup_start is None
+            and backup_end is None
+            and backup_duration is None
+            and backup_switch is None
+        ):
+            self._logger.error(
+                "No valid AC charge options provided for device %s (%s)",
+                self.sn,
+                self.pn,
+            )
+            return False
+        # Consider time zone shifts of device, timestamp conversion is absolute and timezone aware
+        now = datetime.now().replace(second=0, microsecond=0).astimezone()
+        cache = self.get_status(fromFile=toFile)
+        if not backup_start:
+            backup_start = datetime.fromtimestamp(
+                cache.get("backup_start_timestamp") or 0
+            ).astimezone()
+        if not backup_end:
+            backup_end = datetime.fromtimestamp(
+                cache.get("backup_end_timestamp") or 0
+            ).astimezone()
+        if backup_switch is None:
+            backup_switch = bool(cache.get("backup_switch"))
+        else:
+            # switch provided as parameter, first ensure start time is set correctly if backup range will be activated
+            if backup_switch:
+                backup_start = backup_start or now
+                if not cache.get("backup_switch") and (backup_end or now) <= now:
+                    # switch will be changed to enabled, ensure start time is at least now if now passed a previous interval
+                    backup_start = now
+            parm_map["set_backup_option_switch"] = int(backup_switch)
+        # make sure backup start and end time are valid and merged with optional parameters before applying them
+        if backup_start or backup_end:
+            backup_end = max(backup_start or backup_end, backup_end or backup_start)
+            backup_start = min(backup_start or backup_end, backup_end or backup_start)
+            if backup_start == backup_end or backup_duration:
+                backup_end = backup_start + (backup_duration or def_duration)
+            parm_map["set_backup_start_timestamp"] = round(backup_start.timestamp() / 60) * 60
+            parm_map["set_backup_end_timestamp"] = round(backup_end.timestamp() / 60) * 60
+        # Send command if any parameters to update
+        if parm_map:
+            if (
+                result := await self.run_command(
+                    cmd=cmd1,
+                    parm_map=parm_map,
+                    toFile=toFile,
+                )
+            ) is None:
+                return None
+            resp.update(result)
+        return resp or None
 
     async def set_ac_output(
         self,

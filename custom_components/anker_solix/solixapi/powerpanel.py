@@ -16,11 +16,14 @@ from .apitypes import (
     ApiCategories,
     SolixDeviceCapacity,
     SolixDeviceCategory,
+    SolixDeviceNames,
     SolixDeviceStatus,
     SolixDeviceType,
     SolixSiteType,
 )
 from .helpers import convertToKwh, get_solix_product_code
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -110,6 +113,41 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     if key in ["product_code", "device_pn"] and value:
                         device.update({"device_pn": str(value)})
+                        # Get device code features once
+                        if "device_code_features" not in device:
+                            device["device_code_features"] = (
+                                self.account.get("products", {})
+                                .get(str(value), {})
+                                .get("product_codes", {})
+                                .get(device.get("device_code", ""), {})
+                                .get("custom_fields", {})
+                            )
+                        # Flag device for supported mqtt trigger if admin and device not passive
+                        if (
+                            device.get("is_admin") or device.get("owner_user_id")
+                        ) and not (
+                            device.get("is_passive") or devData.get("is_passive")
+                        ):
+                            device["mqtt_supported"] = True
+                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            device["mqtt_overlay"] = bool(
+                                device.get("mqtt_overlay") or False
+                            )
+                            # check once if device supports status requests from description
+                            if "mqtt_status_request" not in device:
+                                device["mqtt_status_request"] = bool(
+                                    [
+                                        cmd
+                                        for cmd in SOLIXMQTTMAP.get(
+                                            str(value), {}
+                                        ).values()
+                                        if SolixMqttCommands.status_request
+                                        in [
+                                            cmd.get(COMMAND_NAME),
+                                            *cmd.get(COMMAND_LIST, []),
+                                        ]
+                                    ]
+                                )
                         # try to get capacity from category definitions
                         if (
                             hasattr(SolixDeviceCapacity, str(value))
@@ -146,8 +184,28 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 device["main_sn"] = sn
                                 device["is_primary"] = True
                                 update_main = True
+                    elif key == "device_name" and value:
+                        device["name"] = str(value)
                     elif key == "alias_name" and value:
-                        device.update({"alias": str(value)})
+                        device["alias"] = str(value)
+                        # preset default device name if only alias provided, fallback to alias if product name not listed
+                        if (
+                            pn := device.get("device_pn")
+                            or devData.get("device_pn")
+                            or None
+                        ) and (not device.get("name") or devData.get("device_name")):
+                            device["name"] = (
+                                devData.get("device_name")
+                                or (
+                                    (self.account.get("products") or {}).get(pn) or {}
+                                ).get("name")
+                                or getattr(SolixDeviceNames, pn, "")
+                                or str(value)
+                            )
+                    elif key == "mqtt_overlay" and value is not None:
+                        # keys that are customized
+                        custom = (device.get("customized") or {}).get(key)
+                        device[key] = custom if custom is not None else value
                     elif key == "status":
                         device.update({"status": str(value)})
                         # decode the status into a description
@@ -161,6 +219,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         # This is used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         calc_capacity = True
+                    elif key == "battery_soc" and value is not None:
+                        # This is a percentage value for the battery state of charge, not power
+                        calc_capacity |= device.get("battery_soc") != str(value)
+                        device["battery_soc"] = str(value)
                     elif key == "average_power" and value:
                         # calculate remaining capacity for new SOC
                         calc_capacity |= (device.get("average_power") or {}).get(
@@ -170,10 +232,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     elif key == "batCount" and str(value).isdigit():
                         calc_capacity |= device.get(key) != int(value)
                         device[key] = int(value)
-                    # Examples for boolean key values
+                    # keys with any value
+                    elif key in [
+                        "disaster_support",
+                        "device_disaster_status",
+                        "device_disaster",
+                    ]:
+                        device[key] = value
+                    # keys with boolean values
                     elif key == "auto_upgrade":
                         device[key] = bool(value)
-                    # key with string values
+                    # keys with string values
                     elif key == "wireless_type" or (
                         # Example for keys with string values that should only be updated if value returned
                         key in ["wifi_name", "rssi"] and value
@@ -183,106 +252,161 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         device[key] = value
                         # TODO: Add code to extract active slot parameters from plan
 
-                    # check that main device is defined for all sub devices
-                    if update_main or (
-                        device.get("is_subdevice") and not device.get("main_sn")
-                    ):
-                        site_devs = [
+                except Exception:  # pylint: disable=broad-exception-caught
+                    self._logger.exception(
+                        "Api %s exception occurred when updating device details for key %s with value %s",
+                        self.apisession.nickname,
+                        key,
+                        value,
+                    )
+
+            # check that main device is defined for all sub devices
+            if update_main or (
+                device.get("is_subdevice") and not device.get("main_sn")
+            ):
+                site_devs = [
+                    d for d in self.devices.values() if site_id == d.get("site_id")
+                ]
+                if main_sn := ([d for d in site_devs if d.get("is_primary")] or [{}])[
+                    0
+                ].get("main_sn"):
+                    for dev in [d for d in site_devs if d.get("is_subdevice")]:
+                        dev["main_sn"] = main_sn
+
+            # generate extra values when certain conditions are met
+            if calc_capacity:
+                # get some data optionally from mqtt data
+                mqtt = device.get("mqtt_data") or {}
+                # init calculated fields with 0 if not existing
+                if "battery_capacity" not in device:
+                    device["battery_capacity"] = "0"
+                if "battery_energy" not in device:
+                    # leave energy empty until it can be calculated
+                    device["battery_energy"] = ""
+                cap_change = False
+                # calculate size only once based on PN
+                if (size := device.get("battery_size")) is None:
+                    size = getattr(SolixDeviceCapacity, str(device.get("device_pn")), 0)
+                    device["battery_size"] = size
+                    cap_change = True
+                if (
+                    exp := device.get("sub_package_num")
+                    or mqtt.get("expansion_packs")
+                    or 0
+                ) != device.get("expansion_packs"):
+                    # update calculated exp number in Api cache
+                    device["expansion_packs"] = exp
+                    cap_change = True
+                # recalculate capacity if required
+                if cap_change and str(size).isdigit() and str(exp).isdigit():
+                    # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
+                    controller_bat = 0 if device.get("device_pn") == "A17E1" else 1
+                    device["battery_capacity"] = f"{size * (controller_bat + exp):.0f}"
+                # generate battery values for main device only when soc updated or PPS capacity triggered
+                is_primary = bool(device.get("is_primary"))
+                # get primary device to update capacity and energy values as well
+                prim_dev = (
+                    (
+                        [
                             d
                             for d in self.devices.values()
-                            if site_id == d.get("site_id")
+                            if site_id == d.get("site_id") and d.get("is_primary")
                         ]
-                        if main_sn := (
-                            [d for d in site_devs if d.get("is_primary")] or [{}]
-                        )[0].get("main_sn"):
-                            for dev in [d for d in site_devs if d.get("is_subdevice")]:
-                                dev["main_sn"] = main_sn
-                    # generate extra values when certain conditions are met
-                    if calc_capacity:
-                        # init calculated fields with 0 if not existing
-                        if "battery_capacity" not in device:
-                            device["battery_capacity"] = "0"
-                        # generate battery values for main device only when soc updated or PPS capacity triggered
-                        is_primary = bool(device.get("is_primary"))
-                        if (
-                            not (cap := device.get("battery_capacity")) or calc_capacity
-                        ) and is_primary:
-                            # refresh (customized) capacity of sub devices in system
-                            cap = 0
-                            for dev in [
-                                d
-                                for d in self.devices.values()
-                                if d.get("main_sn") == sn
-                                and d.get("is_subdevice")
-                                and str(d.get("battery_capacity")).isdigit()
-                            ]:
-                                # consider customized capacity for calculation
-                                cap += (
-                                    int(c)
-                                    if (
-                                        c := (dev.get("customized") or {}).get(
-                                            "battery_capacity"
-                                        )
+                        or [{}]
+                    )[0]
+                    if not is_primary
+                    else {}
+                )
+                if (
+                    not (cap := device.get("battery_capacity") or 0)
+                    or cap_change
+                    or (
+                        prim_dev
+                        and device.get("customized", {}).get("battery_capacity")
+                    )
+                ):
+                    # refresh (customized) capacity from sub devices in system
+                    if not (
+                        pri_cap := (device if is_primary else prim_dev)
+                        .get("customized", {})
+                        .get("battery_capacity", 0)
+                    ):
+                        # calculate only if primary dev has no customized capacity
+                        pri_cap = 0
+                        for dev in [
+                            d
+                            for d in self.devices.values()
+                            if d.get("main_sn") == (prim_dev.get("device_sn") or sn)
+                            and d.get("is_subdevice")
+                            and str(d.get("battery_capacity")).isdigit()
+                        ]:
+                            # consider customized capacity for calculation
+                            pri_cap += (
+                                int(c)
+                                if (
+                                    c := (dev.get("customized") or {}).get(
+                                        "battery_capacity"
                                     )
-                                    and str(c).isdigit()
-                                    else int(dev.get("battery_capacity"))
                                 )
-                            if cap == 0:
-                                # add 1 F3800 base capacity as minimum if no PPS found with site relation
-                                cap = SolixDeviceCapacity.A1790
-                        device["battery_capacity"] = str(cap)
-                        soc = (
-                            devData.get("battery_soc")
-                            or devData.get("average_power", {}).get("state_of_charge")
-                            or device.get("battery_soc")
-                            or device.get("average_power", {}).get("state_of_charge")
+                                and str(c).isdigit()
+                                else int(dev.get("battery_capacity") or 0)
+                            )
+                    if pri_cap == 0:
+                        # add 1 F3800 base capacity as minimum if no PPS found with site relation
+                        pri_cap = SolixDeviceCapacity.A1790
+                    if is_primary:
+                        cap = pri_cap
+                    elif prim_dev:
+                        # refresh capacity of primary in system
+                        prim_dev["battery_capacity"] = str(pri_cap)
+                device["battery_capacity"] = str(cap)
+                apisoc = device.get("battery_soc", "") or device.get(
+                    "average_power", {}
+                ).get("state_of_charge", "")
+                # get total SOC, prefer value depending on overlay
+                soc = (
+                    (mqtt.get("battery_soc", "") or apisoc)
+                    if device.get("mqtt_overlay")
+                    else (apisoc or mqtt.get("battery_soc", ""))
+                )
+                custom_cap = (
+                    int(c)
+                    if (c := device.get("customized", {}).get("battery_capacity"))
+                    and str(c).isdigit()
+                    else int(device.get("battery_capacity") or 0)
+                )
+                if soc:
+                    device["battery_energy"] = str(
+                        int(int(custom_cap) * int(soc) / 100)
+                    )
+                # if not primary, update the primary dev energy as well
+                if prim_dev:
+                    apisoc = prim_dev.get("battery_soc", "") or prim_dev.get(
+                        "average_power", {}
+                    ).get("state_of_charge", "")
+                    # get total SOC, prefer value depending on overlay
+                    soc = (
+                        (prim_dev.get("mqtt_data", {}).get("battery_soc", "") or apisoc)
+                        if prim_dev.get("mqtt_overlay")
+                        else (
+                            apisoc
+                            or prim_dev.get("mqtt_data", {}).get("battery_soc", "")
                         )
+                    )
+                    if soc and str(soc).isdigit():
                         custom_cap = (
                             int(c)
                             if (
-                                c := device.get("customized", {}).get(
+                                c := prim_dev.get("customized", {}).get(
                                     "battery_capacity"
                                 )
                             )
                             and str(c).isdigit()
-                            else int(device.get("battery_capacity", 0))
+                            else int(prim_dev.get("battery_capacity") or 0)
                         )
-                        device["battery_energy"] = str(
+                        prim_dev["battery_energy"] = str(
                             int(int(custom_cap) * int(soc) / 100)
                         )
-                        # get primary device to update energy values as well
-                        if not is_primary:
-                            prim_dev = (
-                                [d for d in site_devs if d.get("is_primary")] or [{}]
-                            )[0]
-                            soc = prim_dev.get("battery_soc") or prim_dev.get(
-                                "average_power", {}
-                            ).get("state_of_charge")
-                            if soc and str(soc).isdigit():
-                                custom_cap = (
-                                    int(c)
-                                    if (
-                                        c := prim_dev.get("customized", {}).get(
-                                            "battery_capacity"
-                                        )
-                                    )
-                                    and str(c).isdigit()
-                                    else int(prim_dev.get("battery_capacity", 0))
-                                )
-                                prim_dev["battery_energy"] = str(
-                                    int(int(custom_cap) * int(soc) / 100)
-                                )
-                        calc_capacity = False
-
-                except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-                    self._logger.error(
-                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
-                        self.apisession.nickname,
-                        type(err),
-                        key,
-                        value,
-                        err,
-                    )
 
             self.devices.update({str(sn): device})
         return sn
@@ -477,6 +601,29 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         self.sites = new_sites
         return self.sites
 
+    async def update_disaster_status(
+        self, fromFile: bool = False, exclude: set | None = None
+    ) -> dict:
+        """Update the manual and auto disaster status if supported by site or standalone device."""
+        # cycle through all sites
+        for site_id, site in self.sites.items():
+            if {site.get("site_type")} - exclude and site.get("site_details", {}).get(
+                "disaster_support", {}
+            ):
+                await self.get_device_disaster_status(
+                    identifier=site_id, fromFile=fromFile
+                )
+        # cycle through all stand alone devices which support auto disaster
+        for device_sn, device in self.devices.items():
+            if (
+                {device.get("type")} - exclude
+                and not device.get("site_id")
+                and device.get("disaster_support", {}).get("support_auto_disaster")
+            ):
+                await self.get_device_disaster_status(
+                    identifier=device_sn, id_type=1, fromFile=fromFile
+                )
+
     async def update_site_details(
         self, fromFile: bool = False, exclude: set | None = None
     ) -> dict:
@@ -503,6 +650,21 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
             # First fetch details that only work for site admins
             if site.get("site_admin", False):
+                # Get disaster support once for site
+                if "disaster_support" not in site.get("site_details", {}):
+                    await self.get_disaster_support(
+                        identifier=site_id, fromFile=fromFile
+                    )
+                # Fetch disaster settings if supported
+                if site.get("site_details").get("disaster_support"):
+                    await self.get_device_disaster(
+                        identifier=site_id, fromFile=fromFile
+                    )
+                    # fetch first status if not done yet by update sites
+                    if not site.get("site_details").get("device_disaster_status"):
+                        await self.update_disaster_status(
+                            fromFile=fromFile, exclude=exclude
+                        )
                 # Fetch site price and CO2 settings
                 if {ApiCategories.site_price} - exclude:
                     self._logger.debug(
@@ -573,7 +735,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 # Cloud server energy stat updates may be delayed by 3 minutes for Power Panel
                 # min Offset in seconds to last valid record, reduce by 5 minutes to ensure last record is made
                 energy_offset = (site.get("energy_offset_seconds") or 0) - 300
-                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
+                time: datetime = datetime.now().astimezone() + timedelta(
+                    seconds=energy_offset
+                )
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
@@ -587,7 +751,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(yesterday),
+                            startDay=datetime.fromisoformat(yesterday).astimezone(),
                             numDays=1 if skip_today else 2,
                             dayTotals=True,
                             devTypes=query_types,
@@ -598,7 +762,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(today),
+                            startDay=datetime.fromisoformat(today).astimezone(),
                             numDays=1,
                             dayTotals=True,
                             devTypes=query_types,
@@ -641,6 +805,26 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     self.apisession.nickname,
                 )
                 await self.get_wifi_info(deviceSn=sn, fromFile=fromFile)
+            elif not device.get("site_id"):
+                # fetch info for standalone devices, those are owned or shared devices
+                if device.get("type") in ({SolixDeviceType.PPS.value} - exclude):
+                    # Get auto disaster support once for device
+                    if "disaster_support" not in device:
+                        support = await self.get_disaster_support(
+                            identifier=sn, id_type=1, fromFile=fromFile
+                        )
+                        # Fetch initial disaster status if supported
+                        if support.get("support_auto_disaster"):
+                            await self.get_device_disaster_status(
+                                identifier=sn, id_type=1, fromFile=fromFile
+                            )
+                    else:
+                        support = device.get("disaster_support", {})
+                    # Fetch disaster settings if supported
+                    if support.get("support_auto_disaster"):
+                        await self.get_device_disaster(
+                            identifier=sn, id_type=1, fromFile=fromFile
+                        )
         return self.devices
 
     async def get_system_running_info(
@@ -708,7 +892,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self.sites[siteId] = mysite
         return data
 
-    async def get_avg_power_from_energy(  # noqa: C901
+    async def get_avg_power_from_energy(
         self, siteId: str, fromFile: bool = False
     ) -> dict:
         """Get the last 5 min average power from energy statistics.
@@ -750,7 +934,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         entry: dict = {}
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
-            datetime.now() - datetime.fromisoformat(timestring)
+            datetime.now().astimezone()
+            - datetime.fromisoformat(timestring).astimezone()
         ) >= timedelta(minutes=5):
             self._logger.debug(
                 "Updating api %s power average values from energy statistics of Power Panel site ID %s",
@@ -758,7 +943,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 siteId,
             )
             offset = timedelta(seconds=avg_data.get("offset_seconds") or 0)
-            validtime = datetime.now() + offset
+            validtime = datetime.now().astimezone() + offset
             validdata = {}
             old_valid = avg_data.get("valid_time") or ""
             for source in ["hes", "solar", "home", "grid"]:
@@ -794,20 +979,21 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 endDay=checkdate,
                             )
                         # generate list of SOC timestamps different from 0 and pick last one
-                        if soclist := [
-                            item
-                            for item in (data.get("chargeLevel") or [])
-                            if (item.get("value") or "0") != "0"
-                        ]:
-                            if soclist[-1].get("time"):
-                                last = datetime.strptime(
-                                    checkdate.strftime("%Y-%m-%d")
-                                    + soclist[-1].get("time"),
-                                    "%Y-%m-%d%H:%M",
-                                )
-                                future: datetime = last + timedelta(minutes=5)
-                                validdata = data
-                                break
+                        if (
+                            soclist := [
+                                item
+                                for item in (data.get("chargeLevel") or [])
+                                if (item.get("value") or "0") != "0"
+                            ]
+                        ) and soclist[-1].get("time"):
+                            last = datetime.strptime(
+                                checkdate.strftime("%Y-%m-%d")
+                                + soclist[-1].get("time"),
+                                "%Y-%m-%d%H:%M",
+                            ).astimezone()
+                            future: datetime = last + timedelta(minutes=5)
+                            validdata = data
+                            break
                     # get min offset to first invalid timestamp to find best check time (smallest delay after new value from cloud)
                     if future:
                         offset = min(
@@ -815,12 +1001,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             timedelta(days=2)
                             if offset.total_seconds() == 0
                             # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
-                            or future - datetime.now() > offset + timedelta(minutes=6)
+                            or future - datetime.now().astimezone()
+                            > offset + timedelta(minutes=6)
                             else offset,
                             # set offset few seconds before future invalid time if smaller than previous offset
-                            future - datetime.now() - timedelta(seconds=5),
+                            future - datetime.now().astimezone() - timedelta(seconds=5),
                         )
-                        validtime = datetime.now() + offset
+                        validtime = datetime.now().astimezone() + offset
                         # reuse last valid data from timestamp check to get values
                         data = validdata
                         self._logger.debug(
@@ -861,16 +1048,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     future
                     and not fromFile
                     and (
-                        future - datetime.now() - timedelta(seconds=5) < offset
+                        future - datetime.now().astimezone() - timedelta(seconds=5)
+                        < offset
                         or offset.total_seconds == 0
                     )
                 ):
                     avg_data["last_check"] = (
-                        datetime.now() - timedelta(minutes=5)
+                        datetime.now().astimezone() - timedelta(minutes=5)
                     ).strftime("%Y-%m-%d %H:%M:%S")
                 else:
-                    avg_data["last_check"] = datetime.now().strftime(
-                        "%Y-%m-%d %H:%M:%S"
+                    avg_data["last_check"] = (
+                        datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
                     )
                 avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
                 avg_data["offset_seconds"] = round(offset.total_seconds())
@@ -976,8 +1164,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                         (
                                             datetime.fromisoformat(
                                                 avg_data["valid_time"]
-                                            )
-                                            - datetime.fromisoformat(old_valid)
+                                            ).astimezone()
+                                            - datetime.fromisoformat(
+                                                old_valid
+                                            ).astimezone()
                                         ).total_seconds()
                                         / interval
                                     ),
@@ -1054,12 +1244,12 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             if sourceType in ["solar", "hes", "home", "grid", "pps", "diesel"]
             else "solar",
             "dateType": rangeType if rangeType in ["day", "week", "year"] else "day",
-            "start": startDay.strftime("%Y-%m-%d")
-            if startDay
-            else datetime.today().strftime("%Y-%m-%d"),
-            "end": endDay.strftime("%Y-%m-%d")
-            if endDay
-            else datetime.today().strftime("%Y-%m-%d"),
+            "start": startDay.astimezone().strftime("%Y-%m-%d")
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
+            "end": endDay.astimezone().strftime("%Y-%m-%d")
+            if isinstance(endDay, datetime)
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
             "global": isglobal,
             "productCode": productCode,
         }
@@ -1071,7 +1261,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
     async def energy_daily(  # noqa: C901
         self,
         siteId: str,
-        startDay: datetime = datetime.today(),
+        startDay: datetime | None = None,
         numDays: int = 1,
         dayTotals: bool = False,
         devTypes: set | None = None,
@@ -1087,9 +1277,14 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
         """
         table = {}
+        startDay = (
+            startDay.astimezone()
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone()
+        )
         if not devTypes or not isinstance(devTypes, set):
             devTypes = set()
-        future = datetime.today() + timedelta(days=7)
+        future = datetime.today().astimezone() + timedelta(days=7)
         # check daily range and limit to 1 year max and avoid future days if more than 1 week
         if startDay > future:
             startDay = future
@@ -1126,7 +1321,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1215,7 +1410,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1302,7 +1497,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1405,7 +1600,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -1597,10 +1792,12 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ),
                         }
                     )
+                else:
+                    pass
         return entry
 
     async def get_disaster_support(
-        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+        self, identifier: str, id_type: int = 2, fromFile: bool = False
     ) -> dict:
         """Get backup feature support info (auto disaster support, allowed country codes).
 
@@ -1609,63 +1806,80 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             {"code": "US","google_code": "ChIJCzYy5IS16lQRQrfeQ5K5Oxw"},
             {"code": "PR","google_code": "ChIJ-aeSGyaWAowRGpsEGCjsNvM"}]}
         """
-        data = {"identifier_id": siteId, "type": deviceType}
+        data = {"identifier_id": identifier, "type": id_type}
+        self._logger.debug(
+            "Getting api %s site device disaster feature support for ID %s",
+            self.apisession.nickname,
+            identifier,
+        )
         if fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{siteId}.json"
+                / f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{identifier}.json"
             )
         else:
             resp = await self.apisession.request(
                 "post", API_CHARGING_ENDPOINTS["get_disaster_support_func"], json=data
             )
-        if result := resp.get("data") or {}:
+        # Add result to site or device details
+        result = resp.get("data") or {}
+        if id_type == 1:
+            # cache under device_details
+            self._update_dev({"device_sn": identifier, "disaster_support": result})
+        else:
             # cache under site_details
-            self._update_site(siteId, {"disaster_support": result})
+            self._update_site(identifier, {"disaster_support": result})
         return result
 
     async def get_device_disaster(
-        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+        self, identifier: str, id_type: int = 2, fromFile: bool = False
     ) -> dict:
-        """Get the manual/auto backup (disaster preparedness) configuration of a Power Panel site.
+        """Get the manual/auto backup (disaster preparedness) configuration of a Power Panel site or stand alone PPS.
 
-        Verified on A17B1 Home Power Panel, deviceType=2 for power panel sites.
+        Verified on A17B1 Home Power Panel, id_type=2 for power panel sites, and AS220 id_type=1 for S2000 PPS
         Example data:
         {"auto_disaster_switch": false,"manual_disaster_switch": true,"disaster_details": [
             {"uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
             "end_time": 1780991880,"charging_time": 36,"event_key": ""}]}
         """
         self._logger.debug(
-            "Getting api %s Power Panel disaster config", self.apisession.nickname
+            "Getting api %s site device disaster config for ID %s",
+            self.apisession.nickname,
+            identifier,
         )
-        data = {"identifier_id": siteId, "type": deviceType}
+        data = {"identifier_id": identifier, "type": id_type}
         if fromFile:
             # For file data, verify first if there is a modified file to be used for testing
             if not (
                 resp := await self.apisession.loadFromFile(
                     Path(self.testDir())
-                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json"
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json"
                 )
             ):
                 resp = await self.apisession.loadFromFile(
                     Path(self.testDir())
-                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{siteId}.json"
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{identifier}.json"
                 )
         else:
             resp = await self.apisession.request(
                 "post", API_CHARGING_ENDPOINTS["get_site_device_disaster"], json=data
             )
         if result := resp.get("data") or {}:
-            # cache under site_details
-            self._update_site(siteId, {"device_disaster": result})
+            if id_type == 1:
+                # cache under device_details
+                self._update_dev({"device_sn": identifier, "device_disaster": result})
+            else:
+                # cache under site_details
+                self._update_site(identifier, {"device_disaster": result})
         return result
 
     async def get_device_disaster_status(
-        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+        self, identifier: str, id_type: int = 2, fromFile: bool = False
     ) -> dict:
         """Get the live backup-preparedness status of a Power Panel site.
 
-        manual_disaster_status: 1 = active/running, 2 = inactive.
+        auto_disaster_status: 1 = progressing, 2 = inactive.
+        manual_disaster_status: 1 = progressing, 2 = inactive.
         current_disaster_detail is only populated while a window is active.
         Note: status flips to 1 only once start_time is reached, back to 2 after end_time.
         Example data:
@@ -1674,13 +1888,15 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             "end_time": 1780991880,"charging_time": 36,"event_key": ""}}
         """
         self._logger.debug(
-            "Getting api %s Power Panel disaster status", self.apisession.nickname
+            "Getting api %s site device disaster status for ID %s",
+            self.apisession.nickname,
+            identifier,
         )
-        data = {"identifier_id": siteId, "type": deviceType}
+        data = {"identifier_id": identifier, "type": id_type}
         if fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{siteId}.json"
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{identifier}.json"
             )
         else:
             resp = await self.apisession.request(
@@ -1689,18 +1905,74 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 json=data,
             )
         if result := resp.get("data") or {}:
-            # cache under site_details
-            self._update_site(siteId, {"device_disaster_status": result})
+            if id_type == 1:
+                # cache under device_details
+                self._update_dev(
+                    {"device_sn": identifier, "device_disaster_status": result}
+                )
+            else:
+                # cache under site_details
+                self._update_site(identifier, {"device_disaster_status": result})
         return result
+
+    async def set_auto_disaster(
+        self,
+        identifier: str,
+        id_type: int = 2,
+        enable: bool = False,
+        toFile: bool = False,
+    ) -> dict:
+        """Disable or enable auto disaster (storm guard) for a Power Panel or device.
+
+        Notes: When disabled, the device may ramp power down gradually rather than cutting off instantly.
+        Returns the refreshed disaster configuration or an empty dict upon error
+        """
+        data = {
+            "identifier_id": identifier,
+            "type": id_type,
+            "auto_disaster_switch": bool(enable),
+        }
+        if toFile:
+            # change only relevant parts of existing status
+            if id_type == 1:
+                filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
+            else:
+                filedata = (
+                    self.sites.get(identifier, {})
+                    .get("site_details", {})
+                    .get("device_disaster")
+                    or {}
+                )
+            filedata["auto_disaster_switch"] = bool(enable)
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json",
+                data={"code": 0, "msg": "success!", "data": data},
+            ):
+                return {}
+        else:
+            code = (
+                await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return {}
+        # return refreshed config and update cache
+        return await self.get_device_disaster(
+            identifier=identifier, id_type=id_type, fromFile=toFile
+        )
 
     async def set_manual_backup(
         self,
-        siteId: str,
+        identifier: str,
+        id_type: int = 2,
         enable: bool = False,
         start_time: int | datetime | None = None,
         end_time: int | datetime | None = None,
         disaster_type: int = 1,
-        deviceType: int = 2,
         toFile: bool = False,
     ) -> dict:
         """Disable or enable manual backup mode for a Power Panel site over a time window.
@@ -1720,8 +1992,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         elif not isinstance(end_time, int):
             end_time = 0
         data = {
-            "identifier_id": siteId,
-            "type": deviceType,
+            "identifier_id": identifier,
+            "type": id_type,
             "manual_disaster_switch": bool(enable),
         }
         # When disabled, the payload MUST omit manual_disaster_detail.
@@ -1742,12 +2014,15 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             }
         if toFile:
             # change only relevant parts of existing status
-            filedata = (
-                self.sites.get(siteId, {})
-                .get("site_details", {})
-                .get("device_disaster")
-                or {}
-            )
+            if id_type == 1:
+                filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
+            else:
+                filedata = (
+                    self.sites.get(identifier, {})
+                    .get("site_details", {})
+                    .get("device_disaster")
+                    or {}
+                )
             filedata["manual_disaster_switch"] = bool(enable)
             if details := data.get("manual_disaster_detail"):
                 if (filedetails := filedata.get("disaster_details")) and isinstance(
@@ -1766,7 +2041,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 filedata["disaster_details"] = []
             if not await self.apisession.saveToFile(
                 Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json",
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json",
                 data={"code": 0, "msg": "success!", "data": data},
             ):
                 return {}
@@ -1782,7 +2057,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 return {}
         # return refreshed config and update cache
         return await self.get_device_disaster(
-            siteId=siteId, deviceType=deviceType, fromFile=toFile
+            identifier=identifier, id_type=id_type, fromFile=toFile
         )
 
     async def get_utility_rate_plan(

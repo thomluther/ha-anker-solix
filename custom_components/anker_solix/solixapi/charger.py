@@ -285,7 +285,7 @@ async def get_charger_manual_screensavers(
     {"list": [
         {"id": 38820,"img_url": "https://edge-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker_power/edge/screen_saver/2026/07/12/472497a8f3bc0e58f449f3fa98972f07b5e2df4c/NA7sOGF4wHqzrE90.cropped_image.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA4XHFIO3C7RXFIYK6%2F20260712%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20260712T213013Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=3bc068f2a952db749c30b1f9abaf849400003e628a19aa9e5881f71fcc89ffbe",
         "short_url": "/anker_power/edge/screen_saver/2026/07/12/472497a8f3bc0e58f449f3fa98972f07b5e2df4c/NA7sOGF4wHqzrE90.cropped_image.jpg","hash_code": "0x14edd612",
-        "name": "Feuerwerk","seq": 1}],
+        "name": "Fireworks","seq": 1}],
     "total": 1}
     """
 

@@ -63,6 +63,7 @@ from .solixapi.apitypes import (
     SolarbankDeviceMetrics,
     SolarbankSchedulePresetType,
     SolarbankUsageMode,
+    SolixCircuitPriority,
     SolixDeviceType,
     SolixPpsOutputMode,
     SolixPpsOutputModeV2,
@@ -89,6 +90,7 @@ class AnkerSolixSelectDescription(
     dynamic_options: bool = False
     api_cmd: bool | None = None
     restore: bool = False
+    ignore_opt_count: bool | None = None
     # Use optionally to provide function for value calculation or lookup of nested values
     force_creation_fn: Callable[[dict, str], bool] = lambda d, jk: False
     value_fn: Callable[[dict, str], str | None] = lambda d, jk: (
@@ -341,6 +343,11 @@ DEVICE_SELECTS = [
             not ({d.get("type")} - s - {SolixDeviceType.SOLARBANK.value})
         ),
         value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        attrib_fn=lambda d, jk: (
+            {"silent_charge_limit": val}
+            if str(val := d.get("silent_charge_power", ""))
+            else {}
+        ),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.ac_charge_limit,
     ),
@@ -826,6 +833,26 @@ DEVICE_SELECTS = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.port_priority,
     ),
+    # repeated element
+    *[
+        AnkerSolixSelectDescription(
+            key=f"priority_circuit_{idx:02d}",
+            translation_key="priority_circuit_x",
+            json_key="priority",
+            entity_category=EntityCategory.CONFIG,
+            value_fn=lambda d, jk, idx=idx: (
+                v.get(jk)
+                if (v := d.get("circuit_setup", {}).get(f"{idx:02d}", {}))
+                and v.get("pair_status", 0) != 1
+                else None
+            ),
+            exclude_fn=lambda s, d: not ({d.get("type")} - s),
+            mqtt=True,
+            mqtt_cmd=SolixMqttCommands.circuit_priority,
+            ignore_opt_count=True,
+        )
+        for idx in range(1, 13)
+    ],
 ]
 
 SITE_SELECTS = [
@@ -994,10 +1021,13 @@ async def async_setup_entry(
                                         mdev.cmd_is_switch(
                                             cmd=desc.mqtt_cmd, parm=desc.mqtt_cmd_parm
                                         )
-                                        or not mdev.get_cmd_parm_option_map(
-                                            cmd=desc.mqtt_cmd,
-                                            parm=desc.mqtt_cmd_parm,
-                                            limit=20,
+                                        or not (
+                                            desc.ignore_opt_count
+                                            or mdev.get_cmd_parm_option_map(
+                                                cmd=desc.mqtt_cmd,
+                                                parm=desc.mqtt_cmd_parm,
+                                                limit=20,
+                                            )
                                         )
                                     )
                                 )
@@ -1069,21 +1099,36 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         self.entity_type = entity_type
         self._attr_extra_state_attributes = None
 
+        mdev = self.coordinator.client.get_mqtt_device(context)
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
             data = coordinator.data.get(context) or {}
             if data.get("is_subdevice"):
-                self._attr_device_info = get_AnkerSolixSubdeviceInfo(
-                    data, context, data.get("main_sn")
-                )
+                self._attr_device_info = get_AnkerSolixSubdeviceInfo(data, context)
             else:
-                self._attr_device_info = get_AnkerSolixDeviceInfo(
-                    data, context, coordinator.client.api.apisession.email
-                )
+                self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
             # add service attribute for manageable devices
             self._attr_supported_features: AnkerSolixEntityFeature = (
-                description.feature if data.get("is_admin", False) else None
+                description.feature
+                if (data.get("is_admin", False) or (mdev and not mdev.is_passive()))
+                else None
             )
+            if description.translation_key == "priority_circuit_x" and mdev:
+                # generate the id for the circuit
+                idx = description.key[-2:]
+                self._attr_translation_placeholders = {
+                    "id": "-".join(
+                        map(
+                            str,
+                            [
+                                int(idx),
+                                *mdev.get_status(
+                                    fromFile=coordinator.client.testmode()
+                                ).get(f"peers_circuit_{idx}", []),
+                            ],
+                        )
+                    )
+                }
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
             # get the account data from account context entry of coordinator data
             data = coordinator.data.get(context) or {}
@@ -1093,17 +1138,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         elif self.entity_type == AnkerSolixEntityType.VEHICLE:
             # get the vehicle info data from vehicle entry of coordinator data
             data = coordinator.data.get(context) or {}
-            self._attr_device_info = get_AnkerSolixVehicleInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixVehicleInfo(data, context)
             # add service attribute for vehicle entities
             self._attr_supported_features: AnkerSolixEntityFeature = description.feature
         else:
             # get the site info data from site context entry of coordinator data
             data = (coordinator.data.get(context) or {}).get("site_info") or {}
-            self._attr_device_info = get_AnkerSolixSystemInfo(
-                data, context, coordinator.client.api.apisession.email
-            )
+            self._attr_device_info = get_AnkerSolixSystemInfo(data, context)
             # add service attribute for site entities
             self._attr_supported_features: AnkerSolixEntityFeature = description.feature
 
@@ -1112,7 +1153,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             data, self.entity_description.json_key
         )
         # Initial options update for static information not changed during Api session
-        mdev = self.coordinator.client.get_mqtt_device(context)
         number_sort = False
         if self._attribute_name == "system_price_unit":
             # merge currencies from entity description and from Api currency list
@@ -1164,7 +1204,15 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         elif self.entity_description.mqtt_cmd and mdev:
             # Get MQTT device options for supported control
             if self._attribute_name == "ev_charger_mode":
-                self._attr_options = mdev.ev_charger_mode_options()
+                self._attr_options = mdev.ev_charger_mode_options(
+                    fromFile=self.coordinator.client.testmode()
+                )
+            elif self._attribute_name.startswith("priority_circuit_"):
+                self._attr_options = [
+                    item.name
+                    for item in SolixCircuitPriority
+                    if "unknown" not in item.name
+                ]
             else:
                 # get options from MQTT device description
                 self._attr_options = list(
@@ -1319,7 +1367,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             if mdev := self.coordinator.client.get_mqtt_device(
                 self.coordinator_context
             ):
-                self._attr_options = mdev.ev_charger_mode_options()
+                self._attr_options = mdev.ev_charger_mode_options(
+                    fromFile=self.coordinator.client.testmode()
+                )
                 self._attr_options.sort()
         elif self._attribute_name == "charger_mode":
             if mdev := self.coordinator.client.get_mqtt_device(
@@ -1379,7 +1429,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     self._attr_options = [self._attr_current_option]
         elif self._attribute_name == "display_theme":
             if not self._attr_options or len(self._attr_options) < 2:
-                # update screensaver option list only upon init
+                # update screensaver option list only upon init, will later be done upon state change only
                 self._attr_options = (
                     self.coordinator.client.api.get_charger_theme_options(
                         deviceSn=self.coordinator_context
@@ -1469,7 +1519,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 )
                 # convert command state value into option if available
                 if self._attribute_name == "ev_charger_mode":
-                    if state := mdev.ev_charger_mode_state():
+                    if state := mdev.ev_charger_mode_state(
+                        fromFile=self.coordinator.client.testmode()
+                    ):
                         data.update({key: state})
                 # update image url if required
                 elif self._attribute_name == "display_theme":
@@ -1503,7 +1555,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 ):
                     data[key] = f"custom-{data.get('custom_profile_number', '')!s}"
                 elif self._attribute_name in ["ac_output_mode", "dc_12v_output_mode"]:
-                    # These entities may have different states across PPS models and than the switch setting
+                    # These entities may have different states than the switch setting across PPS models
                     # The entity state cannot be obtained from the command parameter values
                     data[key] = get_enum_name(
                         SolixPpsOutputModeV2
@@ -1512,6 +1564,19 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         str(self.entity_description.value_fn(data, key)),
                         SolixPpsOutputMode.unknown.value,
                     )
+                elif self._attribute_name.startswith("priority_circuit_"):
+                    # update the priority for this circuit in the data copy
+                    circuit = (
+                        data.get("circuit_setup", {})
+                        .get(self._attribute_name[-2:], {})
+                        .copy()
+                    )
+                    circuit[key] = get_enum_name(
+                        SolixCircuitPriority,
+                        str(circuit.get(key)),
+                        SolixPpsOutputMode.unknown.value,
+                    )
+                    data["circuit_setup"] = {self._attribute_name[-2:]: circuit}
                 # convert MQTT state code into descriptive option
                 elif self.entity_description.mqtt_cmd:
                     data.update(
@@ -2114,8 +2179,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         )
             elif (
                 self._attribute_name == "charger_usage_mode"
-                and mdev
                 and option.startswith("custom")
+                and mdev
             ):
                 # change the MQTT command if a custom usage mode is selected
                 LOGGER.debug(
@@ -2124,70 +2189,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     option,
                     self.entity_description.mqtt_cmd,
                 )
-                # prepare parameter map and correct command
-                keys = option.split("-")
-                number = keys[-1:][0].strip()
-                if (
-                    profile
-                    := self.coordinator.client.api.get_charger_custom_mode_profile(
-                        deviceSn=self.coordinator_context, profile_number=number
-                    )
-                ):
-                    LOGGER.log(
-                        logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
-                        "%s: Found custom profile '%s' to be applied:\n%s",
-                        "TESTMODE"
-                        if self.coordinator.client.testmode()
-                        else "LIVEMODE",
-                        str(number),
-                        json.dumps(
-                            profile,
-                            indent=2 if len(json.dumps(profile)) < 200 else None,
-                        ),
-                    )
-                    # Custom profile structure
-                    # {"id":24581,"number":1,"name":"test","total_power":30,"max_total_power":250,"auto_exit":0,"has_charge_protocol":1,"power_settings":[
-                    #     {"name":"C1","power":0,"max_power":140,"input_power":0,"input_max_power":0,"scp":0,"ufcs":0,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
-                    #     {"name":"C2","power":0,"max_power":100,"input_power":0,"input_max_power":0,"scp":0,"ufcs":0,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
-                    #     {"name":"C3","power":0,"max_power":100,"input_power":0,"input_max_power":0,"scp":0,"ufcs":0,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
-                    #     {"name":"C4","power":15,"max_power":100,"input_power":0,"input_max_power":0,"scp":0,"ufcs":1,"pps11v":0,"pps16v":0,"pps20v":0,"pd12v":0,"huawei":0,"xiaomi":0},
-                    #     {"name": "A","power": 15,"max_power": 24,"input_power": 0,"input_max_power": 0,"scp": 0,"ufcs": 0,"pps11v": 0,"pps16v": 0,"pps20v": 0,"pd12v": 0,"huawei": 0,"xiaomi": 0}]}
-                    parm_map = {
-                        "set_auto_exit_switch": int(profile.get("auto_exit") or 0),
-                    }
-                    for port in profile.get("power_settings", []):
-                        port_name = str(port.get("name", "")).lower()
-                        parm_map[f"set_usb_{port_name}_power_limit"] = int(
-                            port.get("power") or 0
-                        )
-                        if port_name != "a":
-                            parm_map[f"set_usb_{port_name}_protocols"] = [
-                                p
-                                for p in [
-                                    "scp",
-                                    "ufcs",
-                                    "pd12v",
-                                    "pps11v",
-                                    "pps16v",
-                                    "pps20v",
-                                    "huawei",
-                                    "xiaomi",
-                                ]
-                                if port.get(p)
-                            ]
-                    await self._async_mqtt_option(
-                        mdev=mdev,
-                        option=int(profile.get("number") or 0),
-                        cmd=SolixMqttCommands.charger_custom_usage_mode,
-                        parm="set_custom_profile_number",
-                        parm_map=parm_map,
-                    )
-                else:
-                    LOGGER.error(
-                        "'%s' option could not be changed via MQTT command because custom profile '%s' not found in Api cache",
-                        self.entity_id,
-                        number,
-                    )
+                await self._async_mqtt_option(
+                    mdev=mdev,
+                    option=0,  # dummy for parm validation only, real profile will be looked up by helper from name
+                    cmd=SolixMqttCommands.charger_custom_usage_mode,
+                    parm="set_custom_profile_number",
+                    parm_map={"name": option},
+                )
 
             elif self._attribute_name == "display_theme" and mdev:
                 LOGGER.debug(
@@ -2196,47 +2204,12 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     option,
                     self.entity_description.mqtt_cmd,
                 )
-                # prepare parameter map and correct command
-                keys = option.split("-")
-                category = keys[:1][0].strip()
-                title = "-".join(keys[1:]).strip()
-                # lookup new theme
-                if theme := (
-                    [
-                        item
-                        for item in self.coordinator.client.api.get_charger_themes(
-                            deviceSn=self.coordinator_context
-                        ).values()
-                        if item.get("category_name") == category
-                        and item.get("title") == title
-                    ]
-                    or [{}]
-                )[0]:
-                    LOGGER.log(
-                        logging.INFO if ALLOW_TESTMODE else logging.DEBUG,
-                        "%s: Found theme '%s' to be applied:\n%s",
-                        "TESTMODE"
-                        if self.coordinator.client.testmode()
-                        else "LIVEMODE",
-                        option,
-                        json.dumps(
-                            theme, indent=2 if len(json.dumps(theme)) < 200 else None
-                        ),
-                    )
-                    await self._async_mqtt_option(
-                        mdev=mdev,
-                        option=int(theme.get("id") or 0),
-                        cmd=(
-                            SolixMqttCommands.charger_theme_custom
-                            if category == "Custom"
-                            else SolixMqttCommands.charger_theme
-                        ),
-                        parm="set_theme_id",
-                        parm_map={
-                            "set_theme_hash": int(theme.get("file_hash") or 0, 16),
-                            "set_theme_url": theme.get("image_url", ""),
-                        },
-                    )
+                if await self._async_mqtt_option(
+                    mdev=mdev,
+                    option=option,
+                    cmd=SolixMqttCommands.charger_theme_custom,
+                    parm="set_theme_url",
+                ):
                     # trigger a delayed theme request to get updated MQTT message
                     async_call_later(
                         self.hass,
@@ -2279,16 +2252,36 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         if not isinstance(parm_map, dict):
             parm_map = {}
         try:
-            cmdvalue = mdev.get_cmd_parm_option_map(
-                cmd=cmd,
-                parm=parm,
-            ).get(option)
+            # Use helper methods for certain MQTT commands to update complex parameter structures
+            if self._attribute_name.startswith("priority_circuit_"):
+                parm = "set_circuit_priority"
+                # update whole circuit setup strcuture
+                cmdvalue = mdev.update_circuit_priority(
+                    circuit=self._attribute_name[-2:], priority=option
+                )
+            else:
+                cmdvalue = mdev.get_cmd_parm_option_map(
+                    cmd=cmd,
+                    parm=parm,
+                ).get(option)
             # Use helper methods for certain MQTT commands that require special handling
             if self._attribute_name == "weekend_mode":
                 # change dependend times upon weekend mode changes
                 resp = await mdev.set_ev_charger_schedule(
                     weekend_mode=parm_map.get(self.entity_description.mqtt_cmd_parm)
                     or option,
+                    toFile=self.coordinator.client.testmode(),
+                )
+            elif self._attribute_name == "display_theme":
+                # change theme via helper
+                resp = await mdev.set_clock_theme(
+                    name=option,
+                    toFile=self.coordinator.client.testmode(),
+                )
+            elif cmd == SolixMqttCommands.charger_custom_usage_mode:
+                # change profile via helper
+                resp = await mdev.set_custom_usage_profile(
+                    number=(parm_map.pop("name", "").split("-")[-1:] or ["0"])[0],
                     toFile=self.coordinator.client.testmode(),
                 )
             else:

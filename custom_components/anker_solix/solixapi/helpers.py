@@ -23,14 +23,24 @@ class RequestCounter:
 
     def add(self, request_time: datetime | None = None, request_info: str = "") -> None:
         """Add new tuple with timestamp and optional request info to end of counter."""
-        self.elements.append((request_time or datetime.now(), request_info))
+        self.elements.append(
+            (
+                request_time.astimezone()
+                if isinstance(request_time, datetime)
+                else datetime.now().astimezone(),
+                request_info,
+            )
+        )
         # limit the counter entries to 1 hour when adding new
         self.recycle()
 
-    def recycle(
-        self, last_time: datetime = datetime.now() - timedelta(hours=1)
-    ) -> None:
+    def recycle(self, last_time: datetime | None = None) -> None:
         """Remove oldest timestamps from beginning of counter until last_time is reached, default is 1 hour ago."""
+        last_time = (
+            last_time.astimezone()
+            if isinstance(last_time, datetime)
+            else datetime.now().astimezone() - timedelta(hours=1)
+        )
         self.elements = [x for x in self.elements if x[0] > last_time]
 
     def add_throttle(self, endpoint: str) -> None:
@@ -40,13 +50,13 @@ class RequestCounter:
 
     def last_minute(self, details: bool = False) -> int | list:
         """Get number of timestamps or all details for last minute."""
-        last_time = datetime.now() - timedelta(minutes=1, seconds=2)
+        last_time = datetime.now().astimezone() - timedelta(minutes=1, seconds=2)
         requests = [x for x in self.elements if x[0] > last_time]
         return requests if details else len(requests)
 
     def last_hour(self, details: bool = False) -> int | list:
         """Get number of timestamps or details for last hour."""
-        last_time = datetime.now() - timedelta(hours=1)
+        last_time = datetime.now().astimezone() - timedelta(hours=1)
         requests = [x for x in self.elements if x[0] > last_time]
         return requests if details else len(requests)
 
@@ -82,7 +92,7 @@ def getTimezoneGMTString() -> str:
 
 def generateTimestamp(in_ms: bool = False) -> str:
     """Generate unix epoche timestamp from local time in seconds or milliseconds."""
-    return str(int(datetime.now().timestamp() * (1000 if in_ms else 1)))
+    return str(int(datetime.now().astimezone().timestamp() * (1000 if in_ms else 1)))
 
 
 def convertToKwh(val: str | float, unit: str, decimals: int = 2) -> str | float | None:
@@ -142,6 +152,19 @@ def convert_time_minutes(val: str | float | time) -> int | time | None:
     if isinstance(val, int):
         hours, minutes = divmod(val, 60)
         return time(hours, minutes)
+    return None
+
+
+def convert_isotimestamp(
+    val: str | float, output_fmt: str = "%Y-%m-%d %H:%M:%S"
+) -> str | int | None:
+    """Convert the given iso time or epoche timestamp into the opposite. ms will be ignored."""
+    if isinstance(val, str):
+        with contextlib.suppress(ValueError):
+            return int(datetime.fromisoformat(val).astimezone().timestamp())
+    if isinstance(val, int | float):
+        with contextlib.suppress(ValueError):
+            return datetime.fromtimestamp(val).astimezone().strftime(output_fmt)
     return None
 
 
@@ -241,17 +264,15 @@ def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
         isinstance(value, str)
         and (parts := value.split(":"))
         and (2 <= len(parts) <= 3)
+    ) and (
+        (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
+        and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
+        and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
     ):
         # Convert string to bytes
-        if (
-            (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
-            and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
-            and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
-        ):
-            return bytes(
-                ([int(parts[2])] if len(parts) > 2 else [])
-                + [int(parts[1]), int(parts[0])]
-            )
+        return bytes(
+            ([int(parts[2])] if len(parts) > 2 else []) + [int(parts[1]), int(parts[0])]
+        )
     return None
 
 
@@ -347,6 +368,79 @@ def convert_port_protocols(
             for day in value
             if isinstance(day, str) and day in protocols
         ).to_bytes()
+    return None
+
+
+def convert_circuit_setup(
+    value: bytes | bytearray | dict, count: int | None = None, merge: dict | None = None
+) -> bytearray | dict | None:
+    """Convert between Power dock circuits setup dictionary and binary field as used in MQTT messages.
+
+    Automatically detects input value type and converts accordingly. The dictionary structure:
+    12 slots for 12 circuits
+    The state for each slot is: pair_status, priority, id
+    pair_status: 0: not paired, 1: Pair circuit high slot, 2: Pair circuit low slot
+    priority: 1: must have, 2: nice to have in case of backup scenario
+    id: Logical number 1-, increased per group from highest to lowest circuit, where each priority is a different group
+    The value for the circuit priority command uses only 2 bytes per slot: priority, id
+
+    Args:
+        value: dictionary or binary with circuit setup structure
+        count: number of circuits to consider
+        merge: provide existing states that should be merged with the short form of binary data
+
+    Returns:
+        Dictionary with circuit setup if input is bytes/bytearray.
+        Bytearray with circuit priority and id if input is valid dictionary structure.
+        None if conversion failed
+
+    """
+    if isinstance(value, bytes | bytearray):
+        if isinstance(merge, dict):
+            slot_len = 2
+        else:
+            slot_len = 3
+            merge = {}
+        # adjust count of circuits to consider
+        count = max(
+            len(value) // slot_len
+            if not isinstance(count, int | float)
+            else int(count),
+            len(value) // slot_len,
+        )
+        # Convert binary to dict
+        with contextlib.suppress(ValueError, TypeError):
+            circuits = {}
+            for slot in range(count):
+                pair_status = merge.get(f"{slot + 1:02d}", {}).get("pair_status")
+                add = int(pair_status is None)
+                circuits[f"{slot + 1:02d}"] = {
+                    "pair_status": pair_status
+                    if pair_status is not None
+                    else int.from_bytes(
+                        value[0 + slot_len * slot : 1 + slot_len * slot]
+                    ),
+                    "priority": int.from_bytes(
+                        value[0 + add + slot_len * slot : 1 + add + slot_len * slot]
+                    ),
+                    "id": int.from_bytes(
+                        value[1 + add + slot_len * slot : 2 + add + slot_len * slot]
+                    ),
+                }
+            return circuits
+    if isinstance(value, dict):
+        # adjust count of circuits to consider
+        count = max(
+            len(value) if not isinstance(count, int | float) else int(count), len(value)
+        )
+        # convert elements to binary structure as needed for command using only 2 bytes per slot
+        with contextlib.suppress(ValueError, TypeError):
+            hexvalue = bytearray()
+            for slot in range(count):
+                if circuit := value.get(f"{slot + 1:02d}"):
+                    hexvalue.extend(int(circuit.get("priority", 0)).to_bytes())
+                    hexvalue.extend(int(circuit.get("id", 0)).to_bytes())
+            return hexvalue
     return None
 
 
@@ -447,7 +541,7 @@ def convert_pps_tou_schedule(
     Automatically detects input value type and converts accordingly. The dictionary structure:
     Byte with slot count
     Each slot has 3 bytes: tariff: (1=Peak,2=Mid,3=Off), start_hr, end_hr
-    max 6 slots are allowed in the app, the field may have max 7 slots
+    max 6 slots are allowed in the app
     The price per tariff is not part of the structure, this may be maintained by App/Cloud only
 
     Args:
@@ -500,6 +594,79 @@ def convert_pps_tou_schedule(
                 )
                 hexvalue.extend(
                     int((end[:1] or [])[0] or 0).to_bytes(byteorder="little")
+                )
+            return hexvalue
+    return None
+
+
+def convert_pps_output_schedule(
+    value: bytes | bytearray | dict, min_slots: int = 0, max_slots: int = 5
+) -> bytearray | dict | None:
+    """Convert between PPS output schedule dictionary and binary field as used in MQTT messages.
+
+    Automatically detects input value type and converts accordingly. The dictionary structure:
+    1st Byte with slot count: 0-max_slots
+    Each slot has 5 bytes: slot status (0=inactive,1=active), weekday bitmask (00-7f),
+                           output toggle: (0=0ff, 1=On), minutes of day (0-1435)
+    max 5 slots are allowed in the app
+
+    Args:
+        value: dictionary or binary with schedule structure
+        min_slots: Trailing bytes will be added if min slots > found slots (ignored for dictionary extract)
+        max_slots: Max bytes slots to be extracted, None returned if dictionary exceeds max
+
+    Returns:
+        Dictionary with schedule if input is bytes/bytearray.
+        Bytearray with schedule data if input is valid dictionary structure.
+        None if conversion failed
+
+    """
+    if isinstance(value, bytes | bytearray):
+        # Convert binary to dict
+        with contextlib.suppress(ValueError, TypeError):
+            pos = 0
+            schedule = {}
+            if slots := int.from_bytes(value[:1]):
+                schedule["slots"] = []
+                pos += 1
+            for _ in range(slots):
+                daytime = convert_time_minutes(
+                    int.from_bytes(value[pos + 3 : pos + 5], byteorder="little")
+                )
+                slot = {
+                    "active": bool(
+                        int.from_bytes(value[pos : pos + 1], byteorder="little")
+                    ),
+                    "weekdays": convert_weekdays(value[pos + 1 : pos + 2]) or [],
+                    "switch": int.from_bytes(
+                        value[pos + 2 : pos + 3], byteorder="little"
+                    ),
+                    "time": daytime.isoformat(timespec="minutes")
+                    if daytime
+                    else "00:00",
+                }
+                schedule["slots"].append(slot)
+                pos += 5
+            return schedule
+    if isinstance(value, dict):
+        # convert elements to binary structure
+        with contextlib.suppress(ValueError, TypeError):
+            hexvalue = bytearray()
+            slots = value.get("slots", [])
+            # limit count to max converted slots
+            hexvalue.extend(min(len(slots), max_slots).to_bytes(byteorder="little"))
+            # adopt slot list according to limits
+            if len(slots) < min_slots:
+                slots.extend({} for _ in range(min_slots - len(slots)))
+            slots = slots[:max_slots]
+            for slot in slots:
+                hexvalue.extend(int(slot.get("active", 0)).to_bytes(byteorder="little"))
+                hexvalue.extend(convert_weekdays(slot.get("weekdays", [])))
+                hexvalue.extend(int(slot.get("switch", 0)).to_bytes(byteorder="little"))
+                hexvalue.extend(
+                    int(
+                        min(1439, convert_time_minutes(slot.get("time", "00:00")) or 0)
+                    ).to_bytes(length=2, byteorder="little")
                 )
             return hexvalue
     return None
