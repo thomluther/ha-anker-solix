@@ -20,7 +20,11 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
-from homeassistant.helpers import issue_registry as ir, restore_state
+from homeassistant.helpers import (
+    config_validation as cv,
+    issue_registry as ir,
+    restore_state,
+)
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
@@ -61,6 +65,8 @@ from .const import (
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .services import async_setup_services  # async_remove_services
 from .solixapi.apitypes import ApiCategories, SolixDeviceType
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

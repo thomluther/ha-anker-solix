@@ -872,7 +872,7 @@
                     "idle": "mdi:timeline-outline",
                     "charging": "mdi:timeline-plus",
                     "discharging": "mdi:timeline-minus-outline",
-                    "sleep": " mdi:power-sleep",
+                    "sleep": "mdi:power-sleep",
                     "shutdown": "mdi:power-standby",
                     "unknown": "mdi:timeline-question"
                 }
