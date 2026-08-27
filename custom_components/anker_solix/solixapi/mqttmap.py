@@ -4252,13 +4252,15 @@ _PP_JSON = {
         "mps": {NAME: "micro_power_setting?"},
         "tpp": {NAME: "pv_yield", FACTOR: 0.001},  # 3045970
         "tgp": {
-            NAME: "grid_import_energy", FACTOR: 0.001
+            NAME: "grid_import_energy",
+            FACTOR: 0.001,
         },  # cumulative counter, increase rate proportional to grid import power, halts during outage
         "tlp": {
-            NAME: "home_consumption", FACTOR: 0.001
+            NAME: "home_consumption",
+            FACTOR: 0.001,
         },  # cumulative counter, increase rate proportional to home load power
         "tsp": {NAME: "unknown_total_energy?", FACTOR: 0.001},  # 50620729
-        # daily energies in Wh?
+        # TODO: daily energies in Wh? All daily factors to be confirmed, values may be 0.1 Wh
         "pe": {NAME: "pv_yield_today", FACTOR: 0.001},  # 6293 Wh
         "p2le": {NAME: "pv_consumption_today", FACTOR: 0.001},  # 4771 Wh
         "p2be": {NAME: "pv_charge_today", FACTOR: 0.001},  # 1522 Wh

@@ -60,6 +60,7 @@ This integration utilizes an unofficial Python library to communicate with the A
    * [Solarbank Multisystem with Power Dock](#solarbank-multisystem-with-power-dock)
    * [Solarbank station controls](#solarbank-station-controls)
    * [Solarbank PPS system](#solarbank-pps-systems)
+   * [Portable Power Stations (PPS)](#portable-power-stations-pps)
    * [EV charger devices](#ev-charger-devices)
    * [Electric Vehicle devices](#electric-vehicle-devices)
    * [Power Panels](#power-panels)
@@ -329,6 +330,21 @@ The Solarbank PPS systems provide power consumption data in the cloud api, but n
 Integration version 3.5.4 added initial support for this new system type and the F3000 PPS devices. System owners need to explore and document cloud Api capabilities as well as MQTT controls for F3000 devices to further expand any system or device support.
 
 
+### Portable Power Stations (PPS)
+
+Portable Power Stations are managed as stand alone devices in most cases. The monitoring and control via the mobile App is typically only via Bluetooth or the MQTT server. Most recent PPS devices however added features that may require cloud Api services, like the Storm Guard disaster protection feature to enable an auto backup charge in case natural disasters are approaching.
+
+Version 3.8.1 added support for the cloud managed Storm Guard feature for a few PPS devices that support this feature already, which are currently the S2000 and C2000(X) Gen 2 PPS. Once the home location has been defined through the mobile App, the integration can enable or disable the Storm Guard feature. The integration also queries the cloud Api which disaster protection features are supported for the particular device or system. Only if supported, the appropriate disaster protection status and control entities may be created.
+
+> [!IMPORTANT]
+> At this point in time, the disaster protection endpoints are only supported on the COM cloud server, but not the EU server. Furthermore, the Storm Guard disaster protection feature itself is only supported for a few countries (e.g. US, PR), and the support genrally depends on the device model or system type. The Anker mobile App will show whether Storm Guard is supported for the selected location. If the feature is not supported by the mobile App, those entities should not become available either in the integration.
+
+Furthermore, new PPS devices may also support a manual backup charge plan. The required controls have been added (switch, start date time, end date time). When modifying the dates or times through the integration while the plan is disabled, the changes are only stored in the data cache to prevent too many MQTT commands upon each partial datetime entity change. Just once the manual backup plan is or will be enabled, any cached dates and times will be used for the timestamp modifications. Therefore you should be aware, if you modify the datetime entities while the backup plan is activated, separate MQTT commands may be issued for each partial entity change. If only the backup plan will be activated without actual or future charge window, the dates and times will be adjusted automatically to start an immediate manual backup charge for 1 hour, just by enabling the backup switch.
+
+> [!TIP]
+> In order to modify the full backup plan with a single MQTT command, it is recommended to utilize the 'Solix AC backup charge' action, which already supports the Solarbank manual backup plan option. PPS devices supporting a manual backup plan are enabled as valid target switch entities for this action. The action also allows to define a duration instead of a dedicated end timestamp, see [Manual backup charge Option](INFO.md#manual-backup-charge-option) for more details.
+
+
 ### EV charger devices
 
 The Solix V1 EV charger has some unique device characteristics. It can be used individually within a dedicated system, added to Solarbank Power Dock systems or to HES X1 systems. Additionally, this device has the unique feature to allow device sharing with other Anker Solix accounts, which enables them to control most of the device features and settings without granting those device members full access to the whole system where the charger belongs to. For example, if system members also get a dedicated member access to the EV charger device, those family members can control the EV charging features with their own Anker account.
@@ -364,7 +380,7 @@ The Anker EV Charger device can be shared amongst Anker cloud users, while each 
 
 ### Power Panels
 
-Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800(P) power stations attached to the Power Panel are not tracked as system devices. Actual power consumption data in the cloud api does not exist and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
+Power Panels are not supported in the EU market, therefore the EU cloud api server currently does not support either the required endpoints. Furthermore it was discovered that the F3800(P) power stations attached to the Power Panel are not tracked as system devices through the api. Actual power consumption data in the cloud api does not exist and it is assumed that the power panel home page consumption values are merged by the App from the MQTT cloud server only if the App home page is viewed. A work around for monitoring some power values and overall SOC has been implemented by extracting the last valid 5 minute average data that is collected with the system energy statistics (Basically the last data point that is visible in the various daily diagrams of your mobile app). However this comes with a **[cost of ~80 MB data traffic per system per day](https://github.com/thomluther/ha-anker-solix/discussions/32#discussioncomment-12748132)** just for the average power values. You can exclude the average power category from your integration configuration options to reduce they daily data traffic.
 
 Integration version 3.1.0 added a [customizable battery capacity](INFO.md#battery-capacity) to the Powerpanel device. Since the assigned(P) F3800 PPS cannot be determined via Api queries, the capacity is assumed with a single F3800 device without expansion batteries. You can adjust the capacity to your installation to let the integration calculate the estimated remaining battery energy based on the actual SOC. See [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for a better understanding how such virtual entities are being used.
 
@@ -372,12 +388,12 @@ Power Panel owners need to explore and document cloud Api capabilities to furthe
 
 Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) for F3800(P) device that are typically attached to power panels.
 
-Version 3.5.0 added device control via optional MQTT connection for F3800(P) devices.
-
 > [!IMPORTANT]
 > Power Panel systems have a weird setup where the PPS devices are not tracked as system devices and they seem to use a local MQTT broker on the Power Panel for local only communication. They do not subscribe to the Anker cloud MQTT server at all and all their data is proxied through the Power Panel, which is managed through MQTT and cloud api. Therefore, MQTT controls are not possible for the connected F3800(P) devices running in MQTT local mode, but yet the mobile App receives the PPS device data for display on the home screen.
 
 The Power Panel publishes MQTT messages received from the connected devices as embedded messages. This data and the state of the control entities is represented with the originating PPS device. For more details, see [devices in MQTT local mode](INFO.md#devices-in-mqtt-local-mode) in the [User Guide](INFO.md).
+
+Version 3.8.1 added disaster protection status for the system. Additionally, code restructuring now allows to manage stand alone PPS devices as part of the power panel system instance and improves merging of MQTT data with api data to construct an appropriate system device topology in the data cache. This also enables correct system battery capacity calculation, based on the reported F3800s and their installed extensions. The topology and the overall battery capacity is updated over time as Power Panel messages with PPS data are being received.
 
 
 ### Home Energy Systems (HES)

@@ -1372,6 +1372,9 @@
             "solar_energy": {
                 "name": "Énergie produite"
             },
+            "home_energy": {
+                "name": "Énergie domestique"
+            },
             "consumed_energy": {
                 "name": "Énergie consommée"
             },

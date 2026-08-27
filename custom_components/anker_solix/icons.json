@@ -658,6 +658,9 @@
             "solar_energy": {
                 "default": "mdi:solar-power-variant"
             },
+            "home_energy": {
+                "default": "mdi:home-lightning-bolt"
+            },
             "consumed_energy": {
                 "default": "mdi:lightning-bolt-circle"
             },
