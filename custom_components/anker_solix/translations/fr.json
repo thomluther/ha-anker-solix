@@ -819,19 +819,6 @@
                     }
                 }
             },
-            "pps_active_tariff": {
-                "name": "Tarif actif",
-                "state": {
-                    "peak": "Heure pleine",
-                    "mid_peak": "Heure moyenne",
-                    "off_peak": "Heure creuse"
-                },
-                "state_attributes": {
-                    "tariff": {
-                        "name": "Tarif"
-                    }
-                }
-            },
             "dc_12v_output_mode": {
                 "name": "Mode de sortie 12V CC",
                 "state": {
