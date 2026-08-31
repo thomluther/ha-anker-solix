@@ -42,6 +42,8 @@ from .const import (
     DOMAIN,
     LOGGER,
     MQTT_OVERLAY,
+    parse_pps_tou_plan,
+    pps_tou_tariff_price,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -501,6 +503,34 @@ DEVICE_NUMBERS = [
         mqtt_cmd=SolixMqttCommands.display_brightness,
         ignore_opt_count=True,
     ),
+    # PPS TOU price per tariff type (one per type, created for every PPS device
+    # with a plan); unset prices show 0.0 and can be set directly, which
+    # upserts the price into the plan's price list. The currency symbol is the
+    # plan's "unit"
+    *[
+        AnkerSolixNumberDescription(
+            key=f"pps_tou_price_{tariff_name}",
+            translation_key=f"pps_tou_price_{tariff_name}",
+            json_key="pps_use_time",
+            entity_category=EntityCategory.CONFIG,
+            mode=NumberMode.BOX,
+            native_min_value=0,
+            native_max_value=10,
+            native_step=0.001,
+            value_fn=lambda d, jk, t=tariff_type: (
+                pps_tou_tariff_price(d.get(jk), t) or 0.0
+            ),
+            unit_fn=lambda d, t=tariff_type: (
+                (parse_pps_tou_plan(d.get("pps_use_time")) or {}).get("unit")
+            ),
+            force_creation_fn=lambda d, jk: bool(parse_pps_tou_plan(d.get(jk))),
+            exclude_fn=lambda s, d: (
+                not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+            ),
+            api_cmd=True,
+        )
+        for tariff_type, tariff_name in ((1, "peak"), (2, "mid"), (3, "off"))
+    ],
 ]
 
 SITE_NUMBERS = [
@@ -978,6 +1008,9 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 "battery_capacity",
                 "ac_max_charging_power",
                 "energy_consumption_per_100km",
+                "pps_tou_price_peak",
+                "pps_tou_price_mid",
+                "pps_tou_price_off",
             ]
             and not self.entity_description.restore
             and not self.entity_description.mqtt_cmd
@@ -1423,6 +1456,56 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied settings for '%s' change to %s:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            value,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+                # PPS TOU tariff price changes via the cloud
+                elif self._attribute_name in [
+                    "pps_tou_price_peak",
+                    "pps_tou_price_mid",
+                    "pps_tou_price_off",
+                ]:
+                    LOGGER.debug(
+                        "'%s' change to %s will be applied", self.entity_id, value
+                    )
+                    kwargs = {"toFile": self.coordinator.client.testmode()}
+                    # upsert the price for the tariff type in the full price list
+                    tariff_type = {
+                        "pps_tou_price_peak": 1,
+                        "pps_tou_price_mid": 2,
+                        "pps_tou_price_off": 3,
+                    }[self._attribute_name]
+                    prices = (
+                        (parse_pps_tou_plan(data.get("pps_use_time")) or {}).get(
+                            "prices"
+                        )
+                        or []
+                    )
+                    # the cloud stores prices as strings; preserve native precision
+                    # (PPS prices can be e.g. 0.001) by stripping trailing zeros
+                    price_str = f"{float(value):.6f}".rstrip("0").rstrip(".")
+                    upserted = False
+                    for price in prices:
+                        if price.get("type") == tariff_type:
+                            price["price"] = price_str
+                            upserted = True
+                            break
+                    if not upserted:
+                        prices.append({"price": price_str, "type": tariff_type})
+                    kwargs["prices"] = prices
+                    resp = await self.coordinator.client.api.set_pps_use_time(
+                        deviceSn=self.coordinator_context,
+                        **kwargs,
+                    )
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied PPS TOU plan for '%s' change to %s:\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",

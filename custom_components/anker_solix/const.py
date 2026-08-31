@@ -1,8 +1,10 @@
 """Constants for Anker Solix."""
 
+from contextlib import suppress
 from dataclasses import fields
 from datetime import datetime
 from logging import Logger, getLogger
+import json
 from typing import Any, Final
 import urllib.parse
 
@@ -117,6 +119,7 @@ END_HOUR: Final[str] = "end_hour"
 TARIFF: Final[str] = "tariff"
 TARIFF_PRICE: Final[str] = "tariff_price"
 DELETE: Final[str] = "delete"
+SLOT: Final[str] = "slot"
 ENDPOINT: Final[str] = "endpoint"
 
 
@@ -128,6 +131,37 @@ def extractNone(value: Any) -> None:
     ):
         return None
     return value
+
+
+def parse_pps_tou_plan(value: Any) -> dict | None:
+    """Parse the pps_use_time cloud attribute into a PPS TOU plan dict.
+
+    The attribute is a JSON string (or already-parsed dict) with the keys
+    "ranges" (the slot plan), "prices" (the tariff prices), "unit" and
+    "reserve_power". Returns the plan dict, or None if the value is absent
+    or not a valid plan.
+    """
+    if isinstance(value, str):
+        with suppress(ValueError, TypeError):
+            value = json.loads(value)
+    return value if isinstance(value, dict) and value.get("ranges") else None
+
+
+def pps_tou_tariff_price(value: Any, tariff_type: int) -> float | None:
+    """Return the price for a tariff type in the PPS TOU plan, or None.
+
+    tariff_type is 1=Peak, 2=Mid, 3=Off (the cloud "type").
+    """
+    plan = parse_pps_tou_plan(value)
+    if not plan:
+        return None
+    for price in plan.get("prices") or []:
+        if price.get("type") == tariff_type:
+            try:
+                return float(price.get("price"))
+            except (TypeError, ValueError):
+                return None
+    return None
 
 
 VALID_DAYTIME = vol.All(
@@ -415,6 +449,12 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
             vol.Optional(RESERVE_POWER): vol.All(
                 vol.Coerce(int),
                 vol.Range(min=1, max=100, msg="reserve_power must be a percentage 1-100"),
+            ),
+            # PPS explicit slot targeting: a 1-based slot index to target a specific
+            # slot in the TOU plan (overrides time-based slot selection).
+            vol.Optional(SLOT): vol.All(
+                vol.Coerce(int),
+                vol.Range(min=1, max=6, msg="slot must be a 1-based index 1-6"),
             ),
         }
     ),

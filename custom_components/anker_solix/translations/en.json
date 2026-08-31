@@ -638,6 +638,15 @@
             },
             "display_brightness": {
                 "name": "Display brightness"
+            },
+            "pps_tou_price_peak": {
+                "name": "PPS TOU peak price"
+            },
+            "pps_tou_price_mid": {
+                "name": "PPS TOU mid price"
+            },
+            "pps_tou_price_off": {
+                "name": "PPS TOU off-peak price"
             }
         },
         "select": {

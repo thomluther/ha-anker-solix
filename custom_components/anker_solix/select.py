@@ -43,6 +43,7 @@ from .const import (
     MQTT_OVERLAY,
     RESERVE_POWER,
     SERVICE_MODIFY_SOLIX_USE_TIME,
+    SLOT,
     START_HOUR,
     START_MONTH,
     TARIFF,
@@ -76,6 +77,25 @@ from .solixapi.apitypes import (
 from .solixapi.helpers import get_enum_name
 from .solixapi.mqtt_device import SolixMqttDevice
 from .solixapi.mqttcmdmap import SolixMqttCommands
+
+# PPS model families (device_pn). The C1000 family supports only Standard and
+# Time-of-Use (Self-Consumption/Custom error in the Anker app on the A1763).
+# Other PPS families keep the full command-map set until their supported modes
+# are tested; add a family to the mapping once known.
+PPS_C1000_FAMILY = frozenset({"A1761", "A1763", "A1765", "AS100"})
+PPS_C2000_S2000_FAMILY = frozenset({"A1783", "A1785", "AS220"})
+PPS_USAGE_MODE_OPTIONS_BY_FAMILY = {
+    PPS_C1000_FAMILY: ["standard", "time_of_use"],
+    # PPS_C2000_S2000_FAMILY: [...]  # add once tested
+}
+
+
+def pps_usage_mode_options(device_pn, fallback):
+    """Supported pps_usage_mode options for a PPS model, DRY by model family."""
+    for family, options in PPS_USAGE_MODE_OPTIONS_BY_FAMILY.items():
+        if device_pn in family:
+            return options
+    return fallback
 
 
 @dataclass(frozen=True)
@@ -1238,6 +1258,22 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     for item in SolixCircuitPriority
                     if "unknown" not in item.name
                 ]
+            elif self._attribute_name == "pps_usage_mode":
+                # DRY by PPS model family: the C1000 family supports only
+                # Standard and Time-of-Use; other PPS families keep the full
+                # command-map set until tested
+                data = (self.coordinator.data or {}).get(
+                    self.coordinator_context
+                ) or {}
+                fallback = list(
+                    mdev.get_cmd_parm_option_map(
+                        cmd=self.entity_description.mqtt_cmd,
+                        parm=self.entity_description.mqtt_cmd_parm,
+                    ).keys()
+                )
+                self._attr_options = pps_usage_mode_options(
+                    data.get("device_pn"), fallback
+                )
             else:
                 # get options from MQTT device description
                 self._attr_options = list(
@@ -2460,11 +2496,20 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     tariff_price = kwargs.get(TARIFF_PRICE)
                     delete = kwargs.get(DELETE)
                     reserve = kwargs.get(RESERVE_POWER)
+                    slot = kwargs.get(SLOT)
                     if not any(
-                        (start_hour, end_hour, tariff, tariff_price, delete, reserve)
+                        (
+                            start_hour,
+                            end_hour,
+                            tariff,
+                            tariff_price,
+                            delete,
+                            reserve,
+                            slot,
+                        )
                     ):
                         raise ServiceValidationError(
-                            f"The entity {self.entity_id} requires a use-time field (start_hour, end_hour, tariff, tariff_price, delete and/or reserve_power)",
+                            f"The entity {self.entity_id} requires a use-time field (start_hour, end_hour, tariff, tariff_price, delete, reserve_power and/or slot)",
                             translation_domain=DOMAIN,
                             translation_key="service_not_supported",
                             translation_placeholders={
@@ -2526,6 +2571,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         tariff_price=tariff_price,
                         delete=delete,
                         reserve_power=reserve,
+                        slot=slot,
                         toFile=self.coordinator.client.testmode(),
                     )
                 else:
