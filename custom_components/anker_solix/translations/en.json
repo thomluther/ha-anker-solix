@@ -647,6 +647,9 @@
             },
             "pps_tou_price_off": {
                 "name": "PPS TOU off-peak price"
+            },
+            "pps_active_tariff_price": {
+                "name": "PPS Active Tariff Price"
             }
         },
         "select": {

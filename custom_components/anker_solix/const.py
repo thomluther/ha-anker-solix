@@ -164,6 +164,18 @@ def pps_tou_tariff_price(value: Any, tariff_type: int) -> float | None:
     return None
 
 
+def pps_tou_active_price(value: Any, active_tariff: Any) -> float | None:
+    """Return the price of the active PPS TOU tariff type, or None.
+
+    active_tariff is the device-computed active tariff (tou_active_tariff:
+    1=Peak, 2=Mid, 3=Off; 0=none/UPS). Returns None when there is no active
+    tariff (0/unknown) or the plan is absent, so the entity is unavailable.
+    """
+    if active_tariff not in (1, 2, 3):
+        return None
+    return pps_tou_tariff_price(value, active_tariff)
+
+
 VALID_DAYTIME = vol.All(
     lambda v: datetime.strptime(":".join(str(v).split(":")[:2]), "%H:%M").astimezone(),
 )

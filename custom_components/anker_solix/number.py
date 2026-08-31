@@ -43,6 +43,7 @@ from .const import (
     LOGGER,
     MQTT_OVERLAY,
     parse_pps_tou_plan,
+    pps_tou_active_price,
     pps_tou_tariff_price,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
@@ -531,6 +532,36 @@ DEVICE_NUMBERS = [
         )
         for tariff_type, tariff_name in ((1, "peak"), (2, "mid"), (3, "off"))
     ],
+    # PPS active tariff price: the price of the currently active TOU segment
+    # (the device-computed tou_active_tariff). Writable: setting it changes the
+    # active segment's tariff price via the cloud Api, upserting that tariff
+    # type's price into the plan's price list while preserving every other
+    # range/price. Unavailable when there is no active tariff.
+    AnkerSolixNumberDescription(
+        key="pps_active_tariff_price",
+        translation_key="pps_active_tariff_price",
+        json_key="pps_use_time",
+        entity_category=EntityCategory.CONFIG,
+        mode=NumberMode.BOX,
+        native_min_value=0,
+        native_max_value=10,
+        native_step=0.001,
+        value_fn=lambda d, jk: pps_tou_active_price(
+            d.get(jk), d.get("tou_active_tariff")
+        ),
+        unit_fn=lambda d: (parse_pps_tou_plan(d.get("pps_use_time")) or {}).get(
+            "unit"
+        ),
+        force_creation_fn=lambda d, jk: bool(parse_pps_tou_plan(d.get(jk))),
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+        ),
+        # tou_active_tariff is a device-computed MQTT d9 field (not an Api
+        # attribute), so read the combined Api+Mqtt cache to see both the
+        # active tariff and the pps_use_time plan.
+        mqtt=True,
+        api_cmd=True,
+    ),
 ]
 
 SITE_NUMBERS = [
@@ -1011,6 +1042,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 "pps_tou_price_peak",
                 "pps_tou_price_mid",
                 "pps_tou_price_off",
+                "pps_active_tariff_price",
             ]
             and not self.entity_description.restore
             and not self.entity_description.mqtt_cmd
@@ -1506,6 +1538,31 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied PPS TOU plan for '%s' change to %s:\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            value,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+                # PPS active tariff price: change the active TOU segment's tariff
+                # price via the cloud Api. No explicit slot is passed, so the
+                # active segment is targeted and only its tariff type's price is
+                # upserted; every other range/price is preserved.
+                elif self._attribute_name == "pps_active_tariff_price":
+                    LOGGER.debug(
+                        "'%s' change to %s will be applied", self.entity_id, value
+                    )
+                    resp = await self.coordinator.client.api.set_pps_use_time(
+                        deviceSn=self.coordinator_context,
+                        tariff_price=value,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied active tariff price for '%s' change to %s:\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",

@@ -2563,17 +2563,31 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                     "max": ceiling,
                                 },
                             )
-                    result = await self.coordinator.client.api.set_pps_use_time(
-                        deviceSn=self.coordinator_context,
-                        start_hour=start_hour,
-                        end_hour=end_hour,
-                        tariff_type=tariff,
-                        tariff_price=tariff_price,
-                        delete=delete,
-                        reserve_power=reserve,
-                        slot=slot,
-                        toFile=self.coordinator.client.testmode(),
-                    )
+                    try:
+                        result = await self.coordinator.client.api.set_pps_use_time(
+                            deviceSn=self.coordinator_context,
+                            start_hour=start_hour,
+                            end_hour=end_hour,
+                            tariff_type=tariff,
+                            tariff_price=tariff_price,
+                            delete=delete,
+                            reserve_power=reserve,
+                            slot=slot,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    except ValueError as err:
+                        # An explicitly invalid slot (or an unresolvable target)
+                        # is a user error: surface it instead of an unhandled
+                        # exception, and nothing was written.
+                        raise ServiceValidationError(
+                            f"The action {service_name} cannot be executed: {err}",
+                            translation_domain=DOMAIN,
+                            translation_key="slot_time_error",
+                            translation_placeholders={
+                                "service": service_name,
+                                "error": str(err),
+                            },
+                        ) from err
                 else:
                     # SB2 device: set the seasonal AC use-time plan via the cloud API
                     result = await self.coordinator.client.api.set_sb2_use_time(
