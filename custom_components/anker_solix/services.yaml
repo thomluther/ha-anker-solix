@@ -481,28 +481,6 @@ modify_solix_use_time:
       example: false
       selector:
         boolean:
-    slots:
-      required: false
-      description: >-
-        PPS devices only (e.g. SOLIX C1000 Gen 2): list of 1-6 TOU tariff slots
-        covering the day (00:00-24:00). Each slot has: tariff (1=Peak, 2=Mid,
-        3=Off), start_time ("HH:MM"), end_time ("HH:MM"). From the UI, paste the
-        list as YAML (as in the example); programmatic calls may pass the raw
-        list instead. Ignored for SB2 AC devices, which use the seasonal
-        month/day_type/hour/tariff fields above.
-      example: |
-        - tariff: 1
-          start_time: "00:00"
-          end_time: "08:00"
-        - tariff: 2
-          start_time: "08:00"
-          end_time: "09:00"
-        - tariff: 3
-          start_time: "09:00"
-          end_time: "24:00"
-      selector:
-        text:
-          multiline: true
     reserve_power:
       required: false
       description: >-

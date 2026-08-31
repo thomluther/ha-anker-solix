@@ -45,11 +45,8 @@ from .const import (
     SERVICE_MODIFY_SOLIX_USE_TIME,
     START_HOUR,
     START_MONTH,
-    START_TIME,
-    END_TIME,
     TARIFF,
     TARIFF_PRICE,
-    TOU_SLOTS,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -567,6 +564,29 @@ DEVICE_SELECTS = [
         feature=AnkerSolixEntityFeature.TOU_SCHEDULE,
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.pps_usage_mode,
+    ),
+    AnkerSolixSelectDescription(
+        # PPS active tariff control: the state is the device-computed active tariff
+        # (tou_active_tariff: 1=Peak, 2=Mid, 3=Off; 0=none/UPS -> unknown). Selecting
+        # a tariff modifies the active TOU slot's tariff via the cloud Api.
+        key="pps_active_tariff",
+        translation_key="pps_active_tariff",
+        json_key="tou_active_tariff",
+        entity_category=EntityCategory.CONFIG,
+        options_fn=lambda d, _: [
+            item.name.lower() for item in SolixTariffTypes if item.value in (1, 2, 3)
+        ],
+        value_fn=lambda d, jk: (
+            get_enum_name(SolixTariffTypes, d.get(jk), "").lower()
+            if d.get(jk) in (1, 2, 3)
+            else None
+        ),
+        attrib_fn=lambda d, jk: {"tariff": d.get(jk)},
+        feature=AnkerSolixEntityFeature.TOU_SCHEDULE,
+        mqtt=True,
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+        ),
     ),
     AnkerSolixSelectDescription(
         key="max_evcharge_current",
@@ -1631,6 +1651,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     "preset_usage_mode",
                     "preset_load_type",
                     "preset_tariff",
+                    "pps_active_tariff",
                     "power_cutoff",
                     "system_price_unit",
                     "system_price_type",
@@ -1981,6 +2002,35 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied site price settings for '%s' change to '%s':\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            option,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+
+            elif (
+                self._attribute_name == "pps_active_tariff"
+                and option != cv.ENTITY_MATCH_NONE
+            ):
+                # PPS active tariff: modify the active TOU slot's tariff via the cloud Api
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied",
+                    self.entity_id,
+                    option,
+                )
+                with suppress(ValueError, TypeError):
+                    resp = await self.coordinator.client.api.set_pps_use_time(
+                        deviceSn=self.coordinator_context,
+                        tariff_type=option,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied active tariff for '%s' change to '%s':\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -2398,15 +2448,23 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             if service_name == SERVICE_MODIFY_SOLIX_USE_TIME:
                 LOGGER.debug("%s action will be applied", service_name)
                 if self.supported_features & AnkerSolixEntityFeature.TOU_SCHEDULE:
-                    # PPS device: set the hourly peak/mid/off TOU schedule via the
-                    # cloud Api. Writing the pps_use_time attribute is sufficient:
-                    # the cloud pushes the new plan down to the device, so no direct
-                    # MQTT command is required.
-                    slots = kwargs.get(TOU_SLOTS)
+                    # PPS device: reuse the standard use-time fields (start_hour,
+                    # end_hour, tariff, tariff_price, delete) to modify the active
+                    # TOU slot via the cloud Api; month/day_type are ignored for PPS,
+                    # which has a single hourly plan. Writing the pps_use_time
+                    # attribute is sufficient: the cloud pushes the new plan down to
+                    # the device, so no direct MQTT command is required.
+                    start_hour = kwargs.get(START_HOUR)
+                    end_hour = kwargs.get(END_HOUR)
+                    tariff = kwargs.get(TARIFF)
+                    tariff_price = kwargs.get(TARIFF_PRICE)
+                    delete = kwargs.get(DELETE)
                     reserve = kwargs.get(RESERVE_POWER)
-                    if not slots and reserve is None:
+                    if not any(
+                        (start_hour, end_hour, tariff, tariff_price, delete, reserve)
+                    ):
                         raise ServiceValidationError(
-                            f"The entity {self.entity_id} requires the 'slots' and/or 'reserve_power' field",
+                            f"The entity {self.entity_id} requires a use-time field (start_hour, end_hour, tariff, tariff_price, delete and/or reserve_power)",
                             translation_domain=DOMAIN,
                             translation_key="service_not_supported",
                             translation_placeholders={
@@ -2414,20 +2472,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 "service": service_name,
                             },
                         )
-                    # The cloud stores each slot's tariff as "type" (1=Peak/2=Mid/3=Off);
-                    # the service field uses "tariff". Map each slot to the cloud format.
-                    ranges = (
-                        [
-                            {
-                                "start_time": slot[START_TIME],
-                                "end_time": slot[END_TIME],
-                                "type": slot["tariff"],
-                            }
-                            for slot in slots
-                        ]
-                        if slots
-                        else None
-                    )
                     # Validate the backup reserve ("TOU Power") against the device-
                     # specific floor/ceiling: the app steps by 1% and will not accept
                     # a value below min_soc + 5 or above max_soc (both read from the
@@ -2476,7 +2520,11 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             )
                     result = await self.coordinator.client.api.set_pps_use_time(
                         deviceSn=self.coordinator_context,
-                        ranges=ranges,
+                        start_hour=start_hour,
+                        end_hour=end_hour,
+                        tariff_type=tariff,
+                        tariff_price=tariff_price,
+                        delete=delete,
                         reserve_power=reserve,
                         toFile=self.coordinator.client.testmode(),
                     )

@@ -7,7 +7,6 @@ from typing import Any, Final
 import urllib.parse
 
 import voluptuous as vol
-import yaml
 
 from homeassistant.const import CONF_METHOD, CONF_PAYLOAD, Platform
 import homeassistant.helpers.config_validation as cv
@@ -94,7 +93,6 @@ SERVICE_API_REQUEST: Final[str] = "api_request"
 
 START_TIME: Final[str] = "start_time"
 END_TIME: Final[str] = "end_time"
-TOU_SLOTS: Final[str] = "slots"
 RESERVE_POWER: Final[str] = "reserve_power"
 PLAN: Final[str] = "plan"
 WEEK_DAYS: Final[str] = "week_days"
@@ -346,27 +344,6 @@ SOLIX_BACKUP_CHARGE_SCHEMA: vol.Schema = vol.All(
     ),
 )
 
-# Validator for a TOU slot hour ("HH:MM" or "HH:MM:SS"), normalized to "HH:MM", hour 0-24
-VALID_TOU_HOUR = vol.All(
-    lambda v: ":".join(str(v).split(":")[:2]),
-    vol.Match(r"^([01]?\d|2[0-4]):[0-5]\d$"),
-)
-
-# A TOU slot list (1-6 slots of tariff/start_time/end_time), shared by the raw-list
-# and YAML-string forms of the "slots" service field.
-TOU_SLOT_LIST = vol.All(
-    vol.Length(min=1, max=6, msg="1-6 TOU slots required"),
-    [
-        vol.Schema(
-            {
-                vol.Required("tariff"): vol.In([1, 2, 3]),
-                vol.Required(START_TIME): VALID_TOU_HOUR,
-                vol.Required(END_TIME): VALID_TOU_HOUR,
-            }
-        )
-    ],
-)
-
 SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
     cv.make_entity_service_schema(
         {
@@ -431,15 +408,6 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
                 extractNone, vol.Any(None, cv.positive_float)
             ),
             vol.Optional(DELETE): VALID_SWITCH,
-            # PPS hourly time-of-use schedule (list of up to 6 tariff slots). Used by
-            # PPS devices (e.g. A1763 SOLIX C1000 Gen 2); ignored for SB2 AC devices,
-            # which use the seasonal start_month/end_month/day_type/hour/tariff fields.
-            # Accepts a raw slot list (programmatic service calls) or a YAML string
-            # (the UI text field), both normalized to the same slot list.
-            vol.Optional(TOU_SLOTS): vol.Any(
-                TOU_SLOT_LIST,
-                vol.All(str, yaml.safe_load, TOU_SLOT_LIST),
-            ),
             # PPS backup reserve percentage (the app's "TOU Power" setting; "power in
             # use" = 100 - reserve_power). The app steps by 1% and enforces a
             # device-specific floor (min_soc + 5) and ceiling (max_soc), which the

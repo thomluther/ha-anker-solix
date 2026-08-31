@@ -819,6 +819,19 @@
                     }
                 }
             },
+            "pps_active_tariff": {
+                "name": "Active tariff",
+                "state": {
+                    "peak": "Peak",
+                    "mid_peak": "Medium peak",
+                    "off_peak": "Off peak"
+                },
+                "state_attributes": {
+                    "tariff": {
+                        "name": "Tariff"
+                    }
+                }
+            },
             "dc_12v_output_mode": {
                 "name": "DC 12V output mode",
                 "state": {

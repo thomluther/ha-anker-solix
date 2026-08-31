@@ -826,6 +826,19 @@
                     }
                 }
             },
+            "pps_active_tariff": {
+                "name": "Aktiver Tarif",
+                "state": {
+                    "peak": "Hochtarif",
+                    "mid_peak": "Mitteltarif",
+                    "off_peak": "Niedrigtarif"
+                },
+                "state_attributes": {
+                    "tariff": {
+                        "name": "Tarif"
+                    }
+                }
+            },
             "max_evcharge_current": {
                 "name": "Max EV Ladestrom"
             },
