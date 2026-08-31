@@ -41,11 +41,15 @@ from .const import (
     END_MONTH,
     LOGGER,
     MQTT_OVERLAY,
+    RESERVE_POWER,
     SERVICE_MODIFY_SOLIX_USE_TIME,
     START_HOUR,
     START_MONTH,
+    START_TIME,
+    END_TIME,
     TARIFF,
     TARIFF_PRICE,
+    TOU_SLOTS,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -560,6 +564,7 @@ DEVICE_SELECTS = [
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
         ),
+        feature=AnkerSolixEntityFeature.TOU_SCHEDULE,
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.pps_usage_mode,
     ),
@@ -2347,7 +2352,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
     ) -> dict | None:
         """Execute the defined solix ac charge action."""
         # Raise alerts to frontend
-        if not (self.supported_features & AnkerSolixEntityFeature.AC_CHARGE):
+        if not (
+            self.supported_features
+            & (
+                AnkerSolixEntityFeature.AC_CHARGE
+                | AnkerSolixEntityFeature.TOU_SCHEDULE
+            )
+        ):
             raise ServiceValidationError(
                 f"The entity {self.entity_id} does not support the action {service_name}",
                 translation_domain=DOMAIN,
@@ -2386,19 +2397,104 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             data: dict = self.coordinator.data.get(self.coordinator_context) or {}
             if service_name == SERVICE_MODIFY_SOLIX_USE_TIME:
                 LOGGER.debug("%s action will be applied", service_name)
-                result = await self.coordinator.client.api.set_sb2_use_time(
-                    siteId=data.get("site_id") or "",
-                    deviceSn=self.coordinator_context,
-                    start_month=kwargs.get(START_MONTH),
-                    end_month=kwargs.get(END_MONTH),
-                    start_hour=kwargs.get(START_HOUR),
-                    end_hour=kwargs.get(END_HOUR),
-                    day_type=kwargs.get(DAY_TYPE),
-                    tariff_type=kwargs.get(TARIFF),
-                    tariff_price=kwargs.get(TARIFF_PRICE),
-                    delete=kwargs.get(DELETE),
-                    toFile=self.coordinator.client.testmode(),
-                )
+                if self.supported_features & AnkerSolixEntityFeature.TOU_SCHEDULE:
+                    # PPS device: set the hourly peak/mid/off TOU schedule via the
+                    # cloud Api. Writing the pps_use_time attribute is sufficient:
+                    # the cloud pushes the new plan down to the device, so no direct
+                    # MQTT command is required.
+                    slots = kwargs.get(TOU_SLOTS)
+                    reserve = kwargs.get(RESERVE_POWER)
+                    if not slots and reserve is None:
+                        raise ServiceValidationError(
+                            f"The entity {self.entity_id} requires the 'slots' and/or 'reserve_power' field",
+                            translation_domain=DOMAIN,
+                            translation_key="service_not_supported",
+                            translation_placeholders={
+                                "entity": self.entity_id,
+                                "service": service_name,
+                            },
+                        )
+                    # The cloud stores each slot's tariff as "type" (1=Peak/2=Mid/3=Off);
+                    # the service field uses "tariff". Map each slot to the cloud format.
+                    ranges = (
+                        [
+                            {
+                                "start_time": slot[START_TIME],
+                                "end_time": slot[END_TIME],
+                                "type": slot["tariff"],
+                            }
+                            for slot in slots
+                        ]
+                        if slots
+                        else None
+                    )
+                    # Validate the backup reserve ("TOU Power") against the device-
+                    # specific floor/ceiling: the app steps by 1% and will not accept
+                    # a value below min_soc + 5 or above max_soc (both read from the
+                    # live device d9 status).
+                    if reserve is not None:
+                        # Validate the backup reserve ("TOU Power") against the
+                        # device-specific ceiling (max_soc) and, when the live d9
+                        # status exposes min_soc, the app's lower bound (min_soc + 5).
+                        # The combined MQTT+cloud cache is the same source the entity
+                        # uses; the raw device dict nests MQTT fields under "mqtt_data".
+                        def _as_int(v):
+                            try:
+                                return int(v)
+                            except (TypeError, ValueError):
+                                return None
+
+                        cache = {}
+                        if (
+                            mdev := self.coordinator.client.get_mqtt_device(
+                                self.coordinator_context
+                            )
+                        ):
+                            cache = mdev.get_combined_cache(
+                                api_prio=not mdev.device.get(MQTT_OVERLAY),
+                                fromFile=self.coordinator.client.testmode(),
+                            )
+                        min_soc = _as_int(cache.get("min_soc"))
+                        max_soc = _as_int(cache.get("max_soc"))
+                        # Ceiling is always enforced (a real device limit); the floor
+                        # is the app's UI bound (min_soc + 5) and is only enforced when
+                        # min_soc is present in the live status, otherwise it falls
+                        # back to the schema minimum (1).
+                        floor = min_soc + 5 if min_soc is not None else 1
+                        ceiling = max_soc if max_soc is not None else 100
+                        if not (floor <= reserve <= ceiling):
+                            raise ServiceValidationError(
+                                f"reserve_power {reserve}% is out of range for {self.entity_id} (allowed {floor}-{ceiling}%)",
+                                translation_domain=DOMAIN,
+                                translation_key="out_of_range",
+                                translation_placeholders={
+                                    "entity_id": self.entity_id,
+                                    "value": f"{reserve}%",
+                                    "min": floor,
+                                    "max": ceiling,
+                                },
+                            )
+                    result = await self.coordinator.client.api.set_pps_use_time(
+                        deviceSn=self.coordinator_context,
+                        ranges=ranges,
+                        reserve_power=reserve,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                else:
+                    # SB2 device: set the seasonal AC use-time plan via the cloud API
+                    result = await self.coordinator.client.api.set_sb2_use_time(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        start_month=kwargs.get(START_MONTH),
+                        end_month=kwargs.get(END_MONTH),
+                        start_hour=kwargs.get(START_HOUR),
+                        end_hour=kwargs.get(END_HOUR),
+                        day_type=kwargs.get(DAY_TYPE),
+                        tariff_type=kwargs.get(TARIFF),
+                        tariff_price=kwargs.get(TARIFF_PRICE),
+                        delete=kwargs.get(DELETE),
+                        toFile=self.coordinator.client.testmode(),
+                    )
             else:
                 raise ServiceValidationError(
                     f"The entity {self.entity_id} does not support the action {service_name}",

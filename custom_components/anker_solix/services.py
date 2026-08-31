@@ -51,7 +51,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
         entity_domain=select.DOMAIN,
         schema=SOLIX_USE_TIME_SCHEMA,
         func=SERVICE_MODIFY_SOLIX_USE_TIME,
-        required_features=[AnkerSolixEntityFeature.AC_CHARGE],
+        required_features=[
+            AnkerSolixEntityFeature.AC_CHARGE,
+            AnkerSolixEntityFeature.TOU_SCHEDULE,
+        ],
     )
     # Switch entity actions
     service.async_register_platform_entity_service(
