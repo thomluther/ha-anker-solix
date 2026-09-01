@@ -41,11 +41,14 @@ from .const import (
     END_MONTH,
     LOGGER,
     MQTT_OVERLAY,
+    RESERVE_POWER,
     SERVICE_MODIFY_SOLIX_USE_TIME,
+    SLOT,
     START_HOUR,
     START_MONTH,
     TARIFF,
     TARIFF_PRICE,
+    pps_tou_supported,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -557,11 +560,39 @@ DEVICE_SELECTS = [
                 else {}
             )
         ),
+        # PPS TOU is only exposed on models in PPS_TOU_MODELS
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+            or not pps_tou_supported(d)
         ),
+        feature=AnkerSolixEntityFeature.TOU_SCHEDULE,
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.pps_usage_mode,
+    ),
+    AnkerSolixSelectDescription(
+        # PPS active tariff control: the state is the device-computed active tariff
+        # (active_tariff: 1=Peak, 2=Mid, 3=Off; 0=none/UPS -> unknown). Selecting
+        # a tariff modifies the active TOU slot's tariff via the cloud Api.
+        key="pps_active_tariff",
+        translation_key="pps_active_tariff",
+        json_key="active_tariff",
+        entity_category=EntityCategory.CONFIG,
+        options_fn=lambda d, _: [
+            item.name.lower() for item in SolixTariffTypes if item.value in (1, 2, 3)
+        ],
+        value_fn=lambda d, jk: (
+            get_enum_name(SolixTariffTypes, d.get(jk), "").lower()
+            if d.get(jk) in (1, 2, 3)
+            else None
+        ),
+        attrib_fn=lambda d, jk: {"tariff": d.get(jk)},
+        feature=AnkerSolixEntityFeature.TOU_SCHEDULE,
+        mqtt=True,
+        # PPS TOU is only exposed on models in PPS_TOU_MODELS
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+            or not pps_tou_supported(d)
+        ),
     ),
     AnkerSolixSelectDescription(
         key="max_evcharge_current",
@@ -1626,6 +1657,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     "preset_usage_mode",
                     "preset_load_type",
                     "preset_tariff",
+                    "pps_active_tariff",
                     "power_cutoff",
                     "system_price_unit",
                     "system_price_type",
@@ -1976,6 +2008,35 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied site price settings for '%s' change to '%s':\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            option,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
+
+            elif (
+                self._attribute_name == "pps_active_tariff"
+                and option != cv.ENTITY_MATCH_NONE
+            ):
+                # PPS active tariff: modify the active TOU slot's tariff via the cloud Api
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied",
+                    self.entity_id,
+                    option,
+                )
+                with suppress(ValueError, TypeError):
+                    resp = await self.coordinator.client.api.set_pps_use_time(
+                        deviceSn=self.coordinator_context,
+                        tariff_type=option,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied active tariff for '%s' change to '%s':\n%s",
                             "TESTMODE"
                             if self.coordinator.client.testmode()
                             else "LIVEMODE",
@@ -2347,7 +2408,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
     ) -> dict | None:
         """Execute the defined solix ac charge action."""
         # Raise alerts to frontend
-        if not (self.supported_features & AnkerSolixEntityFeature.AC_CHARGE):
+        if not (
+            self.supported_features
+            & (
+                AnkerSolixEntityFeature.AC_CHARGE
+                | AnkerSolixEntityFeature.TOU_SCHEDULE
+            )
+        ):
             raise ServiceValidationError(
                 f"The entity {self.entity_id} does not support the action {service_name}",
                 translation_domain=DOMAIN,
@@ -2386,19 +2453,127 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             data: dict = self.coordinator.data.get(self.coordinator_context) or {}
             if service_name == SERVICE_MODIFY_SOLIX_USE_TIME:
                 LOGGER.debug("%s action will be applied", service_name)
-                result = await self.coordinator.client.api.set_sb2_use_time(
-                    siteId=data.get("site_id") or "",
-                    deviceSn=self.coordinator_context,
-                    start_month=kwargs.get(START_MONTH),
-                    end_month=kwargs.get(END_MONTH),
-                    start_hour=kwargs.get(START_HOUR),
-                    end_hour=kwargs.get(END_HOUR),
-                    day_type=kwargs.get(DAY_TYPE),
-                    tariff_type=kwargs.get(TARIFF),
-                    tariff_price=kwargs.get(TARIFF_PRICE),
-                    delete=kwargs.get(DELETE),
-                    toFile=self.coordinator.client.testmode(),
-                )
+                if self.supported_features & AnkerSolixEntityFeature.TOU_SCHEDULE:
+                    # PPS device: reuse the standard use-time fields (start_hour,
+                    # end_hour, tariff, tariff_price, delete) to modify the active
+                    # TOU slot via the cloud Api; month/day_type are ignored for PPS,
+                    # which has a single hourly plan. Writing the pps_use_time
+                    # attribute is sufficient: the cloud pushes the new plan down to
+                    # the device, so no direct MQTT command is required.
+                    start_hour = kwargs.get(START_HOUR)
+                    end_hour = kwargs.get(END_HOUR)
+                    tariff = kwargs.get(TARIFF)
+                    tariff_price = kwargs.get(TARIFF_PRICE)
+                    delete = kwargs.get(DELETE)
+                    reserve = kwargs.get(RESERVE_POWER)
+                    slot = kwargs.get(SLOT)
+                    if not any(
+                        (
+                            start_hour,
+                            end_hour,
+                            tariff,
+                            tariff_price,
+                            delete,
+                            reserve,
+                            slot,
+                        )
+                    ):
+                        raise ServiceValidationError(
+                            f"The entity {self.entity_id} requires a use-time field (start_hour, end_hour, tariff, tariff_price, delete, reserve_power and/or slot)",
+                            translation_domain=DOMAIN,
+                            translation_key="service_not_supported",
+                            translation_placeholders={
+                                "entity": self.entity_id,
+                                "service": service_name,
+                            },
+                        )
+                    # Validate the backup reserve ("TOU Power") against the device-
+                    # specific floor/ceiling: the app steps by 1% and will not accept
+                    # a value below backup_discharge_soc + 5 or above
+                    # backup_charge_soc (both read from the live device d9 status).
+                    if reserve is not None:
+                        # Validate the backup reserve ("TOU Power") against the
+                        # device-specific ceiling (backup_charge_soc) and, when the live d9
+                        # status exposes backup_discharge_soc, the app's lower bound
+                        # (min SOC + 5).
+                        # The combined MQTT+cloud cache is the same source the entity
+                        # uses; the raw device dict nests MQTT fields under "mqtt_data".
+                        def _as_int(v):
+                            try:
+                                return int(v)
+                            except (TypeError, ValueError):
+                                return None
+
+                        cache = {}
+                        if (
+                            mdev := self.coordinator.client.get_mqtt_device(
+                                self.coordinator_context
+                            )
+                        ):
+                            cache = mdev.get_combined_cache(
+                                api_prio=not mdev.device.get(MQTT_OVERLAY),
+                                fromFile=self.coordinator.client.testmode(),
+                            )
+                        min_soc = _as_int(cache.get("backup_discharge_soc"))
+                        max_soc = _as_int(cache.get("backup_charge_soc"))
+                        # Ceiling is always enforced (a real device limit); the floor
+                        # is the app's UI bound (min SOC + 5) and is only enforced when
+                        # backup_discharge_soc is present in the live status, otherwise it
+                        # falls back to the schema minimum (1).
+                        floor = min_soc + 5 if min_soc is not None else 1
+                        ceiling = max_soc if max_soc is not None else 100
+                        if not (floor <= reserve <= ceiling):
+                            raise ServiceValidationError(
+                                f"reserve_power {reserve}% is out of range for {self.entity_id} (allowed {floor}-{ceiling}%)",
+                                translation_domain=DOMAIN,
+                                translation_key="out_of_range",
+                                translation_placeholders={
+                                    "entity_id": self.entity_id,
+                                    "value": f"{reserve}%",
+                                    "min": floor,
+                                    "max": ceiling,
+                                },
+                            )
+                    try:
+                        result = await self.coordinator.client.api.set_pps_use_time(
+                            deviceSn=self.coordinator_context,
+                            start_hour=start_hour,
+                            end_hour=end_hour,
+                            tariff_type=tariff,
+                            tariff_price=tariff_price,
+                            delete=delete,
+                            reserve_power=reserve,
+                            slot=slot,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    except ValueError as err:
+                        # An explicitly invalid slot (or an unresolvable target)
+                        # is a user error: surface it instead of an unhandled
+                        # exception, and nothing was written.
+                        raise ServiceValidationError(
+                            f"The action {service_name} cannot be executed: {err}",
+                            translation_domain=DOMAIN,
+                            translation_key="slot_time_error",
+                            translation_placeholders={
+                                "service": service_name,
+                                "error": str(err),
+                            },
+                        ) from err
+                else:
+                    # SB2 device: set the seasonal AC use-time plan via the cloud API
+                    result = await self.coordinator.client.api.set_sb2_use_time(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        start_month=kwargs.get(START_MONTH),
+                        end_month=kwargs.get(END_MONTH),
+                        start_hour=kwargs.get(START_HOUR),
+                        end_hour=kwargs.get(END_HOUR),
+                        day_type=kwargs.get(DAY_TYPE),
+                        tariff_type=kwargs.get(TARIFF),
+                        tariff_price=kwargs.get(TARIFF_PRICE),
+                        delete=kwargs.get(DELETE),
+                        toFile=self.coordinator.client.testmode(),
+                    )
             else:
                 raise ServiceValidationError(
                     f"The entity {self.entity_id} does not support the action {service_name}",

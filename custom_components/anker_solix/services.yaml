@@ -378,10 +378,12 @@ modify_solix_use_time:
     entity:
       integration: anker_solix
       domain: select
-      # anker_solix.AnkerSolixEntityFeature.AC_CHARGE is not resolved by HA core when frontend is loaded and does not work as filter
-      # therefore a proper core domain feature is used as filter that resolves to same IntFlag as used in AnkerSolixEntityFeature
+      # anker_solix.AnkerSolixEntityFeature.AC_CHARGE (8) and .TOU_SCHEDULE (16) are not resolved by HA core when frontend is loaded and do not work as filters
+      # therefore proper core domain features are used as filters that resolve to the same IntFlags as used in AnkerSolixEntityFeature
+      # (BACKUP=8 -> AC_CHARGE, RELEASE_NOTES=16 -> TOU_SCHEDULE); the list is OR-matched
       supported_features:
         - update.UpdateEntityFeature.BACKUP
+        - update.UpdateEntityFeature.RELEASE_NOTES
   fields:
     start_month:
       required: false
@@ -479,6 +481,32 @@ modify_solix_use_time:
       example: false
       selector:
         boolean:
+    reserve_power:
+      required: false
+      description: >-
+        PPS devices only (e.g. SOLIX C1000 Gen 2): backup reserve percentage
+        (the app's "TOU Power" setting; "power in use" = 100 - reserve_power).
+        The app steps by 1% and enforces a device-specific floor (min_soc + 5)
+        and ceiling (max_soc). Ignored for SB2 AC devices.
+      example: 6
+      selector:
+        number:
+          min: 1
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+    slot:
+      required: false
+      description: >-
+        PPS devices only: 1-based slot index to explicitly target a specific
+        slot in the TOU plan (overrides time-based slot selection). When set,
+        start_hour/end_hour only move the target slot's boundaries.
+      example: 2
+      selector:
+        number:
+          min: 1
+          max: 6
+          step: 1
 
 # Service to issue any Api request for the connected account to explore Api capabilities
 api_request:

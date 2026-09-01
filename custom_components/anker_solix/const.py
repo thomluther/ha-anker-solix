@@ -1,8 +1,10 @@
 """Constants for Anker Solix."""
 
+from contextlib import suppress
 from dataclasses import fields
 from datetime import datetime
 from logging import Logger, getLogger
+import json
 from typing import Any, Final
 import urllib.parse
 
@@ -93,6 +95,7 @@ SERVICE_API_REQUEST: Final[str] = "api_request"
 
 START_TIME: Final[str] = "start_time"
 END_TIME: Final[str] = "end_time"
+RESERVE_POWER: Final[str] = "reserve_power"
 PLAN: Final[str] = "plan"
 WEEK_DAYS: Final[str] = "week_days"
 LOAD_TYPE: Final[str] = "load_type"
@@ -116,7 +119,11 @@ END_HOUR: Final[str] = "end_hour"
 TARIFF: Final[str] = "tariff"
 TARIFF_PRICE: Final[str] = "tariff_price"
 DELETE: Final[str] = "delete"
+SLOT: Final[str] = "slot"
 ENDPOINT: Final[str] = "endpoint"
+# PPS models with verified TOU support. PPS TOU features are gated to these
+# models; add a device_pn here once a model is tested.
+PPS_TOU_MODELS: Final[frozenset] = frozenset({"A1763"})
 
 
 def extractNone(value: Any) -> None:
@@ -127,6 +134,42 @@ def extractNone(value: Any) -> None:
     ):
         return None
     return value
+
+
+def pps_tou_supported(data: dict) -> bool:
+    """Whether the device supports PPS TOU (its device_pn is in PPS_TOU_MODELS)."""
+    return data.get("device_pn") in PPS_TOU_MODELS
+
+
+def parse_pps_tou_plan(value: Any) -> dict | None:
+    """Parse the pps_use_time attribute (JSON string or dict) into a plan dict;
+    None if absent or not a valid plan."""
+    if isinstance(value, str):
+        with suppress(ValueError, TypeError):
+            value = json.loads(value)
+    return value if isinstance(value, dict) and value.get("ranges") else None
+
+
+def pps_tou_tariff_price(value: Any, tariff_type: int) -> float | None:
+    """Price for a tariff type (1=Peak, 2=Mid, 3=Off) in the PPS TOU plan,
+    or None."""
+    plan = parse_pps_tou_plan(value)
+    if not plan:
+        return None
+    for price in plan.get("prices") or []:
+        if price.get("type") == tariff_type:
+            try:
+                return float(price.get("price"))
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def pps_tou_active_price(value: Any, active_tariff: Any) -> float | None:
+    """Price of the active PPS TOU tariff (0/unknown or no plan -> None)."""
+    if active_tariff not in (1, 2, 3):
+        return None
+    return pps_tou_tariff_price(value, active_tariff)
 
 
 VALID_DAYTIME = vol.All(
@@ -407,6 +450,19 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
                 extractNone, vol.Any(None, cv.positive_float)
             ),
             vol.Optional(DELETE): VALID_SWITCH,
+            # PPS backup reserve percentage (the app's "TOU Power" setting; "power in
+            # use" = 100 - reserve_power). The app steps by 1% and enforces a
+            # device-specific floor (min_soc + 5) and ceiling (max_soc), which the
+            # handler checks against the live device values.
+            vol.Optional(RESERVE_POWER): vol.All(
+                vol.Coerce(int),
+                vol.Range(min=1, max=100, msg="reserve_power must be a percentage 1-100"),
+            ),
+            # PPS explicit slot targeting (1-based; overrides time-based selection)
+            vol.Optional(SLOT): vol.All(
+                vol.Coerce(int),
+                vol.Range(min=1, max=6, msg="slot must be a 1-based index 1-6"),
+            ),
         }
     ),
 )

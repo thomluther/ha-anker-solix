@@ -150,6 +150,7 @@ class AnkerSolixEntityFeature(IntFlag):
     ACCOUNT_INFO = 2
     SYSTEM_INFO = 4
     AC_CHARGE = 8
+    TOU_SCHEDULE = 16
 
 
 def get_AnkerSolixSubdeviceInfo(data: dict, identifier: str) -> DeviceInfo:

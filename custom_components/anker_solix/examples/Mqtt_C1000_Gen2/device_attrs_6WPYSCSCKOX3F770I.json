@@ -16,6 +16,7 @@
         800
       ],
       "pv_power_limit": 3600,
+      "pps_use_time": "{\"ranges\":[{\"start_time\":\"00:00\",\"end_time\":\"09:00\",\"type\":1},{\"start_time\":\"09:00\",\"end_time\":\"19:00\",\"type\":3},{\"start_time\":\"19:00\",\"end_time\":\"24:00\",\"type\":1}],\"prices\":[{\"price\":\"0.2\",\"type\":1},{\"price\":\"0.05\",\"type\":2},{\"price\":\"0.001\",\"type\":3}],\"unit\":\"$\",\"reserve_power\":6}",
       "rssi": "-57",
       "switch_0w": 1
     }

@@ -638,6 +638,18 @@
             },
             "display_brightness": {
                 "name": "Display brightness"
+            },
+            "pps_tou_price_peak": {
+                "name": "PPS TOU peak price"
+            },
+            "pps_tou_price_mid": {
+                "name": "PPS TOU mid price"
+            },
+            "pps_tou_price_off": {
+                "name": "PPS TOU off-peak price"
+            },
+            "pps_active_tariff_price": {
+                "name": "PPS Active Tariff Price"
             }
         },
         "select": {
@@ -816,6 +828,19 @@
                     },
                     "tou_mode_schedule": {
                         "name": "TOU schedule"
+                    }
+                }
+            },
+            "pps_active_tariff": {
+                "name": "Active tariff",
+                "state": {
+                    "peak": "Peak",
+                    "mid_peak": "Medium peak",
+                    "off_peak": "Off peak"
+                },
+                "state_attributes": {
+                    "tariff": {
+                        "name": "Tariff"
                     }
                 }
             },
