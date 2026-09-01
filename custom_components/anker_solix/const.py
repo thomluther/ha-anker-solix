@@ -121,6 +121,9 @@ TARIFF_PRICE: Final[str] = "tariff_price"
 DELETE: Final[str] = "delete"
 SLOT: Final[str] = "slot"
 ENDPOINT: Final[str] = "endpoint"
+# PPS models with verified TOU support. PPS TOU features are gated to these
+# models; add a device_pn here once a model is tested.
+PPS_TOU_MODELS: Final[frozenset] = frozenset({"A1763"})
 
 
 def extractNone(value: Any) -> None:
@@ -133,14 +136,14 @@ def extractNone(value: Any) -> None:
     return value
 
 
-def parse_pps_tou_plan(value: Any) -> dict | None:
-    """Parse the pps_use_time cloud attribute into a PPS TOU plan dict.
+def pps_tou_supported(data: dict) -> bool:
+    """Whether the device supports PPS TOU (its device_pn is in PPS_TOU_MODELS)."""
+    return data.get("device_pn") in PPS_TOU_MODELS
 
-    The attribute is a JSON string (or already-parsed dict) with the keys
-    "ranges" (the slot plan), "prices" (the tariff prices), "unit" and
-    "reserve_power". Returns the plan dict, or None if the value is absent
-    or not a valid plan.
-    """
+
+def parse_pps_tou_plan(value: Any) -> dict | None:
+    """Parse the pps_use_time attribute (JSON string or dict) into a plan dict;
+    None if absent or not a valid plan."""
     if isinstance(value, str):
         with suppress(ValueError, TypeError):
             value = json.loads(value)
@@ -148,10 +151,8 @@ def parse_pps_tou_plan(value: Any) -> dict | None:
 
 
 def pps_tou_tariff_price(value: Any, tariff_type: int) -> float | None:
-    """Return the price for a tariff type in the PPS TOU plan, or None.
-
-    tariff_type is 1=Peak, 2=Mid, 3=Off (the cloud "type").
-    """
+    """Price for a tariff type (1=Peak, 2=Mid, 3=Off) in the PPS TOU plan,
+    or None."""
     plan = parse_pps_tou_plan(value)
     if not plan:
         return None
@@ -165,12 +166,7 @@ def pps_tou_tariff_price(value: Any, tariff_type: int) -> float | None:
 
 
 def pps_tou_active_price(value: Any, active_tariff: Any) -> float | None:
-    """Return the price of the active PPS TOU tariff type, or None.
-
-    active_tariff is the device-computed active tariff (tou_active_tariff:
-    1=Peak, 2=Mid, 3=Off; 0=none/UPS). Returns None when there is no active
-    tariff (0/unknown) or the plan is absent, so the entity is unavailable.
-    """
+    """Price of the active PPS TOU tariff (0/unknown or no plan -> None)."""
     if active_tariff not in (1, 2, 3):
         return None
     return pps_tou_tariff_price(value, active_tariff)
@@ -462,8 +458,7 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
                 vol.Coerce(int),
                 vol.Range(min=1, max=100, msg="reserve_power must be a percentage 1-100"),
             ),
-            # PPS explicit slot targeting: a 1-based slot index to target a specific
-            # slot in the TOU plan (overrides time-based slot selection).
+            # PPS explicit slot targeting (1-based; overrides time-based selection)
             vol.Optional(SLOT): vol.All(
                 vol.Coerce(int),
                 vol.Range(min=1, max=6, msg="slot must be a 1-based index 1-6"),

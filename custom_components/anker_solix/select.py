@@ -48,6 +48,7 @@ from .const import (
     START_MONTH,
     TARIFF,
     TARIFF_PRICE,
+    pps_tou_supported,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
@@ -77,25 +78,6 @@ from .solixapi.apitypes import (
 from .solixapi.helpers import get_enum_name
 from .solixapi.mqtt_device import SolixMqttDevice
 from .solixapi.mqttcmdmap import SolixMqttCommands
-
-# PPS model families (device_pn). The C1000 family supports only Standard and
-# Time-of-Use (Self-Consumption/Custom error in the Anker app on the A1763).
-# Other PPS families keep the full command-map set until their supported modes
-# are tested; add a family to the mapping once known.
-PPS_C1000_FAMILY = frozenset({"A1761", "A1763", "A1765", "AS100"})
-PPS_C2000_S2000_FAMILY = frozenset({"A1783", "A1785", "AS220"})
-PPS_USAGE_MODE_OPTIONS_BY_FAMILY = {
-    PPS_C1000_FAMILY: ["standard", "time_of_use"],
-    # PPS_C2000_S2000_FAMILY: [...]  # add once tested
-}
-
-
-def pps_usage_mode_options(device_pn, fallback):
-    """Supported pps_usage_mode options for a PPS model, DRY by model family."""
-    for family, options in PPS_USAGE_MODE_OPTIONS_BY_FAMILY.items():
-        if device_pn in family:
-            return options
-    return fallback
 
 
 @dataclass(frozen=True)
@@ -578,8 +560,10 @@ DEVICE_SELECTS = [
                 else {}
             )
         ),
+        # PPS TOU is only exposed on models in PPS_TOU_MODELS
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+            or not pps_tou_supported(d)
         ),
         feature=AnkerSolixEntityFeature.TOU_SCHEDULE,
         mqtt=True,
@@ -587,11 +571,11 @@ DEVICE_SELECTS = [
     ),
     AnkerSolixSelectDescription(
         # PPS active tariff control: the state is the device-computed active tariff
-        # (tou_active_tariff: 1=Peak, 2=Mid, 3=Off; 0=none/UPS -> unknown). Selecting
+        # (active_tariff: 1=Peak, 2=Mid, 3=Off; 0=none/UPS -> unknown). Selecting
         # a tariff modifies the active TOU slot's tariff via the cloud Api.
         key="pps_active_tariff",
         translation_key="pps_active_tariff",
-        json_key="tou_active_tariff",
+        json_key="active_tariff",
         entity_category=EntityCategory.CONFIG,
         options_fn=lambda d, _: [
             item.name.lower() for item in SolixTariffTypes if item.value in (1, 2, 3)
@@ -604,8 +588,10 @@ DEVICE_SELECTS = [
         attrib_fn=lambda d, jk: {"tariff": d.get(jk)},
         feature=AnkerSolixEntityFeature.TOU_SCHEDULE,
         mqtt=True,
+        # PPS TOU is only exposed on models in PPS_TOU_MODELS
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+            or not pps_tou_supported(d)
         ),
     ),
     AnkerSolixSelectDescription(
@@ -1258,22 +1244,6 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     for item in SolixCircuitPriority
                     if "unknown" not in item.name
                 ]
-            elif self._attribute_name == "pps_usage_mode":
-                # DRY by PPS model family: the C1000 family supports only
-                # Standard and Time-of-Use; other PPS families keep the full
-                # command-map set until tested
-                data = (self.coordinator.data or {}).get(
-                    self.coordinator_context
-                ) or {}
-                fallback = list(
-                    mdev.get_cmd_parm_option_map(
-                        cmd=self.entity_description.mqtt_cmd,
-                        parm=self.entity_description.mqtt_cmd_parm,
-                    ).keys()
-                )
-                self._attr_options = pps_usage_mode_options(
-                    data.get("device_pn"), fallback
-                )
             else:
                 # get options from MQTT device description
                 self._attr_options = list(
@@ -2519,12 +2489,13 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         )
                     # Validate the backup reserve ("TOU Power") against the device-
                     # specific floor/ceiling: the app steps by 1% and will not accept
-                    # a value below min_soc + 5 or above max_soc (both read from the
-                    # live device d9 status).
+                    # a value below backup_discharge_soc + 5 or above
+                    # backup_charge_soc (both read from the live device d9 status).
                     if reserve is not None:
                         # Validate the backup reserve ("TOU Power") against the
-                        # device-specific ceiling (max_soc) and, when the live d9
-                        # status exposes min_soc, the app's lower bound (min_soc + 5).
+                        # device-specific ceiling (backup_charge_soc) and, when the live d9
+                        # status exposes backup_discharge_soc, the app's lower bound
+                        # (min SOC + 5).
                         # The combined MQTT+cloud cache is the same source the entity
                         # uses; the raw device dict nests MQTT fields under "mqtt_data".
                         def _as_int(v):
@@ -2543,12 +2514,12 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 api_prio=not mdev.device.get(MQTT_OVERLAY),
                                 fromFile=self.coordinator.client.testmode(),
                             )
-                        min_soc = _as_int(cache.get("min_soc"))
-                        max_soc = _as_int(cache.get("max_soc"))
+                        min_soc = _as_int(cache.get("backup_discharge_soc"))
+                        max_soc = _as_int(cache.get("backup_charge_soc"))
                         # Ceiling is always enforced (a real device limit); the floor
-                        # is the app's UI bound (min_soc + 5) and is only enforced when
-                        # min_soc is present in the live status, otherwise it falls
-                        # back to the schema minimum (1).
+                        # is the app's UI bound (min SOC + 5) and is only enforced when
+                        # backup_discharge_soc is present in the live status, otherwise it
+                        # falls back to the schema minimum (1).
                         floor = min_soc + 5 if min_soc is not None else 1
                         ceiling = max_soc if max_soc is not None else 100
                         if not (floor <= reserve <= ceiling):

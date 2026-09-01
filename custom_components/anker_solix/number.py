@@ -44,6 +44,7 @@ from .const import (
     MQTT_OVERLAY,
     parse_pps_tou_plan,
     pps_tou_active_price,
+    pps_tou_supported,
     pps_tou_tariff_price,
 )
 from .coordinator import AnkerSolixDataUpdateCoordinator
@@ -504,10 +505,8 @@ DEVICE_NUMBERS = [
         mqtt_cmd=SolixMqttCommands.display_brightness,
         ignore_opt_count=True,
     ),
-    # PPS TOU price per tariff type (one per type, created for every PPS device
-    # with a plan); unset prices show 0.0 and can be set directly, which
-    # upserts the price into the plan's price list. The currency symbol is the
-    # plan's "unit"
+    # PPS TOU price per tariff type (unset shows 0.0); setting upserts the price
+    # into the plan's price list; unit is the plan's currency symbol
     *[
         AnkerSolixNumberDescription(
             key=f"pps_tou_price_{tariff_name}",
@@ -516,27 +515,28 @@ DEVICE_NUMBERS = [
             entity_category=EntityCategory.CONFIG,
             mode=NumberMode.BOX,
             native_min_value=0,
-            native_max_value=10,
-            native_step=0.001,
+            # max tested cloud round-trip cap (prices stored as strings)
+            native_max_value=10000000000,
+            # 6-decimal step: the library normalizes prices to 6 decimals
+            native_step=0.000001,
             value_fn=lambda d, jk, t=tariff_type: (
                 pps_tou_tariff_price(d.get(jk), t) or 0.0
             ),
-            unit_fn=lambda d, t=tariff_type: (
+            unit_fn=lambda d: (
                 (parse_pps_tou_plan(d.get("pps_use_time")) or {}).get("unit")
             ),
             force_creation_fn=lambda d, jk: bool(parse_pps_tou_plan(d.get(jk))),
+            # PPS TOU is only exposed on models in PPS_TOU_MODELS
             exclude_fn=lambda s, d: (
                 not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+                or not pps_tou_supported(d)
             ),
             api_cmd=True,
         )
         for tariff_type, tariff_name in ((1, "peak"), (2, "mid"), (3, "off"))
     ],
-    # PPS active tariff price: the price of the currently active TOU segment
-    # (the device-computed tou_active_tariff). Writable: setting it changes the
-    # active segment's tariff price via the cloud Api, upserting that tariff
-    # type's price into the plan's price list while preserving every other
-    # range/price. Unavailable when there is no active tariff.
+    # PPS active tariff price: the active TOU segment's price (device-computed
+    # active_tariff); setting it upserts only that tariff type's price
     AnkerSolixNumberDescription(
         key="pps_active_tariff_price",
         translation_key="pps_active_tariff_price",
@@ -544,21 +544,23 @@ DEVICE_NUMBERS = [
         entity_category=EntityCategory.CONFIG,
         mode=NumberMode.BOX,
         native_min_value=0,
-        native_max_value=10,
-        native_step=0.001,
+        # max tested cloud round-trip cap (prices stored as strings)
+        native_max_value=10000000000,
+        # 6-decimal step: the library normalizes prices to 6 decimals
+        native_step=0.000001,
         value_fn=lambda d, jk: pps_tou_active_price(
-            d.get(jk), d.get("tou_active_tariff")
+            d.get(jk), d.get("active_tariff")
         ),
         unit_fn=lambda d: (parse_pps_tou_plan(d.get("pps_use_time")) or {}).get(
             "unit"
         ),
         force_creation_fn=lambda d, jk: bool(parse_pps_tou_plan(d.get(jk))),
+        # PPS TOU is only exposed on models in PPS_TOU_MODELS
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
+            or not pps_tou_supported(d)
         ),
-        # tou_active_tariff is a device-computed MQTT d9 field (not an Api
-        # attribute), so read the combined Api+Mqtt cache to see both the
-        # active tariff and the pps_use_time plan.
+        # active_tariff is an MQTT d9 field, so read the combined Api+Mqtt cache
         mqtt=True,
         api_cmd=True,
     ),
@@ -1519,8 +1521,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                         or []
                     )
-                    # the cloud stores prices as strings; preserve native precision
-                    # (PPS prices can be e.g. 0.001) by stripping trailing zeros
+                    # the cloud stores prices as strings; strip trailing zeros
                     price_str = f"{float(value):.6f}".rstrip("0").rstrip(".")
                     upserted = False
                     for price in prices:
@@ -1547,10 +1548,8 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
-                # PPS active tariff price: change the active TOU segment's tariff
-                # price via the cloud Api. No explicit slot is passed, so the
-                # active segment is targeted and only its tariff type's price is
-                # upserted; every other range/price is preserved.
+                # PPS active tariff price: target the active segment, upsert its
+                # tariff type's price only
                 elif self._attribute_name == "pps_active_tariff_price":
                     LOGGER.debug(
                         "'%s' change to %s will be applied", self.entity_id, value
