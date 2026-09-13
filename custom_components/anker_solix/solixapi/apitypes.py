@@ -10,6 +10,13 @@ API_SERVERS: Final[dict] = {
     "eu": "https://ankerpower-api-eu.anker.com",
     "com": "https://ankerpower-api.anker.com",
 }
+# The Api preset Key may be a region-specific AES-128 key the app provisions into its stored
+# userConfig ("presetKey"). It is a constant per region/build and never returned in a response.
+# It wraps the ECDH public keys and keys the key-exchange signature.
+API_PRESET_KEYS: Final[dict] = {
+    "eu": "e8ad18f61bbd3fbd52d5ed12d14d3b9c",  # Confirmed same key work is working
+    "com": "e8ad18f61bbd3fbd52d5ed12d14d3b9c",  # Confirmed same key work is working
+}
 API_LOGIN: Final[str] = "passport/login"
 API_KEY_EXCHANGE: Final[str] = "openapi/oauth/key/exchange"
 API_HEADERS: Final[dict] = {
@@ -109,7 +116,7 @@ API_ENDPOINTS: Final[dict] = {
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 24 25 26 27 28 29 30 31 32 33 34]
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 24 25 26 27 28 29 30 31 32 33 34 35]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
@@ -351,18 +358,22 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/set_oil_consumption_reminder_plan'
     'power_service/v1/app/set_maintain_parts_ignore_reminders'
 
-related to power V2: 11 + 0 used => 11 total
+related to power V2: 14 + 0 used => 11 total
     'power_service/v2/app/get_custom_branch_icon' # get list of branch icons and url
     'power_service/v2/app/get_hardware_relation'# shows empty list, {"sn_list": [deviceSn]}
-    'power_service/v2/platform_get_pn_region_code'# shows region codes per PN, but purpose unclear, {"product_code": "A5102"}
+    'power_service/v2/platform_get_pn_region_code'# {"product_code": "AE103"})) SB4 => {"product_code": "AE103","region_codes": [{"country_code": "DE","states": [{"state_code": "DE","grid_code": 3,"grid_code_name": "VDE-AR-N 4105"}]},...]}
     'power_service/v2/site/platform_energy_analysis_options'
     'power_service/v2/app/set_device_pv_name'
     'power_service/v2/device/energy_analysis'
+    'power_service/v2/device/energy_options' # shows earliest date for device # {"device_sn": deviceSn}))
+    'power_service/v2/device/timeline/event' # {"device_sn": deviceSn})) => {"total_count": 0,"all_unlocked": false,"top_event": null,"statistics": {"stable_days": 0,"offgrid_consume": 0,"co2": 0},"list": []}
+    'power_service/v2/device/timeline/event/batch_read'
     'power_service/v2/device/report_data'
-    'power_service/v2/platform_get_user_region_param'
+    'power_service/v2/platform_get_user_region_param' # {"product_code": "A17C5", "identifier_id": deviceSn, "scenario_type": 1})) # if supported, CC, grid code, advanced params settings for grid options
     'power_service/v2/platform_set_user_region_param'
-    'power_service/v2/site/get_output_power_info'
-    'power_service/v2/site/platform_get_site_savings'
+    'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
+    'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
+
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -687,6 +698,7 @@ Model  Name                                     Platform
 ----------------------------------------------------------------------------------------------------
 A110A  26K Prime Power Bank                     Power Bank
 A110B  20K Prime Power Bank                     Power Bank
+A110G  20K Prime Power Bank                     Power Bank
 A1722  SOLIX C300                               Portable Power Station
 A1723  SOLIX C300X                              Portable Power Station
 A1725  SOLIX C200(X)                            Portable Power Station
@@ -726,6 +738,7 @@ A17C3  Solarbank 2 E1600 Plus                   Plug-in Home Battery
 A17C5  Solarbank 3 E2700 Pro                    Plug-in Home Battery
 A17E2  Solarbank Max AC                         Plug-in Home Battery
 AE103  Solarbank 4 E5000 Pro                    Plug-in Home Battery
+AE111  Solarbank Max                            Plug-in Home Battery
 A17X7  Smart Meter                              Accessory
 A17X8  Smart Plug                               Accessory
 A1903  150W Charging Base                       Charger
@@ -1025,6 +1038,7 @@ class SolixParmType(Enum):
     SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
     SOLARBANK_SOC = "27"  # Gen 4 SOC settings (no longer in 18)
     SOLARBANK_GRID_EXPORT = "28"  # Gen 4 grid export settings (no longer in 18)
+    SOLARBANK_CT_CONFIG = "29"  # Smartmeter Gen 2 CT configuration
     SOLARBANK_PEAK_SHAVING = (
         "30"  # Gen 4 peak_shaving_soc, peak_shaving_switch\, peak_shaving_upper_limit
     )
@@ -1190,13 +1204,25 @@ class SolixDeviceCapacity:
 
     A110A: int = 100  # Anker Prime Power Bank 300 W, 25Ah, 99,75 Wh
     A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
+    A110G: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
     A17C0: int = 1600  # SOLIX Solarbank E1600
     A17C1: int = 1600  # SOLIX Solarbank 2 E1600 Pro
+    BP1600: int = 1600  # Solarbank 2 Expansion BP1600 (This has no SN or product code)
+    _C1: int = 1600  # Solarbank 2 Expansion BP1600 type byte
+    _C2: int = 1600  # Solarbank 2 Expansion BP1600 type byte
     A17C2: int = 1600  # SOLIX Solarbank 2 E1600 AC
     A17C3: int = 1600  # SOLIX Solarbank 2 E1600 Plus
     A17C5: int = 2688  # SOLIX Solarbank 3 E2700 Pro
+    DJF: int = 2688  # Solarbank 3 Expansion BP2700 product code
+    _C5: int = 2688  # Solarbank 3 Expansion BP2700 type byte
     AE103: int = 5024  # SOLIX Solarbank 4 E5000 Pro
+    _AE: int = 5024  # Solarbank 4 Expansion BP5000 type byte
+    DMVS: int = 5024 # Solarbank 4 Expansion BP5000 product code
+    BS2: int = 5024 # Solarbank 4 Expansion BP5000 product code
+    BM2: int = 5024 # Solarbank 4 Expansion BP5000 product code
     A17E2: int = 7000  # Solarbank Max AC
+    AE111: int = 7000  # Solarbank Max
+    BP7000: int = 7000 # TODO: Add product code for Solarbank Max AC Expansion
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
     A1723: int = 288  # SOLIX C300X Portable Power Station
@@ -1236,7 +1262,8 @@ class SolixDeviceCapacity:
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
-    A17E1: int = 6144  # SOLIX E10 Battery module, Controller has no battery?
+    A17E1: int = 6144  # SOLIX E10 Controller, has no battery
+    DJXM: int = 6144  # SOLIX E10 Expansion Battery,
 
 
 @dataclass(frozen=True)
@@ -1270,8 +1297,9 @@ class SolixSiteType:
         SolixDeviceType.HOME_BACKUP.value
     )  # Only AX170: Power Dock US market to connect multiple E10
     t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS, A5191
-    t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
+    t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with AE120, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
     t_20 = SolixDeviceType.SOLARBANK.value  # Main AE103 Solarbank 4 Pro with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
+    t_21 = SolixDeviceType.SOLARBANK.value  # Main AE111 Solarbank Max with AE120, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
 
 
 @dataclass(frozen=True)
@@ -1301,6 +1329,9 @@ class SolixDeviceCategory:
         SolixDeviceType.SOLARBANK.value + "_4"
     )  # SOLIX Solarbank 4 E5000 Pro, generation 4
     # Station
+    AE111: str = (
+        SolixDeviceType.SOLARBANK.value + "_4"
+    )  # SOLIX Solarbank Max, generation 4
     AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock Solarbanks
     AX1S0: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Pro HES system
     AX170: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Home Backup
@@ -1391,6 +1422,9 @@ class SolixDeviceCategory:
         SolixDeviceType.POWERBANK.value
     )  # Anker Prime Power Bank 300 W, 25Ah, 92 Wh
     A110B: str = (
+        SolixDeviceType.POWERBANK.value
+    )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
+    A110G: str = (
         SolixDeviceType.POWERBANK.value
     )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
     # EV Charger
@@ -1495,6 +1529,26 @@ class SolarbankDeviceMetrics:
     # SOLIX Solarbank Max AC
     A17E2: ClassVar[set[str]] = {
         "sub_package_num",
+        "ac_power",
+        "to_home_load",
+        "pei_heating_power",
+        "grid_to_battery_power",
+        "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
+        "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
+        "backup_reserve",
+        "backup_reserve_switch",
+    }
+    # SOLIX Solarbank Max, with 3 high voltage MPPT channel and AC socket
+    AE111: ClassVar[set[str]] = {
+        "sub_package_num",
+        "solar_power_1",
+        "solar_power_2",
+        "solar_power_3",
         "ac_power",
         "to_home_load",
         "pei_heating_power",

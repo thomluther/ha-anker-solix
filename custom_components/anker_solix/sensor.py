@@ -1380,6 +1380,29 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
+        attrib_fn=lambda d, _: (
+            (
+                {
+                    "l1_kwh": val,
+                }
+                if (val := d.get("grid_import_energy_l1",""))
+                else {}
+            )
+            | (
+                {
+                    "l2_kwh": val,
+                }
+                if (val := d.get("grid_import_energy_l2",""))
+                else {}
+            )
+            | (
+                {
+                    "l3_kwh": val,
+                }
+                if (val := d.get("grid_import_energy_l3",""))
+                else {}
+            )
+        ),
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
@@ -1393,6 +1416,29 @@ DEVICE_SENSORS = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         suggested_display_precision=3,
+        attrib_fn=lambda d, _: (
+            (
+                {
+                    "l1_kwh": val,
+                }
+                if (val := d.get("grid_export_energy_l1",""))
+                else {}
+            )
+            | (
+                {
+                    "l2_kwh": val,
+                }
+                if (val := d.get("grid_export_energy_l2",""))
+                else {}
+            )
+            | (
+                {
+                    "l3_kwh": val,
+                }
+                if (val := d.get("grid_export_energy_l3",""))
+                else {}
+            )
+        ),
         exclude_fn=lambda s, d: (
             not (({d.get("type")} - s) and ({f"{d.get('type', '')!s}_energy"} - s))
         ),
@@ -2113,7 +2159,9 @@ DEVICE_SENSORS = [
                     {
                         "serialnumber": v,
                     }
-                    if (v := d.get(f"exp_{idx}_sn"))
+                    if (
+                        v := d.get(f"exp_{idx}_sn") or d.get(f"exp_{idx}_controller_sn")
+                    )
                     else {}
                 )
                 | (
@@ -2121,6 +2169,13 @@ DEVICE_SENSORS = [
                         "type": v,
                     }
                     if (v := d.get(f"exp_{idx}_type"))
+                    else {}
+                )
+                | (
+                    {
+                        "capacity": v,
+                    }
+                    if (v := d.get(f"exp_{idx}_size"))
                     else {}
                 )
             ),
@@ -4093,10 +4148,11 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "bt_mac",
             "bytes_received",
             "bytes_sent",
-            "current",
+            "capacity",
             "charge_count",
             "charging_status",
             "co2_saving",
+            "current",
             "details",
             "device_sn",
             "device_name",
@@ -4114,6 +4170,9 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             "hour_end",
             "hourly_unit",
             "inverter_info",
+            "l1_kwh",
+            "l2_kwh",
+            "l3_kwh",
             "main_ct_number",
             "main_branch_check_status",
             "manual",

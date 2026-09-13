@@ -237,8 +237,8 @@ async def get_device_parm(
     {"param_data": {"backup_reserve": 10, "charge_upper_limit": 100, "backup_reserve_switch": 0, "discharge_lower_limit": 10, "soc_calibration_enable": 1}"
     Example data for provided site_id with param_type 28:
     {"param_data": {"feeder_0w": 0, "feed_times": null, "feed_switch": 0, "cached_power": 0, "feed_upper_limit": 4294967295}}
-    Example data for provided site_id with param_type 29:
-    {"param_data": {"master_used": 0, "third_party_pv_install": 1}}
+    Example data for provided site_id with param_type 29: Smartmeter Gen 2
+    {"param_data": {"master_used": 0, "ct_grid_configuration": {"ct1": {"direction": 0, "branch_index": 0}, "ct2": {"direction": 0, "branch_index": 1}, "ct3": {"direction": 0, "branch_index": 2}}, "third_party_pv_install": 0}}
     Example data for provided site_id with param_type 30:
     {"param_data": {"peak_shaving_soc": 0,"peak_shaving_switch": 0,"peak_shaving_upper_limit": 0}}
     """

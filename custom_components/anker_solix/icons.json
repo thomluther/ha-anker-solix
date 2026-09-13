@@ -161,6 +161,13 @@
             }
         },
         "number": {
+            "mqtt_status_interval": {
+                "default": "mdi:repeat-off",
+                "range": {
+                    "0": "mdi:repeat-off",
+                    "1": "mdi:repeat"
+                }
+            },
             "preset_system_output_power": {
                 "default": "mdi:home-lightning-bolt-outline"
             },

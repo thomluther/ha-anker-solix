@@ -198,13 +198,14 @@ def get_solix_product_code(sn: str) -> str:
     Rules:
     - 16-digit SN: characters 4-6 (index 3-5, 3 characters)
     - 17-digit SN: characters 4-7 (index 3-6, 4 characters)
+    - Expansions may have only 15 digit controller SN, using characters 4-6 (index 3-5, 3 characters) as well
     """
     if isinstance(sn, str):
         sn = sn.strip()
-        if 16 <= len(sn) <= 17:
-            # 16-digit SN: extract characters 4-6 (index 3-5)
+        if 15 <= len(sn) <= 17:
+            # 15-16-digit SN: extract characters 4-6 (index 3-5)
             # 17-digit SN: extract characters 4-7 (index 3-6)
-            return sn[3 : len(sn) - 10]
+            return sn[3 : max(6, len(sn) - 10)]
     return ""
 
 

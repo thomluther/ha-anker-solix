@@ -43,7 +43,7 @@ from .const import (
     LOGGER,
     MQTT_OVERLAY,
 )
-from .coordinator import AnkerSolixDataUpdateCoordinator
+from .coordinator import AnkerSolixDataUpdateCoordinator, Command
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
     AnkerSolixEntityType,
@@ -86,6 +86,31 @@ class AnkerSolixNumberDescription(
 
 
 DEVICE_NUMBERS = [
+    AnkerSolixNumberDescription(
+        # Customizable device option for regular MQTT status requests
+        key=Command.MQTT_STATUS_INTERVAL.value,
+        translation_key=Command.MQTT_STATUS_INTERVAL.value,
+        json_key=Command.MQTT_STATUS_INTERVAL.value,
+        mode=NumberMode.SLIDER,
+        native_min_value=0,
+        native_max_value=60,
+        native_step=5,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk: str(v) if (v := d.get(jk)) is not None else None,
+        attrib_fn=lambda d, jk: (
+            {"customized": c}
+            if (c := (d.get("customized") or {}).get(jk)) is not None
+            else {}
+        ),
+        exclude_fn=lambda s, d: not (({d.get("type")} - s) and not d.get("is_passive")),
+        restore=True,
+        mqtt=True,
+        # specify MQTT command to trigger control error if device is passive
+        mqtt_cmd=SolixMqttCommands.status_request,
+        # Ignore the MQTT command validation since status request has no number parameter
+        api_cmd=True,
+    ),
     AnkerSolixNumberDescription(
         # System total output setting, determined by schedule, the limits will be adopted during creation
         key="preset_system_output_power",
@@ -164,7 +189,7 @@ DEVICE_NUMBERS = [
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         device_class=NumberDeviceClass.ENERGY_STORAGE,
         entity_category=EntityCategory.CONFIG,
-        native_min_value=1,
+        native_min_value=0,
         native_max_value=100000,
         native_step=1,
         mode=NumberMode.BOX,
@@ -748,8 +773,10 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
             else:
                 self._attr_device_info = get_AnkerSolixDeviceInfo(data, context)
             # Setup number ranges for MQTT command numbers
-            if self.entity_description.mqtt_cmd and (
-                mdev := self.coordinator.client.get_mqtt_device(context)
+            if (
+                self.entity_description.mqtt_cmd
+                and self._attribute_name != Command.MQTT_STATUS_INTERVAL.value
+                and (mdev := self.coordinator.client.get_mqtt_device(context))
             ):
                 self._options_update(mdev=mdev)
         elif self.entity_type == AnkerSolixEntityType.ACCOUNT:
@@ -803,9 +830,13 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 else None
             )
         else:
-            self.native_min_value = desc.get(VALUE_MIN)
-            self.native_max_value = desc.get(VALUE_MAX)
-            self.native_step = desc.get(VALUE_STEP)
+            self.native_min_value = desc.get(
+                VALUE_MIN, self.entity_description.native_min_value
+            )
+            self.native_max_value = desc.get(
+                VALUE_MAX, self.entity_description.native_max_value
+            )
+            self.native_step = desc.get(VALUE_STEP, self.entity_description.native_step)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -1432,6 +1463,15 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
+                elif (
+                    self._attribute_name == Command.MQTT_STATUS_INTERVAL.value and mdev
+                ):
+                    # schedule the status request
+                    await self.coordinator.async_execute_command(
+                        command=Command.MQTT_STATUS_INTERVAL.value,
+                        option=mdev.sn,
+                        interval=value,
+                    )
                 # Trigger MQTT commands depending on changed entity
                 elif self.entity_description.mqtt_cmd and mdev:
                     LOGGER.debug(
@@ -1574,11 +1614,12 @@ class AnkerSolixRestoreNumber(AnkerSolixNumber, RestoreNumber):
             ):
                 # set the customized value if it was modified
                 if self._native_value != last_state.state:
-                    if self._attribute_name == "battery_capacity" and (
-                        last_state.attributes.get("calculated") != self._native_value
-                    ):
-                        # skip value restore if config was changed, actual native value initially contains calculated value
-                        return
+                    # Skip the reset on new calculation, since customization can be reset with 0
+                    # if self._attribute_name == "battery_capacity" and (
+                    #     last_state.attributes.get("calculated") != self._native_value
+                    # ):
+                    #     # skip value restore if config was changed, actual native value initially contains calculated value
+                    #     return
                     self._native_value = last_state.state
                     LOGGER.info(
                         "Restored state value of entity '%s' to: %s",

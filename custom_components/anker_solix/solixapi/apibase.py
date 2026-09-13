@@ -16,6 +16,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     SolixDefaults,
+    SolixDeviceCapacity,
     SolixDeviceCategory,
     SolixDeviceNames,
     SolixDeviceType,
@@ -77,6 +78,10 @@ class AnkerSolixBaseApi:
     def testDir(self, subfolder: str | None = None) -> str:
         """Get or set the subfolder for local API test files in the api session."""
         return self.apisession.testDir(subfolder)
+
+    def payloadEncryption(self, enable: bool | None = None) -> bool:
+        """Get or set the api session payload encryption."""
+        return self.apisession.payloadEncryption(enable)
 
     def endpointLimit(self, limit: int | None = None) -> int:
         """Get or set the api request limit per endpoint per minute."""
@@ -175,24 +180,14 @@ class AnkerSolixBaseApi:
                 data = self.devices.get(id)
                 customized = data.get("customized") or {}
                 customized[key] = value
+                # reset customized keys if required
+                if key == "battery_capacity" and str(value or 0) and float(value) == 0:
+                    customized.pop("battery_capacity", None)
                 data["customized"] = customized
                 # trigger dependent updates by rewriting old value to cache update method
                 # customized keys that are used as alternate value must be handled separately since they may not exist in cache
                 if key in data:
                     self._update_dev(devData={"device_sn": id, key: data[key]})
-                    # Ensure to update main device capacity as well if sub device was customized
-                    # NOTE: Main capacity update now handled in Api classes
-                    # if (
-                    #     key == "battery_capacity"
-                    #     and value
-                    #     and data.get("is_subdevice")
-                    #     and (main := data.get("main_sn"))
-                    #     and (cap := (self.devices.get(main) or {}).get(key))
-                    # ):
-                    #     # first remove any previous customization on main device
-                    #     (self.devices[main].get("customized") or {}).pop(key, None)
-                    #     # trigger calculation update
-                    #     self._update_dev(devData={"device_sn": main, key: cap})
             elif id == self.apisession.email:
                 data = self.account
                 customized = data.get("customized") or {}
@@ -609,6 +604,23 @@ class AnkerSolixBaseApi:
                             )
                             and value is not None
                         ):
+                            # update expansion size from type byte value if found and different
+                            if (
+                                key.startswith("exp_")
+                                and key.endswith("_type")
+                                and str(value) != device_mqtt.get(key)
+                                and str(value).isdigit()
+                                and (
+                                    size := getattr(
+                                        SolixDeviceCapacity,
+                                        f"_{int(value).to_bytes(byteorder='little').hex().upper()}",
+                                        None,
+                                    )
+                                )
+                                and device.get(key.replace("_type", "_size")) != size
+                            ):
+                                calc_capacity = True
+                                device[key.replace("_type", "_size")] = size
                             device_mqtt.update({key: str(value)})
                             value_updated = bool(
                                 key != "wifi_name"
@@ -771,7 +783,15 @@ class AnkerSolixBaseApi:
                         ) and str(value).replace("-", "", 1).replace(
                             ".", "", 1
                         ).isdigit():
-                            device_mqtt[key] = f"{float(value):.3f}"
+                            if str(key).endswith("_soh"):
+                                if (val := f"{float(value):.3f}") != device_mqtt.get(
+                                    key
+                                ):
+                                    # trigger capacity calculation if SOH is changing
+                                    calc_capacity = True
+                                device_mqtt[key] = val
+                            else:
+                                device_mqtt[key] = f"{float(value):.3f}"
                             # accumulate overall port power if not in data
                             if (
                                 key == "usbc_1_power"
@@ -835,6 +855,7 @@ class AnkerSolixBaseApi:
                                 "tcp_port",
                                 "ip_address",
                                 "mode",  # HA missing, HES meaning not clear
+                                "battery_type",
                                 "car_battery_type",
                                 "car_battery_voltage_type",
                                 "xt60i_cable",
@@ -866,7 +887,7 @@ class AnkerSolixBaseApi:
                                         "_protocols",
                                         "_settings",
                                         "_data",
-                                        # "?", # Add for decoder testing in monitor
+                                        # "?",  # Add for decoder testing in monitor
                                     )
                                 )
                             )
@@ -937,12 +958,20 @@ class AnkerSolixBaseApi:
                             ".", "", 1
                         ).isdigit():
                             if str(key).endswith("_soh"):
-                                device_mqtt[key] = f"{float(value):.3f}"
-                            else:
-                                device_mqtt[key] = f"{float(value):.0f}"
-                                # trigger capacity calculation if any soc provided
-                                if "_soc" in key:
+                                if (val := f"{float(value):.3f}") != device_mqtt.get(
+                                    key
+                                ):
+                                    # trigger capacity calculation if SOH is changing
                                     calc_capacity = True
+                                device_mqtt[key] = val
+                            else:
+                                # trigger capacity calculation if SOC or type is changing
+                                val = f"{float(value):.0f}"
+                                if str(key).endswith("_soc") and val != device_mqtt.get(
+                                    key
+                                ):
+                                    calc_capacity = True
+                                device_mqtt[key] = val
                         elif key in ["output_cutoff_data", "min_soc", "power_cutoff"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in [
@@ -1127,7 +1156,36 @@ class AnkerSolixBaseApi:
                                     )
                                 ]
                             )
+                        # determine size of expansion if not done yet and save in api cache
+                        cap_change = False
+                        expansions = device_mqtt.get("expansion_packs", 0)
+                        for i in range(1, expansions + 1):
+                            # One deterministic approach from serial
+                            if (
+                                device.get(f"exp_{i}_size") is None
+                                and (
+                                    exp_sn := device_mqtt.get(f"exp_{i}_sn")
+                                    or device_mqtt.get(f"exp_{i}_controller_sn")
+                                )
+                                is not None
+                            ):
+                                code = get_solix_product_code(exp_sn)
+                                cap_change = True
+                                if (
+                                    not code
+                                    and device.get("type")
+                                    == SolixDeviceType.SOLARBANK.value
+                                ):
+                                    code = "BP1600"
+                                device[f"exp_{i}_size"] = getattr(
+                                    SolixDeviceCapacity,
+                                    code,
+                                    device.get("battery_size") or 0,
+                                )
+                            else:
+                                break
                         # calculate device overall soc if expansions are available and no overall soc in mqtt cache
+                        size = device.get("battery_size")
                         if not (tsoc := mqtt.get("battery_soc")) and (
                             soclist := [
                                 float(device_mqtt.get(k))
@@ -1139,11 +1197,44 @@ class AnkerSolixBaseApi:
                             ]
                         ):
                             # calculate overall soc based on expansions
-                            tsoc = round(sum(soclist) / len(soclist))
+                            sizelist = [size] if len(soclist) > expansions else []
+                            sizelist.extend(
+                                [
+                                    float(device.get(k))
+                                    for k in (
+                                        [
+                                            f"exp_{i}_size"
+                                            for i in range(1, 1 + expansions)
+                                        ]
+                                    )
+                                    if device.get(k)
+                                ]
+                            )
+                            if len(soclist) == len(sizelist):
+                                # consider different expansion sizes in average, limit to 100 %
+                                tsoc = min(
+                                    100,
+                                    round(
+                                        sum(
+                                            [
+                                                size * soc
+                                                for size, soc in zip(
+                                                    sizelist, soclist, strict=False
+                                                )
+                                            ]
+                                        )
+                                        / sum(sizelist)
+                                    ),
+                                )
+                            else:
+                                # simply take average which ignores different expansion sizes
+                                tsoc = round(sum(soclist) / len(soclist))
                             device_mqtt["battery_soc"] = f"{float(tsoc):.0f}"
-                        # trigger capacity calculation if no Api SOC available or MQTT overlay
+                        # trigger capacity calculation if no Api SOC available or MQTT overlay or expansion size changed
                         if tsoc and (
-                            not device.get("battery_soc") or device.get("mqtt_overlay")
+                            not device.get("battery_soc")
+                            or device.get("mqtt_overlay")
+                            or cap_change
                         ):
                             # trigger correct class with old capacity since this will cause capacity recalculation
                             if self.hesApi and sn in self.hesApi.devices:

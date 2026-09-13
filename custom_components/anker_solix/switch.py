@@ -53,7 +53,7 @@ from .const import (
     SERVICE_EXPORT_SYSTEMS,
     SERVICE_MODIFY_SOLIX_BACKUP_CHARGE,
 )
-from .coordinator import AnkerSolixDataUpdateCoordinator
+from .coordinator import AnkerSolixDataUpdateCoordinator, Command
 from .entity import (
     AnkerSolixEntityFeature,
     AnkerSolixEntityRequiredKeyMixin,
@@ -642,9 +642,9 @@ SITE_SWITCHES = []
 
 ACCOUNT_SWITCHES = [
     AnkerSolixSwitchDescription(
-        key="allow_refresh",
-        translation_key="allow_refresh",
-        json_key="allow_refresh",
+        key=Command.ALLOW_REFRESH.value,
+        translation_key=Command.ALLOW_REFRESH.value,
+        json_key=Command.ALLOW_REFRESH.value,
         entity_category=EntityCategory.DIAGNOSTIC,
         feature=AnkerSolixEntityFeature.ACCOUNT_INFO,
         force_creation_fn=lambda d, _: True,
@@ -898,12 +898,14 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 self._attribute_name == "device_switch"
                 and data.get("type") == SolixDeviceType.CHARGER.value
             ):
-                # enable reverse mode only if PPS connected via expansion cable and showing SN
+                # enable device switch only if PPS connected
                 if (
                     str(data.get("device_1_status", ""))
                     == SolixConnectionStatus.disconnected.value
                 ):
                     self._attr_is_on = None
+                else:
+                    self._attr_is_on = self.entity_description.value_fn(data, key)
             elif self._attribute_name == "ev_charger_mode_switch":
                 if mdev:
                     # convert command state value into option if available
@@ -951,7 +953,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
         # Skip Api calls if entity does not change
         if self._attr_is_on in [None, enable]:
             return
-        if self._attribute_name == "allow_refresh":
+        if self._attribute_name == Command.ALLOW_REFRESH.value:
             await self.coordinator.async_execute_command(
                 command=self.entity_description.key,
                 option=enable ^ self.entity_description.inverted,

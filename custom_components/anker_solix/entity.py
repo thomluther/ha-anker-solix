@@ -44,6 +44,7 @@ class AnkerSolixPicturePath:
     A17C5: str = str(Path(IMAGEPATH) / "Solarbank_3_pro_A17C5_pub.png")
     A17E2: str = str(Path(IMAGEPATH) / "Solarbank_Max_AC_A17E2_pub.png")
     AE103: str = str(Path(IMAGEPATH) / "Solarbank_4_pro_AE103.png")
+    AE111: str = str(Path(IMAGEPATH) / "Solarbank_Max_AC_A17E2_pub.png")
 
     A5140: str = str(Path(IMAGEPATH) / "MI60_A5140_pub.png")
     A5143: str = str(Path(IMAGEPATH) / "MI80_A5143_pub.png")

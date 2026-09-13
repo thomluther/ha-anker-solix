@@ -544,6 +544,9 @@
             }
         },
         "number": {
+            "mqtt_status_interval": {
+                "name": "MQTT status interval"
+            },
             "preset_system_output_power": {
                 "name": "System load preset"
             },
@@ -1818,10 +1821,32 @@
                 }
             },
             "grid_import_energy": {
-                "name": "Grid energy imported"
+                "name": "Grid energy imported",
+                "state_attributes": {
+                    "l1_kwh": {
+                        "name": "L1 kWh"
+                    },
+                    "l2_kwh": {
+                        "name": "L2 kWh"
+                    },
+                    "l3_kwh": {
+                        "name": "L3 kWh"
+                    }
+                }
             },
             "grid_export_energy": {
-                "name": "Grid energy exported"
+                "name": "Grid energy exported",
+                "state_attributes": {
+                    "l1_kwh": {
+                        "name": "L1 kWh"
+                    },
+                    "l2_kwh": {
+                        "name": "L2 kWh"
+                    },
+                    "l3_kwh": {
+                        "name": "L3 kWh"
+                    }
+                }
             },
             "discharge_power_avg": {
                 "name": "Discharge power ⌀"
@@ -2328,6 +2353,9 @@
                     },
                     "type": {
                         "name": "Type"
+                    },
+                    "capacity": {
+                        "name": "Capacity Wh"
                     }
                 }
             },

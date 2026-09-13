@@ -2,6 +2,8 @@
 
 from asyncio import sleep
 from datetime import datetime, timedelta
+from enum import StrEnum
+from functools import partial
 import logging
 from typing import Any
 
@@ -9,7 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api_client import (
@@ -19,8 +21,18 @@ from .api_client import (
     AnkerSolixApiClientError,
     AnkerSolixApiClientRetryExceededError,
 )
-from .const import ALLOW_TESTMODE, DOMAIN, LOGGER, PLATFORMS
+from .const import ALLOW_TESTMODE, DOMAIN, LOGGER, MQTT_STATUS_INTERVAL, PLATFORMS
 from .solixapi.apitypes import SolixDeviceType
+
+
+class Command(StrEnum):
+    """Enumeration for usable coordinator commands."""
+
+    ALLOW_REFRESH = "allow_refresh"
+    REFRESH_DEVICE = "refresh_device"
+    REFRESH_VEHICLES = "refresh_vehicles"
+    MQTT_STATUS_INTERVAL = MQTT_STATUS_INTERVAL
+    REMOVE_VEHICLE = "remove_vehicle"
 
 
 # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
@@ -48,6 +60,7 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         self.update_handler = None
         self.registered_devices = set()
         self.mqtt_values = 0
+        self._scheduled_mqtt_status = {}
 
         super().__init__(
             hass=hass,
@@ -86,6 +99,8 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             elif self.client.startup:
                 self.registered_devices = ids
                 self.mqtt_values = mcount
+                # start scheduled status requests for devices with a defined interval
+                await self._async_init_status_request_schedule()
             # trigger reload if additional devices are found
             elif ids - self.registered_devices or mcount > self.mqtt_values:
                 LOGGER.log(
@@ -162,6 +177,99 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         self.update_handler = None
         self.async_update_listeners()
 
+    async def _async_init_status_request_schedule(
+        self, cancel_sn: str | None = None
+    ) -> None:
+        """Start request schedule for MQTT devices with defined interval or cancel the provided device schedule."""
+        if isinstance(cancel_sn, str):
+            # just cancel existing schedule for provided sn
+            await self._async_schedule_status_request(cancel_sn)
+            return
+        if self.data and self.client:
+            for sn in self.registered_devices:
+                if (
+                    sn not in self._scheduled_mqtt_status
+                    and (interval := self.data.get(sn, {}).get(MQTT_STATUS_INTERVAL))
+                    and (mdev := self.client.get_mqtt_device(sn=sn))
+                    and not mdev.is_passive()
+                ):
+                    await self._async_schedule_status_request(sn, interval)
+
+    async def _async_schedule_status_request(
+        self, device_sn: str, interval: str | float | None = None
+    ) -> None:
+        """Schedule status requests for an MQTT device or stop active schedule if interval is 0."""
+        if isinstance(interval, str) and interval.replace(".", "", 1).isdigit():
+            interval = float(interval)
+        elif not isinstance(interval, float | int):
+            interval = 0
+        # get existing schedule
+        dev_schedule = self._scheduled_mqtt_status.pop(device_sn, {})
+        # stop any orphaned schedule
+        if (
+            cancel_cb := dev_schedule.get("callback")
+        ) and device_sn not in self.registered_devices:
+            cancel_cb()
+            LOGGER.info(
+                "Api Coordinator %s stopped MQTT status requests for removed device %s",
+                self.config_entry.title,
+                device_sn,
+            )
+            return
+        changed = False
+        if dev_schedule.get("interval", -1) == int(interval):
+            # no change, add schedule back if callback exists
+            if cancel_cb:
+                self._scheduled_mqtt_status[device_sn] = dev_schedule
+                return
+        elif cancel_cb:
+            # existing schedule is modified, stop old callback
+            cancel_cb()
+            if interval > 0:
+                # Clear old callback to create new schedule
+                cancel_cb = None
+                changed = True
+            else:
+                LOGGER.info(
+                    "Api Coordinator %s stopped MQTT status requests for device %s",
+                    self.config_entry.title,
+                    device_sn,
+                )
+        if interval and not cancel_cb:
+            # run immediate request and start new schedule
+            await self.scheduled_mqtt_status_request(device_sn)
+            dev_schedule = {"interval": int(interval)}
+            # Send request every interval
+            dev_schedule["callback"] = async_track_time_interval(
+                self.hass,
+                partial(self.scheduled_mqtt_status_request, device_sn),
+                timedelta(seconds=interval),
+                name=f"Scheduled MQTT status {device_sn}",
+                cancel_on_shutdown=True,
+            )
+            self._scheduled_mqtt_status[device_sn] = dev_schedule
+            LOGGER.info(
+                "Api Coordinator %s %s regular MQTT status requests for device %s %s %s seconds interval",
+                self.config_entry.title,
+                "changed" if changed else "started",
+                device_sn,
+                "to" if changed else "with",
+                int(interval),
+            )
+
+    async def scheduled_mqtt_status_request(
+        self, device_sn: str, _now: datetime | None = None
+    ) -> None:
+        """Execute a scheduled MQTT status request for the provided device if MQTT connection exists."""
+        testmode = self.client.testmode()
+        if (
+            self.client.cache_valid
+            and (mdev := self.client.get_mqtt_device(sn=device_sn))
+            and not mdev.is_passive()
+            and (mdev.is_subscribed() or testmode)
+        ):
+            await mdev.status_request(toFile=testmode)
+
     async def async_refresh_device_details(
         self, reset_cache: bool = False, categories: set | str | None = None
     ) -> None:
@@ -231,6 +339,11 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
         """Clear Api cache to close any active MQTT loop and then call super method."""
         # Ensue any MQTT connection is closed by clearing cache upon shutdown
         if self and self.client and self.client.api:
+            # cancel any scheduled MQTT status requests
+            for dev_schedule in self._scheduled_mqtt_status.values():
+                if cancel_cb := dev_schedule.get("callback"):
+                    cancel_cb()
+            self._scheduled_mqtt_status = {}
             self.client.api.clearCaches()
         await super().async_shutdown()
 
@@ -265,6 +378,8 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             )
             # save actual mqtt device value count
             self.mqtt_values = self.client.get_mqtt_valuecount()
+            # start scheduled status requests for devices with a defined interval
+            await self._async_init_status_request_schedule()
             return True
         return False
 
@@ -290,8 +405,9 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                     remove_config_entry_id=self.config_entry.entry_id,
                 )
                 self.registered_devices.discard(dev_entry.serial_number)
-                # update MQTT devices
-                self.client.mqtt_devices.pop(dev_entry.serial_number, None)
+                # update MQTT devices and stop scheduled status requests
+                if mdev := self.client.mqtt_devices.pop(dev_entry.serial_number, None):
+                    await self._async_init_status_request_schedule(cancel_sn=mdev.sn)
                 self.mqtt_values = self.client.get_mqtt_valuecount()
                 LOGGER.warning(
                     "Api Coordinator %s removed orphaned %s device %s, ID %s",
@@ -302,17 +418,17 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                 )
 
     async def async_execute_command(
-        self, command: str, option: Any = None
+        self, command: str, option: Any = None, **kwargs: Any
     ) -> bool | None:
         """Execute the given command."""
         match command:
-            case "refresh_device":
+            case Command.REFRESH_DEVICE:
                 await self.async_refresh_device_details()
-            case "refresh_vehicles":
+            case Command.REFRESH_VEHICLES:
                 await self.async_refresh_device_details(
                     categories=SolixDeviceType.VEHICLE.value
                 )
-            case "allow_refresh":
+            case Command.ALLOW_REFRESH:
                 if isinstance(option, bool):
                     self.client.allow_refresh(allow=option)
                     if option:
@@ -323,7 +439,12 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
                     else:
                         # refresh states from cache that is virtually empty while refresh not allowed
                         await self.async_refresh_data_from_apidict()
-            case "remove_vehicle":
+            case Command.MQTT_STATUS_INTERVAL:
+                if isinstance(option, str):
+                    await self._async_schedule_status_request(
+                        device_sn=option, interval=kwargs.get("interval")
+                    )
+            case Command.REMOVE_VEHICLE:
                 # Wait until client cache is valid before running api action
                 await self.client.validate_cache()
                 if option in self.data and isinstance(

@@ -62,7 +62,7 @@ from .const import (
     PLATFORMS,
     REGISTERED_EXCLUDES,
 )
-from .coordinator import AnkerSolixDataUpdateCoordinator
+from .coordinator import AnkerSolixDataUpdateCoordinator, Command
 from .services import async_setup_services  # async_remove_services
 from .solixapi.apitypes import ApiCategories, SolixDeviceType
 
@@ -304,7 +304,7 @@ async def async_remove_config_entry_device(
         # remove vehicle device types from cloud
         if device_entry.model == SolixDeviceType.VEHICLE.value.capitalize():
             await coordinator.async_execute_command(
-                command="remove_vehicle", option=device_entry.serial_number
+                command=Command.REMOVE_VEHICLE.value, option=device_entry.serial_number
             )
         # Allow only removal of orphaned devices not contained in actual api data
         active = any(

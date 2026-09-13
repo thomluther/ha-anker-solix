@@ -69,6 +69,7 @@ SHARED_ACCOUNT: Final[str] = "shared_account"
 IMAGEFOLDER: Final[str] = "images"
 EXPORTFOLDER: Final[str] = "exports"
 MQTT_OVERLAY: Final[str] = "mqtt_overlay"
+MQTT_STATUS_INTERVAL: Final[str] = "mqtt_status_interval"
 
 # True will enable configuration options for testmode and testfolder
 ALLOW_TESTMODE: Final[bool] = False

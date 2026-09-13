@@ -29,7 +29,7 @@ from .const import (
     LOGGER,
     SERVICE_GET_DEVICE_INFO,
 )
-from .coordinator import AnkerSolixDataUpdateCoordinator
+from .coordinator import AnkerSolixDataUpdateCoordinator, Command
 from .entity import (
     AnkerSolixEntityFeature,
     AnkerSolixEntityRequiredKeyMixin,
@@ -65,8 +65,8 @@ class AnkerSolixButtonDescription(
 
 DEVICE_BUTTONS = [
     AnkerSolixButtonDescription(
-        key="refresh_device",
-        translation_key="refresh_device",
+        key=Command.REFRESH_DEVICE.value,
+        translation_key=Command.REFRESH_DEVICE.value,
         json_key="",
         force_creation_fn=lambda d, jk: True,
         feature=AnkerSolixEntityFeature.SYSTEM_INFO,
@@ -126,8 +126,8 @@ SITE_BUTTONS = []
 
 ACCOUNT_BUTTONS = [
     AnkerSolixButtonDescription(
-        key="refresh_vehicles",
-        translation_key="refresh_vehicles",
+        key=Command.REFRESH_VEHICLES.value,
+        translation_key=Command.REFRESH_VEHICLES.value,
         json_key="",
         force_creation_fn=lambda d, jk: True,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -283,7 +283,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 self._attr_supported_features: AnkerSolixEntityFeature = (
                     description.feature
                 )
-            if self._attribute_name == "refresh_device":
+            if self._attribute_name == Command.REFRESH_DEVICE.value:
                 # set the correct device type picture for the device refresh entity, which is available for any device and account type
                 if (pn := str(data.get("device_pn") or "").upper()) and hasattr(
                     AnkerSolixPicturePath, pn
@@ -334,7 +334,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 translation_key="local_mode",
                 translation_placeholders={"entity_id": self.entity_id},
             )
-        if self._attribute_name == "refresh_device":
+        if self._attribute_name == Command.REFRESH_DEVICE.value:
             if (
                 self.coordinator.client.last_device_refresh
                 and (
@@ -425,7 +425,7 @@ class AnkerSolixButton(CoordinatorEntity, ButtonEntity):
                 "'%s' triggered an MQTT status request for device",
                 self.entity_id,
             )
-        elif self._attribute_name == "refresh_vehicles":
+        elif self._attribute_name == Command.REFRESH_VEHICLES.value:
             if (
                 self.coordinator.client.active_device_refresh
                 or self.coordinator.client.startup

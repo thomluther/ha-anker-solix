@@ -544,6 +544,9 @@
             }
         },
         "number": {
+            "mqtt_status_interval": {
+                "name": "MQTT Statusintervall"
+            },
             "preset_system_output_power": {
                 "name": "System Lastvorgabe"
             },
@@ -1818,10 +1821,32 @@
                 }
             },
             "grid_import_energy": {
-                "name": "Netzenergie Bezug"
+                "name": "Netzenergie Bezug",
+                "state_attributes": {
+                    "l1_kwh": {
+                        "name": "L1 kWh"
+                    },
+                    "l2_kwh": {
+                        "name": "L2 kWh"
+                    },
+                    "l3_kwh": {
+                        "name": "L3 kWh"
+                    }
+                }
             },
             "grid_export_energy": {
-                "name": "Netzenergie Einspeisung"
+                "name": "Netzenergie Einspeisung",
+                "state_attributes": {
+                    "l1_kwh": {
+                        "name": "L1 kWh"
+                    },
+                    "l2_kwh": {
+                        "name": "L2 kWh"
+                    },
+                    "l3_kwh": {
+                        "name": "L3 kWh"
+                    }
+                }
             },
             "discharge_power_avg": {
                 "name": "Entladeleistung ⌀"
@@ -2328,6 +2353,9 @@
                     },
                     "type": {
                         "name": "Typ"
+                    },
+                    "capacity": {
+                        "name": "Kapazität Wh"
                     }
                 }
             },
