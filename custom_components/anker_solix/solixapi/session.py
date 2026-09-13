@@ -205,7 +205,9 @@ class AnkerSolixClientSession:
         """Get or set the Api payload encryption flag."""
         if enable is not None and isinstance(enable, bool):
             self.encrypt_payload = enable
-            self._logger.info("Set api %s payload encryption to: %s", self.nickname, enable)
+            self._logger.info(
+                "Set api %s payload encryption to: %s", self.nickname, enable
+            )
         return self.encrypt_payload
 
     def requestDelay(self, delay: float | None = None) -> float:
@@ -1011,6 +1013,7 @@ class AnkerEncryptionHandler:
         - the presetKey, for the session key exchange, or
         - the session key shared_secret[:16] (the securityKey), for every request once
           the handshake has derived it.
+
         """
         sign_key_hex = (
             self._preset_key_hex
