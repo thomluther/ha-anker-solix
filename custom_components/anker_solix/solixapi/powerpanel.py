@@ -257,7 +257,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     ]:
                         device[key] = value
                     # keys with boolean values
-                    elif key == "auto_upgrade":
+                    elif key in ["auto_upgrade", "is_passive"]:
                         device[key] = bool(value)
                     # keys with string values
                     elif key == "wireless_type" or (

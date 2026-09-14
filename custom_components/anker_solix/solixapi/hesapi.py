@@ -222,6 +222,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         "auto_upgrade",
                         "is_subdevice",
                         "is_primary",
+                        "is_passive",
                     ]:
                         device[key] = bool(value)
                     # key with string values

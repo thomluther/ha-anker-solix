@@ -1287,7 +1287,8 @@ class AnkerSolixBaseApi:
                                     )
                             if pps := self.powerpanelApi.devices.get(pps_sn):
                                 pps_mqtt = {}
-                                pps_update = {"device_sn": pps_sn}
+                                # Mark power panel PPS as passive MQTT device
+                                pps_update = {"device_sn": pps_sn, "is_passive": True}
                                 for key, value in {
                                     k: v
                                     for k, v in check_values.items()
