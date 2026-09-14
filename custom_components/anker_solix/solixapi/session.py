@@ -157,6 +157,11 @@ class AnkerSolixClientSession:
         return self._countryId
 
     @property
+    def region(self) -> str:
+        """Get the region used for the active session."""
+        return self._region
+
+    @property
     def server(self) -> str | None:
         """Get the server used for the active session."""
         return self._api_base
@@ -165,11 +170,6 @@ class AnkerSolixClientSession:
     def session(self) -> ClientSession:
         """Get the active client session."""
         return self._session
-
-    @property
-    def login_response(self) -> dict:
-        """Get the client login response used for the active session."""
-        return self._login_response
 
     def logger(self, logger: logging.Logger | None = None) -> logging.Logger:
         """Get or set the logger for API client."""
@@ -435,6 +435,7 @@ class AnkerSolixClientSession:
         else:
             self._token_expiration = None
             self._loggedIn = False
+            self._eh = None
         if data.get("user_id"):
             # gtoken is MD5 hash of user_id from login response
             self._gtoken = md5(data.get("user_id"))
@@ -444,6 +445,7 @@ class AnkerSolixClientSession:
         else:
             self._gtoken = None
             self._loggedIn = False
+            self._eh = None
         return self._loggedIn
 
     async def request(  # noqa: C901
@@ -489,10 +491,7 @@ class AnkerSolixClientSession:
         if self.encrypt_payload and self._login_response:
             if not self._eh and self._token:
                 # initialize the encryption handler
-                self._eh = AnkerEncryptionHandler(
-                    client=self,
-                    preset_key=API_PRESET_KEYS.get(self._region),
-                )
+                self._eh = AnkerEncryptionHandler(client=self)
             if not self._eh.shared_secret:
                 # Perform key exchange for encryption handler to get the shared secret for the session
                 await self._eh.perform_key_exchange(
@@ -639,7 +638,7 @@ class AnkerSolixClientSession:
                 # reset retry flag for normal request retry attempts
                 self._retry_attempt = False
 
-                # data field has to be decoded when encrypted and signature field in response
+                # data field has to be decoded when encrypted and signature field found in response
                 if self.encrypt_payload and data.get("signature"):
                     data["data"] = self._eh.decryptApiData(data.get("data"))
                     self._logger.debug("Decrypted Data: %s", data["data"])
@@ -937,24 +936,20 @@ class AnkerEncryptionHandler:
     def __init__(
         self,
         client: AnkerSolixClientSession,
-        preset_key: str | None = None,
     ) -> None:
         """Initialize the encryption handler."""
         self._client = client
-        self._session = client.session
-        self._login_response = client.login_response
-        self._request_timeout = client.requestTimeout()
         # region presetKey (API_PRESET_KEYS) as hex string; the HMAC signature keys on
         # this ascii hex, while the AES envelope keys on its raw bytes - keep both forms.
-        if not preset_key:
+        self._preset_key_hex = API_PRESET_KEYS.get(client.region)
+        if not self._preset_key_hex:
             raise ClientError(
-                f"No presetKey defined for region (country {self._login_response.get('country_code', 'unknown')}), payload encryption unavailable!"
+                f"No presetKey defined for region '{client.region}' (country '{client.get_login_info('country_code') or 'unknown'}'), payload encryption unavailable!"
             )
-        self._preset_key_hex = preset_key
         self._preset_key = bytes.fromhex(self._preset_key_hex)
         # Create ECDH key pair for encryption key exchange using NIST P-256 curve
-        self.private_key = ec.generate_private_key(ec.SECP256R1())
-        self.public_key = self.private_key.public_key()
+        self._private_key = ec.generate_private_key(ec.SECP256R1())
+        self.public_key = self._private_key.public_key()
         # key_ident is a random id generated once per key pair and sent unchanged as
         # x-key-ident on every request; the server uses it to look up the shared secret.
         self.key_ident = os.urandom(16).hex()
@@ -1067,12 +1062,12 @@ class AnkerEncryptionHandler:
             self._client.mask_values(headers, "x-auth-token", "gtoken"),
         )
         self._logger.debug("Request Body: %s", str(data))
-        async with self._session.request(
+        async with self._client.session.request(
             method,
             url,
             headers=headers,
             json=data,
-            timeout=ClientTimeout(total=self._request_timeout),
+            timeout=ClientTimeout(total=self._client.requestTimeout()),
         ) as resp:
             try:
                 if self._client.request_count:
@@ -1127,7 +1122,7 @@ class AnkerEncryptionHandler:
         server_public_key = ec.EllipticCurvePublicKey.from_encoded_point(
             ec.SECP256R1(), point
         )
-        self.shared_secret = self.private_key.exchange(ec.ECDH(), server_public_key)
+        self.shared_secret = self._private_key.exchange(ec.ECDH(), server_public_key)
         return self.shared_secret
 
     def _body_key(self) -> bytes:
