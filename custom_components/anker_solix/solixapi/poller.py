@@ -18,6 +18,7 @@ from .apitypes import (
     SolixPriceProvider,
     SolixSiteType,
 )
+from .errors import AnkerSolixError
 from .hesapi import AnkerSolixHesApi
 from .powerpanel import AnkerSolixPowerpanelApi
 
@@ -1005,11 +1006,21 @@ async def poll_site_details(
                         or {}
                     ):
                         # Ensure actual provider prices are available
-                        await api.refresh_provider_prices(
-                            provider=SolixPriceProvider(provider=provider),
-                            siteId=site_id,
-                            fromFile=fromFile,
-                        )
+                        try:
+                            await api.refresh_provider_prices(
+                                provider=SolixPriceProvider(provider=provider),
+                                siteId=site_id,
+                                fromFile=fromFile,
+                            )
+                        except AnkerSolixError as err:
+                            # Dynamic price details are optional and may be unavailable
+                            # for a provider or region without invalidating the site data.
+                            api._logger.warning(
+                                "Failed to refresh dynamic prices for provider %s on site %s: %s",
+                                provider,
+                                site_id,
+                                err,
+                            )
                     # extract the actual spot price and unit for sites supporting dynamic prices
                     # The dynamic_price_details key is also a marker for sites supporting dynamic tariffs
                     api._update_site(
