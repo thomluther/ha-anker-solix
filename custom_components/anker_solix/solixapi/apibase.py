@@ -24,6 +24,7 @@ from .apitypes import (
     SolixPriceProvider,
     SolixPriceTypes,
 )
+from .errors import AnkerSolixError
 from .helpers import get_enum_name, get_solix_product_code
 from .mqtt import AnkerSolixMqttSession, MessageCallback
 from .mqttcmdmap import EMBEDDED
@@ -2310,6 +2311,8 @@ class AnkerSolixBaseApi:
                 else None
             )
             and provider.area
+            # #619: Limit detail queries to Nordpool only to avoid request errors
+            and str(provider.company).lower() == 'nordpool'
         ):
             return {}
         # validate date
@@ -2331,9 +2334,13 @@ class AnkerSolixBaseApi:
                 / f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/', '_')}.json"
             )
         else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_dynamic_price_details"], json=data
-            )
+            # Ignore Api errors from endpoint which may fail depending on provider and area codes...
+            try:
+                resp = await self.apisession.request(
+                    "post", API_ENDPOINTS["get_dynamic_price_details"], json=data
+                )
+            except AnkerSolixError:
+                resp = {}
         data = resp.get("data") or {}
         # update account details with spot prices for provider and add last poll time
         self._update_account(
