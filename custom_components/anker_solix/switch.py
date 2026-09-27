@@ -451,8 +451,7 @@ DEVICE_SWITCHES = [
         # state values are mdev functions, depending on charger status, must be converted into binary switch state
         value_fn=lambda d, jk: bool(d.get(jk)),
         force_creation_fn=lambda d, _: (
-            d.get("ev_charger_status") is not None
-            or d.get("mqtt_data", {}).get("ev_charger_status") is not None
+            d.get("mqtt_data", {}).get("ev_charger_status") is not None
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s and d.get("mqtt_data")),
         mqtt=True,

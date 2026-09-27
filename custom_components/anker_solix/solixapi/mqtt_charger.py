@@ -179,7 +179,10 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             elif state == SolixEvChargerMode.boost_charge.name:
                 options.add(SolixEvChargerMode.stop_charge.name)
             # Add start option only if status indicates start capability
-            elif status == SolixEvChargerStatus.standby.name:
+            elif status in [
+                SolixEvChargerStatus.standby.name,
+                SolixEvChargerStatus.completed.name,
+            ]:
                 options.add(SolixEvChargerMode.start_charge.name)
         return list(options)
 

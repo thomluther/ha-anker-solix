@@ -651,8 +651,7 @@ DEVICE_SELECTS = [
             )
         ),
         force_creation_fn=lambda d, _: (
-            d.get("ev_charger_status") is not None
-            or d.get("mqtt_data", {}).get("ev_charger_status") is not None
+            d.get("mqtt_data", {}).get("ev_charger_status") is not None
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s and d.get("mqtt_data")),
         mqtt=True,
