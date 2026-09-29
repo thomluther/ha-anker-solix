@@ -1273,15 +1273,26 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 options = mdev.ev_charger_mode_options(
                     fromFile=self.coordinator.client.testmode()
                 )
-                cmdvalue = (
-                    SolixEvChargerMode.start_charge.name
-                    if cmdvalue == STATE_ON
-                    and SolixEvChargerMode.start_charge.name in options
-                    else SolixEvChargerMode.stop_charge.name
-                    if cmdvalue == STATE_OFF
-                    and SolixEvChargerMode.stop_charge.name in options
-                    else None  # let the command fail since toggle not possible
-                )
+                if (
+                    cmdvalue := (
+                        SolixEvChargerMode.start_charge.name
+                        if cmdvalue == STATE_ON
+                        and SolixEvChargerMode.start_charge.name in options
+                        else SolixEvChargerMode.stop_charge.name
+                        if cmdvalue == STATE_OFF
+                        and SolixEvChargerMode.stop_charge.name in options
+                        else None  # let the command fail since toggle not possible
+                    )
+                ) is None:
+                    raise ServiceValidationError(
+                        f"The action {'switch.toggle'} cannot be executed: No other charging mode option available for toggling",
+                        translation_domain=DOMAIN,
+                        translation_key="value_error",
+                        translation_placeholders={
+                            "service": "switch.toggle",
+                            "error": "No other charging mode option available for toggling",
+                        },
+                    )
             # Use helper methods for certain MQTT commands that require special handling
             if self._attribute_name == "pps_manual_backup_switch":
                 # consider cached timestamps that may have been provided
@@ -1576,7 +1587,8 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                         backup_switch=kwargs.get(ENABLE_BACKUP),
                         toFile=self.coordinator.client.testmode(),
                     )
-                if not isinstance(result, dict):
+                # raise service error if no result
+                if result is False:
                     raise ServiceValidationError(
                         f"The action '{service_name}' failed, review log for error details",
                         translation_domain=DOMAIN,

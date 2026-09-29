@@ -3,6 +3,7 @@
 
 import contextlib
 from datetime import datetime, timedelta
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -85,6 +86,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_device_load,
         set_device_parm,
         set_home_load,
+        set_pps_use_time,
         set_sb2_ac_charge,
         set_sb2_home_load,
         set_sb2_use_time,
@@ -323,6 +325,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "grid_export_limit",
                             "owner_user_id",
                             "img_url",
+                            "currency",
+                            "ip_region",
                         ]
                         and value
                     ):
@@ -699,13 +703,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device["preset_load_type"] = SolixDefaults.PRESET_TYPE
                             if ac_type:
                                 # update default with site currency if found
-                                if not (
-                                    curr_def := (mysite.get("site_details") or {}).get(
+                                curr_def = (
+                                    (mysite.get("site_details") or {}).get(
                                         "site_price_unit"
                                     )
-                                    or ""
-                                ):
-                                    curr_def = SolixDefaults.CURRENCY_DEF
+                                    or (self.account.get("default_currency") or {}).get(
+                                        "symbol"
+                                    )
+                                    or SolixDefaults.CURRENCY_DEF
+                                )
                                 device.update(
                                     {
                                         "preset_manual_backup_start": 0,
@@ -1014,6 +1020,81 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device["set_system_output_power"] = sys_power
                                 if not devData.get("parallel_home_load") and dev_power:
                                     device["set_output_power"] = dev_power
+                    elif key == "pps_use_time":
+                        # PPS TOU plan managed via cloud, convert attribute if supported
+                        if device.get("type") == SolixDeviceType.PPS.value:
+                            if value and isinstance(value, str | dict):
+                                # deserialize plan
+                                device[key] = (
+                                    json.loads(value)
+                                    if isinstance(value, str)
+                                    else value
+                                )
+                            elif key in device.get("mqtt_data", {}):
+                                # add empty plan since attribute is supported by device MQTT data
+                                device[key] = {}
+                            # extract actual tariff and price
+                            # NOTE: Backup SOC in plan is controlled by MQTT command only
+                            if (plan := device.get(key)) is not None:
+                                # get actual presets from current slot
+                                # Consider time zone shifts
+                                tz_offset = device.get("energy_offset_tz") or 0
+                                now = datetime.now().astimezone() + timedelta(
+                                    seconds=tz_offset
+                                )
+                                now_time = now.time().replace(microsecond=0)
+                                # set now to new daytime if close to end of day
+                                if (
+                                    now_time
+                                    >= datetime.strptime("23:59:58", "%H:%M:%S")
+                                    .astimezone()
+                                    .time()
+                                ):
+                                    now_time = (
+                                        datetime.strptime("00:00", "%H:%M")
+                                        .astimezone()
+                                        .time()
+                                    )
+                                tariff = (
+                                    next(
+                                        iter(
+                                            [
+                                                slot
+                                                for slot in (plan.get("ranges") or [])
+                                                if (slot.get("start_time") or "00:00")
+                                                <= f"{now_time.hour:02d}:00"
+                                                < (slot.get("end_time") or "24:00")
+                                            ]
+                                        ),
+                                        {},
+                                    ).get("type")
+                                    or SolixTariffTypes.UNKNOWN.value
+                                )
+                                price = (
+                                    next(
+                                        iter(
+                                            [
+                                                slot
+                                                for slot in (plan.get("prices") or [])
+                                                if slot.get("type") == tariff
+                                            ]
+                                        ),
+                                        {},
+                                    ).get("price")
+                                    or SolixDefaults.TARIFF_PRICE_DEF
+                                )
+                                device.update(
+                                    {
+                                        "preset_tariff": tariff,
+                                        "preset_tariff_price": price,
+                                        "preset_tariff_currency": plan.get("unit")
+                                        or device.get("currency")
+                                        or (
+                                            self.account.get("default_currency") or {}
+                                        ).get("symbol")
+                                        or SolixDefaults.CURRENCY_DEF,
+                                    }
+                                )
 
                     # inverter specific keys
                     elif key == "generate_power":
@@ -1900,7 +1981,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         r"""Get requested device attributes.
 
         Example data for attributes list ["rssi", "pv_power_limit", "ac_power_limit"]:
-        {"device_sn": "9JVB42LJK8J0P5RY","attributes": {"pv_power_limit": 3600, "ac_power_limit": 1200, "rssi": "-74"}
+        {"device_sn": "9JVB42LJK8J0P5RY","attributes": {"pv_power_limit": 3600, "ac_power_limit": 1200, "rssi": "-74"}}
+
+        Example data for attributes ["pps_use_time"]: Its a serialized json object as string
+        {"ranges": [{"start_time": "00:00", "end_time": "09:00", "type": 1},
+            {"start_time": "09:00", "end_time": "19:00", "type": 3},
+            {"start_time": "19:00", "end_time": "24:00", "type": 1}],
+         "prices": [{"price": "0.2", "type": 1}, {"price": "0.001", "type": 3}],
+         "unit": "$", "reserve_power": 6}"
         """
         # validate parameters
         attributes = [attributes] if isinstance(attributes, str) else attributes

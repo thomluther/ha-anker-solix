@@ -1333,18 +1333,26 @@
             "service": "mdi:sun-clock",
             "sections": {
                 "sb1_fields": "mdi:numeric-1-box-outline",
-                "sb2_fields": "mdi:numeric-2-box-outline"
+                "sb2_fields": "mdi:numeric-2-box-outline",
+                "sb3_fields": "mdi:numeric-3-box-outline"
               }
         },
         "update_solarbank_schedule": {
             "service": "mdi:sun-clock",
             "sections": {
                 "sb1_fields": "mdi:numeric-1-box-outline",
-                "sb2_fields": "mdi:numeric-2-box-outline"
+                "sb2_fields": "mdi:numeric-2-box-outline",
+                "sb3_fields": "mdi:numeric-3-box-outline"
               }
         },
         "modify_solix_backup_charge": {"service": "mdi:battery-clock"},
-        "modify_solix_use_time": {"service": "mdi:cash-clock"},
+        "modify_solix_use_time": {
+            "service": "mdi:cash-clock",
+            "sections": {
+                "sb_fields": "mdi:generator-stationary",
+                "pps_fields": "mdi:generator-mobile"
+              }
+        },
         "api_request": {"service": "mdi:cloud-braces"}
 
     }

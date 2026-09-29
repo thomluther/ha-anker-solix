@@ -47,7 +47,6 @@ API_COUNTRIES: Final[dict] = {
         "NG",
         "NZ",
         "RU",
-        "SG",
         "ZA",
         "KR",
         "TW",
@@ -102,6 +101,7 @@ API_COUNTRIES: Final[dict] = {
         "IL",
         "RO",  # See #250, HA #443, #410
         "JP",  # See #317, HA #557
+        "SG",  # See HA #593
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
@@ -168,9 +168,11 @@ API_ENDPOINTS: Final[dict] = {
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
     "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
     "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
+    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
     # Power endpoints */v1/device/*
     "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
-    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
+    # Power endpoints */v2/device/*
+    "get_device_energy": "power_service/v2/device/energy_analysis", # works on newer PPS {"device_sn": deviceSn,"type": "week","start_time": "2026-09-21","end_time": "2026-09-27"}
     # Power endpoints */v1/dynamic_price/*
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
     "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
@@ -229,6 +231,7 @@ API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_sns": "charging_energy_service/get_sns",  # json={"main_sn": "POWERPANELSN","macs": ["F38001MAC001","F38002MAC002"]})) # needs owner account, Displays Serial Numbers of attached PPS in Home
     "get_monetary_units": "charging_energy_service/get_world_monetary_unit",  # monetary unit list for system, needs owner account
     # Power Panel disaster preparedness / backup mode (verified on A17B1 hardware, use type=2)
+    # Standalone PPS may be supported as well, charging_disaster_prepared endpoints also work on EU server
     "get_disaster_support_func": "charging_disaster_prepared/get_support_func",  # {"identifier_id": siteId, "type": 2} or {"identifier_id": deviceSn, "type": 1}
     "get_site_device_disaster": "charging_disaster_prepared/get_site_device_disaster",  # {"identifier_id": siteId, "type": 2} or {"identifier_id": deviceSn, "type": 1}
     "get_site_device_disaster_status": "charging_disaster_prepared/get_site_device_disaster_status",  # {"identifier_id": siteId, "type": 2} or {"identifier_id": deviceSn, "type": 1}
@@ -358,14 +361,14 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/set_oil_consumption_reminder_plan'
     'power_service/v1/app/set_maintain_parts_ignore_reminders'
 
-related to power V2: 14 + 0 used => 11 total
+related to power V2: 15 + 1 used => 16 total
     'power_service/v2/app/get_custom_branch_icon' # get list of branch icons and url
     'power_service/v2/app/get_hardware_relation'# shows empty list, {"sn_list": [deviceSn]}
     'power_service/v2/platform_get_pn_region_code'# {"product_code": "AE103"})) SB4 => {"product_code": "AE103","region_codes": [{"country_code": "DE","states": [{"state_code": "DE","grid_code": 3,"grid_code_name": "VDE-AR-N 4105"}]},...]}
     'power_service/v2/site/platform_energy_analysis_options'
     'power_service/v2/app/set_device_pv_name'
-    'power_service/v2/device/energy_analysis'
     'power_service/v2/device/energy_options' # shows earliest date for device # {"device_sn": deviceSn}))
+    'power_service/v2/device/energy_options_reconnect' # endpoint yet unknown on server
     'power_service/v2/device/timeline/event' # {"device_sn": deviceSn})) => {"total_count": 0,"all_unlocked": false,"top_event": null,"statistics": {"stable_days": 0,"offgrid_consume": 0,"co2": 0},"list": []}
     'power_service/v2/device/timeline/event/batch_read'
     'power_service/v2/device/report_data'
@@ -373,7 +376,7 @@ related to power V2: 14 + 0 used => 11 total
     'power_service/v2/platform_set_user_region_param'
     'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
     'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
-
+    'power_service/v2/site/platform_get_site_scene'  # may need special site?
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -432,12 +435,10 @@ Passport related: 30 + 0 used => 30 total
     'passport/subscription_configs',  # get show_sms
     'passport/discount_desc',  # get title, sub_title, button and sub_button
 
-PPS and Power Panel related: 6 + 12 used => 18 total
+PPS and Power Panel related: 4 + 14 used => 18 total
     "charging_energy_service/sync_installation_inspection", # Unknown at this time
     "charging_energy_service/sync_config",
     "charging_energy_service/restart_peak_session",
-    "charging_energy_service/preprocess_utility_rate_plan",
-    "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
 
     "charging_common_svc/location/get",  # Get default and identifier location for identifier_id, identifier_type, business_type with longitude, latitude, country_code, place_id, display_name, formatted_address
@@ -502,10 +503,10 @@ Home Energy System related (X1): 6 + 0 used => 6 total
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
     "charging_hes_dynamic_price_svc/get_third_jump_url"
 
-related to what, seem to work with Power Panel sites: 3 + 4 used => 7 total
+Related to Storm Guard and manual backup plan for Power Panel sites and standalone PPS: 3 + 4 used => 7 total
     'charging_disaster_prepared/clear',
     'charging_disaster_prepared/quit_disaster_prepare',
-    'charging_disaster_prepared/disaster_detail', # 404 page not found (verified on A17B1)
+    'charging_disaster_prepared/disaster_detail', # 404 page not found (verified on A17B1 and with supported PPS device)
 
 related to Prime charger models: 18 + 13 used => 31 total
     'mini_power/v1/app/charging/update_charging_mode',
@@ -576,6 +577,7 @@ API_FILEPREFIXES: Final[dict] = {
     "energy_grid": "energy_grid",
     "energy_pps": "energy_pps",
     "energy_ev_charger": "energy_ev_charger",
+    "energy_device": "energy_device",
     "solar_info": "solar_info",
     "compatible_process": "compatible_process",
     "get_cutoff": "power_cutoff",
@@ -755,12 +757,14 @@ A5191  V1 Smart EV Charger                      Smart EV Charger
 A5220  X1 Battery Module                        Residential Storage System
 A5341  Backup Controller                        Residential Storage System
 A5450  Zigbee Dongle                            Residential Storage System
+AE113  XE 6/8kW                                 Residential Storage System
 A91B2  240W Charging Station                    Charger
 AE100  SOLIX Power Dock                         Plug-in Home Battery
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 AE1X0  Smart Meter Gen 2                        Accessory
 AS100  C1000 Gen 2 LE                           Portable Power Station
 AS220  SOLIX S2000                              Portable Power Station
+AS510  SOLIX S5000                              Portable Power Station
 AS200  Alternator Charger                       Charger
 AX1S0  Power Dock Pro                           Residential Storage System
 AX170  Power Dock                               Home Backup System
@@ -1217,12 +1221,12 @@ class SolixDeviceCapacity:
     _C5: int = 2688  # Solarbank 3 Expansion BP2700 type byte
     AE103: int = 5024  # SOLIX Solarbank 4 E5000 Pro
     _AE: int = 5024  # Solarbank 4 Expansion BP5000 type byte
-    DMVS: int = 5024 # Solarbank 4 Expansion BP5000 product code
-    BS2: int = 5024 # Solarbank 4 Expansion BP5000 product code
-    BM2: int = 5024 # Solarbank 4 Expansion BP5000 product code
+    DMVS: int = 5024  # Solarbank 4 Expansion BP5000 product code
+    BS2: int = 5024  # Solarbank 4 Expansion BP5000 product code
+    BM2: int = 5024  # Solarbank 4 Expansion BP5000 product code
     A17E2: int = 7000  # Solarbank Max AC
     AE111: int = 7000  # Solarbank Max
-    BP7000: int = 7000 # TODO: Add product code for Solarbank Max AC Expansion
+    BP7000: int = 7000  # TODO: Add product code for Solarbank Max AC Expansion
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
     A1723: int = 288  # SOLIX C300X Portable Power Station
@@ -1242,6 +1246,7 @@ class SolixDeviceCapacity:
     A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
     AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
     AS220: int = 2010  # SOLIX S2000 Portable Power Station
+    AS510: int = 5000  # SOLIX S5000 Portable Power Station
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -1262,6 +1267,7 @@ class SolixDeviceCapacity:
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
+    AE113: int = 7000  # Solix XE
     A17E1: int = 6144  # SOLIX E10 Controller, has no battery
     DJXM: int = 6144  # SOLIX E10 Expansion Battery,
 
@@ -1300,6 +1306,12 @@ class SolixSiteType:
     t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with AE120, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
     t_20 = SolixDeviceType.SOLARBANK.value  # Main AE103 Solarbank 4 Pro with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
     t_21 = SolixDeviceType.SOLARBANK.value  # Main AE111 Solarbank Max with AE120, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
+    t_22 = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # AS510 S5000 Portable Power Station with A17X7US
+    t_25 = (
+        SolixDeviceType.HES.value
+    )  # Main AE113 HES XE with SHEM3, SHEMP3, AE1X0, A17X7, AE120
 
 
 @dataclass(frozen=True)
@@ -1387,6 +1399,9 @@ class SolixDeviceCategory:
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX F3000 PPS with SM support (US Market)
+    AS510: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX S5000 PPS with SM support (US Market)
     # Power Panels (Home_backup)
     A17B1: str = (
         SolixDeviceType.POWERPANEL.value
@@ -1403,6 +1418,7 @@ class SolixDeviceCategory:
     A5220: str = SolixDeviceType.HES.value  # SOLIX X1 Battery module
     A5341: str = SolixDeviceType.HES.value  # SOLIX X1 Backup Controller
     A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
+    AE113: str = SolixDeviceType.HES.value  # SOLIX XE 6/8kW
     # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
@@ -1671,6 +1687,16 @@ class SolixDefaults:
         "DE": 19,
         "PL": 23,
         "DEFAULT": 0,
+    }
+    PPS_BACKUP_SOC_DEF: int = 6
+    # SOLIX Devices supporting device energy queries
+    DEVICE_ENERGY: ClassVar[set[str]] = {
+        "A1763",  # C1000 Gen 2
+        "A1765",  # C1000X Gen 2
+        "AS100", # C1000X Gen 2 LE
+        "A1783", # C2000 Gen 2
+        "A1785", # C2000X Gen 2
+        "AS220", # S2000
     }
 
 

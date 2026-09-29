@@ -34,6 +34,7 @@ from . import api_client
 from .const import (
     ACCEPT_TERMS,
     ALLOW_TESTMODE,
+    CONF_API_ENCRYPTION,
     CONF_API_OPTIONS,
     CONF_ENDPOINT_LIMIT,
     CONF_MQTT_OPTIONS,
@@ -68,6 +69,7 @@ DELAY_TIME_DEF: float = api_client.DEFAULT_DELAY_TIME
 TIMEOUT_DEF: int = api_client.DEFAULT_TIMEOUT
 TRIGGER_TIMEOUT_DEF: int = api_client.DEFAULT_TRIGGER_TIMEOUT
 ENDPOINT_LIMIT_DEF: int = api_client.DEFAULT_ENDPOINT_LIMIT
+API_ENCRYPTION_DEF: bool = api_client.DEFAULT_API_ENCRYPTION
 SKIP_INVALID_DEF: bool = False
 MQTT_USAGE_DEF: bool = api_client.DEFAULT_MQTT_USAGE
 
@@ -513,6 +515,10 @@ async def get_options_schema(entry: dict | None = None) -> dict:
                 ),
             ),
         ),
+        vol.Optional(
+            CONF_API_ENCRYPTION,
+            default=api_options.get(CONF_API_ENCRYPTION, API_ENCRYPTION_DEF),
+        ): selector.BooleanSelector(),
         vol.Optional(
             CONF_SKIP_INVALID,
             default=api_options.get(CONF_SKIP_INVALID, SKIP_INVALID_DEF),

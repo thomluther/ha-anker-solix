@@ -1385,21 +1385,21 @@ DEVICE_SENSORS = [
                 {
                     "l1_kwh": val,
                 }
-                if (val := d.get("grid_import_energy_l1",""))
+                if (val := d.get("grid_import_energy_l1", ""))
                 else {}
             )
             | (
                 {
                     "l2_kwh": val,
                 }
-                if (val := d.get("grid_import_energy_l2",""))
+                if (val := d.get("grid_import_energy_l2", ""))
                 else {}
             )
             | (
                 {
                     "l3_kwh": val,
                 }
-                if (val := d.get("grid_import_energy_l3",""))
+                if (val := d.get("grid_import_energy_l3", ""))
                 else {}
             )
         ),
@@ -1421,21 +1421,21 @@ DEVICE_SENSORS = [
                 {
                     "l1_kwh": val,
                 }
-                if (val := d.get("grid_export_energy_l1",""))
+                if (val := d.get("grid_export_energy_l1", ""))
                 else {}
             )
             | (
                 {
                     "l2_kwh": val,
                 }
-                if (val := d.get("grid_export_energy_l2",""))
+                if (val := d.get("grid_export_energy_l2", ""))
                 else {}
             )
             | (
                 {
                     "l3_kwh": val,
                 }
-                if (val := d.get("grid_export_energy_l3",""))
+                if (val := d.get("grid_export_energy_l3", ""))
                 else {}
             )
         ),
@@ -4610,7 +4610,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
             )
         return None
 
-    async def _solarbank_schedule_service(
+    async def _solarbank_schedule_service(  # noqa: C901
         self, service_name: str, **kwargs: Any
     ) -> dict | None:
         """Execute the defined solarbank schedule action."""
@@ -4674,16 +4674,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                     SolarbankRatePlan.manual,
                 } and data.get("preset_usage_mode") not in {None, 1, 2, 3}:
                     raise ServiceValidationError(
-                        f"The action {service_name} cannot be executed: {'Selected plan [' + str(plan) + '] of [' + self.entity_id + '] not usable for this action'}.",
+                        f"The action {service_name} cannot be executed: Selected plan '{plan!s}' of '{self.entity_id!s}' is not usable for this action.",
                         translation_domain=DOMAIN,
-                        translation_key="slot_time_error",
+                        translation_key="value_error",
                         translation_placeholders={
                             "service": service_name,
-                            "error": "Selected plan ["
-                            + str(plan)
-                            + "] of ["
-                            + self.entity_id
-                            + "] not usable for this action",
+                            "error": f"Selected plan '{plan!s}' of '{self.entity_id!s}' is not usable for this action",
                         },
                     )
                 start_time = kwargs.get(START_TIME)
@@ -4761,6 +4757,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             )
 
                         LOGGER.debug("%s action will be applied", service_name)
+                        result = None
                         # Wait until client cache is valid
                         await self.coordinator.client.validate_cache()
                         if generation >= 2:
@@ -4793,8 +4790,6 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         toFile=self.coordinator.client.testmode(),
                                     )
                                 )
-                            else:
-                                result = False
                         else:
                             # SB1 schedule action
                             # Raise error if action currently not usable for active schedule
@@ -4803,14 +4798,12 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                 and data.get("preset_allow_export") is None
                             ):
                                 raise ServiceValidationError(
-                                    f"The action {service_name} cannot be executed: {'Active schedule of [' + self.entity_id + '] not usable for this action'}.",
+                                    f"The action {service_name} cannot be executed: Active schedule of '{self.entity_id!s}' is not usable for this action.",
                                     translation_domain=DOMAIN,
-                                    translation_key="slot_time_error",
+                                    translation_key="value_error",
                                     translation_placeholders={
                                         "service": service_name,
-                                        "error": "Active schedule of ["
-                                        + self.entity_id
-                                        + "] not usable for this action",
+                                        "error": f"Active schedule of '{self.entity_id!s}' is not usable for this action",
                                     },
                                 )
                             # Map action keys to api slot keys
@@ -4841,9 +4834,16 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                                         toFile=self.coordinator.client.testmode(),
                                     )
                                 )
-                            else:
-                                result = False
-
+                        # raise service error if no result
+                        if result is False:
+                            raise ServiceValidationError(
+                                f"The action '{service_name}' failed, review log for error details",
+                                translation_domain=DOMAIN,
+                                translation_key="service_error",
+                                translation_placeholders={
+                                    "service": service_name,
+                                },
+                            )
                         # log resulting schedule if testmode returned dict
                         if isinstance(result, dict) and ALLOW_TESTMODE:
                             LOGGER.info(
@@ -4872,22 +4872,22 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             ).get("preset_system_output_power") or None
                     else:
                         raise ServiceValidationError(
-                            f"The action {service_name} cannot be executed: {'start_time must be earlier than end_time'}.",
+                            f"The action {service_name} cannot be executed: 'start_time' must be earlier than 'end_time'.",
                             translation_domain=DOMAIN,
-                            translation_key="slot_time_error",
+                            translation_key="value_error",
                             translation_placeholders={
                                 "service": service_name,
-                                "error": "start_time must be earlier than end_time",
+                                "error": "'start_time' must be earlier than 'end_time'",
                             },
                         )
                 else:
                     raise ServiceValidationError(
-                        f"The action {service_name} cannot be executed: {'start_time or end_time missing'}.",
+                        f"The action {service_name} cannot be executed: 'start_time' or 'end_time' missing.",
                         translation_domain=DOMAIN,
-                        translation_key="slot_time_error",
+                        translation_key="value_error",
                         translation_placeholders={
                             "service": service_name,
-                            "error": "start_time or end_time missing",
+                            "error": "'start_time' or 'end_time missing'",
                         },
                     )
 
@@ -4921,6 +4921,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
 
             elif service_name == SERVICE_CLEAR_SOLARBANK_SCHEDULE:
                 LOGGER.debug("%s action will be applied", service_name)
+                result = None
                 # Wait until client cache is valid
                 await self.coordinator.client.validate_cache()
                 if generation >= 2:
@@ -4939,19 +4940,6 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             ),
                             toFile=self.coordinator.client.testmode(),
                         )
-                        # log resulting schedule if in testmode
-                        if isinstance(result, dict) and ALLOW_TESTMODE:
-                            LOGGER.info(
-                                "%s: Applied schedule for action %s:\n%s",
-                                "TESTMODE"
-                                if self.coordinator.client.testmode()
-                                else "LIVEMODE",
-                                service_name,
-                                json.dumps(
-                                    result,
-                                    indent=2 if len(json.dumps(result)) < 200 else None,
-                                ),
-                            )
                 else:
                     # clear SB 1 schedule
                     # Wait until client cache is valid
@@ -4963,19 +4951,29 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                         deviceSn=self._context_base,
                         toFile=self.coordinator.client.testmode(),
                     )
-                    # log resulting schedule if testmode returned dict
-                    if isinstance(result, dict) and ALLOW_TESTMODE:
-                        LOGGER.info(
-                            "%s: Applied schedule for action %s:\n%s",
-                            "TESTMODE"
-                            if self.coordinator.client.testmode()
-                            else "LIVEMODE",
-                            service_name,
-                            json.dumps(
-                                result,
-                                indent=2 if len(json.dumps(result)) < 200 else None,
-                            ),
-                        )
+                # raise service error if no result
+                if result is False:
+                    raise ServiceValidationError(
+                        f"The action '{service_name}' failed, review log for error details",
+                        translation_domain=DOMAIN,
+                        translation_key="service_error",
+                        translation_placeholders={
+                            "service": service_name,
+                        },
+                    )
+                # log resulting schedule if testmode returned dict
+                if isinstance(result, dict) and ALLOW_TESTMODE:
+                    LOGGER.info(
+                        "%s: Applied schedule for action %s:\n%s",
+                        "TESTMODE"
+                        if self.coordinator.client.testmode()
+                        else "LIVEMODE",
+                        service_name,
+                        json.dumps(
+                            result,
+                            indent=2 if len(json.dumps(result)) < 200 else None,
+                        ),
+                    )
 
                 # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                 # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache

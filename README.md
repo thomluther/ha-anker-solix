@@ -332,17 +332,12 @@ Integration version 3.5.4 added initial support for this new system type and the
 
 ### Portable Power Stations (PPS)
 
-Portable Power Stations are managed as stand alone devices in most cases. The monitoring and control via the mobile App is typically only via Bluetooth or the MQTT server. Most recent PPS devices however added features that may require cloud Api services, like the Storm Guard disaster protection feature to enable an auto backup charge in case natural disasters are approaching.
+Portable Power Stations (PPS) are managed as stand alone devices in most cases and typically cannot be added to a power system (beside few exceptions). The monitoring and control via the mobile App is typically only via Bluetooth or the MQTT server. Most recent PPS devices however added features that may require cloud Api services as well, like the Time of Use mode or the Storm Guard disaster protection feature to enable an auto backup charge in case natural disasters are approaching.
 
-Version 3.8.1 added support for the cloud managed Storm Guard feature for a few PPS devices that support this feature already, which are currently the S2000 and C2000(X) Gen 2 PPS. Once the home location has been defined through the mobile App, the integration can enable or disable the Storm Guard feature. The integration also queries the cloud Api which disaster protection features are supported for the particular device or system. Only if supported, the appropriate disaster protection status and control entities may be created.
-
-> [!IMPORTANT]
-> At this point in time, the disaster protection endpoints are only supported on the COM cloud server, but not the EU server. Furthermore, the Storm Guard disaster protection feature itself is only supported for a few countries (e.g. US, PR), and the support generally depends on the device model or system type. The Anker mobile App will show whether Storm Guard is supported for the selected location. If the feature is not supported by the mobile App, those entities should not become available either in the integration.
-
-Furthermore, new PPS devices may also support a manual backup charge plan. The required controls have been added (switch, start date time, end date time). When modifying the dates or times through the integration while the plan is disabled, the changes are only stored in the data cache to prevent too many MQTT commands upon each partial datetime entity change. Just once the manual backup plan is or will be enabled, any cached dates and times will be used for the timestamp modifications. Therefore you should be aware, if you modify the datetime entities while the backup plan is activated, separate MQTT commands may be issued for each partial entity change. If only the backup plan will be activated without actual or future charge window, the dates and times will be adjusted automatically to start an immediate manual backup charge for 1 hour, just by enabling the backup switch.
-
-> [!TIP]
-> In order to modify the full backup plan with a single MQTT command, it is recommended to utilize the 'Solix AC backup charge' action, which already supports the Solarbank manual backup plan option. PPS devices supporting a manual backup plan are enabled as valid target switch entities for this action. The action also allows to define a duration instead of a dedicated end timestamp, see [Manual backup charge Option](INFO.md#manual-backup-charge-option) for more details.
+For more details to control such enhanced PPS features, please refer to [Modification of PPS settings](INFO.md#modification-of-pps-settings) in the [Usage documentation](INFO.md):
+- [Manual backup charge option](INFO.md#pps-manual-backup-charge-option)
+- [Auto backup charge option (Storm Guard)](INFO.md#pps-auto-backup-charge-option-storm-guard)
+- [Time of Use mode](INFO.md#pps-time-of-use-mode)
 
 
 ### EV charger devices

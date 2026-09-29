@@ -155,11 +155,13 @@
                             "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
                             "timeout": "Zeitüberschreitung für Api Anfragen",
                             "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
+                            "api_encryption": "Api Nutzdatenverschlüsselung",
                             "skip_invalid": "Ignoriere ungültige Antwortdaten"
                         },
                         "data_description": {
                             "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert, wenn kein MQTT Real Time Data Update getriggert wurde. Ein Update Intervall kleiner 60 Sekunden bringt deswegen nur Vorteile in Verbindung mit MQTT Nutzung.",
                             "endpoint_limit": "Hinweis: Die Anker Cloud Api erzwingt ein Anfragelimit pro Minute und Endpunkt. Um Api Fehler zu vermeiden, werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, sobald das Limit überschritten wurde. Die Drosselung kann mit 0 deaktiviert werden.",
+                            "api_encryption": "Hinweis: Die Api Nutzdatenverschlüsselung wird standardmäßig verwendet, um die Übertragungssicherheit der Nutzerdaten zu erhöhen. Sie kann deaktiviert werden, um verschlüsselungsbezogene Api-Fehler zu vermeiden.",
                             "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden."
                         }
                     },
@@ -226,11 +228,13 @@
                             "delay_time": "Verzögerung für aufeinanderfolgende Api Anfragen",
                             "timeout": "Zeitüberschreitung für Api Anfragen",
                             "endpoint_limit": "Limit für Endpunktanfragen pro Minute (0 = deaktiviert)",
+                            "api_encryption": "Api Nutzdatenverschlüsselung",
                             "skip_invalid": "Ignoriere ungültige Antwortdaten"
                         },
                         "data_description": {
                             "scan_interval": "Hinweis: Die Daten auf dem Cloud Server werden maximal alle 60-300 Sekunden aktualisiert, wenn kein MQTT Real Time Data Update getriggert wurde. Ein Update Intervall kleiner 60 Sekunden bringt deswegen nur Vorteile in Verbindung mit MQTT Nutzung.",
                             "endpoint_limit": "Hinweis: Die Anker Cloud Api erzwingt ein Anfragelimit pro Minute und Endpunkt. Um Api Fehler zu vermeiden, werden gleiche Endpunkt Anfragen auf 10 pro Minute gedrosselt, sobald das Limit überschritten wurde. Die Drosselung kann mit 0 deaktiviert werden.",
+                            "api_encryption": "Hinweis: Die Api Nutzdatenverschlüsselung wird standardmäßig verwendet, um die Übertragungssicherheit der Nutzerdaten zu erhöhen. Sie kann deaktiviert werden, um verschlüsselungsbezogene Api-Fehler zu vermeiden.",
                             "skip_invalid": "Hinweis: Cloud Antworten mit ungültigen oder veralteten Daten resultieren in nicht verfügbaren Sensoren. Du kannst diese Updates ignorieren bis die nächsten gültigen Daten empfangen werden."
                         }
                     },
@@ -2982,18 +2986,28 @@
         "modify_solix_use_time": {
             "name": "Nutzungszeitplan ändern",
             "description": "Anpassung des Nutzungszeitplans für Anker Solix Geräte, die AC-Ladung und einen Nutzungszeit Modus mit verschiedenen Stromtarifen unterstützen",
+            "sections": {
+                "sb_fields": {
+                    "name": "Solarbank Optionen",
+                    "description": "Für Solarbank 2+ Systeme mit AC Ladung können folgende Optionen angegeben werden (ignoriert für PPS Geräte)"
+                },
+                "pps_fields": {
+                    "name": "PPS Optionen",
+                    "description": "Für PPS Geräte können folgende Optionen angegeben werden (ignoriert für Solarbank Systeme)"
+                }
+            },
             "fields": {
                 "start_month": {
                     "name": "Anfangsmonat",
-                    "description": "Anfangsmonat der zu ändernden Saison"
+                    "description": "Anfangsmonat der zu ändernden Saison (ignoriert für PPS Geräte)"
                 },
                 "end_month": {
                     "name": "Endmonat",
-                    "description": "Endmonat der zu ändernden Saison"
+                    "description": "Endmonat der zu ändernden Saison (ignoriert für PPS Geräte)"
                 },
                 "day_type": {
                     "name": "Tagesart",
-                    "description": "Tagesart der in der Saison zu ändernden Tage"
+                    "description": "Tagesart der in der Saison zu ändernden Tage (ignoriert für PPS Geräte)"
                 },
                 "start_hour": {
                     "name": "Anfangsstunde",
@@ -3010,6 +3024,10 @@
                 "tariff_price": {
                     "name": "Tarifpreis pro kWh",
                     "description": "Tarifpreis pro kWh für den ausgewählten oder aktiven Zeitraum"
+                },
+                "backup_soc": {
+                    "name": "Notstrom Ladestand",
+                    "description": "Reservierter Notstrom Ladestand, der bei Entladung basierend auf den TOU Tarifen eingehalten wird (ignoriert für Solarbank Geräte)"
                 },
                 "delete": {
                     "name": "Ausgewählte Optionen aus dem Plan löschen",
@@ -3070,7 +3088,7 @@
         "service_error": {
             "message": "Die Aktion {service} ist fehlgeschlagen, überprüfe die Logs für Fehlerinformationen"
         },
-        "slot_time_error": {
+        "value_error": {
             "message": "Die Aktion {service} kann nicht ausgeführt werden: {error}"
         },
         "mqtt_command_failed": {

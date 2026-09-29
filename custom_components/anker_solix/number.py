@@ -173,7 +173,7 @@ DEVICE_NUMBERS = [
         entity_category=EntityCategory.CONFIG,
         native_min_value=0,
         native_max_value=1000,
-        native_step=0.01,
+        native_step=0.00001,
         exclude_fn=lambda s, d: (
             not (
                 {d.get("type")} - s
@@ -1191,15 +1191,25 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                     LOGGER.debug(
                         "'%s' change to %s will be applied", self.entity_id, value
                     )
-                    resp = await self.coordinator.client.api.set_sb2_use_time(
-                        siteId=data.get("site_id") or "",
-                        deviceSn=self.coordinator_context,
-                        tariff_price=value,
-                        # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
-                        merge_tariff_slots=False,
-                        clear_unused_tariff=False,
-                        toFile=self.coordinator.client.testmode(),
-                    )
+                    if data.get("type") == SolixDeviceType.PPS.value:
+                        resp = await self.coordinator.client.api.set_pps_use_time(
+                            deviceSn=self.coordinator_context,
+                            tariff_price=value,
+                            # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
+                            merge_tariff_slots=False,
+                            clear_unused_tariff=False,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    else:
+                        resp = await self.coordinator.client.api.set_sb2_use_time(
+                            siteId=data.get("site_id") or "",
+                            deviceSn=self.coordinator_context,
+                            tariff_price=value,
+                            # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
+                            merge_tariff_slots=False,
+                            clear_unused_tariff=False,
+                            toFile=self.coordinator.client.testmode(),
+                        )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied schedule for '%s' change to %s:\n%s",

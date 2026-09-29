@@ -84,16 +84,24 @@ This integration utilizes an unofficial Python library to communicate with the A
         - [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
         - [Export tariff options](#export-tariff-options)
 1. **[Solar forecast data](#solar-forecast-data)**
+1. **[Modification of PPS settings](#modification-of-pps-settings)**
+    * [PPS manual backup charge](#pps-manual-backup-charge-option)
+    * [PPS auto backup charge (Storm Guard)](#pps-auto-backup-charge-option-storm-guard)
+    * [PPS Time of Use mode](#pps-time-of-use-mode)
 1. **[Modification of vehicles](#modification-of-vehicles)**
 1. **[Markdown card to show the defined Solarbank schedule](#markdown-card-to-show-the-defined-solarbank-schedule)**
     * [Markdown card for Solarbank 1 schedules](#markdown-card-for-solarbank-1-schedules)
     * [Markdown card for Solarbank 2+ schedules](#markdown-card-for-solarbank-2-schedules)
+1. **[Markdown card to show the defined PPS schedules](#markdown-card-to-show-pps-schedules)**
+    * [Markdown card for PPS Time of Use schedules](#markdown-card-for-pps-time-of-use-schedules)
 1. **[Apex chart card to show your forecast data](#apex-chart-card-to-show-forecast-data)**
-1. **[Script to manually modify appliance schedule for your solarbank](#script-to-manually-modify-appliance-schedule-for-your-solarbank)**
+1. **[Scripts to manually modify appliance schedule for your solarbank](#scripts-to-manually-modify-appliance-schedule-for-your-solarbank)**
     * [Script code to adjust Solarbank 1 schedules](#script-code-to-adjust-solarbank-1-schedules)
     * [Script code to adjust Solarbank 2+ schedules](#script-code-to-adjust-solarbank-2-schedules)
     * [Script code to adjust Solarbank AC backup charge](#script-code-to-adjust-solarbank-ac-backup-charge)
     * [Script code to adjust Solarbank AC Time of Use plan](#script-code-to-adjust-solarbank-ac-time-of-use-plan)
+1. **[Scripts to manually modify appliance schedule for your PPS](#scripts-to-manually-modify-pps-schedules)**
+    * [Script code to adjust PPS AC Time of Use plan](#script-code-to-adjust-pps-ac-time-of-use-plan)
 1. **[Other integration actions](#other-integration-actions)**
     * [Export systems action](#export-systems-action)
     * [Get system info action](#get-system-info-action)
@@ -273,6 +281,9 @@ With release 2.6.0 there have been added diagnostic entities to the account devi
 Those entities however are disabled by default and must be enabled if you want more insights on the integration refresh intervals and runtimes. They may help to recognize throttling loops or interval staggering according to their update history.
 
 ![Api refresh sensors][api-refresh-sensors-img]![Api refresh history][api-refresh-history-img]
+
+Version 3.9.0 introduced Api payload encryption support as always used by the Anker mobile App. Payload encryption is enabled per default for Api client communication and it is transparent for Api usage. The payload encryption only becomes visible in the debug logs and those will show the encrypted as well as the decrypted payload data. Api payload encryption is based on secrets exchange upon each client connection. The keys are maintained while the connection remains active and new keys will be automatically exchanged if required. Payload encryption can be disabled if there may arise Api communication issues that point to issues with encryption handling. Otherwise the option should remain enabled for security and future proof communication. Currently unencrypted Api payloads are still tolerated by Anker cloud Api servers, but encryption may be enforced in the future and it would break all clients not using payload encryption.
+
 
 ### MQTT configuration options
 
@@ -833,7 +844,7 @@ For combined Solarbank 2 and Solarbank 1 systems, following schedule rules will 
 
 #### 3. Interactive solarbank schedule modification via a parameterized script
 
-Home Assistant 2024.3 provides a new capability to define fields for script parameters that can be filled via the more info dialog of the script entity prior execution. This allows easy integration of schedule modifications to your dashboard (see [Script to manually modify appliance schedule for your solarbank](#script-to-manually-modify-appliance-schedule-for-your-solarbank)).
+Home Assistant 2024.3 provides a new capability to define fields for script parameters that can be filled via the more info dialog of the script entity prior execution. This allows easy integration of schedule modifications to your dashboard (see [Scripts to manually modify appliance schedule for your solarbank](#scripts-to-manually-modify-appliance-schedule-for-your-solarbank)).
 
 
 ### Schedule action details and limitations
@@ -942,7 +953,7 @@ You can also use an Anker Solix action to modify the use time plan. Following is
 
 ![AC Time of Use service][ac-time-of-use-service-img]
 
-All fields of the action are optional. Following rules will be applied when the action is executed with inactive deletion:
+All fields of the action are optional. The PPS fields will be ignored for Solarbank plans. Following rules will be applied when the action is executed with inactive deletion:
 - The use time plan must define all year and all day intervals, no gaps are allowed
   - Therefore any new season or day type interval will use min start and max end definition for the interval, independent which interval range was specified
   - Further intervals in the same scope must be applied with subsequent actions
@@ -1086,6 +1097,101 @@ Forecast data entities and cloud polling can be excluded in your hub configurati
 
 > [!IMPORTANT]
 > None of the forecast entities can be used as solar forecast entities for your HA energy dashboard. If Smart mode is inactive, no forecast data is provided and the entities will show an unknown state. Furthermore those entities are not designed to integrate with your HA energy dashboard. Instead they are usable to monitor the behavior of the 'Smart' mode since that is acting like a black box and may show weird charging and discharging behavior that may not make much sense. If you need more accurate forecast data, I recommend any of the available solar forecast integrations.
+
+
+## Modification of PPS settings
+
+The supported PPS devices are mostly stand alone devices and have no system controls, which are managed through the cloud Api in most cases. Most PPS controls are typcically individual entities that use MQTT commands through the connected Anker MQTT server. Newer PPS devices with advanced features however require a hybrid or cloud Api only control for those advanced features. Following cloud Api dependend features are known and may be implemented:
+- Storm Guard protection (3.8.0)
+- Time of Use plans (3.9.0)
+- Device energy history (future release)
+
+> [!NOTE]
+> Control entities may only be present if you have a working MQTT server connection and subscription for the device. Some devices like the S2000 can also be shared with other Anker accounts. A shared device can typically be controlled by the member, however the member account may have limited Api endpoint permissions to control the device. As such, a member account may not be able to control all advanced PPS features.
+
+
+### PPS Manual backup charge option
+
+The manual backup charge is considered as usage mode option in the Anker app, since it is a temporary mode. It has a start and end timestamp and can either be active or inactive. The manual backup charge is controlled by a switch, start date time and end date time entity. Once active and within the defined backup charge interval, this mode will overlay any configured usage mode since it is considered as emergency charge mode for the battery. This means the battery will be charged with maximum possible charge power taken from PV or grid. Once the battery is full or the backup charge interval is exceeded, the mode will toggle back automatically to the previous configured usage mode. While the Anker App may allow only rough 30 minute interval ranges, the integration allows to specify timestamps with minute granularity (seconds are ignored), which should also be applied by the device once set in the schedule object.
+When modifying the dates or times through the integration while the plan is disabled, the changes are only stored in the data cache to prevent too many MQTT commands upon each partial datetime entity change. Just once the manual backup plan is or will be enabled, any cached dates and times will be used for the timestamp modifications. Therefore you should be aware, if you modify the datetime entities while the backup plan is activated, separate MQTT commands may be issued for each partial entity change. If only the backup plan will be activated without actual or future charge window, the dates and times will be adjusted automatically to start an immediate manual backup charge for 1 hour, just by enabling the backup switch.
+
+> [!TIP]
+> In order to modify the full backup plan with a single MQTT command, it is recommended to utilize the [Solix AC backup charge](#modify-ac-backup-charge-action) action, which already supports the Solarbank manual backup plan option. PPS devices supporting a manual backup plan are enabled as valid target switch entities for this action. The action also allows to define a duration instead of a dedicated end timestamp.
+
+
+### PPS Auto backup charge option (Storm Guard)
+
+Version 3.8.1 added support for the cloud managed Storm Guard feature for a few PPS devices that support this feature already, which are currently the S2000 and C2000(X) Gen 2 PPS. Once the home location has been defined through the Anker mobile App, the integration can enable or disable the Storm Guard feature. The integration also queries the cloud Api which disaster protection features are supported for the particular device or system. Only if supported, the appropriate disaster protection status and control entities may be created.
+
+> [!IMPORTANT]
+> The Storm Guard disaster protection feature itself is only supported for a few countries (e.g. US, PR), and the support generally depends on the device model or system type. The Anker mobile App will show whether Storm Guard is supported for the selected location. If the feature is not supported by the mobile App, those entities should not become available either in the integration.
+
+
+### PPS Time of Use mode
+
+A Time of Use plan must be defined first before this mode can be enabled in the Anker app. The plan defines at which hours during the day you have which power tariff. The app supports up to 6 time range definitions during a day, and the time ranges must always cover all 24 hours (no gaps are allowed). The ranges only support hour granularity, any minutes or seconds that you may specify through control entities are therefore ignored. For each range you can define peak, medium peak and off peak tariffs and a corresponding price per tariff. The defined plan is considered only in the 'Time of Use' mode which is intended for a so called 'Peak and Valley' shaving. This basically means AC charge during off peak tariff and discharge only at peak tariff. Medium peak typically causes neither charge nor discharge and is the default tariff if not explicitely specified upon plan changes. Please consult your device product documentation for more details on the device behavior for the various tariffs.
+
+#### Time of Use plan control by entities
+
+Starting with version 3.9.0 there is a 'Tariff' select entity and a 'Tariff Price' number entity which are extracted from the defined TOU plan.
+Along with a new device entity to control the price currency, they complete the tariff management capabilities that the PPS device may offer.
+Furthermore, the backup reserve SOC is also part of the TOU plan (and only applied by the device while discharging during active TOU usage mode). This setting is currently controlled directly via MQTT commands, and reused upon TOU plan changes through the Api.
+
+> [!IMPORTANT]
+> As of today, device member accounts have no access permission to the Api endpoints required to query and control the device Time of Use plans. Therefore you have to use the device owner account if you want to control the plan through the integration. This restriction applies to the Anker mobile App and the integration. If you feel the need to control the TOU plan also as member, please raise a Ticket with Anker Support.
+
+The tariff and tariff price entities are device entities that reflect the settings from the actual interval of the TOU plan, depending on hour of the day. In order to ensure the current TOU setting is reflected correctly in the control entities, your device and HA instance must be time synchronized and in the same time zone. The TOU plan control entities allow toggling of the actual tariff or changing the actual tariff price directly. Following rules have to be considered when using the control entities:
+- Toggling to a tariff that had no previous price defined yet will apply your actual tariff price as default for the selected tariff and may have to be changed afterwards
+  - The default price will be adjusted to be inline with existing tariff prices
+- Toggling the tariff or changing tariff prices will not cause any sanitation of the TOU plan ranges, which is typically applied when modifying the TOU plan via the corresponding Anker Solix action
+  - This avoids that daily time intervals are merged if same tariff exists already in adjacent intervals
+  - This avoids that tariff prices are cleared if the tariff is no longer used in the daily intervals
+- The price currency is only used for proper display of prices, there is no amount conversion applied between different currencies or currency changes
+- The backup reserve SOC is part of the TOU plan, but applied directly as MQTT command if the entitiy is being modified (without Api call to modify the TOU plan)
+  - This may not be reflected directly in the TOU plan as used by the Anker mobile App, although the setting is active on the device
+  - The integration entity will report only the active backup SOC setting from the device, not the (obsolete) value as may be reported in the TOU plan
+  - The integration will reuse the active backup SOC value when applying TOU plan changes via the Api to ensure the correct setting is reused in the plan
+
+#### Modify Time of Use plan action
+
+You can also use an Anker Solix action to modify the use time plan. Following is an example of the UI mode for this action.
+
+![AC Time of Use service][pps-time-of-use-service-img]
+
+All fields of the action are optional, any Solarbank fields will be ignored for PPS TOU plan updates. Following rules will be applied when the action is executed with inactive deletion:
+- The TOU plan must cover full day time ranges, no gaps are allowed
+  - To specify 24:00 you can use 23:59 since 24 is out of range for a time entity
+- If only a start or end time is specified, this will be used to select the corresponding interval that covers the specified value
+  - There will not be any change of interval ranges if no complete range was specified for the action
+- Specifying a range with valid start and end time will modify the specified interval in the plan
+  - Adjacent intervals will be adopted accordingly to avoid overlays or gaps
+  - If adjacent intervals use the same tariff type they will be merged into a single interval
+  - If no tariff is provided for a new interval range, the medium peak tariff will be used as default
+  - If no price is provided, the active tariff price or 0 will be used as default for selected tariff and will be adjusted to be inline with existing tariff prices
+- Specifying only a price will change the active tariff price
+- Specifying a tariff will modify the tariff for the active interval
+  - An optional price will be set or changed as well for the provided tariff
+  - If no price is provided for a previously unused tariff type, the active tariff price or 0 will be used as default
+- The action will also sanitize the overall plan
+  - Merge adjacent time intervals with the same resulting tariff
+  - Remove tariff prices if the tariff is no longer used in the plan
+
+Deletions of any use time plan definitions can be performed as well with the same action once you activate the 'delete' option. Deletion is done on various scopes of the plan and depends on which other options have been specified. A general deletion rule is to remove also the higher level scope object and fill any gaps if the last interval in the lower level scope is deleted.
+
+Following rules will be applied once the 'delete' option is used:
+- If start or end time is specified, the time interval(s) will be removed
+  - If only one of the time range options is specified, only the selected single interval will be removed
+  - If a range is specified, the given range will be removed and the gap will be closed by adjacent intervals
+- Otherwise if a tariff is specified
+  - All time intervals with the specified tariff will be removed and the gaps will be closed by adjacent intervals
+  - The tariff price definition will be removed as well
+- Otherwise the whole TOU plan will be removed if no further options are specified
+  - Since the Api does not support deletion of all ranges, a default full day range with default tariff (medium peak) and default price (0) will remain
+
+Removal of intervals can lead to a gap in the overall range. Following common rules will be applied to avoid gaps or holes in required TOU plan ranges:
+- The remaining previous time interval will be elongated to fill the gap of the removed time range
+  - The following interval will be used from the beginning if no previous time interval remains
+- If no time interval remains for the day, the default interval, tariff and price will be applied
 
 
 ## Modification of vehicles
@@ -1245,7 +1351,7 @@ content: >
             {%- set start = today_at(wk[idx].start_time|default(0)|string~":0") -%}
             {%- set end = wk[idx].end_time|default(0)|int(0) -%}
             {%- set end = today_at(end|string~":0") if end < 24 else today_at("0:0") + timedelta(days=1)  -%}
-            {%- set bs = '_**' if active and m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5) and start.time() <= isnow.time() < end.time() else '' -%}
+            {%- set bs = '_**' if active and m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5) and start <= isnow < end else '' -%}
             {%- set be = '**_' if bs else '' -%}
             {%- set row = "%s | %s | %s | %s%.2f %s | |"|format(bs~start.strftime("%H:%M")~be, bs~end.strftime("%H:%M")~be, bs~tariff~be, bs, price, unit~be~('*' if bs else '')) -%}
           {%- else -%}
@@ -1258,7 +1364,7 @@ content: >
             {%- set start = today_at(we[idx].start_time|default(0)|string~":0") -%}
             {%- set end = we[idx].end_time|default(0)|int(0) -%}
             {%- set end = today_at(end|string~":0") if end < 24 else today_at("0:0") + timedelta(days=1)  -%}
-            {%- set bs = '_**' if active and m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5,7) and start.time() <= isnow.time() < end.time() else '' -%}
+            {%- set bs = '_**' if active and m_start.month <= isnow.month <= m_end.month and isnow.weekday() in range(5,7) and start <= isnow < end else '' -%}
             {%- set be = '**_' if bs else '' -%}
             {%- set row = row ~ "%s | %s | %s | %s%.2f %s"|format(bs~start.strftime("%H:%M")~be, bs~end.strftime("%H:%M")~be, bs~tariff~be, bs, price, unit~be~('*' if bs else '')) -%}
           {%- else -%}
@@ -1285,6 +1391,59 @@ content: >
 - The `use_time` plan is only used when the 'Time of Use' mode is enabled
 - The `time_slot` plan is only used for 'Time Slot' mode. However, currently there is not supplied any object for the time_slot plan through the cloud Api, therefore the structure and configuration parameters are unknown. Once they become available, the markdown card will be revised with this additional plan of Solarbank 3 devices
 - The Anker Intelligence (AI) section is just shown if the device supports the `Smart` mode
+- Highlighting of the active plan and slot is based on local timezone of the device. The local timestamp is provided in the card header
+
+
+## Markdown card to show PPS schedules
+
+### Markdown card for PPS Time of Use schedules
+
+Following markdown card code can be used to display the PPS TOU schedule in the UI frontend. The active interval will be highlighted. Just replace the entity with your select entity representing the PPS usage mode. It is the entity that has all schedule types as attributes.
+
+#### Markdown card code for PPS Time of Use schedules
+
+<details>
+<summary><b>Expand to see card code</b><br><br></summary>
+
+```yaml
+type: markdown
+content: |
+  {% set entity = 'select.solix_s2000_usage_mode' %}
+  {% set mode = state_translated(entity)|default('') %}
+  {% set plan = state_attr(entity,'tou_mode_schedule')|default({}) %}
+  {% set isnow = now().replace(second=0,microsecond=0) %}
+  ### PPS Schedule (Set Usage Mode: {{mode|capitalize}})
+  {% if plan %}
+    {%- set tariffs = ["Peak","Medium","OffPeak"] -%}
+    {%- set unit = plan.unit|default('-') -%}
+    {%- set slots = plan.ranges|default([]) -%}
+  #### PPS TOU plan: (Backup SOC: {{plan.reserve_power|default('-')}} %)
+  {{ "%s | %s | %s | %s"|format('Start', 'End', 'Type', 'Price') }}
+  {{ ":---|:---|:---|---" }}
+    {% for idx in range(slots|length) -%}
+      {%- set tariff = slots[idx].type|default(0)|int(0) -%}
+      {%- set price = plan.prices|default([]) | selectattr('type',"eq",tariff) | map(attribute='price') | list | first | float(0) -%}
+      {%- set tariff = tariffs[tariff-1] if tariff is number and 0 < tariff <= tariffs|length else '------' -%}
+      {%- set start = today_at(slots[idx].start_time|default('00:00')) -%}
+      {%- set end = (slots[idx].end_time|default('24:00')).split(':')[0]|int(24) -%}
+      {%- set end = today_at(end|string~":0") if end < 24 else today_at("0:0") + timedelta(days=1)  -%}
+      {%- set bs = '_**' if start <= isnow < end else '' -%}
+      {%- set be = '**_' if bs else '' -%}
+      {%- set row = "%s | %s | %s | %s%s %s"|format(bs~start.strftime("%H:%M")~be, bs~end.strftime("%H:%M")~be, bs~tariff~be, bs, price|round(5), unit~be~(' *' if bs else '')) %}
+  {{ row }}
+    {%- endfor %}
+  {% endif %}
+  {% if not plan %}
+    {{ "No TOU schedule available"}}
+  {% endif %}
+```
+</details>
+
+**Notes:**
+
+- The PPS TOU schedule is controlled through the cloud Api
+- The `tou_mode_schedule` plan is only used if the PPS has activated 'Time of Use' usage mode. The plan is limited to 6 time ranges for a full day and must cover the full day (no gaps are allowed)
+- A complete plan deletion is not supported through the Api. A plan deletion will reset the plan to a full day slot with default tariff (Mid Peak) and default price (0)
 - Highlighting of the active plan and slot is based on local timezone of the device. The local timestamp is provided in the card header
 
 
@@ -1419,7 +1578,7 @@ series:
 </details>
 
 
-## Script to manually modify appliance schedule for your solarbank
+## Scripts to manually modify appliance schedule for your solarbank
 
 With Home Assistant 2024.3 you have the option to manually enter parameters for a script prior execution. This is a nice capability that let's you add an UI capability for an action right into your dashboard. You just need to create a script with input fields that will run the selected solarbank action using the entered parameters. Following is a screenshot of the more info dialog for the script entity:
 
@@ -1901,6 +2060,118 @@ sequence:
 </details>
 
 
+## Scripts to manually modify PPS schedules
+
+Similar to [scripts to modify Solarbank schedules](#scripts-to-manually-modify-appliance-schedule-for-your-solarbank), you can create scripts to modify PPS schedules accordingly. Following is a screenshot of the more info dialog for such a script entity:
+
+![Change PPS TOU schedule script][pps-schedule-script-img]
+
+Below are example scripts which you can use for PPS devices, you just need to replace the default entity name in the action data entity_id field with your device select entity for the TOU tariff. If you have multiple devices, you can select another device entity to run the script.
+
+### Script code to adjust PPS AC Time of Use plan
+
+<details>
+<summary><b>Expand to see script code</b><br><br></summary>
+
+```yaml
+alias: Modify PPS Usage Time
+description: ''
+icon: mdi:cash-clock
+mode: single
+fields:
+  entity:
+    name: Entity
+    description: Choose a PPS entity
+    required: true
+    default: select.solix_s2000_tariff_tou
+    selector:
+      entity:
+        integration: anker_solix
+        domain: select
+  start_hour:
+    name: Start hour
+    description: Start hour of the days to be modified (minutes and seconds are ignored)
+    required: false
+    default: '00:00:00'
+    selector:
+      time: null
+  end_hour:
+    name: End hour
+    description: >-
+      End hour of the days to be modified (minutes and seconds are ignored). For 24:00 you must enter 23:59
+    required: false
+    default: '23:59:00'
+    selector:
+      time: null
+  tariff:
+    name: Tariff
+    description: Tariff to be used for the selected or active period
+    required: false
+    default: off_peek
+    selector:
+      select:
+        mode: dropdown
+        multiple: false
+        translation_key: tariff
+        options:
+          - peak
+          - mid_peak
+          - off_peak
+  tariff_price:
+    name: Tariff price per kWh
+    description: Tariff price per kWh for the selected or active period
+    required: false
+    example: 0.27
+    default: 0.3
+    selector:
+      number:
+        mode: box
+        min: 0
+        max: 100
+        step: any
+        unit_of_measurement: per kWh
+  backup_soc:
+    name: Backup reserve SOC
+    description: >-
+      Backup reserve SOC for discharging while in TOU mode. Must be 5 % above min SOC
+    required: false
+    example: 20
+    selector:
+      number:
+        min: 6
+        max: 100
+        step: 1
+        unit_of_measurement: '%'
+  delete:
+    name: Delete selected options from plan
+    description: >-
+      If activated, the selected options will be removed from the plan instead of being created or modified. Deletions will always merge ranges in the
+      applicable scope to avoid any gaps. If no option is selected, the whole plan will be deleted.
+    required: false
+    selector:
+      boolean: null
+sequence:
+  - action: anker_solix.modify_solix_use_time
+    target:
+      entity_id: |
+        {{entity}}
+    data:
+      start_hour: |
+        {{start_hour|default(None)}}
+      end_hour: |
+        {{end_hour|default(None)}}
+      tariff: |
+        {{tariff|default(None)}}
+      tariff_price: |
+        {{tariff_price|default(None)}}
+      backup_soc: |
+        {{backup_soc|default(None)}}
+      delete: |
+        {{delete|default(None)}}
+```
+</details>
+
+
 ## Other integration actions
 
 Anker Solix actions can be used in any automation, script or via the HA UI developer tool panel.
@@ -2103,6 +2374,7 @@ If you like this project, please give it a star on [GitHub][anker-solix]. If you
 [ac-backup-service-img]: doc/ac-backup-service.png
 [ac-tariff-control-img]: doc/ac-tariff-control.png
 [ac-time-of-use-service-img]: doc/ac-time-of-use-service.png
+[pps-time-of-use-service-img]: doc/pps-time-of-use-service.png
 [dynamic-price-diagram-img]: doc/dynamic-price-diagram.png
 [forecast-data-diagram-img]: doc/forecast-data-diagram.png
 [power-dock-device-img]: doc/power-dock-device.png

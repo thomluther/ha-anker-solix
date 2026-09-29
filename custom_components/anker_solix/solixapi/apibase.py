@@ -2127,7 +2127,15 @@ class AnkerSolixBaseApi:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_currency_list"]
             )
-        return resp.get("data") or {}
+        # cache the currency list in the account
+        if (data := resp.get("data") or {}):
+            self._update_account(
+                {
+                    "currency_list": data.get("currency_list") or [],
+                    "default_currency": data.get("default_currency") or {},
+                }
+            )
+        return data
 
     def lookup_currency_symbol(self, currency: str) -> str | None:
         """Get the currency symbol from the currency list if available."""

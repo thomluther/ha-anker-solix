@@ -155,11 +155,13 @@
                             "delay_time": "Delay for subsequent Api requests",
                             "timeout": "Timeout for Api requests",
                             "endpoint_limit": "Endpoint request limit per minute",
+                            "api_encryption": "Api payload encryption",
                             "skip_invalid": "Skip invalid data responses"
                         },
                         "data_description": {
                             "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most if no MQTT real-time data update has been triggered. An update interval of less than 60 seconds therefore only offers advantages in conjunction with MQTT use.",
                             "endpoint_limit": "Note: The Anker cloud Api enforces a request limit per minute and endpoint. To avoid Api errors, identical endpoint requests are throttled to 10 per minute once the limit has been exceeded. With 0 you can deactivate endpoint throttling.",
+                            "api_encryption": "Note: Api payload encryption is used by default for enhanced transfer security. It can be disabled to avoid encryption related Api errors.",
                             "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again."
                         }
                     },
@@ -226,11 +228,13 @@
                             "delay_time": "Delay for subsequent Api requests",
                             "timeout": "Timeout for Api requests",
                             "endpoint_limit": "Endpoint request limit per minute",
+                            "api_encryption": "Api payload encryption",
                             "skip_invalid": "Skip invalid data responses"
                         },
                         "data_description": {
                             "scan_interval": "Note: The data on the cloud server is updated every 60-300 seconds at most if no MQTT real-time data update has been triggered. An update interval of less than 60 seconds therefore only offers advantages in conjunction with MQTT use.",
                             "endpoint_limit": "Note: The Anker cloud Api enforces a request limit per minute and endpoint. To avoid Api errors, identical endpoint requests are throttled to 10 per minute once the limit has been exceeded. With 0 you can deactivate endpoint throttling.",
+                            "api_encryption": "Note: Api payload encryption is used by default for enhanced transfer security. It can be disabled to avoid encryption related Api errors.",
                             "skip_invalid": "Note: Cloud responses with invalid or stale data will make entities unavailable. You can skip entity updates until next valid data is received again."
                         }
                     },
@@ -2982,18 +2986,28 @@
         "modify_solix_use_time": {
             "name": "Modify Time of Use plan",
             "description": "Adjust the Time of Use plan for Anker Solix devices that support AC charge and a Time of Use mode with flexible power tariffs",
+            "sections": {
+                "sb_fields": {
+                    "name": "Solarbank options",
+                    "description": "For Solarbank 2+ systems supporting AC charge, you can specify following options (ignored for PPS devices)"
+                },
+                "pps_fields": {
+                    "name": "PPS options",
+                    "description": "For stand alone PPS devices, you can specify following options (ignored for Solarbank systems)"
+                }
+            },
             "fields": {
                 "start_month": {
                     "name": "Start month",
-                    "description": "Start month for the season to be modified"
+                    "description": "Start month for the season to be modified (ignored for PPS devices)"
                 },
                 "end_month": {
                     "name": "End month",
-                    "description": "End month for the season to be modified"
+                    "description": "End month for the season to be modified (ignored for PPS devices)"
                 },
                 "day_type": {
                     "name": "Day type",
-                    "description": "Type of days to be modified in the season"
+                    "description": "Type of days to be modified in the season (ignored for PPS devices)"
                 },
                 "start_hour": {
                     "name": "Start hour",
@@ -3010,6 +3024,10 @@
                 "tariff_price": {
                     "name": "Tariff price per kWh",
                     "description": "Tariff price per kWh for the selected or active period"
+                },
+                "backup_soc": {
+                    "name": "Backup SOC",
+                    "description": "Reserved state of charge level, that should be kept while discharging based on TOU tariffs (ignored for Solarbank devices)"
                 },
                 "delete": {
                     "name": "Delete selected options from plan",
@@ -3070,7 +3088,7 @@
         "service_error": {
             "message": "The action {service} failed, review log for error details"
         },
-        "slot_time_error": {
+        "value_error": {
             "message": "The action {service} cannot be executed: {error}"
         },
         "mqtt_command_failed": {

@@ -33,6 +33,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     ALLOW_TESTMODE,
     ATTRIBUTION,
+    BACKUP_SOC,
     CREATE_ALL_ENTITIES,
     DAY_TYPE,
     DELETE,
@@ -223,9 +224,42 @@ DEVICE_SELECTS = [
         feature=AnkerSolixEntityFeature.AC_CHARGE,
         exclude_fn=lambda s, d: (
             not (
-                {d.get("type")} - s
+                {d.get("type")} - s - {SolixDeviceType.PPS.value}
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
+        ),
+    ),
+    AnkerSolixSelectDescription(
+        # PPS TOU Tariff type
+        key="pps_preset_tariff",
+        translation_key="preset_tariff",
+        json_key="preset_tariff",
+        entity_category=EntityCategory.CONFIG,
+        options_fn=lambda d, _: [
+            item.name.lower()
+            for item in SolixTariffTypes
+            if SolixTariffTypes.PEAK.value
+            <= item.value
+            <= SolixTariffTypes.OFF_PEAK.value
+        ],
+        value_fn=lambda d, jk: (
+            get_enum_name(
+                SolixTariffTypes,
+                d.get("active_tariff") or d.get(jk)
+                if d.get(MQTT_OVERLAY)
+                else d.get(jk) or d.get("active_tariff"),
+                "",
+            ).lower()
+            or None
+        ),
+        attrib_fn=lambda d, jk: {
+            "tariff": d.get("active_tariff") or d.get(jk)
+            if d.get(MQTT_OVERLAY)
+            else d.get(jk) or d.get("active_tariff")
+        },
+        feature=AnkerSolixEntityFeature.AC_CHARGE,
+        exclude_fn=lambda s, d: (
+            not (({d.get("type")} - s) & {SolixDeviceType.PPS.value})
         ),
     ),
     AnkerSolixSelectDescription(
@@ -553,7 +587,9 @@ DEVICE_SELECTS = [
             )
             | (
                 {"tou_mode_schedule": val}
-                if str(val := d.get("tou_mode_schedule", ""))
+                if str(
+                    val := d.get("pps_use_time", "") or d.get("tou_mode_schedule", "")
+                )
                 else {}
             )
         ),
@@ -852,6 +888,22 @@ DEVICE_SELECTS = [
         )
         for idx in range(1, 13)
     ],
+    AnkerSolixSelectDescription(
+        # Defined Site price unit energy saving calculations by cloud
+        key="device_price_unit",
+        translation_key="system_price_unit",
+        json_key="preset_tariff_currency",
+        entity_category=EntityCategory.CONFIG,
+        options_fn=lambda d, _: [
+            "€",
+            "$",
+            "£",
+            "¥",
+            "₹",
+            "원",
+        ],
+        exclude_fn=lambda s, d: not ({d.get("type")} - s and "pps_use_time" in d),
+    ),
 ]
 
 SITE_SELECTS = [
@@ -1153,7 +1205,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         )
         # Initial options update for static information not changed during Api session
         number_sort = False
-        if self._attribute_name == "system_price_unit":
+        if self._attribute_name in ["system_price_unit", "device_price_unit"]:
             # merge currencies from entity description and from Api currency list
             options = set(self._attr_options or []) | {
                 item.get("symbol")
@@ -1625,9 +1677,11 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     "preset_usage_mode",
                     "preset_load_type",
                     "preset_tariff",
+                    "pps_preset_tariff",
                     "power_cutoff",
                     "system_price_unit",
                     "system_price_type",
+                    "device_price_unit",
                     "preset_inverter_limit",
                     "preset_ac_input_limit",
                     "preset_pv_input_limit",
@@ -1954,7 +2008,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             ),
                         )
             elif (
-                self._attribute_name == "preset_tariff"
+                self._attribute_name in ["preset_tariff", "pps_preset_tariff"]
                 and option != cv.ENTITY_MATCH_NONE
             ):
                 LOGGER.debug(
@@ -1963,15 +2017,25 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     option,
                 )
                 with suppress(ValueError, TypeError):
-                    resp = await self.coordinator.client.api.set_sb2_use_time(
-                        siteId=data.get("site_id", ""),
-                        deviceSn=self.coordinator_context,
-                        tariff_type=option,
-                        # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
-                        merge_tariff_slots=False,
-                        clear_unused_tariff=False,
-                        toFile=self.coordinator.client.testmode(),
-                    )
+                    if self._attribute_name == "pps_preset_tariff":
+                        resp = await self.coordinator.client.api.set_pps_use_time(
+                            deviceSn=self.coordinator_context,
+                            tariff_type=option,
+                            # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
+                            merge_tariff_slots=False,
+                            clear_unused_tariff=False,
+                            toFile=self.coordinator.client.testmode(),
+                        )
+                    else:
+                        resp = await self.coordinator.client.api.set_sb2_use_time(
+                            siteId=data.get("site_id", ""),
+                            deviceSn=self.coordinator_context,
+                            tariff_type=option,
+                            # Ensure that only the tariff is changed without modification of slot times or clearance of tariff price
+                            merge_tariff_slots=False,
+                            clear_unused_tariff=False,
+                            toFile=self.coordinator.client.testmode(),
+                        )
                     if isinstance(resp, dict) and ALLOW_TESTMODE:
                         LOGGER.info(
                             "%s: Applied site price settings for '%s' change to '%s':\n%s",
@@ -2052,6 +2116,32 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                     indent=2 if len(json.dumps(resp)) < 200 else None,
                                 ),
                             )
+
+            elif self._attribute_name == "device_price_unit":
+                LOGGER.debug(
+                    "'%s' selection change to option '%s' will be applied",
+                    self.entity_id,
+                    option,
+                )
+                with suppress(ValueError, TypeError):
+                    # change device price unit via pps_use_time plan attribute
+                    resp = await self.coordinator.client.api.set_pps_use_time(
+                        deviceSn=self.coordinator_context,
+                        currency=option,
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                    if isinstance(resp, dict) and ALLOW_TESTMODE:
+                        LOGGER.info(
+                            "%s: Applied device price settings for '%s' change to '%s':\n%s",
+                            "TESTMODE"
+                            if self.coordinator.client.testmode()
+                            else "LIVEMODE",
+                            self.entity_id,
+                            option,
+                            json.dumps(
+                                resp, indent=2 if len(json.dumps(resp)) < 200 else None
+                            ),
+                        )
 
             elif self._attribute_name == "preset_inverter_limit":
                 with suppress(ValueError, TypeError):
@@ -2381,23 +2471,50 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 },
             )
         if self.coordinator and hasattr(self.coordinator, "data"):
-            result = False
+            result = None
             data: dict = self.coordinator.data.get(self.coordinator_context) or {}
             if service_name == SERVICE_MODIFY_SOLIX_USE_TIME:
+                # first check if tariff is supported by device
+                if (tariff := kwargs.get(TARIFF)) is not None:
+                    if str(tariff).isdigit():
+                        tariff = get_enum_name(SolixTariffTypes, int(tariff), "")
+                    if str(tariff).lower() not in self._attr_options:
+                        # Raise alert to frontend
+                        raise ServiceValidationError(
+                            f"The action {service_name} cannot be executed: Selected tariff '{tariff}' is no supported tariff option: {self._attr_options!s}",
+                            translation_domain=DOMAIN,
+                            translation_key="value_error",
+                            translation_placeholders={
+                                "service": service_name,
+                                "error": f"Selected tariff '{tariff}' is no supported tariff option: {self._attr_options!s}",
+                            },
+                        )
                 LOGGER.debug("%s action will be applied", service_name)
-                result = await self.coordinator.client.api.set_sb2_use_time(
-                    siteId=data.get("site_id") or "",
-                    deviceSn=self.coordinator_context,
-                    start_month=kwargs.get(START_MONTH),
-                    end_month=kwargs.get(END_MONTH),
-                    start_hour=kwargs.get(START_HOUR),
-                    end_hour=kwargs.get(END_HOUR),
-                    day_type=kwargs.get(DAY_TYPE),
-                    tariff_type=kwargs.get(TARIFF),
-                    tariff_price=kwargs.get(TARIFF_PRICE),
-                    delete=kwargs.get(DELETE),
-                    toFile=self.coordinator.client.testmode(),
-                )
+                if self._attribute_name == "pps_preset_tariff":
+                    result = await self.coordinator.client.api.set_pps_use_time(
+                        deviceSn=self.coordinator_context,
+                        start_hour=kwargs.get(START_HOUR),
+                        end_hour=kwargs.get(END_HOUR),
+                        tariff_type=kwargs.get(TARIFF),
+                        tariff_price=kwargs.get(TARIFF_PRICE),
+                        backup_soc=kwargs.get(BACKUP_SOC),
+                        delete=kwargs.get(DELETE),
+                        toFile=self.coordinator.client.testmode(),
+                    )
+                else:
+                    result = await self.coordinator.client.api.set_sb2_use_time(
+                        siteId=data.get("site_id") or "",
+                        deviceSn=self.coordinator_context,
+                        start_month=kwargs.get(START_MONTH),
+                        end_month=kwargs.get(END_MONTH),
+                        start_hour=kwargs.get(START_HOUR),
+                        end_hour=kwargs.get(END_HOUR),
+                        day_type=kwargs.get(DAY_TYPE),
+                        tariff_type=kwargs.get(TARIFF),
+                        tariff_price=kwargs.get(TARIFF_PRICE),
+                        delete=kwargs.get(DELETE),
+                        toFile=self.coordinator.client.testmode(),
+                    )
             else:
                 raise ServiceValidationError(
                     f"The entity {self.entity_id} does not support the action {service_name}",
@@ -2405,6 +2522,16 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     translation_key="service_not_supported",
                     translation_placeholders={
                         "entity": self.entity_id,
+                        "service": service_name,
+                    },
+                )
+            # raise service error if result failed
+            if result is False:
+                raise ServiceValidationError(
+                    f"The action '{service_name}' failed, review log for error details",
+                    translation_domain=DOMAIN,
+                    translation_key="service_error",
+                    translation_placeholders={
                         "service": service_name,
                     },
                 )

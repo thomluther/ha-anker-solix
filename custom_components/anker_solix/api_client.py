@@ -21,6 +21,7 @@ from homeassistant.const import (
 
 from .const import (
     ALLOW_TESTMODE,
+    CONF_API_ENCRYPTION,
     CONF_API_OPTIONS,
     CONF_ENDPOINT_LIMIT,
     CONF_MQTT_OPTIONS,
@@ -55,6 +56,8 @@ DEFAULT_ENDPOINT_LIMIT: int = SolixDefaults.ENDPOINT_LIMIT_DEF
 DEFAULT_DELAY_TIME: float = SolixDefaults.REQUEST_DELAY_DEF
 # default timeout for api requests
 DEFAULT_TIMEOUT: int = SolixDefaults.REQUEST_TIMEOUT_DEF
+# default Api payload encryption
+DEFAULT_API_ENCRYPTION: bool = True
 # default MQTT usage
 DEFAULT_MQTT: bool = DEFAULT_MQTT_USAGE
 # default timeout for MQTT realtime trigger
@@ -193,6 +196,13 @@ class AnkerSolixApiClient:
             int(
                 (data.get(CONF_API_OPTIONS) or {}).get(
                     CONF_ENDPOINT_LIMIT, DEFAULT_ENDPOINT_LIMIT
+                )
+            )
+        )
+        self.api.apisession.payloadEncryption(
+            bool(
+                (data.get(CONF_API_OPTIONS) or {}).get(
+                    CONF_API_ENCRYPTION, DEFAULT_API_ENCRYPTION
                 )
             )
         )
@@ -521,7 +531,9 @@ class AnkerSolixApiClient:
             else:
                 # do not provide data when refresh suspended to avoid stale data from cache is used for real
                 data = {}
-            _LOGGER.debug("Coordinator %s data: %s", self.api.apisession.nickname, data)
+            if not from_cache:
+                # Avoid debug spam for frequent MQTT updates from cache
+                _LOGGER.debug("Coordinator %s data: %s", self.api.apisession.nickname, data)
             return data  # noqa: TRY300
         except TimeoutError as exception:
             raise AnkerSolixApiClientCommunicationError(
@@ -640,6 +652,22 @@ class AnkerSolixApiClient:
             )
             self.api.apisession.endpointLimit(int(limit))
         return self.api.apisession.endpointLimit()
+
+    def api_encryption(self, enable: bool | None = None) -> bool:
+        """Query or set Api payload encryption for client."""
+        if (
+            enable is not None
+            and isinstance(enable, bool)
+            and enable != self.api.apisession.payloadEncryption()
+        ):
+            _LOGGER.info(
+                "Api Coordinator %s payload encryption was changed from %s to %s",
+                self.api.apisession.nickname,
+                str(not enable),
+                str(enable),
+            )
+            self.api.apisession.payloadEncryption(enable)
+        return self.api.apisession.payloadEncryption()
 
     def allow_refresh(self, allow: bool | None = None) -> bool:
         """Query or set api refresh capability for client."""

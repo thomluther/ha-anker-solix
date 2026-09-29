@@ -123,13 +123,7 @@ async def poll_sites(  # noqa: C901
             if "currency_list" not in api.account and (
                 {ApiCategories.site_price} - exclude
             ):
-                data = await api.get_currency_list(fromFile=fromFile)
-                api._update_account(
-                    {
-                        "currency_list": data.get("currency_list") or [],
-                        "default_currency": data.get("default_currency") or {},
-                    }
-                )
+                await api.get_currency_list(fromFile=fromFile)
             # Get product list once for device names if no admin and save it in account cache
             if "products" not in api.account:
                 if not admin and ({ApiCategories.account_info} - exclude):
@@ -854,7 +848,22 @@ async def poll_sites(  # noqa: C901
 
     # update disaster status if supported
     if api.powerpanelApi:
-        await api.powerpanelApi.update_disaster_status(fromFile=fromFile, exclude=exclude)
+        await api.powerpanelApi.update_disaster_status(
+            fromFile=fromFile, exclude=exclude
+        )
+
+    # as time progressed, update actual pps_use_time presets from a cached PPS device if available
+    for pps in [
+        dev
+        for sn, dev in api.devices.items()
+        if dev.get("pps_use_time") is not None and {dev.get("type")} - exclude
+    ]:
+        api._update_dev(
+            {
+                "device_sn": pps.get("device_sn"),
+                "pps_use_time": pps.get("pps_use_time"),
+            }
+        )
 
     # update account dictionary with Api metrics
     api._update_account(
@@ -1294,6 +1303,21 @@ async def poll_device_details(  # noqa: C901
             # Fetch EV charger total statistics
             await api.get_device_charge_order_stats(deviceSn=sn, fromFile=fromFile)
 
+        elif dev_type in ({SolixDeviceType.PPS.value} - exclude):
+            # Fetch PPS TOU plan (pps_use_time) attribute
+            # Only owned (admin) devices can query device attributes, shared devices have no permission (Anker Could Bug?)
+            if device.get("is_admin"):
+                await api.get_device_attributes(
+                    deviceSn=sn,
+                    attributes=["pps_use_time", "ip_region", "currency"],
+                    fromFile=fromFile,
+                )
+            # fetch account currency list once for TOU price unit options
+            if "currency_list" not in api.account and (
+                {ApiCategories.site_price} - exclude
+            ):
+                await api.get_currency_list(fromFile=fromFile)
+
         elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
             # Fetch mini charger datails for supported models
             if (pn := device.get("device_pn")) == "A2345":
@@ -1365,13 +1389,13 @@ async def poll_device_details(  # noqa: C901
             else:
                 pass
 
-        # Merge additional powerpanel data
-        if api.powerpanelApi:
-            device.update(api.powerpanelApi.devices.get(sn) or {})
+        # # Merge additional powerpanel data
+        # if api.powerpanelApi:
+        #     device.update(api.powerpanelApi.devices.get(sn) or {})
 
-        # Merge additional hes data
-        if api.hesApi:
-            device.update(api.hesApi.devices.get(sn) or {})
+        # # Merge additional hes data
+        # if api.hesApi:
+        #     device.update(api.hesApi.devices.get(sn) or {})
 
         # update entry in devices and notify registered callbacks
         api.devices.update({sn: device})

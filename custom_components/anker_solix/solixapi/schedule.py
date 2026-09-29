@@ -2369,8 +2369,6 @@ async def set_sb2_use_time(  # noqa: C901
 ) -> bool | dict:
     r"""Set or change the AC use time parameters for a given site id and solarbank 2 AC device.
 
-    !!! THIS IS NOT IMPLEMENTED YET !!!
-
     The is part of the device schedule object
     Example schedule for Solarbank 2 AC as provided via Api:
     "{"mode_type":3,
@@ -2565,10 +2563,10 @@ async def set_sb2_use_time(  # noqa: C901
         or end_hour
         or day_type
         or tariff_type
-        or tariff_price
-        or tariff_sell_price
+        or tariff_price is not None
+        or tariff_sell_price is not None
         or currency
-        or delete
+        or delete is not None
     ):
         self._logger.error(
             "Api %s no valid use time plan options provided", self.apisession.nickname
@@ -3134,4 +3132,447 @@ async def set_sb2_use_time(  # noqa: C901
         await self.set_site_price(
             siteId=siteId, price_type=new_price_type, toFile=toFile
         )
+    return resp
+
+
+async def set_pps_use_time(  # noqa: C901
+    self: AnkerSolixApi,
+    deviceSn: str,
+    start_hour: int | datetime | time | None = None,  # 0-23
+    end_hour: int | datetime | time | None = None,  # 1-24
+    tariff_type: int | str | None = None,  # Any SolixTariffTypes
+    tariff_price: float | str | None = None,
+    currency: str | None = None,
+    backup_soc: float | str | None = None,
+    delete: bool | None = False,
+    merge_tariff_slots: bool = True,  # merge time slots with same tariff
+    clear_unused_tariff: bool = True,  # clear price of unsused tariff
+    max_ranges: int | None = 6,  # maximum number of time ranges
+    test_schedule: dict
+    | None = None,  # used for testing or to apply changes only to api cache
+    toFile: bool = False,  # for testing with files
+) -> bool | dict:
+    r"""Set or change the PPS use time schedule parameters for a given PPS device.
+
+    Example schedule for pps_use_time attribute, its a serialized json object as string:
+    {"ranges": [{"start_time": "00:00", "end_time": "09:00", "type": 1},
+        {"start_time": "09:00", "end_time": "19:00", "type": 3},
+        {"start_time": "19:00", "end_time": "24:00", "type": 1}],
+    "prices": [{"price": "0.2", "type": 1}, {"price": "0.001", "type": 3}],
+    "unit": "$", "reserve_power": 6}
+
+    Applied Parameter logic:
+    - The ranges must cover the whole day from 00:00 - 24:00, no gaps are allowed. No ranges are allowed
+    - Up to 6 different slots can be defined per default for most PPS. This can be changed per parameter
+    - Prices can per defined per used type, unused type prices will be removed per default, unless clear_unused_tariff set false
+    - Optional start hour
+        - Default to start of current hour interval if end hour not provided, else use start hour of end hour interval
+            - If no interval exists, use 0
+        - If start hour matches existing interval start, use it without change
+        - If start hour splits existing interval and intervals below max_ranges, reduce end hour of previous interval
+            - Copy interval data to use as default for new interval
+    - Optional end hour
+        - Default to end hour of interval containing the start hour
+            - If no interval exists, use 24
+        - If end hour matches existing interval end, use it without change
+        - If end hour splits existing interval and intervals below max_ranges, copy interval and increase start hour for the remaining interval
+        - If end hour exceeds existing interval, increase start hour of next interval with start hour < end and end hour > end
+    - Optional tariff
+        - Default to existing interval tariff
+            - If none exists, use off peak tariff
+        - Set given tariff
+    - Optional tariff price
+        - Default to existing day tariff prices and currency (no change)
+            - If no price exists for interval tariff, use 0
+            - Default to default account currency or hard coded default
+        - Add or change given tariff price and currency
+    - Optional currency
+        - Set default currency to default account currency or hard coded default
+        - Change currency if provided
+    - Optional backup_soc
+        - Set default to actual backup soc or default pps_backup
+        - Change backup SOC if provided
+    - Optional delete
+        - Deletion has various scope, depending which other options provided
+        - If tariff given, delete tariff and all slots with it
+        - Else if start or end hour given, delete the time slot(s) and fill the gap with other slot start and end times
+        - If no time slots left, fill with the default slot, tarif and price
+        NOTE: It seems the whole plan cannot be deleted through the Api, even if it is empty in original condition
+    """
+
+    # Validate parameters
+    # get valid integer for hour or set None
+    if isinstance(start_hour, datetime):
+        start_hour = start_hour.time()
+    start_hour = (
+        max(0, min(23, int(start_hour)))
+        if (str(start_hour).isdigit() or isinstance(start_hour, int | float))
+        else start_hour.hour
+        if isinstance(start_hour, time)
+        else None
+    )
+    if isinstance(end_hour, datetime):
+        end_hour = end_hour.time()
+    end_hour = (
+        max(1, min(24, int(end_hour)))
+        if (str(end_hour).isdigit() or isinstance(end_hour, int | float))
+        else end_hour.hour
+        if isinstance(end_hour, time)
+        and end_hour < datetime.strptime("23:59", "%H:%M").astimezone().time()
+        else 24
+        if isinstance(end_hour, time)
+        else None
+    )
+    # ensure end hour is larger than start hour for considering valid range
+    if not (start_hour is None or end_hour is None):
+        end_hour = end_hour if end_hour > start_hour else None
+    # ensure NONE tariff type is ignored for any modifications
+    tariff_type = (
+        int(getattr(SolixTariffTypes, str(tariff_type).upper()))
+        if hasattr(SolixTariffTypes, str(tariff_type).upper())
+        and str(tariff_type).upper()
+        not in [SolixTariffTypes.UNKNOWN.name, SolixTariffTypes.VALLEY.name]
+        else int(tariff_type)
+        if (str(tariff_type).isdigit() or isinstance(tariff_type, int | float))
+        and SolixTariffTypes.UNKNOWN.value
+        < int(tariff_type)
+        < SolixTariffTypes.VALLEY.value
+        else None
+    )
+    tariff_price = (
+        str(round(float(tariff_price), 5))
+        if str(tariff_price).replace(".", "", 1).isdigit()
+        else None
+    )
+    currency = str(currency)[0:3] if currency else None
+    dev = self.devices.get(deviceSn, {})
+    mqtt = dev.get("mqtt_data", {})
+    backup_soc = (
+        int(backup_soc)
+        if isinstance(backup_soc, int | float)
+        or str(backup_soc).replace(".", "", 1).isdigit()
+        else None
+    )
+    max_ranges = int(max_ranges) if isinstance(max_ranges, int | float) else 6
+    delete = delete if isinstance(delete, bool) else False
+    merge_tariff_slots = (
+        merge_tariff_slots if isinstance(merge_tariff_slots, bool) else True
+    )
+    clear_unused_tariff = (
+        clear_unused_tariff if isinstance(clear_unused_tariff, bool) else True
+    )
+
+    # fast return if no valid options provided
+    if not (
+        start_hour is not None
+        or end_hour
+        or tariff_type
+        or tariff_price is not None
+        or currency
+        or backup_soc
+        or delete is not None
+    ):
+        self._logger.error(
+            "Api %s no valid use time plan options provided", self.apisession.nickname
+        )
+        return False
+    # set defaults if needed
+    def_currency = (
+        # get default from device attributes
+        dev.get("currency")
+        # get default currency for account
+        or (self.account.get("default_currency") or {}).get("symbol")
+        # use hard coded currency
+        or SolixDefaults.CURRENCY_DEF
+    )
+    def_tariff_price = tariff_price or SolixDefaults.TARIFF_PRICE_DEF
+    def_ranges = [
+        {
+            "start_time": "00:00",
+            "end_time": "24:00",
+            "type": SolixTariffTypes.MID_PEAK.value,  # Neither charge nor discharge,
+        }
+    ]
+    def_prices = [
+        {
+            "price": SolixDefaults.TARIFF_PRICE_DEF,
+            "type": SolixTariffTypes.MID_PEAK.value,
+        }
+    ]
+    # obtain actual device schedule from internal dict or fetch via api
+    if not isinstance(test_schedule, dict):
+        test_schedule = None
+    if test_schedule:
+        schedule = test_schedule
+    elif not (schedule := dev.get("pps_use_time")):
+        schedule = (
+            (
+                await self.get_device_attributes(
+                    deviceSn=deviceSn, attributes=["pps_use_time"], fromFile=toFile
+                )
+            ).get("attributes")
+            or {}
+        ).get("pps_use_time")
+    if schedule and isinstance(schedule, str):
+        schedule = json.loads(schedule)
+    if not isinstance(schedule, dict):
+        schedule = None
+    if schedule:
+        plan = copy.deepcopy(schedule)
+        if currency:
+            plan["unit"] = currency
+        # given, existing or default backup soc, ensure backup soc is min_soc + 5 < backup <= max_soc
+        plan["reserve_power"] = min(
+            int(mqtt.get("max_soc") or 80),
+            max(
+                int(mqtt.get("power_cutoff") or 20) + 5,
+                int(
+                    backup_soc
+                    or plan.get("reserve_power")
+                    or mqtt.get("backup_soc")
+                    or SolixDefaults.PPS_BACKUP_SOC_DEF
+                ),
+            ),
+        )
+    else:
+        # define minimum plan to be modified
+        plan = {
+            "ranges": def_ranges,
+            "prices": def_prices,
+            "unit": def_currency,
+            # given, existing or default backup soc, ensure backup soc is min_soc + 5 < backup <= max_soc
+            "reserve_power": min(
+                int(mqtt.get("max_soc") or 80),
+                max(
+                    int(mqtt.get("power_cutoff") or 20) + 5,
+                    int(
+                        backup_soc
+                        or mqtt.get("backup_soc")
+                        or SolixDefaults.PPS_BACKUP_SOC_DEF
+                    ),
+                ),
+            ),
+        }
+
+    # set parameters for the deletion scope, starting from smallest to largest
+    delete_scope = None
+    if delete:
+        if start_hour is not None or end_hour:
+            delete_scope = "slot"
+        elif tariff_type:
+            delete_scope = "tariff"
+        elif not (tariff_price or currency):
+            delete_scope = "plan"
+            # set the defaults for 'supported deletion'
+            start_hour = 0
+            end_hour = 24
+            tariff_price = def_tariff_price
+            tariff_type = (
+                SolixTariffTypes.MID_PEAK.value
+            )  # Neither charge nor discharge
+    # set parameters for the lookup
+    # Consider time zone shifts
+    tz_offset = dev.get("energy_offset_tz") or 0
+    now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
+    find_hour = (
+        start_hour
+        if start_hour is not None
+        else end_hour - 1
+        if end_hour is not None
+        else now.hour
+    )
+
+    # traverse plan and update as required
+    slots = []
+    prices = []
+    # if delete_scope != "plan":
+    split_slot: dict = {}
+    find_tariff = set()
+    delay_hour = None
+    day_start_hour = start_hour
+    day_end_hour = end_hour
+    day_tariff_type = tariff_type
+    # flag for allowing tarif change in slot or not
+    # Allow change in slot only if tariff given and if either start or end hour is given
+    day_tariff_change = (
+        tariff_type
+        and (not (tariff_price and start_hour is None and end_hour is None))
+        and delete_scope not in ["tariff", "slot"]
+    )
+    # update ranges, use default range if none exist yet for changes
+    for slot in plan.get("ranges") or def_ranges:
+        start = str(slot.get("start_time", "")).split(":")[0]
+        start = int(start) if str(start).isdigit() else None
+        end = str(slot.get("end_time", "")).split(":")[0]
+        end = int(end) if str(end).isdigit() else None
+        tariff = slot.get("type")
+        if delete_scope == "tariff" and tariff == tariff_type:
+            # delete all slots with the given tariff and ensure to adjust other slot times to avoid gaps
+            delay_hour = max(delay_hour or end, end)
+            if len(slots) > 0:
+                slots[-1]["end_time"] = f"{delay_hour:02d}:00"
+            continue
+        if delay_hour:
+            if len(slots) == 0 and delay_hour < 24:
+                # no previous slot after a deletion that set delay hour, expand slot to beginning and skip remaining changes
+                delay_hour = None
+                slot["start_time"] = "00:00"
+                find_tariff.add(tariff)
+                slots.append(slot)
+                continue
+            if end > delay_hour:
+                slot["start_time"] = f"{(0 if len(slots) == 0 else delay_hour):02d}:00"
+                delay_hour = None
+            else:
+                # skip slot if overwritten
+                continue
+        if start <= find_hour < end:
+            if delete_scope == "slot":
+                # use start hour of found slot, deletion scope can just extend actual slot if range was defined
+                day_start_hour = start
+                day_end_hour = max(
+                    day_end_hour
+                    if not (day_start_hour is None or day_end_hour is None)
+                    else end,
+                    end,
+                )
+                delay_hour = day_end_hour
+                # adjust previous slot to fill gap of deleted slot(s)
+                if len(slots) > 0:
+                    slots[-1]["end_time"] = f"{delay_hour:02d}:00"
+                continue
+            # use start hour of matching slot if not provided and adjust split slot
+            if day_start_hour is None:
+                day_start_hour = start
+                # overwrite end_hour with slot end to prevent split or expand when no range was given
+                day_end_hour = end
+            elif day_start_hour > start:
+                # split slot by copy or merge with previous
+                if (
+                    len(slots) > 0
+                    and slots[-1]["type"] == tariff
+                    and merge_tariff_slots
+                ):
+                    # merge with previous slot if same tariff type
+                    slots[-1]["end_time"] = f"{day_start_hour:02d}:00"
+                else:
+                    # Copy and add slot
+                    split_slot = copy.deepcopy(slot)
+                    split_slot["end_time"] = f"{day_start_hour:02d}:00"
+                    find_tariff.add(tariff)
+                    slots.append(split_slot)
+                    split_slot = {}
+            # use end hour of matching slot if not provided and adjust split slot or expanded slot
+            if day_end_hour is None:
+                day_end_hour = end
+            elif day_end_hour > end:
+                delay_hour = day_end_hour
+            elif day_end_hour < end:
+                # split slot by copy if tariff is different to new tariff
+                if (
+                    day_tariff_change and tariff_type != tariff
+                ) or not merge_tariff_slots:
+                    # split slot by copy
+                    split_slot = copy.deepcopy(slot)
+                    split_slot["start_time"] = f"{day_end_hour:02d}:00"
+                else:
+                    day_end_hour = end
+            # Adjust current slot range
+            slot["start_time"] = f"{day_start_hour:02d}:00"
+            slot["end_time"] = f"{day_end_hour:02d}:00"
+            # make slot tariff adjustments if no price or range given
+            # Price without range is considered as change for the given tariff type only, but not for changing tariff for slots
+            if day_tariff_change:
+                tariff = tariff_type
+                slot["type"] = tariff
+            elif not day_tariff_type:
+                # set dayttype tariff of modified slot for price adjustment if no tariff defined
+                day_tariff_type = slot.get("type")
+        # Merge with previous slots if they have same tariff and merge allowed
+        if len(slots) > 0 and slots[-1]["type"] == tariff and merge_tariff_slots:
+            # merge with previous slot if same tariff type
+            slots[-1]["end_time"] = slot.get("end_time")
+        else:
+            slots.append(slot)
+            find_tariff.add(tariff)
+        if split_slot:
+            # This split slot should have different tariff or merge is not allowed and must be appended
+            slots.append(split_slot)
+            find_tariff.add(split_slot.get("type"))
+            split_slot = {}
+        if len(slots) > max_ranges:
+            self._logger.error(
+                "Api %s PPS use time plan change failed because time range limit of %s would be exceeded",
+                self.apisession.nickname,
+                max_ranges,
+            )
+            return False
+    # update prices, use default if none exist yet
+    for price in plan.get("prices") or def_prices:
+        tariff = price.get("type")
+        if clear_unused_tariff and (
+            (delete_scope == "tariff" and tariff == day_tariff_type)
+            or tariff not in find_tariff
+        ):
+            # delete unused tariff price
+            find_tariff.discard(tariff)
+            continue
+        if tariff_price and tariff == day_tariff_type:
+            # update price of tariff if specified
+            price["price"] = tariff_price
+        # remove found tariff to prevent it will be added
+        find_tariff.discard(tariff)
+        prices.append(price)
+        # adjust default price to stay in line with prices of existing tariffs, higher types must be cheaper
+        if (
+            not tariff_price
+            and str(day_tariff_type).isdigit()
+            and str(tariff).isdigit()
+            and str(tp := price.get("price") or 0).replace(".", "", 1).isdigit()
+        ):
+            if day_tariff_type < tariff:
+                # added tariff must be higher price
+                def_tariff_price = str(max(float(def_tariff_price), float(tp)))
+            elif day_tariff_type > tariff:
+                # added tariff must be lower price
+                def_tariff_price = str(min(float(def_tariff_price), float(tp)))
+    # Ensure to append remaining tariffs to price list
+    prices.extend(
+        {
+            "price": tariff_price or def_tariff_price,
+            "type": tariff,
+        }
+        for tariff in find_tariff
+    )
+    # add modified or default slot(s) and prices into plan
+    plan["ranges"] = slots or def_ranges
+    plan["prices"] = prices or def_prices
+    self._logger.debug(
+        "Api %s PPS use time plan to be applied: %s", self.apisession.nickname, plan
+    )
+    # return resulting schedule for test purposes without Api call
+    if test_schedule:
+        # ensure schedule is updated in cache for dependent fields
+        self._update_dev(
+            {
+                "device_sn": deviceSn,
+                "attributes": dev.get("attributes", {})
+                | {"pps_use_time": json.dumps(plan, separators=(",", ":"))},
+            }
+        )
+        return plan
+    # Make the Api call with the schedule subset to be applied and return result, the set call will also re-read full schedule and update api dict
+    resp = await self.set_device_attributes(
+        deviceSn=deviceSn,
+        attributes={"pps_use_time": json.dumps(plan, separators=(",", ":"))},
+        query_attributes=["pps_use_time"],
+        toFile=toFile,
+    )
+    # extract the correct plan format from response attributes as return dict
+    if (
+        isinstance(resp, dict)
+        and (resp := resp.get("attributes", {}).get("pps_use_time", {}))
+        and isinstance(resp, str)
+    ):
+        resp = json.loads(resp)
     return resp

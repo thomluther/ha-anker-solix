@@ -541,9 +541,9 @@ def convert_pps_tou_schedule(
 
     Automatically detects input value type and converts accordingly. The dictionary structure:
     Byte with slot count
-    Each slot has 3 bytes: tariff: (1=Peak,2=Mid,3=Off), start_hr, end_hr
+    Each slot has 3 bytes: type (1=Peak,2=Mid,3=Off), start_hr, end_hr
     max 6 slots are allowed in the app
-    The price per tariff is not part of the structure, this may be maintained by App/Cloud only
+    The price per tariff type and price unit are not part of the structure, this is maintained by Cloud structure only
 
     Args:
         value: dictionary or binary with schedule structure
@@ -557,7 +557,13 @@ def convert_pps_tou_schedule(
 
     """
     if isinstance(value, bytes | bytearray):
-        # Convert binary to dict
+        # Convert binary to dict with ranges using pps_use_time attribute dictionary format:
+        # {"ranges": [
+        #     {"start_time": "00:00", "end_time": "09:00", "type": 1},
+        #     {"start_time": "09:00", "end_time": "19:00", "type": 3},
+        #     {"start_time": "19:00", "end_time": "24:00", "type": 1}],
+        # "prices": [{"price": "0.2", "type": 1}, {"price": "0.05", "type": 2}, {"price": "0.001", "type": 3}],
+        # "unit": "$","reserve_power": 6}
         with contextlib.suppress(ValueError, TypeError):
             pos = 0
             schedule = {}
@@ -568,7 +574,7 @@ def convert_pps_tou_schedule(
                 start = int.from_bytes(value[pos + 1 : pos + 2], byteorder="little")
                 end = int.from_bytes(value[pos + 2 : pos + 3], byteorder="little")
                 slot = {
-                    "tariff": int.from_bytes(value[pos : pos + 1], byteorder="little"),
+                    "type": int.from_bytes(value[pos : pos + 1], byteorder="little"),
                     "start_time": f"{start:02d}:00",
                     "end_time": f"{end:02d}:00",
                 }
@@ -587,7 +593,7 @@ def convert_pps_tou_schedule(
                 slots.extend({} for _ in range(min_slots - len(slots)))
             slots = slots[:max_slots]
             for slot in slots:
-                hexvalue.extend(int(slot.get("tariff", 0)).to_bytes(byteorder="little"))
+                hexvalue.extend(int(slot.get("type", 0)).to_bytes(byteorder="little"))
                 start = slot.get("start_time", "").split(":")
                 end = slot.get("end_time", "").split(":")
                 hexvalue.extend(

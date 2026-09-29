@@ -8,6 +8,8 @@ from .apitypes import DeviceHexDataTypes
 from .helpers import (
     convert_circuit_setup,
     convert_port_protocols,
+    convert_pps_custom_schedule,
+    convert_pps_output_schedule,
     convert_pps_tou_schedule,
     convert_weekdays,
 )
@@ -414,6 +416,16 @@ CMD_AC_OUTPUT_MODE_INV = CMD_COMMON | {
     },
 }
 
+CMD_AC_OUTPUT_MODE_V2 = CMD_COMMON_V2 | {
+    # Command: PPS AC output mode setting V2, field a6
+    COMMAND_NAME: SolixMqttCommands.ac_output_mode_select,
+    "a6": {
+        NAME: "set_ac_output_mode",  # Normal (0), Smart (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ac_output_mode",
+        VALUE_OPTIONS: {"normal": 0, "smart": 1},
+    },
+}
 
 CMD_AC_OUTPUT_TIMEOUT_SEC = (
     CMD_COMMON
@@ -471,6 +483,17 @@ CMD_DC_12V_OUTPUT_MODE_INV = CMD_COMMON | {
             else state
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
+    },
+}
+
+CMD_DC_12V_OUTPUT_MODE_V2 = CMD_COMMON_V2 | {
+    # Command: PPS 12V DC output mode setting V2, field a4
+    COMMAND_NAME: SolixMqttCommands.dc_12v_output_mode_select,
+    "a4": {
+        NAME: "set_dc_12v_output_mode",  # Normal (0), Smart (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "dc_12v_output_mode",
+        VALUE_OPTIONS: {"normal": 0, "smart": 1},
     },
 }
 
@@ -2412,7 +2435,7 @@ CMD_BACKUP_PLAN_TIMESTAMPS_V2 = CMD_BACKUP_SWITCH_V2 | {
 }
 
 CMD_PPS_USAGE_MODE_V2 = CMD_COMMON_V2 | {
-    # PPS Usage mode and plan settings
+    # PPS Default Usage mode options, may have to be exanded if more options available per device
     "a2": {  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
         NAME: "set_usage_mode",
         TYPE: DeviceHexDataTypes.ui.value,
@@ -2420,17 +2443,15 @@ CMD_PPS_USAGE_MODE_V2 = CMD_COMMON_V2 | {
         VALUE_OPTIONS: {
             "standard": 0,  # UPS mode
             "time_of_use": 1,
-            "self_consumption": 2,
-            "custom": 3,
         },
     },
 }
 
 CMD_TOU_PLAN_V2 = CMD_PPS_USAGE_MODE_V2 | {
-    # TOU plan for AS220, A1785, typically sent via cloud
+    # TOU plan for AS220, A1783, A1785, typically sent via cloud
     "a2": CMD_PPS_USAGE_MODE_V2["a2"]
     | {
-        VALUE_DEFAULT: 1,  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+        VALUE_DEFAULT: 1,  # 0=Standard, 1=Time-of-Use
     },
     "a3": {
         NAME: "set_unknown_a3",  # is this the actual usage plan ID being modified?
@@ -2464,6 +2485,116 @@ CMD_TOU_PLAN_V2 = CMD_PPS_USAGE_MODE_V2 | {
         ),
     },
 }
+
+CMD_PPS_BACKUP_SOC_V2 = CMD_COMMON_V2 | {
+    # Command: PPS backup SOC command for tou plan
+    COMMAND_NAME: SolixMqttCommands.backup_soc,
+    "a5": {
+        NAME: "set_backup_soc",  # range as [min_soc + 5, max_soc], step 1%
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "backup_soc",
+        VALUE_MIN: 5,
+        VALUE_MAX: 100,
+        VALUE_STEP: 1,
+        STATE_CONVERTER: lambda value, state, cache: (
+            value
+            if value is not None
+            # ensure backup is min + 5 < backup <= max if not specified
+            else min(
+                int(cache.get("max_soc") or 80),
+                max(
+                    int(cache.get("power_cutoff") or 20) + 5,
+                    int(state),
+                ),
+            )
+            if state is not None and str(state).replace(".", "", 1).isdigit()
+            else None
+        ),
+        VALUE_MIN_STATE: "power_cutoff",
+        VALUE_MAX_STATE: "max_soc",
+    },
+}
+
+CMD_PPS_CUSTOM_SCHEDULE_V2 = CMD_COMMON_V2 | {
+    # Command: PPS custom mode schedule
+    COMMAND_NAME: SolixMqttCommands.pps_custom_schedule,
+    "a2": {
+        NAME: "set_custom_mode_schedule",
+        TYPE: DeviceHexDataTypes.bin.value,
+        STATE_NAME: "custom_mode_schedule",
+        STATE_CONVERTER: lambda value, state, cache: (
+            convert_pps_custom_schedule(value)
+            if value is not None
+            else convert_pps_custom_schedule(state)
+        ),
+    },
+}
+
+CMD_PPS_OUTPUT_SCHEDULE_V2 = CMD_COMMON_V2 | {
+    # Command: PPS output schedule
+    COMMAND_NAME: SolixMqttCommands.pps_output_schedule,
+    "a3": {
+        NAME: "set_ac_output_schedule",
+        TYPE: DeviceHexDataTypes.bin.value,
+        STATE_NAME: "ac_output_schedule",
+        STATE_CONVERTER: lambda value, state, cache: (
+            convert_pps_output_schedule(value)
+            if value is not None
+            else convert_pps_output_schedule(state)
+        ),
+    },
+}
+
+CMD_PPS_SILENT_SCHEDULE_V2 = (
+    CMD_COMMON_V2
+    | {
+        # Command: PPS silent schedule
+        COMMAND_NAME: SolixMqttCommands.silent_schedule,
+        "a4": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 6,
+            BYTES: {
+                "00": {
+                    NAME: "set_silent_mode_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "silent_mode_switch",
+                    VALUE_STATE: "silent_mode_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+                "01": {
+                    NAME: "set_silent_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    LENGTH: 1,
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        convert_weekdays(value)
+                        if value is not None
+                        else convert_weekdays(state)
+                    ),
+                    STATE_NAME: "silent_mode_weekdays",
+                    VALUE_STATE: "silent_mode_weekdays",
+                },
+                "02": {
+                    NAME: "set_silent_mode_start_minutes",  # start, minutes of day
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    SIGNED: False,
+                    STATE_NAME: "silent_mode_start_minutes",
+                    VALUE_STATE: "silent_mode_start_minutes",
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 1339,
+                },
+                "04": {
+                    NAME: "set_silent_mode_end_minutes",  # end, minutes of day
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    SIGNED: False,
+                    STATE_NAME: "silent_mode_end_minutes",
+                    VALUE_STATE: "silent_mode_end_minutes",
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 1440,
+                },
+            },
+        },
+    }
+)
 
 CMD_TBD_SWITCH = CMD_COMMON | {
     # Command: Generic switch command with unknown effect

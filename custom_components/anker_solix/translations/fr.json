@@ -155,11 +155,13 @@
                             "delay_time": "Délai pour les requêtes Api suivantes",
                             "timeout": "Délai d'attente pour les requêtes Api",
                             "endpoint_limit": "Limite des demandes de points d'extrémité par minute (0 = désactivé)",
+                            "api_encryption": "Chiffrement de la charge utile de l'Api",
                             "skip_invalid": "Ignorer les réponses de données non valides"
                         },
                         "data_description": {
                             "scan_interval": "Remarque: Les données sur le serveur cloud sont mises à jour toutes les 60 à 300 secondes au maximum si aucune mise à jour des données en temps réel MQTT n'a été déclenchée. Un intervalle de mise à jour inférieur à 60 secondes n'offre donc des avantages qu'en combinaison avec l'utilisation du protocole MQTT.",
                             "endpoint_limit": "Remarque: L'Api Anker Cloud applique une limite de requêtes par minute et par point de terminaison. Pour éviter les erreurs Api, les requêtes identiques vers un point de terminaison sont limitées à 10 par minute une fois la limite dépassée. La valeur 0 permet de désactiver la limitation des points de terminaison.",
+                            "api_encryption": "Remarque: Le chiffrement des données Api est utilisé par défaut pour assurer une sécurité renforcée lors du transfert. Il peut être désactivé pour éviter les erreurs liées au chiffrement.",
                             "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues."
                         }
                     },
@@ -226,11 +228,13 @@
                             "delay_time": "Délai pour les requêtes Api suivantes",
                             "timeout": "Délai d'attente pour les requêtes Api",
                             "endpoint_limit": "Limite des demandes de points d'extrémité par minute (0 = désactivé)",
+                            "api_encryption": "Chiffrement de la charge utile de l'Api",
                             "skip_invalid": "Ignorer les réponses de données non valides"
                         },
                         "data_description": {
                             "scan_interval": "Remarque: Les données sur le serveur cloud sont mises à jour toutes les 60 à 300 secondes au maximum si aucune mise à jour des données en temps réel MQTT n'a été déclenchée. Un intervalle de mise à jour inférieur à 60 secondes n'offre donc des avantages qu'en combinaison avec l'utilisation du protocole MQTT.",
                             "endpoint_limit": "Remarque: L'Api Anker Cloud applique une limite de requêtes par minute et par point de terminaison. Pour éviter les erreurs Api, les requêtes identiques vers un point de terminaison sont limitées à 10 par minute une fois la limite dépassée. La valeur 0 permet de désactiver la limitation des points de terminaison.",
+                            "api_encryption": "Remarque: Le chiffrement des données Api est utilisé par défaut pour assurer une sécurité renforcée lors du transfert. Il peut être désactivé pour éviter les erreurs liées au chiffrement.",
                             "skip_invalid": "Remarque: Les réponses du nuage contenant des données non valides ou périmées rendront les entités indisponibles. Vous pouvez ignorer les mises à jour des entités jusqu'à ce que les prochaines données valides soient à nouveau reçues."
                         }
                     },
@@ -2982,18 +2986,28 @@
         "modify_solix_use_time": {
             "name": "Modifier le plan d'heure d'utilisation",
             "description": "Ajustez le plan d'heure d'utilisation pour les appareils Anker Solix qui prennent en charge la charge CA et un mode heure d'utilisation avec différents tarifs d'électricité.",
+            "sections": {
+                "sb_fields": {
+                    "name": "Options de Solarbank",
+                    "description": "Pour les systèmes Solarbank 2+ prenant en charge la recharge en courant alternatif, vous pouvez spécifier les options suivantes (ignorées pour les appareils PPS)"
+                },
+                "pps_fields": {
+                    "name": "Options de PPS",
+                    "description": "Pour les appareils PPS autonomes, vous pouvez définir les options suivantes (ces options ne sont pas prises en compte pour les systèmes Solarbank)"
+                }
+            },
             "fields": {
                 "start_month": {
                     "name": "Mois de début",
-                    "description": "Mois de début de la saison à modifier"
+                    "description": "Mois de début de la saison à modifier (ignoré pour les appareils PPS)"
                 },
                 "end_month": {
                     "name": "Mois de fin",
-                    "description": "Mois de fin de la saison à modifier"
+                    "description": "Mois de fin de la saison à modifier (ignoré pour les appareils PPS)"
                 },
                 "day_type": {
                     "name": "Type de jours",
-                    "description": "Type de jours à modifier dans la saison"
+                    "description": "Type de jours à modifier dans la saison (ignoré pour les appareils PPS)"
                 },
                 "start_hour": {
                     "name": "Heure de début",
@@ -3010,6 +3024,10 @@
                 "tariff_price": {
                     "name": "Prix du tarif par kWh",
                     "description": "Prix du tarif par kWh pour la période sélectionnée ou active"
+                },
+                "backup_soc": {
+                    "name": "Niveau de charge de sauvegarde",
+                    "description": "Niveau de charge réservé, qui doit être maintenu pendant la décharge dans le cadre des tarifs horaires différenciés (ignoré pour les appareils Solarbank)"
                 },
                 "delete": {
                     "name": "Supprimer les options sélectionnées du plan",
@@ -3070,7 +3088,7 @@
         "service_error": {
             "message": "L'action {service} a échoué, consultez le journal pour plus de détails sur l'erreur."
         },
-        "slot_time_error": {
+        "value_error": {
             "message": "L'action {service} ne peut pas être exécuté: {error}"
         },
         "mqtt_command_failed": {

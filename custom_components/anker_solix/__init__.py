@@ -31,6 +31,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from . import api_client
 from .config_flow import (
+    CONF_API_ENCRYPTION,
     CONF_API_OPTIONS,
     CONF_ENDPOINT_LIMIT,
     CONF_MQTT_OPTIONS,
@@ -199,8 +200,13 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
             testmode == coordinator.client.testmode()
             and (
                 not testmode
-                or str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
-                == coordinator.client.api.testDir()
+                or (
+                    str(Path(entry.data.get(EXAMPLESFOLDER, "")) / testfolder)
+                    == coordinator.client.api.testDir()
+                    and entry.unique_id == coordinator.client.api.apisession.email
+                    and entry.data.get("country_code")
+                    == coordinator.client.api.apisession.countryId
+                )
             )
             and (mqtt or mqtt == await coordinator.client.mqtt_usage())
             and set(excluded) == set(coordinator.client.exclude_categories)
@@ -224,6 +230,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
             coordinator.client.timeout(api_options.get(CONF_TIMEOUT))
             # update Api request delay time
             coordinator.client.endpoint_limit(api_options.get(CONF_ENDPOINT_LIMIT))
+            # update Api payload encryption
+            coordinator.client.api_encryption(api_options.get(CONF_API_ENCRYPTION))
             # set MQTT realtime trigger timeout
             coordinator.client.trigger_timeout(
                 seconds=entry.options.get(CONF_MQTT_OPTIONS, {}).get(

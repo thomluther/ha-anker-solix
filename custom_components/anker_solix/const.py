@@ -56,6 +56,8 @@ UPDT_INTV_MAX: Final[str] = "updt_interval_max"
 CONF_SKIP_INVALID: Final[str] = "skip_invalid"
 CONF_ENDPOINT_LIMIT: Final[str] = "endpoint_limit"
 CONF_API_OPTIONS: Final[str] = "api_options"
+CONF_API_ENCRYPTION: Final[str] = "api_encryption"
+CONF_SKIP_INVALID: Final[str] = "skip_invalid"
 CONF_MQTT_OPTIONS: Final[str] = "mqtt_options"
 CONF_TEST_OPTIONS: Final[str] = "test_options"
 CONF_MQTT_USAGE: Final[str] = "mqtt_usage"
@@ -116,6 +118,7 @@ START_HOUR: Final[str] = "start_hour"
 END_HOUR: Final[str] = "end_hour"
 TARIFF: Final[str] = "tariff"
 TARIFF_PRICE: Final[str] = "tariff_price"
+BACKUP_SOC: Final[str] = "backup_soc"
 DELETE: Final[str] = "delete"
 ENDPOINT: Final[str] = "endpoint"
 
@@ -406,6 +409,9 @@ SOLIX_USE_TIME_SCHEMA: vol.Schema = vol.All(
             ),
             vol.Optional(TARIFF_PRICE): vol.All(
                 extractNone, vol.Any(None, cv.positive_float)
+            ),
+            vol.Optional(BACKUP_SOC): vol.All(
+                extractNone, vol.Any(None, cv.positive_int)
             ),
             vol.Optional(DELETE): VALID_SWITCH,
         }

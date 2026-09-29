@@ -37,6 +37,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     ApiEndpointServices,
+    SolixDefaults,
     SolixPriceProvider,
     SolixVehicle,
 )
@@ -47,7 +48,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.8.2.0"
+VERSION: str = "3.9.0.0"
 
 
 class AnkerSolixApiExport:
@@ -1051,7 +1052,6 @@ class AnkerSolixApiExport:
                             "pps_use_time",
                             "currency",
                             "tag",
-                            "pps_use_time",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
@@ -1257,6 +1257,45 @@ class AnkerSolixApiExport:
                         replace=[(sn, "<deviceSn>")],
                         admin=admin,
                     )
+                # export device energy for device types supporting it
+                if device.get("device_pn") in SolixDefaults.DEVICE_ENERGY:
+                    self._logger.info(
+                        "Exporting device energy data for device %s SN %s...",
+                        device.get("name", ""),
+                        self._randomize(sn, "_sn"),
+                    )
+                    stat_type = "device"
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_energy"],
+                        filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_{self._randomize(sn, 'device_sn')}.json",
+                        payload={
+                            "device_sn": sn,
+                            "type": "week",
+                            "start_time": (
+                                datetime.today().astimezone() - timedelta(days=1)
+                            ).strftime("%Y-%m-%d"),
+                            "end_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
+                        },
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    # Intraday
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_energy"],
+                        filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_today_{self._randomize(sn, 'device_sn')}.json",
+                        payload={
+                            "device_sn": sn,
+                            "type": "day",
+                            "start_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
+                            "end_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
+                        },
+                        replace=[(sn, "<deviceSn>")],
+                    )
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
@@ -1284,144 +1323,158 @@ class AnkerSolixApiExport:
         try:
             # Use simple first query without parms to check if service endpoints usable
             self._logger.info("Exporting Charging error info...")
-            await self.query(
-                endpoint=API_CHARGING_ENDPOINTS["get_error_info"],
-                filename=f"{API_FILEPREFIXES['charging_get_error_info']}.json",
-                catch=False,
-            )
+            charging_endpoints = (
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_error_info"],
+                    filename=f"{API_FILEPREFIXES['charging_get_error_info']}.json",
+                    # catch=False,
+                )
+            ) is not None
 
             has_charging = False
             # loop through all found sites
-            for siteId, site in self.api_power.sites.items():
-                admin = site.get("site_admin")
-                self._logger.info(
-                    "\nExporting Charging specific data for site %s...",
-                    self._randomize(siteId, "site_id"),
-                )
-
-                self._logger.info("Exporting Charging system running info...")
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["get_system_running_info"],
-                    filename=f"{API_FILEPREFIXES['charging_get_system_running_info']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"siteId": siteId},
-                    replace=[(siteId, "<siteId>")],
-                    randomkeys=True,
-                )
-                # check if valid charging data available for site and skip if not enforced
-                if not (
-                    is_charging := site.get("site_type")
-                    in [
-                        api.SolixDeviceType.POWERPANEL.value,
-                        api.SolixDeviceType.HOME_BACKUP.value,
-                    ]
-                ) and not self.export_services & {ApiEndpointServices.charging}:
+            if charging_endpoints:
+                for siteId, site in self.api_power.sites.items():
+                    admin = site.get("site_admin")
                     self._logger.info(
-                        "No system for %s endpoint data found, skipping remaining site queries...",
-                        ApiEndpointServices.charging,
+                        "\nExporting Charging specific data for site %s...",
+                        self._randomize(siteId, "site_id"),
                     )
-                    continue
 
-                if is_charging:
-                    has_charging = True
-
-                # get various daily energies since yesterday
-                for stat_type in ["solar", "hes", "pps", "home", "grid", "diesel"]:
-                    self._logger.info(
-                        "Exporting Charging site energy data for %s...",
-                        stat_type.upper(),
-                    )
+                    self._logger.info("Exporting Charging system running info...")
                     await self.query(
-                        endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                        filename=f"{API_FILEPREFIXES['charging_energy_' + stat_type]}_{self._randomize(siteId, 'site_id')}.json",
+                        endpoint=API_CHARGING_ENDPOINTS["get_system_running_info"],
+                        filename=f"{API_FILEPREFIXES['charging_get_system_running_info']}_{self._randomize(siteId, 'site_id')}.json",
+                        payload={"siteId": siteId},
+                        replace=[(siteId, "<siteId>")],
+                        randomkeys=True,
+                    )
+                    # check if valid charging data available for site and skip if not enforced
+                    if not (
+                        is_charging := site.get("site_type")
+                        in [
+                            api.SolixDeviceType.POWERPANEL.value,
+                            api.SolixDeviceType.HOME_BACKUP.value,
+                        ]
+                    ) and not self.export_services & {ApiEndpointServices.charging}:
+                        self._logger.info(
+                            "No system for %s endpoint data found, skipping remaining site queries...",
+                            ApiEndpointServices.charging,
+                        )
+                        continue
+
+                    if is_charging:
+                        has_charging = True
+
+                    # get various daily energies since yesterday
+                    for stat_type in ["solar", "hes", "pps", "home", "grid", "diesel"]:
+                        self._logger.info(
+                            "Exporting Charging site energy data for %s...",
+                            stat_type.upper(),
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                            filename=f"{API_FILEPREFIXES['charging_energy_' + stat_type]}_{self._randomize(siteId, 'site_id')}.json",
+                            payload={
+                                "siteId": siteId,
+                                "sourceType": stat_type,
+                                "dateType": "week",
+                                "start": (
+                                    datetime.today().astimezone() - timedelta(days=1)
+                                ).strftime("%Y-%m-%d"),
+                                "end": datetime.today()
+                                .astimezone()
+                                .strftime("%Y-%m-%d"),
+                                "global": False,
+                                "productCode": "",
+                            },
+                            replace=[(siteId, "<siteId>")],
+                        )
+
+                    # get various energies of today for last 5 min average values
+                    for stat_type in ["solar", "hes", "home", "grid", "diesel"]:
+                        self._logger.info(
+                            "Exporting Charging site energy data of today for %s...",
+                            stat_type.upper(),
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
+                            filename=f"{API_FILEPREFIXES['charging_energy_' + stat_type + '_today']}_{self._randomize(siteId, 'site_id')}.json",
+                            payload={
+                                "siteId": siteId,
+                                "sourceType": stat_type,
+                                "dateType": "day",
+                                "start": datetime.today()
+                                .astimezone()
+                                .strftime("%Y-%m-%d"),
+                                "end": datetime.today()
+                                .astimezone()
+                                .strftime("%Y-%m-%d"),
+                                "global": False,
+                                "productCode": "",
+                            },
+                            replace=[(siteId, "<siteId>")],
+                        )
+
+                    self._logger.info("Exporting Charging site device data report...")
+                    # check all control options
+                    for ctrol in [0, 1]:
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS["report_device_data"],
+                            filename=f"{API_FILEPREFIXES['charging_report_device_data']}_{ctrol}_{self._randomize(siteId, 'site_id')}.json",
+                            payload={
+                                "siteIds": [siteId],
+                                "ctrol": ctrol,
+                                "duration": 300,
+                            },
+                            replace=[(siteId, "<siteId>")],
+                        )
+                    # Get site disaster information
+                    self._logger.info("Exporting Charging site device disaster data...")
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
+                        filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(siteId, 'site_id')}.json",
                         payload={
-                            "siteId": siteId,
-                            "sourceType": stat_type,
-                            "dateType": "week",
-                            "start": (
-                                datetime.today().astimezone() - timedelta(days=1)
-                            ).strftime("%Y-%m-%d"),
-                            "end": datetime.today().astimezone().strftime("%Y-%m-%d"),
-                            "global": False,
-                            "productCode": "",
-                        },
+                            "identifier_id": siteId,
+                            "type": 2,
+                        },  # Has only been validated with 2 for power panel sites
                         replace=[(siteId, "<siteId>")],
-                    )
-
-                # get various energies of today for last 5 min average values
-                for stat_type in ["solar", "hes", "home", "grid", "diesel"]:
-                    self._logger.info(
-                        "Exporting Charging site energy data of today for %s...",
-                        stat_type.upper(),
+                        admin=admin,
                     )
                     await self.query(
-                        endpoint=API_CHARGING_ENDPOINTS["energy_statistics"],
-                        filename=f"{API_FILEPREFIXES['charging_energy_' + stat_type + '_today']}_{self._randomize(siteId, 'site_id')}.json",
+                        endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                        filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(siteId, 'site_id')}.json",
                         payload={
-                            "siteId": siteId,
-                            "sourceType": stat_type,
-                            "dateType": "day",
-                            "start": datetime.today().astimezone().strftime("%Y-%m-%d"),
-                            "end": datetime.today().astimezone().strftime("%Y-%m-%d"),
-                            "global": False,
-                            "productCode": "",
-                        },
+                            "identifier_id": siteId,
+                            "type": 2,
+                        },  # Has only been validated with 2 for power panel sites
                         replace=[(siteId, "<siteId>")],
+                        admin=admin,
                     )
-
-                self._logger.info("Exporting Charging site device data report...")
-                # check all control options
-                for ctrol in [0, 1]:
                     await self.query(
-                        endpoint=API_CHARGING_ENDPOINTS["report_device_data"],
-                        filename=f"{API_FILEPREFIXES['charging_report_device_data']}_{ctrol}_{self._randomize(siteId, 'site_id')}.json",
-                        payload={"siteIds": [siteId], "ctrol": ctrol, "duration": 300},
+                        endpoint=API_CHARGING_ENDPOINTS[
+                            "get_site_device_disaster_status"
+                        ],
+                        filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(siteId, 'site_id')}.json",
+                        payload={
+                            "identifier_id": siteId,
+                            "type": 2,
+                        },  # Has only been validated with 2 for power panel sites
                         replace=[(siteId, "<siteId>")],
+                        admin=admin,
                     )
 
-                # Get site disaster information
-                self._logger.info("Exporting Charging site device disaster data...")
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
-                    filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={
-                        "identifier_id": siteId,
-                        "type": 2,
-                    },  # Has only been validated with 2 for power panel sites
-                    replace=[(siteId, "<siteId>")],
-                    admin=admin,
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
-                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={
-                        "identifier_id": siteId,
-                        "type": 2,
-                    },  # Has only been validated with 2 for power panel sites
-                    replace=[(siteId, "<siteId>")],
-                    admin=admin,
-                )
-                await self.query(
-                    endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
-                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={
-                        "identifier_id": siteId,
-                        "type": 2,
-                    },  # Has only been validated with 2 for power panel sites
-                    replace=[(siteId, "<siteId>")],
-                    admin=admin,
-                )
-
-            # Ensure stand alone devices may be queried
+            # Ensure stand alone devices may be queried as well, endpoints also work on EU server
             has_charging |= bool(
                 {k for k, d in self.api_power.devices.items() if not d.get("site_id")}
             )
 
-            # skip device queries if no charging system found and charging not enforced
+            # skip device queries if no charging system/device found and charging not enforced
             if not has_charging and not self.export_services & {
                 ApiEndpointServices.charging
             }:
                 self._logger.info(
-                    "No system for %s endpoint data found, skipping device queries...",
+                    "No system or devices for %s endpoint data found, skipping device queries...",
                     ApiEndpointServices.charging,
                 )
                 return True
@@ -1437,7 +1490,7 @@ class AnkerSolixApiExport:
                 admin = device.get("is_admin")
 
                 # run only for appropriate devices and site owner
-                if (dev_type := device.get("type")) in [
+                if charging_endpoints and (dev_type := device.get("type")) in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.HOME_BACKUP.value,
                     api.SolixDeviceType.COMBINER_BOX.value,
@@ -1508,7 +1561,7 @@ class AnkerSolixApiExport:
                         )
 
                 # run for proper device types if eventually site owner
-                if dev_type in [
+                if charging_endpoints and dev_type in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.PPS.value,
                     api.SolixDeviceType.HOME_BACKUP.value,
@@ -1536,43 +1589,48 @@ class AnkerSolixApiExport:
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
-                    # Get device disaster information for devices not assigned to a site
-                    # Note: Only shared or owned standalone devices will be listed for account, admin does not need to be checked
-                    if not siteId:
-                        self._logger.info(
-                            "Exporting Charging device disaster data for standalone device..."
-                        )
-                        await self.query(
-                            endpoint=API_CHARGING_ENDPOINTS[
-                                "get_disaster_support_func"
-                            ],
-                            filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(sn, 'device_sn')}.json",
-                            payload={
-                                "identifier_id": sn,
-                                "type": 1,
-                            },  # Validated against shared S2000 device
-                            replace=[(sn, "<deviceSn>")],
-                        )
-                        await self.query(
-                            endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
-                            filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(sn, 'device_sn')}.json",
-                            payload={
-                                "identifier_id": sn,
-                                "type": 1,
-                            },  # Validated against shared S2000 device
-                            replace=[(sn, "<deviceSn>")],
-                        )
-                        await self.query(
-                            endpoint=API_CHARGING_ENDPOINTS[
-                                "get_site_device_disaster_status"
-                            ],
-                            filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(sn, 'device_sn')}.json",
-                            payload={
-                                "identifier_id": sn,
-                                "type": 1,
-                            },  # Validated against shared S2000 device
-                            replace=[(sn, "<deviceSn>")],
-                        )
+
+                # Get device disaster information for devices not assigned to a site, charging_disaster endpoints work on both cloud servers
+                # Note: Only shared or owned standalone devices will be listed for account, admin does not need to be checked
+                if not siteId and dev_type in [
+                    api.SolixDeviceType.POWERPANEL.value,
+                    api.SolixDeviceType.PPS.value,
+                    api.SolixDeviceType.HOME_BACKUP.value,
+                    api.SolixDeviceType.COMBINER_BOX.value,
+                    api.SolixDeviceType.GENERATOR.value,
+                ]:
+                    self._logger.info(
+                        "Exporting Charging device disaster data for standalone device..."
+                    )
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
+                        filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(sn, 'device_sn')}.json",
+                        payload={
+                            "identifier_id": sn,
+                            "type": 1,
+                        },  # Validated against shared S2000 device
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                        filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(sn, 'device_sn')}.json",
+                        payload={
+                            "identifier_id": sn,
+                            "type": 1,
+                        },  # Validated against shared S2000 device
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    await self.query(
+                        endpoint=API_CHARGING_ENDPOINTS[
+                            "get_site_device_disaster_status"
+                        ],
+                        filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(sn, 'device_sn')}.json",
+                        payload={
+                            "identifier_id": sn,
+                            "type": 1,
+                        },  # Validated against shared S2000 device
+                        replace=[(sn, "<deviceSn>")],
+                    )
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
@@ -2106,12 +2164,12 @@ class AnkerSolixApiExport:
                     randomkeys=randomkeys,
                 )
         except (errors.AnkerSolixError, ClientError) as err:
-            ignore_client_error = True
-            if isinstance(err, ClientError):
-                # client errors never to be caught
-                # Error: 503, message='Service Temporarily Unavailable'
-                ignore_client_error = "Error: 503," not in str(err)
-            if catch and ignore_client_error:
+            # ignore_client_error = True
+            # if isinstance(err, ClientError):
+            # client errors never to be caught
+            # Error: 503, message='Service Temporarily Unavailable'
+            # ignore_client_error = "Error: 503," not in str(err)
+            if catch:  # and ignore_client_error:
                 for secret, public in replace:
                     payload = (str(payload).replace(secret, public),)
                 self._logger.error(

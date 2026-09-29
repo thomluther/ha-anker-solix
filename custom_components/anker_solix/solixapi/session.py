@@ -568,6 +568,8 @@ class AnkerSolixClientSession:
         else:
             body_text = str(json)
         self._logger.debug("Request Body: %s", body_text)
+        if encrypted_body:
+            self._logger.debug("Encrypted Body: %s", encrypted_body)
         # enforce configured delay between any subsequent request
         await self._wait_delay(endpoint=endpoint)
         # uncompressed body must use json parameter, pre-compressed body must use data parameter

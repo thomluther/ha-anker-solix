@@ -383,62 +383,66 @@ modify_solix_use_time:
       supported_features:
         - update.UpdateEntityFeature.BACKUP
   fields:
-    start_month:
-      required: false
-      example: "jan"
-      default: "jan"
-      selector:
-        select:
-          mode: dropdown
-          multiple: false
-          translation_key: month
-          options:
-            - jan
-            - feb
-            - mar
-            - apr
-            - may
-            - jun
-            - jul
-            - aug
-            - sep
-            - oct
-            - nov
-            - dec
-    end_month:
-      required: false
-      example: "dec"
-      default: "dec"
-      selector:
-        select:
-          mode: dropdown
-          multiple: false
-          translation_key: month
-          options:
-            - jan
-            - feb
-            - mar
-            - apr
-            - may
-            - jun
-            - jul
-            - aug
-            - sep
-            - oct
-            - nov
-            - dec
-    day_type:
-      required: false
-      example: "all"
-      selector:
-        select:
-          mode: dropdown
-          multiple: false
-          translation_key: daytype
-          options:
-            - weekday
-            - weekend
-            - all
+    sb_fields:
+      # Following section is used only for Solarbank 2 or later schedule types
+      collapsed: true
+      fields:
+        start_month:
+          required: false
+          example: "jan"
+          default: "jan"
+          selector:
+            select:
+              mode: dropdown
+              multiple: false
+              translation_key: month
+              options:
+                - jan
+                - feb
+                - mar
+                - apr
+                - may
+                - jun
+                - jul
+                - aug
+                - sep
+                - oct
+                - nov
+                - dec
+        end_month:
+          required: false
+          example: "dec"
+          default: "dec"
+          selector:
+            select:
+              mode: dropdown
+              multiple: false
+              translation_key: month
+              options:
+                - jan
+                - feb
+                - mar
+                - apr
+                - may
+                - jun
+                - jul
+                - aug
+                - sep
+                - oct
+                - nov
+                - dec
+        day_type:
+          required: false
+          example: "all"
+          selector:
+            select:
+              mode: dropdown
+              multiple: false
+              translation_key: daytype
+              options:
+                - weekday
+                - weekend
+                - all
     start_hour:
       required: false
       example: "00:00:00"
@@ -471,9 +475,23 @@ modify_solix_use_time:
       selector:
         number:
           min: 0
-          max: 10
+          max: 1000
           step: 0.01
+          mode: box
           unit_of_measurement: "per kWh"
+    pps_fields:
+      # Following section is used only for PPS schedule types
+      collapsed: true
+      fields:
+        backup_soc:
+          required: false
+          example: 20
+          selector:
+            number:
+              min: 6
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
     delete:
       required: false
       example: false
