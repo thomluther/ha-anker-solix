@@ -12,9 +12,7 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/thomluther/ha-anker-solix/issues",
   "requirements": [
-    "aiohttp>=3.10.11",
     "aiofiles>=25.1.0",
-    "cryptography>=3.4.8",
     "paho-mqtt>=2.1.0"
   ],
   "version": "3.9.0"
