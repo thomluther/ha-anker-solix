@@ -137,6 +137,13 @@
                     "on": "mdi:generator-portable"
                 }
             },
+            "ac_input_plug_status": {
+                "default": "mdi:power-plug-outline",
+                "state": {
+                    "off": "mdi:power-plug-off",
+                    "on": "mdi:power-plug"
+                }
+            },
             "mqtt_local_mode": {
                 "default": "mdi:cloud-question-outline",
                 "state": {

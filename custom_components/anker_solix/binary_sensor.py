@@ -162,6 +162,15 @@ DEVICE_SENSORS = [
         mqtt=True,
     ),
     AnkerSolixBinarySensorDescription(
+        key="ac_input_plug_status",
+        translation_key="ac_input_plug_status",
+        json_key="ac_input_power_switch",
+        device_class=BinarySensorDeviceClass.PLUG,
+        value_fn=lambda d, jk: None if (v := d.get(jk)) is None else bool(v),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixBinarySensorDescription(
         key="mqtt_local_mode",
         translation_key="mqtt_local_mode",
         json_key="is_passive",

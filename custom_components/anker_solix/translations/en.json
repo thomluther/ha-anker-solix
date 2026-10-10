@@ -519,6 +519,13 @@
                     "off": "Unplugged"
                 }
             },
+            "ac_input_plug_status": {
+                "name": "AC input plug status",
+                "state": {
+                    "on": "Plugged",
+                    "off": "Unplugged"
+                }
+            },
             "mqtt_local_mode": {
                 "name": "MQTT Local Mode",
                 "state": {

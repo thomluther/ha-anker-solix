@@ -519,6 +519,13 @@
                     "off": "Getrennt"
                 }
             },
+            "ac_input_plug_status": {
+                "name": "AC Eingang Steckerstatus",
+                "state": {
+                    "on": "Eingesteckt",
+                    "off": "Getrennt"
+                }
+            },
             "mqtt_local_mode": {
                 "name": "MQTT lokaler Modus",
                 "state": {

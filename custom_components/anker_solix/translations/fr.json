@@ -519,6 +519,13 @@
                     "off": "Débranché"
                 }
             },
+            "ac_input_plug_status": {
+                "name": "État de la prise d'entrée CA",
+                "state": {
+                    "on": "Branché",
+                    "off": "Débranché"
+                }
+            },
             "mqtt_local_mode": {
                 "name": "Mode local MQTT",
                 "state": {
