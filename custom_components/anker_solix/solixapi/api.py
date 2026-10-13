@@ -1151,15 +1151,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         )
 
                     # Solarbank PPS specific keys, map them to solarbank keys where applicable
-                    elif key == "pv_high_power":
-                        device["solar_power_1"] = str(value)
                     elif key == "pv_low_power":
+                        device["solar_power_1"] = str(value)
+                    elif key == "pv_high_power":
                         device["solar_power_2"] = str(value)
-                    elif key == "pv_high_name":
+                    elif key == "pv_low_name":
                         device["pv_name"] = (device.get("pv_name") or {}) | {
                             "pv1_name": str(value)
                         }
-                    elif key == "pv_low_name":
+                    elif key == "pv_high_name":
                         device["pv_name"] = (device.get("pv_name") or {}) | {
                             "pv2_name": str(value)
                         }

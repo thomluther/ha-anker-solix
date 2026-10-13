@@ -757,6 +757,17 @@ class AnkerSolixBaseApi:
                                 device_mqtt[f"device_{idx}_pv_power"] = (
                                     f"{pv_power:.0f}"
                                 )
+                            elif (
+                                key == "pv_1_power"
+                                and "photovoltaic_power" not in check_values
+                            ):
+                                # accumulate all PV channels if total PV power not in MQTT data
+                                pv_power = 0
+                                for i in range(1, 5):
+                                    pv_power += float(
+                                        check_values.get(f"pv_{i}_power") or 0
+                                    )
+                                device_mqtt["photovoltaic_power"] = f"{pv_power:.0f}"
                         elif (
                             key
                             in [
@@ -1136,6 +1147,32 @@ class AnkerSolixBaseApi:
                                 int(check_values.get(f"{idx}_priority", 0) > 1) >> bit
                             )
                         device_mqtt["port_priority"] = bitmask
+                    if (
+                        getattr(SolixDeviceCategory, model, None)
+                        == SolixDeviceType.SOLARBANK_PPS.value
+                        and "battery_power_signed" not in check_values
+                        and any(
+                            k in check_values
+                            for k in (
+                                "photovoltaic_power",
+                                "pv_1_power",
+                                "pv_2_power",
+                                "ac_input_power",
+                                "output_power_total",
+                            )
+                        )
+                    ):
+                        # calculate net battery power for Solarbank PPS if not reported directly in MQTT data
+                        net_power = (
+                            float(device_mqtt.get("photovoltaic_power") or 0)
+                            + float(device_mqtt.get("ac_input_power") or 0)
+                            - float(device_mqtt.get("output_power_total") or 0)
+                        )
+                        device_mqtt["bat_charge_power"] = f"{max(0.0, net_power):.0f}"
+                        device_mqtt["bat_discharge_power"] = (
+                            f"{max(0.0, -net_power):.0f}"
+                        )
+                        device_mqtt["battery_power_signed"] = f"{net_power:.0f}"
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if calc_capacity and (cap := device.get("battery_capacity")):

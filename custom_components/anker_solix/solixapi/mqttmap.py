@@ -4823,6 +4823,20 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C1000 Gen 2
     "A1763": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [
@@ -4922,6 +4936,20 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C1000X Gen 2
     "A1765": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [
@@ -5043,6 +5071,20 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.pps_tou_schedule: CMD_TOU_PLAN_V2,
             SolixMqttCommands.backup_soc: CMD_PPS_BACKUP_SOC_V2,
         },
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [
@@ -5154,6 +5196,20 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.pps_usage_mode: CMD_PPS_USAGE_MODE_V2,  # 0=Standard, 1=Time-of-Use
             SolixMqttCommands.pps_tou_schedule: CMD_TOU_PLAN_V2,
             SolixMqttCommands.backup_soc: CMD_PPS_BACKUP_SOC_V2,
+        },
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
         },
         "0101": {
             # AC command group
@@ -5620,6 +5676,20 @@ SOLIXMQTTMAP: Final[dict] = {
     # Solarbank PPS F3000
     "A1782": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [
