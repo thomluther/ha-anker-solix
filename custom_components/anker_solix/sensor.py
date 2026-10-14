@@ -2211,6 +2211,7 @@ DEVICE_SENSORS = [
             if d.get("type")
             in [
                 SolixDeviceType.PPS.value,
+                SolixDeviceType.SOLARBANK_PPS.value,
                 SolixDeviceType.CHARGER.value,
                 SolixDeviceType.POWERPANEL.value,
             ]
