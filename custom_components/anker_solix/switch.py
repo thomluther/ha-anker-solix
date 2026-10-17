@@ -618,6 +618,21 @@ DEVICE_SWITCHES = [
         key="pps_storm_guard_switch",
         translation_key="storm_guard_switch",
         json_key="storm_guard_switch",
+        api_cmd=True,
+        value_fn=lambda d, jk: (
+            (
+                v
+                if (v := d.get(jk)) is not None
+                else (d.get("device_disaster") or {}).get("auto_disaster_switch")
+            )
+            if d.get(MQTT_OVERLAY)
+            else (
+                v
+                if (v := (d.get("device_disaster") or {}).get("auto_disaster_switch"))
+                is not None
+                else d.get(jk)
+            )
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.backup_charge_storm_guard,
@@ -1162,20 +1177,35 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             LOGGER.debug(
                 "'%s' will be %s", self.entity_id, "enabled" if enable else "disabled"
             )
-            # First control settings via Api for the cloud service
+            target_enable = enable ^ self.entity_description.inverted
+            # First control settings via Api for the cloud service (both site-level if present and device-level)
+            if site_id := (data or {}).get("site_id"):
+                await self.coordinator.client.api.powerpanelApi.set_auto_disaster(
+                    identifier=site_id,
+                    id_type=2,
+                    enable=target_enable,
+                    toFile=self.coordinator.client.testmode(),
+                )
             resp = (
                 await self.coordinator.client.api.powerpanelApi.set_auto_disaster(
                     identifier=self.coordinator_context,
                     id_type=1,
-                    enable=enable ^ self.entity_description.inverted,
+                    enable=target_enable,
                     toFile=self.coordinator.client.testmode(),
                 )
                 or {}
             )
-            # Finally issue the MQTT command to ensure the device also activated Storm guard setting
-            resp = (resp or {}) | {
-                "mqtt_control": await self._async_mqtt_toggle(mdev=mdev, enable=enable)
-            }
+            if self.coordinator_context in self.coordinator.client.api.devices:
+                self.coordinator.client.api.devices[self.coordinator_context][
+                    "device_disaster"
+                ] = resp
+            # Issue the MQTT command if supported by the device controls
+            if mdev and self.entity_description.mqtt_cmd in mdev.controls:
+                resp = (resp or {}) | {
+                    "mqtt_control": await self._async_mqtt_toggle(
+                        mdev=mdev, enable=enable
+                    )
+                }
         # Trigger MQTT commands depending on changed entity
         elif self.entity_description.mqtt_cmd and mdev:
             LOGGER.debug(

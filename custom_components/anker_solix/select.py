@@ -1938,7 +1938,10 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 with suppress(ValueError, TypeError):
                     if not (usage_mode := getattr(SolarbankUsageMode, option, None)):
                         return
-                    if usage_mode == SolarbankUsageMode.backup.value:
+                    if (
+                        usage_mode == SolarbankUsageMode.backup.value
+                        and data.get("type") != SolixDeviceType.SOLARBANK_PPS.value
+                    ):
                         # Backup option cannot be enabled directly, instead activate backup mode switch
                         # This will reactivate an existing interval or start a new backup with default duration
                         resp = await self.coordinator.client.api.set_sb2_ac_charge(
@@ -1952,6 +1955,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         if (
                             getattr(SolarbankUsageMode, self._attr_current_option, None)
                             == SolarbankUsageMode.backup.value
+                            and data.get("type") != SolixDeviceType.SOLARBANK_PPS.value
                         ):
                             resp = await self.coordinator.client.api.set_sb2_ac_charge(
                                 siteId=data.get("site_id", ""),

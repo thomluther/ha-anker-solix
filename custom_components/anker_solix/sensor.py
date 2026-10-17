@@ -2610,9 +2610,12 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: (
             not (
                 {d.get("type")} - s
-                and d.get("site_details", {})
-                .get("disaster_support", {})
-                .get("support_auto_disaster")
+                and (
+                    d.get("disaster_support", {}).get("support_auto_disaster")
+                    or d.get("site_details", {})
+                    .get("disaster_support", {})
+                    .get("support_auto_disaster")
+                )
             )
         ),
     ),
