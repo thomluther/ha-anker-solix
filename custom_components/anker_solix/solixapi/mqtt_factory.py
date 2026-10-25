@@ -59,6 +59,7 @@ class SolixMqttDeviceFactory:
                     in [
                         SolixDeviceType.SOLARBANK.value,
                         SolixDeviceType.COMBINER_BOX.value,
+                        SolixDeviceType.HOME_BACKUP.value,
                     ]
                     and pn in SB_MODELS
                 ):

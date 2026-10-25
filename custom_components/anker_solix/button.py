@@ -78,7 +78,8 @@ DEVICE_BUTTONS = [
         translation_key="mqtt_realtime_trigger",
         json_key="",
         entity_category=EntityCategory.DIAGNOSTIC,
-        exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        force_creation_fn=lambda d, jk: d.get("mqtt_supported"),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.realtime_trigger,
     ),
@@ -88,10 +89,10 @@ DEVICE_BUTTONS = [
         translation_key="mqtt_status_request",
         json_key="",
         entity_category=EntityCategory.DIAGNOSTIC,
-        exclude_fn=lambda s, d: not (({d.get("type")} - s) and "mqtt_data" in d),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        # Note: Enforce creation together with realtime trigger once supported
+        force_creation_fn=lambda d, jk: d.get("mqtt_supported"),
         mqtt=True,
-        # Note: Enforce creation together with realtime trigger since cmd not defined for each device
-        force_creation_fn=lambda d, jk: "mqtt_data" in d,
         mqtt_cmd=SolixMqttCommands.status_request,
     ),
     AnkerSolixButtonDescription(

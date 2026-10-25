@@ -25,7 +25,7 @@
 This integration utilizes an unofficial Python library to communicate with the Anker Power cloud server Api that is also used by the official Anker mobile app. The Api access or communication may change or break any time without notice and therefore also change or break the integration functionality. Furthermore, the usage for the unofficial Api library may impose risks, such as device damage by improper settings or loss of manufacturer's warranty, whether is caused by improper usage, library failures, Api changes or other reasons.
 
 > [!WARNING]
->  **The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.** 🚨
+> **The user bears the sole risk for a possible loss of the manufacturer's warranty or any damage that may have been caused by use of this integration or the underlying Api python library. Users must accept these conditions prior integration usage. A consent automatically includes future integration or Api library updates, which can extend the integration functionality for additional device settings or monitoring capabilities.** 🚨
 
 
 # Table of contents
@@ -60,29 +60,29 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Pro tips for home load automation with Solarbank 1](#pro-tips-for-home-load-automation-with-solarbank-1)
     * [Home load automation considerations for Solarbank 2+](#home-load-automation-considerations-for-solarbank-2)
     * [How can you modify the home load and the solarbank schedule](#how-can-you-modify-the-home-load-and-the-solarbank-schedule)
-        - [1. Direct parameter changes via entity modifications](#1-direct-parameter-changes-via-entity-modifications)
-        - [2. Solarbank schedule modifications via actions](#2-solarbank-schedule-modifications-via-actions)
-        - [3. Interactive solarbank schedule modification via a parameterized script](#3-interactive-solarbank-schedule-modification-via-a-parameterized-script)
+        * [1. Direct parameter changes via entity modifications](#1-direct-parameter-changes-via-entity-modifications)
+        * [2. Solarbank schedule modifications via actions](#2-solarbank-schedule-modifications-via-actions)
+        * [3. Interactive solarbank schedule modification via a parameterized script](#3-interactive-solarbank-schedule-modification-via-a-parameterized-script)
     * [Schedule action details and limitations](#schedule-action-details-and-limitations)
 1. **[Modification of Solarbank AC settings](#modification-of-solarbank-ac-settings)**
     * [Manual backup charge Option](#manual-backup-charge-option)
-        - [Backup charge option control by entities](#backup-charge-option-control-by-entities)
-        - [Modify AC backup charge action](#modify-ac-backup-charge-action)
+        * [Backup charge option control by entities](#backup-charge-option-control-by-entities)
+        * [Modify AC backup charge action](#modify-ac-backup-charge-action)
     * [Time of Use mode](#time-of-use-mode)
-        - [Time of Use plan control by entities](#time-of-use-plan-control-by-entities)
-        - [Modify Time of Use plan action](#modify-time-of-use-plan-action)
-        - [Usage of flexible tariffs with the Time of Use mode](#usage-of-flexible-tariffs-with-the-time-of-use-mode)
+        * [Time of Use plan control by entities](#time-of-use-plan-control-by-entities)
+        * [Modify Time of Use plan action](#modify-time-of-use-plan-action)
+        * [Usage of flexible tariffs with the Time of Use mode](#usage-of-flexible-tariffs-with-the-time-of-use-mode)
 1. **[Modification of Solarbank 3 settings](#modification-of-solarbank-3-settings)**
     * [Home load type](#home-load-type)
     * [Smart mode](#smart-mode)
-        - [Usage of Smart mode](#usage-of-smart-mode)
+        * [Usage of Smart mode](#usage-of-smart-mode)
     * [Time Slot mode](#time-slot-mode)
-        - [Usage of dynamic tariffs with the Time Slot mode](#usage-of-dynamic-tariffs-with-the-time-slot-mode)
+        * [Usage of dynamic tariffs with the Time Slot mode](#usage-of-dynamic-tariffs-with-the-time-slot-mode)
 1. **[Toggling system price type or currency settings](#toggling-system-price-type-or-currency-settings)**
     * [Dynamic utility rate plans options](#dynamic-utility-rate-plans-options)
-        - [Dynamic price provider](#dynamic-price-provider)
-        - [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
-        - [Export tariff options](#export-tariff-options)
+        * [Dynamic price provider](#dynamic-price-provider)
+        * [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
+        * [Export tariff options](#export-tariff-options)
 1. **[Solar forecast data](#solar-forecast-data)**
 1. **[Modification of PPS settings](#modification-of-pps-settings)**
     * [PPS manual backup charge](#pps-manual-backup-charge-option)
@@ -107,8 +107,8 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [Get system info action](#get-system-info-action)
     * [Get device info action](#get-device-info-action)
     * [Api request action](#api-request-action)
-        - [Hints and tips when using Api requests](#hints-and-tips-when-using-api-requests)
-        - [Format of the payload](#format-of-the-payload)
+        * [Hints and tips when using Api requests](#hints-and-tips-when-using-api-requests)
+        * [Format of the payload](#format-of-the-payload)
 1. **[Showing Your Appreciation](#showing-your-appreciation)**
 
 
@@ -270,10 +270,11 @@ Furthermore there may be request errors when you configured more than one Anker 
 ```
 
 Request errors may cause entities to become unavailable, or even cause the configuration (re)load to fail. You cannot avoid parallel requests of multiple clients by changing the hub configuration options. Starting with release 2.5.5, some enhancements have been implemented to better tolerate multiple hub configuration entries and parallel request errors:
-  * Added a request retry capability to the Api client session for return codes that can be classified as 'Api busy error', such as code 21105. A single retry will be attempted for the request after a random delay of 2-5 seconds, which should mask parallel request errors in most cases. A warning will be logged for the retry attempt to allow monitoring for their frequency.
-  * If more than one Anker hub configuration entry is created, the integration will try to stagger their individual data refresh polls:
-      - The regular refresh interval may be delayed by 5 or more seconds to allow other active client refreshes to complete.
-      - The device details refresh may be delayed by at least 2 minutes to allow other active or delayed device refreshes to complete, assuming they can run into 1-2 throttle delays. Warnings will be logged for any refresh that is being delayed.
+
+* Added a request retry capability to the Api client session for return codes that can be classified as 'Api busy error', such as code 21105. A single retry will be attempted for the request after a random delay of 2-5 seconds, which should mask parallel request errors in most cases. A warning will be logged for the retry attempt to allow monitoring for their frequency.
+* If more than one Anker hub configuration entry is created, the integration will try to stagger their individual data refresh polls:
+  * The regular refresh interval may be delayed by 5 or more seconds to allow other active client refreshes to complete.
+  * The device details refresh may be delayed by at least 2 minutes to allow other active or delayed device refreshes to complete, assuming they can run into 1-2 throttle delays. Warnings will be logged for any refresh that is being delayed.
 
 All the above enhancements should better tolerate multiple hub configuration entries and avoid that your entities become unavailable temporarily.
 
@@ -304,8 +305,9 @@ More MQTT configuration and usage details are provided in [MQTT connection and i
 ## Option considerations for Solarbank 2 systems
 
 Anker changed the device data publish intervals with Solarbank 2 power systems. While Solarbank 1 devices publish their MQTT data every 60 seconds to the Api cloud, Solarbank 2 systems seem to use different intervals for MQTT data publishing:
-   - Default interval is **~5 minutes**: After ~60 seconds, the cloud considered the last values obsolete at initial product release. That resulted in no longer returning valid values upon refresh requests (only 0 values), until new MQTT data has been received again from the devices. There was a change implemented in the cloud around 25. July 2024 to provide always the last known data upon Api refresh requests. This eliminated the missing value problem for shared accounts in the Anker mobile app or 0 values in any api client responses.
-   - Triggered interval is **~3 seconds**: When the mobile app is used with the main account, it triggers real time MQTT publish for applicable and owned devices which will permanently refresh also the Api cloud data. The same method is used for triggering live data updates of individual devices when watching device real time data. That means while watching the Solarbank 2 power system overview via main account in the anker app, you receive very frequent data updates from the cloud Api. Of course, this real time trigger is only applied while the home screen is watched to limit cloud Api requests, data traffic and device power consumption for the remaining times. Once the real time publish trigger times out after 5 minutes, the device falls back to its default publish interval.
+
+* Default interval is **~5 minutes**: After ~60 seconds, the cloud considered the last values obsolete at initial product release. That resulted in no longer returning valid values upon refresh requests (only 0 values), until new MQTT data has been received again from the devices. There was a change implemented in the cloud around 25. July 2024 to provide always the last known data upon Api refresh requests. This eliminated the missing value problem for shared accounts in the Anker mobile app or 0 values in any api client responses.
+* Triggered interval is **~3 seconds**: When the mobile app is used with the main account, it triggers real time MQTT publish for applicable and owned devices which will permanently refresh also the Api cloud data. The same method is used for triggering live data updates of individual devices when watching device real time data. That means while watching the Solarbank 2 power system overview via main account in the anker app, you receive very frequent data updates from the cloud Api. Of course, this real time trigger is only applied while the home screen is watched to limit cloud Api requests, data traffic and device power consumption for the remaining times. Once the real time publish trigger times out after 5 minutes, the device falls back to its default publish interval.
 
 In consequence, before the cloud change in July 2024, the HA integration typically received 1 response with valid data and another 4 responses with invalid data when using the default refresh interval of 60 seconds. **There is nothing the integration or the underlying Api library can do to trigger more frequent cloud data updates for Solarbank 2 systems**. Per default, the HA integration switched all relevant entities to unavailable while invalid data is returned. Optionally, you can change your integration configuration options to **Skip invalid data responses**, which will maintain the previous entity value until valid data is received again. While this means your entities will not become unavailable most of the time, they may present obsolete/stale data without your awareness. It is your choice how entities should reflect data that are marked invalid in the Api response, but neither of the options makes the data more current or reliable. The SB data time entity in the system device will reflect when the last data was provided by the Solarbank 2, or when the last valid data was read through the Api, since also that timestamp in the response is not always valid even if the data itself is valid. A new [action was implemented to get query system information](#get-system-info-action) that provides you a manual verification capability of available system data and power values in the cloud. Following [Anker article contains more information why data for Solarbank 2 may be inaccurate](https://support.ankersolix.com/de/s/article/Warum-ist-die-Datenanzeige-der-Solarbank-2-E1600-Pro-Plus-ungenau) (DE).
 
@@ -377,15 +379,16 @@ Following is an example of the diagnostic device entities available once MQTT da
 
 ### Device real time triggers
 
-The integration supports a diagnostic button per MQTT managed device that can be used to trigger real time data status messages of the device. The timeout used for the real time publish duration can be configured in the MQTT options of your hub. If the device will receive other real time triggers from the mobile App, the timeout used in the last trigger command will be applied by the device. The app typically uses timeouts of 300 seconds, which is also the default timeout in the [MQTT options of the hub configuration](#default-options-as-of-version-340).
+The integration supports a diagnostic button per MQTT managed device that can be used to trigger real time data status messages of the device. The timeout used for the real time publish duration can be configured in the MQTT options of your hub. If the device will receive other real time triggers from the mobile App, the timeout used in the last trigger command will be applied by the device. The app typically uses timeouts of 300 seconds, which is also the default timeout in the [MQTT options of the hub configuration](#default-hub-configuration-options).
 
 Depending on how devices publish their data in regular messages, you may need the real time trigger only to get more frequent data updates. However, data which is only available in real time messages will get stale, if the real time data publish period will timeout. The integration provides the trigger button for each eligible device and you can control it according to your customized needs via an automation that will press the button at regular intervals or only under certain conditions, which you can define in your automation.
 
 > [!IMPORTANT]
 > Be aware that real time data may come with a cost if triggered permanently:
-> - There will be larger amounts of traffic to your HA server but also between the devices and the Anker MQTT and Cloud servers
-> - The Anker cloud infrastructure may not be scalable enough to maintain such 24x7 real time traffic for growing number of devices, since that is no use case with normal mobile App usage
-> - The devices may be kept awake and never go to sleep mode, therefore using more power than necessary
+>
+> * There will be larger amounts of traffic to your HA server but also between the devices and the Anker MQTT and Cloud servers
+> * The Anker cloud infrastructure may not be scalable enough to maintain such 24x7 real time traffic for growing number of devices, since that is no use case with normal mobile App usage
+> * The devices may be kept awake and never go to sleep mode, therefore using more power than necessary
 > For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data.
 
 > [!NOTE]
@@ -460,14 +463,16 @@ actions:
     target:
       entity_id: button.sb_e1600_2_pro_mqtt_realtime_data
 ```
+
 </details>
 
 
 ### Devices in MQTT local mode
 
 Some Anker Solix system types have device connections that utilize an 'MQTT local mode'. Once a device runs in this mode, it does not longer subscribe to the Anker MQTT cloud, but only connects to the local hub in the system. The hub acts as MQTT proxy and sends embedded MQTT messages from the device to the cloud server. At the same time, only the hub can control the device locally and MQTT commands can only be sent to the hub. The device itself is not known to the system or the mobile App and the device may appear only as stand alone device without direct control capabilities. Examples of such system types are:
-- Home Power Panel A17B1, where one or two F3800(P) PPS devices can be connected
-- Home Backup System power dock AX170, where multiple E10 devices can be connected
+
+* Home Power Panel A17B1, where one or two F3800(P) PPS devices can be connected
+* Home Backup System power dock AX170, where multiple E10 devices can be connected
 
 Integration version 3.6.3 added full support for toleration of devices running in 'MQTT local mode' and embedded MQTT messages of their hub devices. Embedded messages can be described in the MQTT mapping of the hub model and the embedded data is presented with the originating device. The MQTT local mode devices are also assigned to the same system as the publishing hub device. Such devices will create a unique diagnostic sensor indicating that MQTT local mode is active. All control entities of the device will remain available to represent the actual state of the control. However, if MQTT based controls are modified or buttons are pressed through the HA front end or by automation, an error will be raised as indicated in following screenshot:
 
@@ -491,6 +496,7 @@ Starting with HA 2024.04, there is a new option to 'Reconfigure' an active integ
 ## How to create a second Anker Power account
 
 If you have the Anker app installed on 2 different devices, the account creation and system sharing will be a little bit easier. Following is a high-level guideline how to create a second account and share the system on a single device:
+
   1. Go to your profile in the Anker app, click on your name at the top and then Log out.
   1. Then create a new Anker power account via the app. You will need a second e-mail address. (This could also be an alias address that you set up with your e-mail provider)
   1. Complete the registration process. This may have to be confirmed via a temporary code that is sent to the used e-mail address.
@@ -511,8 +517,9 @@ Following automation can be used to send a sticky actionable notification to you
 ![notification][notification-img]
 
 Make sure to replace following entities used in the example below with your own entities:
-- `switch.accountalias_country_api_usage` (This is your integration hub switch for the api usage, the entity is part of the 'account' device of the integration devices)
-- `notify.my_smartphone` (This is your mobile notification entity, you can find your notify entities in the developer tab or your HA entities panel)
+
+* `switch.accountalias_country_api_usage` (This is your integration hub switch for the api usage, the entity is part of the 'account' device of the integration devices)
+* `notify.my_smartphone` (This is your mobile notification entity, you can find your notify entities in the developer tab or your HA entities panel)
 
 The system variable is automatically generated based on the device name of the entity that triggered the state change.
 
@@ -612,6 +619,7 @@ action:
 mode: queued
 max: 3
 ```
+
 </details>
 
 
@@ -622,14 +630,14 @@ However, customization of Api cache data alone does not provide much benefit. An
 
 Following entities are utilizing the Api cache customization capabilities and now provide better integration usage.
 
-### Battery Capacity:
+### Battery Capacity
 
 This number entity allows you to adjust the installed capacity of your device in case the calculated capacity is wrong (for example the intermix of Solarbank 2, 3 and 4 battery expansions with different capacity may not be determined correctly). You can also adjust the battery capacity for lifetime degradation, which will reduce the usable capacity over the years. The customized capacity value is used in preference to the calculated capacity to evaluate the theoretical battery energy that can be discharged: `SOC * Capacity`. Therefore you can now easily use this entity as well to adjust the calculated battery energy and make it more accurate to the DC or even AC energy that you can measurably discharge to your home in the evening. The entity also tracks the calculated capacity in the attributes. Up to version 3.8.1, whenever the calculated capacity was changing during restore, it was considered as change in the installation and the entity was reset to the calculated value.
 Integration version 3.8.2 implemented enhancements to the capacity calculation, based on MQTT data being received over time, containing more expansion data or even battery and expansion state of health data, which is now being considered for the overall capacity calculation as well: `Capacity = SUM ( Battery size * (SOH or 100) % )` for main and expansion batteries found per device or system.
 This will make the battery energy calculation more accurate for the device or system and considers per battery capacity degradation if available. Therefore the capacity can change over time and your customization is no longer reset upon calculation changes during the entity restore. You can now manually reset your capacity customization by entering 0 capacity, which will start reusing the calculated capacity.
 
 
-### Dynamic Price Provider selection:
+### Dynamic Price Provider selection
 
 The provider is required to query the correct spot prices through the cloud Api. Those spot prices can also be queried independently of your actual system type and are provided for up to 35 hours in advance. The configured provider for your system however can only be queried and changed when using the owner account with the integration. Whenever the provider was found or set once for your Solarbank 3 system, it will be customized in Api cache and used as alternate data if not available through the active member account. The provider restore and cache customization allows you to monitor the dynamic prices of your Solarbank 3 system also as member account in your hub configuration. However, since you have no control permission in that case, you cannot really automate something for your Solarbank system based on the actual or forecast prices. If you modify the provider in the mobile app, this change cannot be recognized by an integration member account. In that case, you can customize the provider manually in your HA integration and continue receiving the same prices that are also evaluated by your Solarbank system. If you modify the provider in the integration as an owner account, the change will also be applied to your system. Additionally, your system price type will automatically be changed to dynamic tariff, since that is the only way to apply a dynamic price provider setting to your system.
 
@@ -642,7 +650,7 @@ The provider is required to query the correct spot prices through the cloud Api.
 > [!TIP]
 > If there are issues with dynamic price data or related queries, you can exclude the system price category in the hub options. This will remove all price related entities and avoid dynamic price related Api queries.
 
-### Dynamic price fee and VAT:
+### Dynamic price fee and VAT
 
 Those values can be configured in the App and they are used to calculate the dynamic total price from the Nordpool spot prices as following:
 > `(Spot price[per MWh] / 1000 + fee) * (1 + VAT[in %] / 100)`
@@ -673,9 +681,10 @@ For proper usability without PV or micro inverter attachment, beside the known '
 
 > [!IMPORTANT]
 > General Usage mode considerations:
->   - The schedule in the Api cache is refreshed automatically with each device details refresh interval (10 minutes by default hub option settings). It may reset any temporary Api cache changes that have been made with the backup mode controls before they have been applied via an Api call.
->   - The Usage Mode selector extracts the supposed active state from the schedule object, based on actual HA server time. That means it represents the supposed active mode when system time falls into an enabled backup interval. If there are time offsets between your HA server and the Solarbank, the supposed state in the Usage Mode selector entity may be wrong.
->   - The Solarbank also reports the active usage mode as system sensor which has been added with version 2.5.0. However, due to the large delay of up to 5 minutes until the solarbank reports data updates to the cloud, you can observe significant delays of applied usage mode changes.
+>
+> * The schedule in the Api cache is refreshed automatically with each device details refresh interval (10 minutes by default hub option settings). It may reset any temporary Api cache changes that have been made with the backup mode controls before they have been applied via an Api call.
+> * The Usage Mode selector extracts the supposed active state from the schedule object, based on actual HA server time. That means it represents the supposed active mode when system time falls into an enabled backup interval. If there are time offsets between your HA server and the Solarbank, the supposed state in the Usage Mode selector entity may be wrong.
+> * The Solarbank also reports the active usage mode as system sensor which has been added with version 2.5.0. However, due to the large delay of up to 5 minutes until the solarbank reports data updates to the cloud, you can observe significant delays of applied usage mode changes.
 
 
 ### Care must be taken when modifying Solarbank 1 home load settings
@@ -686,16 +695,17 @@ For proper usability without PV or micro inverter attachment, beside the known '
 Following is some more background on this to explain the complexity. The home load power cannot be set directly for the Solarbank. It can only be set indirectly by a time schedule, which typically covers a full day from 00:00 to 24:00h. There cannot be different schedules on various days for Solarbank 1, it's only a single schedule that is shared by all solarbanks configured into the system. Typically for single solarbank systems, the solarbank covers the full home load that is defined for the time interval. For dual solarbank setups, both share 50% of the home load power preset per default. This share was fixed and could not be changed so far. Starting with the Anker App 2.2.1 and new solarbank firmware 1.5.6, the share between both solarbanks can also be modified. Starting with integration version 1.3.0, this capability is also supported with additional entities that will be created for dual solarbank systems supporting individual device presets. It is a new preset mode that was implemented in the schedule structure. Integration version 2.4.0 added support for a new discharge priority switch, which is supported for solarbank 1 with firmware 2.0.9 or higher. This allows to prioritize discharge over PV production for the power export to the house. When the Solarbank 1 will discharge, no PV production or direct bypass is possible anymore, but the requested load power according to the schedule will be discharged from the battery.
 
 Following are the customizable parameters of a time interval that are supported by the integration and the Python Api library:
-  - Start and End time of a schedule interval
-  - Appliance home load preset (0/100 - 800/1600 W). If changed in dual solarbank systems, it will always use normal preset mode with the default 50% device share. Solarbank 2+ devices support lower settings down to 0 W, while Solarbank 1 devices support min. 100 W
-  - For Solarbank 2+ only (ignored for Solarbank 1 systems):
-      - Schedule plan to be used for the time interval
-      - Week days to be  used for the time interval
-  - For Solarbank 1 only (ignored for Solarbank 2+ systems):
-      - Device load preset (50-800 W) for dual solarbank systems supporting individual device presets. A change will always enable advanced preset mode and also affect the appliance load preset accordingly.
-      - Export switch
-      - Charge Priority Limit (0-100 %), typically only seen in the App when Anker MI80 inverter is configured
-      - Discharge priority switch, requires Solarbank 1 firmware 2.0.9 and HA integration 2.4.0
+
+* Start and End time of a schedule interval
+* Appliance home load preset (0/100 - 800/1600 W). If changed in dual solarbank systems, it will always use normal preset mode with the default 50% device share. Solarbank 2+ devices support lower settings down to 0 W, while Solarbank 1 devices support min. 100 W
+* For Solarbank 2+ only (ignored for Solarbank 1 systems):
+  * Schedule plan to be used for the time interval
+  * Week days to be  used for the time interval
+* For Solarbank 1 only (ignored for Solarbank 2+ systems):
+  * Device load preset (50-800 W) for dual solarbank systems supporting individual device presets. A change will always enable advanced preset mode and also affect the appliance load preset accordingly.
+  * Export switch
+  * Charge Priority Limit (0-100 %), typically only seen in the App when Anker MI80 inverter is configured
+  * Discharge priority switch, requires Solarbank 1 firmware 2.0.9 and HA integration 2.4.0
 
 The given ranges depend on the number of solarbanks in the system and are being enforced by the integration and the Api library. However, while those ranges are also accepted by the appliance when provided via a schedule, the appliance may ignore them when they are outside of its internally used/defined boundaries. For example, you can set an Appliance home load of 100 W which is also represented in the schedule interval. The appliance however will still apply the internal minimum limit of 150 W depending on the configured inverter type for your solarbank.
 It is typically the combination of those settings, as well as the actual situation of the battery SOC, the temperature and the defined/used inverter in combination with either the charge priority setting or activation of the 0 W switch that all determine which home load preset will be applied by a Solarbank 1 appliance. The applied home load is typically represented in the App for the active time interval, and this is what you can also see in the Solarbank System sensor for the preset output power. But rest assured, even if it shows 0 W home load preset is applied, it does not warrant you there won't be any output power to the house!
@@ -704,24 +714,26 @@ It is typically the combination of those settings, as well as the actual situati
 
 Before you now start using the home load preset modification capability in some fancy real time automation for zero grid power export, here is my advise:
 
-  - **Be careful !!!**
+* **Be careful !!!**
 
 I will also tell you why:
-  - The first generation of Solarbank E1600 is Anker's first all in one battery device for 'balcony solar systems' and was not designed for frequent home load changes. Unlike the later Solarbank 2+ systems, Solarbank 1 is only manageable via a 'fixed' time schedule and therefore was never designed to react quickly on frequent home load changes (and neither is the Api designed for it)
-  - The Solarbank reaction on changed home load settings got better and during tests a typical adoptions of 10-20 seconds for smaller home load changes with firmware 1.5.6 have been observed. However, using only the integration sensors is still far too slow for real/near time power automation, since all data communication occurs only via the cloud and has significant value time lags to be considered.
-  - In reality (as an average) you need to allow the solarbank up to 1-2 minutes until you get back reliable sensor values from the cloud that represent the result of a previous change. The solarbank also sends the data only once per minute to the cloud, which is another delay to factor into your automation.
-  - If you have additional and local (real time) sensors from smart meters or inverters, they might help to see the modification results faster. But still, the solarbank needs time until it settled reliably for a changed home load. Furthermore it all depends on the cloud and internet availability for any automation. Alternatively I recommend to automate the solarbank discharge only locally via limiting the inverter when you have real time automation capabilities for your inverter limits. [I realized this project as described in the forum](https://community.home-assistant.io/t/using-anker-solix-solarbank-e1600-in-ha/636063) with Hoymiles inverter, OpenDTU and a Tasmota reader device for the grid meter and that works extremely well.
-    - **Attention:** Don't use the inverter limit during solar production since this will negatively impact your possible solar yield and the solarbank may end up in crazy power regulations all the time.
-  - Additionally, each schedule parameter or complete schedule change requires 2 Api requests, one to submit the whole changed schedule and another two to query the applied and resulting schedule and site values again for sensor updates. To enforce some protection for the Api and accommodate the slow solarbank reaction, an increase of the home load is just allowed every 30 seconds at least (decreases or other interval parameter changes are not limited)
-    - **Attention:** Cloud Api requests are limited, but actually the enforced limits in regards to quantity and time frames are unknown. Each change may bring you towards the enforced limit and not only block further changes, but also render all integration entities unavailable or stale
-  - If you have some experience with the solarbank behavior, you may also know how weird it sometimes reacts on changed conditions during the day (or even unchanged conditions). This makes it difficult to adjust the home load setting automatically to a meaningful value that will accomplish the desired home load result.
-  - If you plan to automate moderate changes in the home load, use a timer helper that is restarted upon each change of the settings and used as condition for validation whether another change (increase) should be applied. I would not recommend to apply changes, especially increases in the home load, in less than 2 minute intervals, a trusted re-evaluation of the change results and further reaction can just be done after such a delay. Remember that each provided Solarbank data point is just a single sample within 60 seconds or more. The value average in that interval can be completely different, especially if you compare Solarbank data with real time data of other power devices in your home!
+
+* The first generation of Solarbank E1600 is Anker's first all in one battery device for 'balcony solar systems' and was not designed for frequent home load changes. Unlike the later Solarbank 2+ systems, Solarbank 1 is only manageable via a 'fixed' time schedule and therefore was never designed to react quickly on frequent home load changes (and neither is the Api designed for it)
+* The Solarbank reaction on changed home load settings got better and during tests a typical adoptions of 10-20 seconds for smaller home load changes with firmware 1.5.6 have been observed. However, using only the integration sensors is still far too slow for real/near time power automation, since all data communication occurs only via the cloud and has significant value time lags to be considered.
+* In reality (as an average) you need to allow the solarbank up to 1-2 minutes until you get back reliable sensor values from the cloud that represent the result of a previous change. The solarbank also sends the data only once per minute to the cloud, which is another delay to factor into your automation.
+* If you have additional and local (real time) sensors from smart meters or inverters, they might help to see the modification results faster. But still, the solarbank needs time until it settled reliably for a changed home load. Furthermore it all depends on the cloud and internet availability for any automation. Alternatively I recommend to automate the solarbank discharge only locally via limiting the inverter when you have real time automation capabilities for your inverter limits. [I realized this project as described in the forum](https://community.home-assistant.io/t/using-anker-solix-solarbank-e1600-in-ha/636063) with Hoymiles inverter, OpenDTU and a Tasmota reader device for the grid meter and that works extremely well.
+  * **Attention:** Don't use the inverter limit during solar production since this will negatively impact your possible solar yield and the solarbank may end up in crazy power regulations all the time.
+* Additionally, each schedule parameter or complete schedule change requires 2 Api requests, one to submit the whole changed schedule and another two to query the applied and resulting schedule and site values again for sensor updates. To enforce some protection for the Api and accommodate the slow solarbank reaction, an increase of the home load is just allowed every 30 seconds at least (decreases or other interval parameter changes are not limited)
+  * **Attention:** Cloud Api requests are limited, but actually the enforced limits in regards to quantity and time frames are unknown. Each change may bring you towards the enforced limit and not only block further changes, but also render all integration entities unavailable or stale
+* If you have some experience with the solarbank behavior, you may also know how weird it sometimes reacts on changed conditions during the day (or even unchanged conditions). This makes it difficult to adjust the home load setting automatically to a meaningful value that will accomplish the desired home load result.
+* If you plan to automate moderate changes in the home load, use a timer helper that is restarted upon each change of the settings and used as condition for validation whether another change (increase) should be applied. I would not recommend to apply changes, especially increases in the home load, in less than 2 minute intervals, a trusted re-evaluation of the change results and further reaction can just be done after such a delay. Remember that each provided Solarbank data point is just a single sample within 60 seconds or more. The value average in that interval can be completely different, especially if you compare Solarbank data with real time data of other power devices in your home!
 
 Meaningful automation ideas that might work for the Solarbank 1:
-  - Use schedule actions to apply different set of schedules for different weekdays (workday, home office, weekend etc). The Anker App does not provide this capability, but with HA automation you could create new schedules for given days in advance. Use first the Set schedule action which will create a new all day interval and then Update schedule action to insert additional intervals as needed. Try the action sequence manually to validate if they accomplish the desired end result for your schedule.
-  - Use solar forecast data to define a proper home load preset value for the day in order to allow the battery charging is spanning over the whole day while using as much direct solar power as possible in the house. This will prevent that the battery is full before noon in summer and then maximum solar power is bypassed to the house but cannot be consumed. This is something that I plan implementing for this summer since I have already built an automation for recommended home load setting...
-  - Use time to time changes in the home load when you have expected higher consumption level for certain periods, e.g. cooking, vacuum cleaning, fridge cooling, etc. Basically anything that adds a steady power consumption for a longer period. Don't use it to cover short term consumers like toaster, electric kettles, mixer or coffee machines. Also the home load adoption for washing machines or laundry dryer might not be very effective and too slow since they are pretty dynamic in power consumption.
-  - You have probably more automation ideas for your needs and feel free to share them with the community. But please keep the listed caveats in mind to judge whether an automation project makes sense or not. All efforts may be wasted at the end if the appliance does not behave as you might expect.
+
+* Use schedule actions to apply different set of schedules for different weekdays (workday, home office, weekend etc). The Anker App does not provide this capability, but with HA automation you could create new schedules for given days in advance. Use first the Set schedule action which will create a new all day interval and then Update schedule action to insert additional intervals as needed. Try the action sequence manually to validate if they accomplish the desired end result for your schedule.
+* Use solar forecast data to define a proper home load preset value for the day in order to allow the battery charging is spanning over the whole day while using as much direct solar power as possible in the house. This will prevent that the battery is full before noon in summer and then maximum solar power is bypassed to the house but cannot be consumed. This is something that I plan implementing for this summer since I have already built an automation for recommended home load setting...
+* Use time to time changes in the home load when you have expected higher consumption level for certain periods, e.g. cooking, vacuum cleaning, fridge cooling, etc. Basically anything that adds a steady power consumption for a longer period. Don't use it to cover short term consumers like toaster, electric kettles, mixer or coffee machines. Also the home load adoption for washing machines or laundry dryer might not be very effective and too slow since they are pretty dynamic in power consumption.
+* You have probably more automation ideas for your needs and feel free to share them with the community. But please keep the listed caveats in mind to judge whether an automation project makes sense or not. All efforts may be wasted at the end if the appliance does not behave as you might expect.
 
 ### Pro tips for home load automation with Solarbank 1
 
@@ -775,69 +787,74 @@ Unfortunately, the HA core cards do not offer any configuration features to use 
 
 Schedule actions are useful to apply manual or automated changes for periods that are beyond the current time interval. Following actions are available:
 
-  - **Set new Solarbank schedule:**
+* **Set new Solarbank schedule:**
 
     Allows wiping out the existing time intervals in the selected or active plan and defines a new time interval with the customizable schedule parameters above.
 
-  - **Update Solarbank schedule:**
+* **Update Solarbank schedule:**
 
     Allows inserting/updating/overwriting a time interval in the active or selected schedule plan with the customizable schedule parameters above. Adjacent intervals will be adjusted automatically.
 
-  - **Request Solarbank schedule:**
+* **Request Solarbank schedule:**
 
     Queries the actual schedule and returns the whole schedule JSON object, which is also provided in the schedule attribute of the Solarbank device output preset sensor.
 
-  - **Clear Solarbank schedule:**
+* **Clear Solarbank schedule:**
 
     Clear all defined solarbank schedule time intervals. The solarbank will have no longer a schedule definition and use the default output preset all day (200 W). For solarbank 2, you can optionally clear the defined intervals only for the specified weekdays of the active or specified plan.
 
 You can specify the solarbank device ID or the entity ID of the solarbank output preset sensor as target for those actions. The Action UI in HA developer tools will filter the devices and entities that support the solarbank schedule actions. I recommend using the entity ID as target when using the action in automation, since the device ID is an internal registry value which is difficult to map to a context. In general, most of the solarbank schedule changes should be done by the update action since the Api library has built in simplifications for time interval changes. The update action follows the insert methodology for the specified interval using following rules:
-  - Adjacent slots are automatically adjusted with their start/end times
-    - Completely overlay slots are automatically removed
-    - Smaller interval inserts result in 1-3 intervals for the previous time range, depending on the update interval and existing interval time boundaries
-    - For example if the update interval will be within an existing larger interval, it will split the existing interval at one or both ends. So the insert of one interval may result in 2 or 3 different intervals for the previous time range.
-  - New gaps will not be introduced by schedule updates, but existing gaps will remain if outside of the specified interval
-  - If only the boundary between intervals needs to be changed, update only the interval that will increase because updating the interval that shrinks will split the existing interval
-    - When one of the update interval boundaries remains the same as the existing interval, the existing interval values will be re-used for the updated interval in case they were not specified.
-    - This allows quick interval updates for one boundary or specific parameters only without the need to specify all parameters again
-  - All interval parameters are mandatory for a schedule update via the Api. If they are not specified with the action, existing ones will be re-used when it makes sense or following defaults will be applied:
-    - 100 W Appliance Home load preset in normal preset mode if neither appliance nor device load presets are provided
-    - Current weekday or existing plan with current weekday if no weekdays provided (Solarbank 2 only)
-    - Allow Export is ON (Solarbank 1 only)
-    - 80 % Charge Priority limit (Solarbank 1 only)
-    - Discharge Priority switch is OFF (Solarbank 1 only)
-  - The Set schedule action also requires to specify the time interval for the first slot. However, testing for Solarbank 1 has shown that the provided times are ignored and a full day interval is always created when only a single interval is provided with a schedule update via the Api. For Solarbank 2, the first set slot behavior may be different.
+
+* Adjacent slots are automatically adjusted with their start/end times
+  * Completely overlay slots are automatically removed
+  * Smaller interval inserts result in 1-3 intervals for the previous time range, depending on the update interval and existing interval time boundaries
+  * For example if the update interval will be within an existing larger interval, it will split the existing interval at one or both ends. So the insert of one interval may result in 2 or 3 different intervals for the previous time range.
+* New gaps will not be introduced by schedule updates, but existing gaps will remain if outside of the specified interval
+* If only the boundary between intervals needs to be changed, update only the interval that will increase because updating the interval that shrinks will split the existing interval
+  * When one of the update interval boundaries remains the same as the existing interval, the existing interval values will be re-used for the updated interval in case they were not specified.
+  * This allows quick interval updates for one boundary or specific parameters only without the need to specify all parameters again
+* All interval parameters are mandatory for a schedule update via the Api. If they are not specified with the action, existing ones will be re-used when it makes sense or following defaults will be applied:
+  * 100 W Appliance Home load preset in normal preset mode if neither appliance nor device load presets are provided
+  * Current weekday or existing plan with current weekday if no weekdays provided (Solarbank 2 only)
+  * Allow Export is ON (Solarbank 1 only)
+  * 80 % Charge Priority limit (Solarbank 1 only)
+  * Discharge Priority switch is OFF (Solarbank 1 only)
+* The Set schedule action also requires to specify the time interval for the first slot. However, testing for Solarbank 1 has shown that the provided times are ignored and a full day interval is always created when only a single interval is provided with a schedule update via the Api. For Solarbank 2, the first set slot behavior may be different.
 
 For Solarbank 2 systems, following weekday rules will be applied:
-  - When no weekdays are provided, the current weekday will be used.
-    - If no schedule exists yet, all weekdays will be used.
-  - When a plan exists already containing the current weekday, this plan will be modified
-  - When weekdays are provided, they are considered as following:
-    - If an existing plan is a complete subset of provided weekdays, this plan will be re-used. Extra provided days will be added to the plan.
-    - If an existing plan is no complete subset of provided weekdays, the first plan with most overlapping days will be cloned and modified as new plan for the provided weekdays.
-  - For the clear schedule action, only the provided weekdays will be removed from existing plans
-  - Any existing plan will be curated to avoid that same weekday is defined in different plans
-    - Empty plans will be removed from the schedule
+
+* When no weekdays are provided, the current weekday will be used.
+  * If no schedule exists yet, all weekdays will be used.
+* When a plan exists already containing the current weekday, this plan will be modified
+* When weekdays are provided, they are considered as following:
+  * If an existing plan is a complete subset of provided weekdays, this plan will be re-used. Extra provided days will be added to the plan.
+  * If an existing plan is no complete subset of provided weekdays, the first plan with most overlapping days will be cloned and modified as new plan for the provided weekdays.
+* For the clear schedule action, only the provided weekdays will be removed from existing plans
+* Any existing plan will be curated to avoid that same weekday is defined in different plans
+  * Empty plans will be removed from the schedule
 
 For Solarbank 2 systems, following plan rules will be applied:
-  - When no plan is provided, the plan used by the active usage mode will be used.
-    - If the active plan is not valid for the action, the manual plan will be used.
-  - When a plan is selected, the selected plan will be modified.
-    - This allows modification of a plan that is currently not in use
+
+* When no plan is provided, the plan used by the active usage mode will be used.
+  * If the active plan is not valid for the action, the manual plan will be used.
+* When a plan is selected, the selected plan will be modified.
+  * This allows modification of a plan that is currently not in use
 
 For dual Solarbank 1 systems, following load preset rules will be applied:
-  - If only appliance load preset provided, the normal preset mode will be used which applies a 50% share to both solarbanks
-  - If only device load preset provided, the advanced power mode will be used if supported by existing schedule structure. The appliance load preset will be adjusted accordingly, but the other solarbank device preset will not be changed. It will fall back to normal appliance load usage if advanced power mode not supported by existing schedule structure.
-  - If appliance and device load preset are provided, the advanced power mode will be used if supported by existing schedule structure. The appliance load preset will be used accordingly within the capable limits, resulting from the provided device preset and the preset difference that will be applied to the other solarbank device. It will fall back to normal appliance load usage if advanced power mode not supported by existing schedule structure.
-  - If neither appliance nor device presets are provided, the existing power presets and mode will remain unchanged and reused if at least start or end time remain unchanged. Otherwise the default preset will be applied for the interval
-  - If only device preset is provided for single solarbank systems, it will be applied as appliance load preset instead, which in fact is the same result for such systems
+
+* If only appliance load preset provided, the normal preset mode will be used which applies a 50% share to both solarbanks
+* If only device load preset provided, the advanced power mode will be used if supported by existing schedule structure. The appliance load preset will be adjusted accordingly, but the other solarbank device preset will not be changed. It will fall back to normal appliance load usage if advanced power mode not supported by existing schedule structure.
+* If appliance and device load preset are provided, the advanced power mode will be used if supported by existing schedule structure. The appliance load preset will be used accordingly within the capable limits, resulting from the provided device preset and the preset difference that will be applied to the other solarbank device. It will fall back to normal appliance load usage if advanced power mode not supported by existing schedule structure.
+* If neither appliance nor device presets are provided, the existing power presets and mode will remain unchanged and reused if at least start or end time remain unchanged. Otherwise the default preset will be applied for the interval
+* If only device preset is provided for single solarbank systems, it will be applied as appliance load preset instead, which in fact is the same result for such systems
 
 For combined Solarbank 2 and Solarbank 1 systems, following schedule rules will be applied:
-  - SB1 schedule plans and control entity changes will only be applied when required entities are available. That means the SB2 usage mode must NOT be in manual mode.
-  - When SB1 control entities are unavailable, their presentation in the UI may be confusing and appear as still allowing value changes
-    - For instance unavailable number entity slider will show the middle value of the defined range and allow modifications. However, those changes will never be applied and reset upon next panel refresh
-  - When SB2 mode is an automatic mode, the normal SB1 schedule will be used and you should even be able to set different device output power for dual SB1 device attached to a single SB2
-  - While the SB2 is active in manual mode, it will enforce another SB1 schedule and always control the SB1 output preset, with a fixed share of 50% in dual SB1 setups
+
+* SB1 schedule plans and control entity changes will only be applied when required entities are available. That means the SB2 usage mode must NOT be in manual mode.
+* When SB1 control entities are unavailable, their presentation in the UI may be confusing and appear as still allowing value changes
+  * For instance unavailable number entity slider will show the middle value of the defined range and allow modifications. However, those changes will never be applied and reset upon next panel refresh
+* When SB2 mode is an automatic mode, the normal SB1 schedule will be used and you should even be able to set different device output power for dual SB1 device attached to a single SB2
+* While the SB2 is active in manual mode, it will enforce another SB1 schedule and always control the SB1 output preset, with a fixed share of 50% in dual SB1 setups
 
 > [!NOTE]
 > Usage of Solarbank 1 advanced preset mode is determined by existing schedule structure. When no schedule is defined and the set schedule action is used with a device preset requiring the advanced power preset mode, but both solarbank 1 are not on required firmware level to accept the new schedule structure, the action call may fail with an Api request error.
@@ -861,11 +878,11 @@ Following are screenshots showing the schedule action UI panel (identical for Se
 
 While not the full value ranges supported by the integration can be applied to the device, some may provide enhanced capabilities compared to the Anker App. Following are important notes and limitations for schedule modifications via the cloud Api:
 
-  - Time slots can be defined in minute granularity and what I have seen, they are also applied (don't take my word for given)
-  - The end time of 24:00 must be provided as 23:59 since the datetime range does not know hour 24. Any seconds that are specified are ignored
-  - Home Assistant and the Solarbank should have similar time, but especially same timezone to adopt the time slots correctly. Even more important it is for finding the current/active schedule time interval where individual parameter changes must be applied
-    - Depending on the front end (and timezone used with the front end), the time fields may eventually be converted. All backend datetime calculations by the integration use the local time zone of the HA host. The HA host must be in the same time zone the Solarbank is using, which is typically the case when they are on the same local network.
-  - Situations have been observed during testing with solarbank 1, where an active home load export was applied in the schedule, but the solarbank 1 did not react on the applied schedule. While the cloud schedule was showing the export enabled with a certain load set, verification in the Anker App presented a different picture: There the schedule load was set to **0 W in the slider** which is typically not possible in the App...The only way to get out of such weird schedules on the appliance is to make the interval change via the Anker App since it may use other interfaces than just the cloud Api (Bluetooth and another Cloud MQTT server). This problem was only noticed when just a single resulting interval remains in the schedule that is sent via the Api, for example setting a new schedule or making an update with a full day interval. **To avoid this problem, make sure your schedule has more than one time interval and you do NOT use the Set new Solarbank schedule action.** Instead you can apply schedule changes via the Update Solarbank schedule action with a slot that is NOT covering the full day.
+* Time slots can be defined in minute granularity and what I have seen, they are also applied (don't take my word for given)
+* The end time of 24:00 must be provided as 23:59 since the datetime range does not know hour 24. Any seconds that are specified are ignored
+* Home Assistant and the Solarbank should have similar time, but especially same timezone to adopt the time slots correctly. Even more important it is for finding the current/active schedule time interval where individual parameter changes must be applied
+  * Depending on the front end (and timezone used with the front end), the time fields may eventually be converted. All backend datetime calculations by the integration use the local time zone of the HA host. The HA host must be in the same time zone the Solarbank is using, which is typically the case when they are on the same local network.
+* Situations have been observed during testing with solarbank 1, where an active home load export was applied in the schedule, but the solarbank 1 did not react on the applied schedule. While the cloud schedule was showing the export enabled with a certain load set, verification in the Anker App presented a different picture: There the schedule load was set to **0 W in the slider** which is typically not possible in the App...The only way to get out of such weird schedules on the appliance is to make the interval change via the Anker App since it may use other interfaces than just the cloud Api (Bluetooth and another Cloud MQTT server). This problem was only noticed when just a single resulting interval remains in the schedule that is sent via the Api, for example setting a new schedule or making an update with a full day interval. **To avoid this problem, make sure your schedule has more than one time interval and you do NOT use the Set new Solarbank schedule action.** Instead you can apply schedule changes via the Update Solarbank schedule action with a slot that is NOT covering the full day.
 
 
 ## Modification of Solarbank AC settings
@@ -885,21 +902,22 @@ The backup charge option can be modified via control entities, which also repres
 ![AC backup charge control entities][ac-backup-control-img]
 
 In order to avoid that each backup control entity change triggers an Api call, following behavior was implemented for the backup mode entities:
-  - The UI datetime entities trigger value updates with each field change (date, hour, minute), which may result in 3 or more value update triggers for a single entity
-  - Typically multiple entities need to be modified before the final backup interval definition is completed
-  - To get a clear trigger for the Api call with the finalized entity changes, the backup switch entity will always be disabled once any of the backup control entities was changed in HA, either via UI entity cards or via HA entity actions.
-  - Only the re-activation of the backup switch will actually trigger the Api call to update the whole backup interval with all entity changes you made. This switch activation should be made last to save the new interval via the cloud Api in the device.
-    - **Note:** While any previous changes are not confirmed via the backup switch activation, they are done only in the Api cache, which can be refreshed during next device details refresh cycle. This may revert the changes you did for the backup interval entities, if they have not been applied to the cloud.
-  - The App does not allow to define any backup timestamp in the past, and the end timestamp must be later than the start timestamp. These logical corrections will also be applied upon backup interval changes by the integration.
-  - For convenience, the backup interval will automatically be set for the next 3 hours from now if invalid timestamps are provided
-    - This default duration is sufficient to fully charge an AC device with an expansion battery
-    - The backup mode will automatically be disabled when 100 % SOC is reached
-  - You can also immediately enable the backup mode, just by enabling the backup switch entity or by selecting the Backup Charge mode.
-    - When selecting the Backup Charge mode, the backup will always start immediately
-    - If there is still a valid end timestamp in the future, this will be used instead of using the default end timestamp in 3 hours from now
-  - When enabling the backup switch, the integration will apply the current backup interval via Api.
-    - If the end timestamp is invalid, a default duration of 3 hours from the start timestamp is applied to the end timestamp
-  - If a longer or shorter immediate backup interval is required, you just need to modify the end timestamp and reactivate the backup switch.
+
+* The UI datetime entities trigger value updates with each field change (date, hour, minute), which may result in 3 or more value update triggers for a single entity
+* Typically multiple entities need to be modified before the final backup interval definition is completed
+* To get a clear trigger for the Api call with the finalized entity changes, the backup switch entity will always be disabled once any of the backup control entities was changed in HA, either via UI entity cards or via HA entity actions.
+* Only the re-activation of the backup switch will actually trigger the Api call to update the whole backup interval with all entity changes you made. This switch activation should be made last to save the new interval via the cloud Api in the device.
+  * **Note:** While any previous changes are not confirmed via the backup switch activation, they are done only in the Api cache, which can be refreshed during next device details refresh cycle. This may revert the changes you did for the backup interval entities, if they have not been applied to the cloud.
+* The App does not allow to define any backup timestamp in the past, and the end timestamp must be later than the start timestamp. These logical corrections will also be applied upon backup interval changes by the integration.
+* For convenience, the backup interval will automatically be set for the next 3 hours from now if invalid timestamps are provided
+  * This default duration is sufficient to fully charge an AC device with an expansion battery
+  * The backup mode will automatically be disabled when 100 % SOC is reached
+* You can also immediately enable the backup mode, just by enabling the backup switch entity or by selecting the Backup Charge mode.
+  * When selecting the Backup Charge mode, the backup will always start immediately
+  * If there is still a valid end timestamp in the future, this will be used instead of using the default end timestamp in 3 hours from now
+* When enabling the backup switch, the integration will apply the current backup interval via Api.
+  * If the end timestamp is invalid, a default duration of 3 hours from the start timestamp is applied to the end timestamp
+* If a longer or shorter immediate backup interval is required, you just need to modify the end timestamp and reactivate the backup switch.
 
 #### Modify AC backup charge action
 
@@ -908,20 +926,22 @@ You can also use an Anker Solix action to modify the backup charge settings. Fol
 ![AC backup charge action][ac-backup-service-img]
 
 All fields of the action are optional. Following rules will be applied when the action is executed:
-- End timestamp must be later than start timestamp
-  - If timestamps are invalid while the backup switch is enabled, the start timestamp will be set to now with a default backup duration of 3 hours for the end timestamp
-- If a valid end timestamp is provided, the duration field will be ignored
-- If a duration is provided but the end timestamp is invalid, the duration will be added to the selected start timestamp
-- Seconds are ignored when applying the timestamps via the Api
-- The backup interval will only be active if the Enable toggle will be set
+
+* End timestamp must be later than start timestamp
+  * If timestamps are invalid while the backup switch is enabled, the start timestamp will be set to now with a default backup duration of 3 hours for the end timestamp
+* If a valid end timestamp is provided, the duration field will be ignored
+* If a duration is provided but the end timestamp is invalid, the duration will be added to the selected start timestamp
+* Seconds are ignored when applying the timestamps via the Api
+* The backup interval will only be active if the Enable toggle will be set
 
 
 ### Time of Use mode
 
 A use time plan must be defined first before this mode can be enabled in the Anker app. The use time plan defines per season (range of months), at which hours during the day you have which power tariff. The app supports up to 5 season definitions, which is however not restricted in the integration. More than 5 seasons may or may not be supported by the cloud and AC device. For each season you can define peak, medium peak and off peak tariffs, as well as a valley tariff that seems to be considered as only tariff that allows AC charging from grid. For each tariff you have to define the price as well. The daily intervals are typically the same for each day, unless you specify that weekends should be different than normal weekdays. This use time plan is considered in the 'Time of Use' mode for doing a so called 'Peak and Valley' shaving. This basically means AC charge during super low tariffs and discharge only at high or peak tariffs.
 I have no experience with that mode, and I found only following Anker articles that describe how the Time of Use mode works:
-- Anker article: [Wie funktioniert der Nutzungszeitmodus?](https://support.ankersolix.com/de/s/article/Wie-funktioniert-der-Nutzungszeitmodus) (DE)
-- Anker article: [How does the Time of Use​​​​ Mode Work?](https://support.anker.com/s/article/How-does-the-Time-of-Use-Mode-Work) (EN)
+
+* Anker article: [Wie funktioniert der Nutzungszeitmodus?](https://support.ankersolix.com/de/s/article/Wie-funktioniert-der-Nutzungszeitmodus) (DE)
+* Anker article: [How does the Time of Use​​​​ Mode Work?](https://support.anker.com/s/article/How-does-the-Time-of-Use-Mode-Work) (EN)
 
 According to these tables, AC charge from grid is only done during valley tariff. During off peak tariff, discharge will only be allowed over 80% SOC, since 80% remain reserved for consumption during mid peak or peak tariffs. There is only PV charge allowed in tariffs other than valley tariff. You cannot control the charge power itself, that is controlled automatically by the Solarbank depending on SOC, temperature and available duration of the valley tariff. I assume the primary goal is to get the battery fully charged in the available valley tariff duration.
 The Time of Use mode can be used only in combination with a Smart Meter or Smart Plugs, which can provide the home demand measurements for allowing automatic discharge regulation during the peak intervals, or surplus charge from internal or external PV.
@@ -934,18 +954,19 @@ Along with the system entities to control the price type, the fixed tariff price
 ![AC Time of Use service][ac-tariff-control-img]
 
 The tariff and tariff price entities are device entities that reflect the settings from the actual interval of the use time plan, depending on season, day type and hour of the day. In order to ensure the current use time plan setting is reflected correctly in the control entities, your AC system and HA instance must be time synchronized and in the same time zone. The Time of Use plan control entities allow toggling of the actual tariff or changing the actual tariff price directly. Following rules have to be considered when using the control entities:
-- Toggling to a tariff that had no previous price defined yet in the actual day type will apply your actual system fixed price as default for the selected tariff and may have to be changed afterwards
-  - The default price will be adjusted to be inline with existing tariff prices
-- Toggling the tariff or changing tariff prices will not cause any sanitation of the use time plan, which is typically applied when modifying the use time plan via the corresponding Anker Solix action
-  - This avoids that daily time intervals are merged if same tariff exists already in adjacent intervals
-  - This avoids that tariff prices are cleared if the tariff is no longer used in the daily intervals
-- The price currency is also part of the use time plan definition and the Anker App allows to define different currencies per season.
-  - It does not make sense to support different currencies in the same system
-  - It is assumed the defined currency is only used for proper display of saving amounts, there is no amount conversion applied between different currencies or currency changes
-- The currency can also be modified for the whole system and is used for the fixed price definition
-- The integration will automatically use the active fixed price currency for the use time plan as well
-  - That means a change of the system price currency entity will be applied automatically to an existing use time plan as well
-  - The active currency is also reflected with the active tariff price number entity
+
+* Toggling to a tariff that had no previous price defined yet in the actual day type will apply your actual system fixed price as default for the selected tariff and may have to be changed afterwards
+  * The default price will be adjusted to be inline with existing tariff prices
+* Toggling the tariff or changing tariff prices will not cause any sanitation of the use time plan, which is typically applied when modifying the use time plan via the corresponding Anker Solix action
+  * This avoids that daily time intervals are merged if same tariff exists already in adjacent intervals
+  * This avoids that tariff prices are cleared if the tariff is no longer used in the daily intervals
+* The price currency is also part of the use time plan definition and the Anker App allows to define different currencies per season.
+  * It does not make sense to support different currencies in the same system
+  * It is assumed the defined currency is only used for proper display of saving amounts, there is no amount conversion applied between different currencies or currency changes
+* The currency can also be modified for the whole system and is used for the fixed price definition
+* The integration will automatically use the active fixed price currency for the use time plan as well
+  * That means a change of the system price currency entity will be applied automatically to an existing use time plan as well
+  * The active currency is also reflected with the active tariff price number entity
 
 #### Modify Time of Use plan action
 
@@ -954,51 +975,54 @@ You can also use an Anker Solix action to modify the use time plan. Following is
 ![AC Time of Use service][ac-time-of-use-service-img]
 
 All fields of the action are optional. The PPS fields will be ignored for Solarbank plans. Following rules will be applied when the action is executed with inactive deletion:
-- The use time plan must define all year and all day intervals, no gaps are allowed
-  - Therefore any new season or day type interval will use min start and max end definition for the interval, independent which interval range was specified
-  - Further intervals in the same scope must be applied with subsequent actions
-- If only a start or end value is specified, this will be used to select the corresponding interval that covers the specified value
-  - There will not be any change of interval ranges if no complete range was specified for the action
-- Specifying a range with valid start and end will modify the specified interval in the plan
-  - Adjacent intervals will be adopted accordingly to avoid overlays or gaps
-  - If adjacent intervals use the same tariff type they will be merged into a single interval
-  - If no tariff is provided for a new interval range, the off peak tariff will be used as default
-  - If no price is provided, the active system fixed price will be used as default for selected tariff and will be adjusted to be inline with existing tariff prices
-- Specifying only a price will change the active tariff price for the selected season and day type
-- Specifying a tariff will modify the tariff for the selected season and day type
-  - An optional price will be set or changed as well for the provided tariff
-  - If no price is provided for a previously unused tariff type, the active system fixed price will be used as default
-- If no day type is specified, the active day type in the selected season will be modified
-  - If weekends are the same for the season, all changes will be copied to weekends as well
-- If a day type is specified, only the selected day type is modified
-  - This may cause weekdays to become different to weekends
-- If weekdays were different from weekends but the modification makes them identical, they will be merged again for that season and marked as same
+
+* The use time plan must define all year and all day intervals, no gaps are allowed
+  * Therefore any new season or day type interval will use min start and max end definition for the interval, independent which interval range was specified
+  * Further intervals in the same scope must be applied with subsequent actions
+* If only a start or end value is specified, this will be used to select the corresponding interval that covers the specified value
+  * There will not be any change of interval ranges if no complete range was specified for the action
+* Specifying a range with valid start and end will modify the specified interval in the plan
+  * Adjacent intervals will be adopted accordingly to avoid overlays or gaps
+  * If adjacent intervals use the same tariff type they will be merged into a single interval
+  * If no tariff is provided for a new interval range, the off peak tariff will be used as default
+  * If no price is provided, the active system fixed price will be used as default for selected tariff and will be adjusted to be inline with existing tariff prices
+* Specifying only a price will change the active tariff price for the selected season and day type
+* Specifying a tariff will modify the tariff for the selected season and day type
+  * An optional price will be set or changed as well for the provided tariff
+  * If no price is provided for a previously unused tariff type, the active system fixed price will be used as default
+* If no day type is specified, the active day type in the selected season will be modified
+  * If weekends are the same for the season, all changes will be copied to weekends as well
+* If a day type is specified, only the selected day type is modified
+  * This may cause weekdays to become different to weekends
+* If weekdays were different from weekends but the modification makes them identical, they will be merged again for that season and marked as same
 
 Deletions of any use time plan definitions can be performed as well with the same action once you activate the 'delete' option. Deletion is done on various scopes of the plan and depends on which other options have been specified. A general deletion rule is to remove also the higher level scope object and fill any gaps if the last interval in the lower level scope is deleted.
 
 Following rules will be applied once the 'delete' option is used:
-- If start or end hour is specified, the time interval(s) from given or selected day type and season will be removed
-  - If only one of the time range options is specified, only the selected single interval will be removed
-  - If a range is specified, the given range will be removed and the gap will be closed by adjacent intervals
-- Otherwise if a tariff is specified, the tariff will be removed from selected or active day type and season
-  - All time intervals with the specified tariff will be removed and the gaps will be closed by adjacent intervals
-  - The tariff price definition will be removed as well
-- Otherwise if a day type is specified, removal will be done as following:
-  - If a dedicated day type is specified and current types are different, the other day type will be used as remaining definition and day types will be made same
-  - If all day types are specified or current types are the same, the season will be removed and the gap will be closed by adjacent seasons
-- Otherwise if start or end month is specified, the season(s) will be removed and the gap will be closed by adjacent seasons
-  - If only one of the month range options is specified, only the selected single season will be removed
-  - If a range is specified, the given month range will be removed and the gap will be closed by adjacent seasons
-- Otherwise the whole use time plan will be removed if no further options are specified
+
+* If start or end hour is specified, the time interval(s) from given or selected day type and season will be removed
+  * If only one of the time range options is specified, only the selected single interval will be removed
+  * If a range is specified, the given range will be removed and the gap will be closed by adjacent intervals
+* Otherwise if a tariff is specified, the tariff will be removed from selected or active day type and season
+  * All time intervals with the specified tariff will be removed and the gaps will be closed by adjacent intervals
+  * The tariff price definition will be removed as well
+* Otherwise if a day type is specified, removal will be done as following:
+  * If a dedicated day type is specified and current types are different, the other day type will be used as remaining definition and day types will be made same
+  * If all day types are specified or current types are the same, the season will be removed and the gap will be closed by adjacent seasons
+* Otherwise if start or end month is specified, the season(s) will be removed and the gap will be closed by adjacent seasons
+  * If only one of the month range options is specified, only the selected single season will be removed
+  * If a range is specified, the given month range will be removed and the gap will be closed by adjacent seasons
+* Otherwise the whole use time plan will be removed if no further options are specified
 
 Removal of intervals can lead to a gap in the overall range. Likewise the removal of the last interval (or last tariff) could result in an empty day type or season. Both must be prevented to maintain a valid use time plan. Following common rules will be applied to avoid gaps or holes in required use time plan ranges:
-- The remaining previous time interval will be elongated to fill the gap of the removed time range
-  - The following interval will be used from the beginning if no previous time interval remains
-- If no time interval remains for the day type, the day types of the season will be made same if they were different
-  - Otherwise the whole season will be deleted and the season gap will be closed by adjacent seasons
-- A remaining previous season will be elongated to fill the gap of the removed season range
-  - The following season will be used from the beginning if no previous season remains
-- If no season remains, the whole use time plan will be removed
+
+* The remaining previous time interval will be elongated to fill the gap of the removed time range
+  * The following interval will be used from the beginning if no previous time interval remains
+* If no time interval remains for the day type, the day types of the season will be made same if they were different
+  * Otherwise the whole season will be deleted and the season gap will be closed by adjacent seasons
+* A remaining previous season will be elongated to fill the gap of the removed season range
+  * The following season will be used from the beginning if no previous season remains
+* If no season remains, the whole use time plan will be removed
 
 #### Usage of flexible tariffs with the Time of Use mode
 
@@ -1015,9 +1039,10 @@ If you use a single time slot in the schedule, you can now easily automate the p
 
 > [!IMPORTANT]
 > The home load type requires appropriate firmware of your Solarbank 3 based system. Following rules will be applied:
-  - The load type entity will only be created if the system supports the type toggle.
-  -  The entity cannot be toggled, if the actual usage mode ignores the type setting in the schedule.
-  - Likewise the load type field will be ignored in corresponding schedule actions, if the home load type toggle is not supported by the system type or firmware.
+
+* The load type entity will only be created if the system supports the type toggle.
+*  The entity cannot be toggled, if the actual usage mode ignores the type setting in the schedule.
+* Likewise the load type field will be ignored in corresponding schedule actions, if the home load type toggle is not supported by the system type or firmware.
 
 
 ### Smart mode
@@ -1030,10 +1055,11 @@ The Smart mode is designed to optimize your overall energy consumption and lower
 > The Smart mode configuration will not be provided by the integration and requires the mobile app anyway to admit all required authorizations. Therefore this mode can only be toggled once configured, but not setup or modified via the integration.
 
 Various options that may be used in the Smart mode however can be configured by the integration, such as a [use time plan](#modify-time-of-use-plan-action) with flexible tariffs, or the [fix price settings](#toggling-system-price-type-or-currency-settings) and the [price provider for dynamic utility rate plans](#price-provider-for-dynamic-utility-rate-plans). The integration also provides additional sensors and attributes to monitor parameters of the Smart mode:
-  - AI enablement and training status
-  - AI monitoring runtime and status
-  - AI price advantage through Smart mode usage
-  - Smart plug sensor to show whether plug is automatically switched by Smart mode and in which priority
+
+* AI enablement and training status
+* AI monitoring runtime and status
+* AI price advantage through Smart mode usage
+* Smart plug sensor to show whether plug is automatically switched by Smart mode and in which priority
 
 ### Time Slot mode
 
@@ -1083,8 +1109,9 @@ The Solarbank 3 mode was the first Anker Solix device that supports solar foreca
 One important fact about forecast data for the Solarbank 3 is that they are provided through the cloud only when your device is running in 'Smart' mode.
 Then you can see the forecast also in your mobile app solar chart for today and tomorrow. The forecast data is limited to next 24h, so they do NOT cover the full next day typically. Therefore the presented 24h forecast energy may not be that usable, depending on your home usage pattern over the day.
 The integration version 3.1.0 added support to query the solar forecast data and presents them in following two system entities:
-  - sensor.system_*name*_solar_forecast_today
-  - sensor.system_*name*_solar_forecast_this_hour
+
+* sensor.system_*name*_solar_forecast_today
+* sensor.system_*name*_solar_forecast_this_hour
 
 The cloud only provides hourly energy values for the next 24 hours. No history of past hours for today is provided. The integration enhances this data with additional information, such as forecast for this and next hour, total forecast for today, remaining forecast for today as well as the poll time and the hourly values for today and available hours for tomorrow. The integration utilizes the entity restore capability to maintain the forecast history of today whenever the integration is reloaded or HA is being restarted. Therefore you typically do not loose them if the Api cache has to be rebuilt from scratch upon new connections.
 The remaining energy for today is calculated only from the forecast data. The total forecast for today is calculated from available forecast data. If data polling started in the middle of the day and no history is available, the past hour production data is used to calculate a more accurate total forecast.
@@ -1102,9 +1129,10 @@ Forecast data entities and cloud polling can be excluded in your hub configurati
 ## Modification of PPS settings
 
 The supported PPS devices are mostly stand alone devices and have no system controls, which are managed through the cloud Api in most cases. Most PPS controls are typcically individual entities that use MQTT commands through the connected Anker MQTT server. Newer PPS devices with advanced features however require a hybrid or cloud Api only control for those advanced features. Following cloud Api dependend features are known and may be implemented:
-- Storm Guard protection (3.8.0)
-- Time of Use plans (3.9.0)
-- Device energy history (future release)
+
+* Storm Guard protection (3.8.0)
+* Time of Use plans (3.9.0)
+* Device energy history (future release)
 
 > [!NOTE]
 > Control entities may only be present if you have a working MQTT server connection and subscription for the device. Some devices like the S2000 can also be shared with other Anker accounts. A shared device can typically be controlled by the member, however the member account may have limited Api endpoint permissions to control the device. As such, a member account may not be able to control all advanced PPS features.
@@ -1141,16 +1169,17 @@ Furthermore, the backup reserve SOC is also part of the TOU plan (and only appli
 > As of today, device member accounts have no access permission to the Api endpoints required to query and control the device Time of Use plans. Therefore you have to use the device owner account if you want to control the plan through the integration. This restriction applies to the Anker mobile App and the integration. If you feel the need to control the TOU plan also as member, please raise a Ticket with Anker Support.
 
 The tariff and tariff price entities are device entities that reflect the settings from the actual interval of the TOU plan, depending on hour of the day. In order to ensure the current TOU setting is reflected correctly in the control entities, your device and HA instance must be time synchronized and in the same time zone. The TOU plan control entities allow toggling of the actual tariff or changing the actual tariff price directly. Following rules have to be considered when using the control entities:
-- Toggling to a tariff that had no previous price defined yet will apply your actual tariff price as default for the selected tariff and may have to be changed afterwards
-  - The default price will be adjusted to be inline with existing tariff prices
-- Toggling the tariff or changing tariff prices will not cause any sanitation of the TOU plan ranges, which is typically applied when modifying the TOU plan via the corresponding Anker Solix action
-  - This avoids that daily time intervals are merged if same tariff exists already in adjacent intervals
-  - This avoids that tariff prices are cleared if the tariff is no longer used in the daily intervals
-- The price currency is only used for proper display of prices, there is no amount conversion applied between different currencies or currency changes
-- The backup reserve SOC is part of the TOU plan, but applied directly as MQTT command if the entitiy is being modified (without Api call to modify the TOU plan)
-  - This may not be reflected directly in the TOU plan as used by the Anker mobile App, although the setting is active on the device
-  - The integration entity will report only the active backup SOC setting from the device, not the (obsolete) value as may be reported in the TOU plan
-  - The integration will reuse the active backup SOC value when applying TOU plan changes via the Api to ensure the correct setting is reused in the plan
+
+* Toggling to a tariff that had no previous price defined yet will apply your actual tariff price as default for the selected tariff and may have to be changed afterwards
+  * The default price will be adjusted to be inline with existing tariff prices
+* Toggling the tariff or changing tariff prices will not cause any sanitation of the TOU plan ranges, which is typically applied when modifying the TOU plan via the corresponding Anker Solix action
+  * This avoids that daily time intervals are merged if same tariff exists already in adjacent intervals
+  * This avoids that tariff prices are cleared if the tariff is no longer used in the daily intervals
+* The price currency is only used for proper display of prices, there is no amount conversion applied between different currencies or currency changes
+* The backup reserve SOC is part of the TOU plan, but applied directly as MQTT command if the entitiy is being modified (without Api call to modify the TOU plan)
+  * This may not be reflected directly in the TOU plan as used by the Anker mobile App, although the setting is active on the device
+  * The integration entity will report only the active backup SOC setting from the device, not the (obsolete) value as may be reported in the TOU plan
+  * The integration will reuse the active backup SOC value when applying TOU plan changes via the Api to ensure the correct setting is reused in the plan
 
 #### Modify Time of Use plan action
 
@@ -1159,39 +1188,42 @@ You can also use an Anker Solix action to modify the use time plan. Following is
 ![AC Time of Use service][pps-time-of-use-service-img]
 
 All fields of the action are optional, any Solarbank fields will be ignored for PPS TOU plan updates. Following rules will be applied when the action is executed with inactive deletion:
-- The TOU plan must cover full day time ranges, no gaps are allowed
-  - To specify 24:00 you can use 23:59 since 24 is out of range for a time entity
-- If only a start or end time is specified, this will be used to select the corresponding interval that covers the specified value
-  - There will not be any change of interval ranges if no complete range was specified for the action
-- Specifying a range with valid start and end time will modify the specified interval in the plan
-  - Adjacent intervals will be adopted accordingly to avoid overlays or gaps
-  - If adjacent intervals use the same tariff type they will be merged into a single interval
-  - If no tariff is provided for a new interval range, the medium peak tariff will be used as default
-  - If no price is provided, the active tariff price or 0 will be used as default for selected tariff and will be adjusted to be inline with existing tariff prices
-- Specifying only a price will change the active tariff price
-- Specifying a tariff will modify the tariff for the active interval
-  - An optional price will be set or changed as well for the provided tariff
-  - If no price is provided for a previously unused tariff type, the active tariff price or 0 will be used as default
-- The action will also sanitize the overall plan
-  - Merge adjacent time intervals with the same resulting tariff
-  - Remove tariff prices if the tariff is no longer used in the plan
+
+* The TOU plan must cover full day time ranges, no gaps are allowed
+  * To specify 24:00 you can use 23:59 since 24 is out of range for a time entity
+* If only a start or end time is specified, this will be used to select the corresponding interval that covers the specified value
+  * There will not be any change of interval ranges if no complete range was specified for the action
+* Specifying a range with valid start and end time will modify the specified interval in the plan
+  * Adjacent intervals will be adopted accordingly to avoid overlays or gaps
+  * If adjacent intervals use the same tariff type they will be merged into a single interval
+  * If no tariff is provided for a new interval range, the medium peak tariff will be used as default
+  * If no price is provided, the active tariff price or 0 will be used as default for selected tariff and will be adjusted to be inline with existing tariff prices
+* Specifying only a price will change the active tariff price
+* Specifying a tariff will modify the tariff for the active interval
+  * An optional price will be set or changed as well for the provided tariff
+  * If no price is provided for a previously unused tariff type, the active tariff price or 0 will be used as default
+* The action will also sanitize the overall plan
+  * Merge adjacent time intervals with the same resulting tariff
+  * Remove tariff prices if the tariff is no longer used in the plan
 
 Deletions of any use time plan definitions can be performed as well with the same action once you activate the 'delete' option. Deletion is done on various scopes of the plan and depends on which other options have been specified. A general deletion rule is to remove also the higher level scope object and fill any gaps if the last interval in the lower level scope is deleted.
 
 Following rules will be applied once the 'delete' option is used:
-- If start or end time is specified, the time interval(s) will be removed
-  - If only one of the time range options is specified, only the selected single interval will be removed
-  - If a range is specified, the given range will be removed and the gap will be closed by adjacent intervals
-- Otherwise if a tariff is specified
-  - All time intervals with the specified tariff will be removed and the gaps will be closed by adjacent intervals
-  - The tariff price definition will be removed as well
-- Otherwise the whole TOU plan will be removed if no further options are specified
-  - Since the Api does not support deletion of all ranges, a default full day range with default tariff (medium peak) and default price (0) will remain
+
+* If start or end time is specified, the time interval(s) will be removed
+  * If only one of the time range options is specified, only the selected single interval will be removed
+  * If a range is specified, the given range will be removed and the gap will be closed by adjacent intervals
+* Otherwise if a tariff is specified
+  * All time intervals with the specified tariff will be removed and the gaps will be closed by adjacent intervals
+  * The tariff price definition will be removed as well
+* Otherwise the whole TOU plan will be removed if no further options are specified
+  * Since the Api does not support deletion of all ranges, a default full day range with default tariff (medium peak) and default price (0) will remain
 
 Removal of intervals can lead to a gap in the overall range. Following common rules will be applied to avoid gaps or holes in required TOU plan ranges:
-- The remaining previous time interval will be elongated to fill the gap of the removed time range
-  - The following interval will be used from the beginning if no previous time interval remains
-- If no time interval remains for the day, the default interval, tariff and price will be applied
+
+* The remaining previous time interval will be elongated to fill the gap of the removed time range
+  * The following interval will be used from the beginning if no previous time interval remains
+* If no time interval remains for the day, the default interval, tariff and price will be applied
 
 
 ## Modification of vehicles
@@ -1201,12 +1233,13 @@ Each Anker cloud user can create up to 5 Electric Vehicles (EV). Vehicles will b
 ![vehicle-device][vehicle-device-img]
 
 Following capabilities are implemented as of version 3.2.0:
-- Any existing vehicle definition will be added as vehicle device that is connected to your account device
-- All vehicle attributes can be modified, after the default attributes have been set based on brand/model/year/model-ID selection
-- A model ID selection will reset the attributes to the defined attributes of that model ID
-- All selection options will be queried from the Anker cloud vehicle database and cached in the Api cache for better performance of electable options
-- Vehicles can be removed from your account by removing the device in HA
-- Vehicle related devices and entities can be completely deactivated by excluding the Vehicles category in your hub configuration options
+
+* Any existing vehicle definition will be added as vehicle device that is connected to your account device
+* All vehicle attributes can be modified, after the default attributes have been set based on brand/model/year/model-ID selection
+* A model ID selection will reset the attributes to the defined attributes of that model ID
+* All selection options will be queried from the Anker cloud vehicle database and cached in the Api cache for better performance of electable options
+* Vehicles can be removed from your account by removing the device in HA
+* Vehicle related devices and entities can be completely deactivated by excluding the Vehicles category in your hub configuration options
 
 > [!TIP]
 > The integration will automatically discover added and removed vehicles under the user account during the regular device details refresh cycle (10 minutes per default). An immediate vehicle refresh can also be triggered manually by a corresponding button of the account device.
@@ -1250,17 +1283,18 @@ content: |
       {{ "%s | %s | %s | %s | %s | %s | %s | %s | %s | %s"|format(bs~slot.start_time~be, bs~slot.end_time~be, bs~slot.appliance_loads[0].power~" W"~be, bs~'On'~be if slot.turn_on else bs~'Off'~be, bs~'On'~be if slot.priority_discharge_switch|default(false) else bs~'Off'~be, bs~slot.charge_priority~' %'~be, bs~(slot.power_setting_mode or '-')~be, bs~slot.device_power_loads[0].power~" W"~be, bs~sb2~be, bs~slot.appliance_loads[0].name)~be }}
   {% endfor -%}
 ```
+
 </details>
 
 **Notes:**
 
-- Shared accounts have no access to the schedule
-- The schedule control entities show the individual customizable settings per interval. The reported home load preset that is 'applied' and shown in the system preset sensor state as well as in the Anker App is a combined result from the appliance for the current interval settings.
-- The applied appliance home load preset can show 0 W even if appliance home load preset is different, but Allow Export switch is off. It also depends on the state of charge and the charge priority limit and the defined/installed inverter. Even if the preset sensor state shows 0 W, it does not mean that there won't be output to the house. It simply reflects the same value as presented in the App for the current interval.
-- Starting with Anker App 2.2.1, you can modify the default 50 % preset share between a dual Solarbank setup. The SB1 and SB2 values of the schedule will show the applied preset per Solarbank in that case, which is also reflected in the individual device preset sensor. For single Solarbank setups, the individual device presets of the schedule are ignored by the appliance and the appliance preset is used.
-- Even if each Solarbank device has its own Home Preset sensor (reflecting their contribution to the applied home load preset for the device) and schedule attribute, all Solarbanks in a system share the same schedule. Therefore a parameter change of one solarbank also affects the second solarbank. The applied home load settings are ALWAYS for the schedule, which is still shared by all solarbanks in the system.
-- The schedule structure for the normal preset mode is always reflecting 50% of the appliance load preset to the device load preset. This is also the case for single solarbank systems. A simple schedule structure rule is that with no or normal preset mode, the appliance load preset will be applied. For advanced preset mode which is only accepted in dual solarbank systems, the individual device load presets will be applied and the appliance load setting will be ignored.
-- Starting with Anker App 3.3.0 and Firmware 2.0.9, you can enable discharge priority. This is also supported in the HA integration 2.4.0. If not all solarbanks in your system are at the required version, the discharge priority setting will have no effect and the switch entity may not be presented by the integration.
+* Shared accounts have no access to the schedule
+* The schedule control entities show the individual customizable settings per interval. The reported home load preset that is 'applied' and shown in the system preset sensor state as well as in the Anker App is a combined result from the appliance for the current interval settings.
+* The applied appliance home load preset can show 0 W even if appliance home load preset is different, but Allow Export switch is off. It also depends on the state of charge and the charge priority limit and the defined/installed inverter. Even if the preset sensor state shows 0 W, it does not mean that there won't be output to the house. It simply reflects the same value as presented in the App for the current interval.
+* Starting with Anker App 2.2.1, you can modify the default 50 % preset share between a dual Solarbank setup. The SB1 and SB2 values of the schedule will show the applied preset per Solarbank in that case, which is also reflected in the individual device preset sensor. For single Solarbank setups, the individual device presets of the schedule are ignored by the appliance and the appliance preset is used.
+* Even if each Solarbank device has its own Home Preset sensor (reflecting their contribution to the applied home load preset for the device) and schedule attribute, all Solarbanks in a system share the same schedule. Therefore a parameter change of one solarbank also affects the second solarbank. The applied home load settings are ALWAYS for the schedule, which is still shared by all solarbanks in the system.
+* The schedule structure for the normal preset mode is always reflecting 50% of the appliance load preset to the device load preset. This is also the case for single solarbank systems. A simple schedule structure rule is that with no or normal preset mode, the appliance load preset will be applied. For advanced preset mode which is only accepted in dual solarbank systems, the individual device load presets will be applied and the appliance load setting will be ignored.
+* Starting with Anker App 3.3.0 and Firmware 2.0.9, you can enable discharge priority. This is also supported in the HA integration 2.4.0. If not all solarbanks in your system are at the required version, the discharge priority setting will have no effect and the switch entity may not be presented by the integration.
 
 ### Markdown card for Solarbank 2+ schedules
 
@@ -1378,20 +1412,21 @@ content: >
     {{ "No schedule available"}}
   {% endif %}
 ```
+
 </details>
 
 **Notes:**
 
-- Shared accounts have no access to the schedule
-- Solarbank 2+ devices have less settings per custom plan time slot than Solarbank 1, making it easier to adjust
-- Solarbank 2+ custom plan schedules can be created for individual weekdays. Each group of weekdays has its own plan ID. A weekday can only be configured into one plan ID
-- The defined `custom_rate_plan` is only used when the usage mode is set to 'Custom' (`manual`) or 'Self Consumption' (`smartmeter`) for the case of smart meter communication loss
-- The defined `blend_plan` is only used when the usage mode is set to 'Smart plugs' (`smartplugs`)
-- The `manual_backup` plan is only used for the 'Backup charge' mode of models supporting AC charge. It will overlay any other mode if enabled and in defined datetime interval.
-- The `use_time` plan is only used when the 'Time of Use' mode is enabled
-- The `time_slot` plan is only used for 'Time Slot' mode. However, currently there is not supplied any object for the time_slot plan through the cloud Api, therefore the structure and configuration parameters are unknown. Once they become available, the markdown card will be revised with this additional plan of Solarbank 3 devices
-- The Anker Intelligence (AI) section is just shown if the device supports the `Smart` mode
-- Highlighting of the active plan and slot is based on local timezone of the device. The local timestamp is provided in the card header
+* Shared accounts have no access to the schedule
+* Solarbank 2+ devices have less settings per custom plan time slot than Solarbank 1, making it easier to adjust
+* Solarbank 2+ custom plan schedules can be created for individual weekdays. Each group of weekdays has its own plan ID. A weekday can only be configured into one plan ID
+* The defined `custom_rate_plan` is only used when the usage mode is set to 'Custom' (`manual`) or 'Self Consumption' (`smartmeter`) for the case of smart meter communication loss
+* The defined `blend_plan` is only used when the usage mode is set to 'Smart plugs' (`smartplugs`)
+* The `manual_backup` plan is only used for the 'Backup charge' mode of models supporting AC charge. It will overlay any other mode if enabled and in defined datetime interval.
+* The `use_time` plan is only used when the 'Time of Use' mode is enabled
+* The `time_slot` plan is only used for 'Time Slot' mode. However, currently there is not supplied any object for the time_slot plan through the cloud Api, therefore the structure and configuration parameters are unknown. Once they become available, the markdown card will be revised with this additional plan of Solarbank 3 devices
+* The Anker Intelligence (AI) section is just shown if the device supports the `Smart` mode
+* Highlighting of the active plan and slot is based on local timezone of the device. The local timestamp is provided in the card header
 
 
 ## Markdown card to show PPS schedules
@@ -1437,14 +1472,15 @@ content: |
     {{ "No TOU schedule available"}}
   {% endif %}
 ```
+
 </details>
 
 **Notes:**
 
-- The PPS TOU schedule is controlled through the cloud Api
-- The `tou_mode_schedule` plan is only used if the PPS has activated 'Time of Use' usage mode. The plan is limited to 6 time ranges for a full day and must cover the full day (no gaps are allowed)
-- A complete plan deletion is not supported through the Api. A plan deletion will reset the plan to a full day slot with default tariff (Mid Peak) and default price (0)
-- Highlighting of the active plan and slot is based on local timezone of the device. The local timestamp is provided in the card header
+* The PPS TOU schedule is controlled through the cloud Api
+* The `tou_mode_schedule` plan is only used if the PPS has activated 'Time of Use' usage mode. The plan is limited to 6 time ranges for a full day and must cover the full day (no gaps are allowed)
+* A complete plan deletion is not supported through the Api. A plan deletion will reset the plan to a full day slot with default tariff (Mid Peak) and default price (0)
+* Highlighting of the active plan and slot is based on local timezone of the device. The local timestamp is provided in the card header
 
 
 ## Apex chart card to show forecast data
@@ -1575,6 +1611,7 @@ series:
     color: yellow
     opacity: 0.6
 ```
+
 </details>
 
 
@@ -1588,8 +1625,8 @@ In order to run the script interactively from the dashboard, you just need to ad
 
 **Notes:**
 
-- You may have to reload your browser window when the changed or inserted schedule intervals are not directly represented in the markdown card
-- See further notes above for adjusting the appliance home load parameters or schedule when things are behaving differently than expected
+* You may have to reload your browser window when the changed or inserted schedule intervals are not directly represented in the markdown card
+* See further notes above for adjusting the appliance home load parameters or schedule when things are behaving differently than expected
 
 Below are example scripts which you can use for either Solarbank 1 or Solarbank 2+ devices, you just need to replace the entity name in the action data entity_id field with your device sensor that represents the output preset and has the schedule attribute. If you have multiple systems, you can make the entity also a selectable field in the script similar to the action. For dual solarbank systems, you just need one of the 2 solarbank preset entities to apply the change, since the schedule is shared.
 
@@ -1702,6 +1739,7 @@ sequence:
 mode: single
 icon: mdi:sun-clock
 ```
+
 </details>
 
 ### Script code to adjust Solarbank 2+ schedules
@@ -1834,6 +1872,7 @@ sequence:
 mode: single
 icon: mdi:sun-clock
 ```
+
 </details>
 
 ### Script code to adjust Solarbank AC backup charge
@@ -1902,6 +1941,7 @@ sequence:
       enable_backup: |
         {{enable_backup|default(none)}}
 ```
+
 </details>
 
 ### Script code to adjust Solarbank AC Time of Use plan
@@ -2057,6 +2097,7 @@ sequence:
       delete: |
         {{delete|default(none)}}
 ```
+
 </details>
 
 
@@ -2169,6 +2210,7 @@ sequence:
       delete: |
         {{delete|default(None)}}
 ```
+
 </details>
 
 
@@ -2190,11 +2232,11 @@ Starting with version 2.1.2, a new action was added to simplify an anonymized ex
 
 **Notes:**
 
-- This action will execute a couple of Api queries and run about 10 or more seconds. **If Api throttling must be used, it may even run 1-3 minutes.**
-- If **MQTT messages are included**, the runtime will be **at least 5 minutes** to allow gathering of standard message types as well as including a 60 second interval of real time messages
-- **The UI button will only show green once the action is finished.** An error will be raised if the action is retriggered while there is still a previous action active, or while the configuration startup is not completed yet.
-- There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
-- The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file (the `www` filesystem folder is accessible as `/local` in the url navigation path as given in the response).
+* This action will execute a couple of Api queries and run about 10 or more seconds. **If Api throttling must be used, it may even run 1-3 minutes.**
+* If **MQTT messages are included**, the runtime will be **at least 5 minutes** to allow gathering of standard message types as well as including a 60 second interval of real time messages
+* **The UI button will only show green once the action is finished.** An error will be raised if the action is retriggered while there is still a previous action active, or while the configuration startup is not completed yet.
+* There may be logged warnings and errors for queries that are not allowed or possible for the existing account. The resulting log notifications for the anker_solix integration can be cleared afterwards
+* The url path that is returned in the response needs to be added to your HA server hostname url for direct download of the zipped file (the `www` filesystem folder is accessible as `/local` in the url navigation path as given in the response).
 
 ### Get system info action
 
@@ -2227,55 +2269,57 @@ Example of a valid request but missing system permissions (shared account only):
 
 * There is no documentation which endpoints exist or which parameters and options or methods to be used for various endpoints
 * The known endpoints are documented in the [integration repo module apitypes.py](https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/apitypes.py#L98)
-  - Example parameters for used endpoints can be found in the source code as well, especially the [export.py module](https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/export.py)
+  * Example parameters for used endpoints can be found in the source code as well, especially the [export.py module](https://github.com/thomluther/ha-anker-solix/blob/main/custom_components/anker_solix/solixapi/export.py)
 * There are various endpoint categories listed:
-  - Account related endpoints:
-    - `passport/*`
-  - App related endpoints:
-    - `app/*`
-  - Generic Api or balcony power endpoints:
-    - `power_service/v1/*`
-  - Charging systems endpoints like Power Panels:
-    - `charging_energy_service/*`
-    - **Note:** Those endpoints are currently not supported on the EU cloud server
-  - Home energy systems (HES) endpoints like X1:
-    - `charging_hes_svc/*`
-  - Power Charger categories:
-    - `mini_power/v1/app/*`
-  - Unknown categories:
-    - `charging_disaster_prepared/*`
+  * Account related endpoints:
+    * `passport/*`
+  * App related endpoints:
+    * `app/*`
+  * Generic Api or balcony power endpoints:
+    * `power_service/v1/*`
+  * Charging systems endpoints like Power Panels:
+    * `charging_energy_service/*`
+    * **Note:** Those endpoints are currently not supported on the EU cloud server
+  * Home energy systems (HES) endpoints like X1:
+    * `charging_hes_svc/*`
+  * Power Charger categories:
+    * `mini_power/v1/app/*`
+  * Unknown categories:
+    * `charging_disaster_prepared/*`
 * Most endpoints use the POST method, only some need the GET method. The error typically refers to an unknown method if the wrong method was used
 * Some errors may show the missing mandatory parameters of the payload. If parameters are used in the wrong format, the error may also describe that.
-  - However, most of the time the parameter usage can be discovered only by trial and error until you got it right
-  - Unfortunately it will be difficult to discover optional parameters and how they may change the response information
+  * However, most of the time the parameter usage can be discovered only by trial and error until you got it right
+  * Unfortunately it will be difficult to discover optional parameters and how they may change the response information
 * Standalone device information in the Anker cloud is pretty rare
-  - Typically you cannot find (all) device details as they are being presented in the Anker mobile App, for example device temperature
-  - Some are only available via the Anker MQTT cloud server or via Bluetooth interface
+  * Typically you cannot find (all) device details as they are being presented in the Anker mobile App, for example device temperature
+  * Some are only available via the Anker MQTT cloud server or via Bluetooth interface
 * If you find new requests or useful information in responses that are not available yet via the integration, open an [issue as feature request][issues] and document them there
-  - Implementation into the integration can then be considered
-  - You will have to provide detailed documentation of required parameters and various responses at different times, especially when it comes to proper interpretation of any status codes or conditions that may exist only temporarily or barely.
-  - Any abstract field values in responses will have to be mapped to meaningful descriptions by you before they can be implemented in the integration. I think no user will have any benefit from a `connection_status` of `1` or `2` when they are presented as sensor...
+  * Implementation into the integration can then be considered
+  * You will have to provide detailed documentation of required parameters and various responses at different times, especially when it comes to proper interpretation of any status codes or conditions that may exist only temporarily or barely.
+  * Any abstract field values in responses will have to be mapped to meaningful descriptions by you before they can be implemented in the integration. I think no user will have any benefit from a `connection_status` of `1` or `2` when they are presented as sensor...
 * You can integrate this action also in scripts or automation to implement queries or change settings that are not implemented in the Anker Solix integration (yet)
-  - However, this action does not integrate directly into the Api cache which is used by the data update coordinator to refresh all entity states
-  - Any changes that will be applied by this action will not be reflected until the next data refresh or device details refresh cycle is completed
-  - Further delays may occur if the devices post their data updates only in 5 minute intervals to the cloud
+  * However, this action does not integrate directly into the Api cache which is used by the data update coordinator to refresh all entity states
+  * Any changes that will be applied by this action will not be reflected until the next data refresh or device details refresh cycle is completed
+  * Further delays may occur if the devices post their data updates only in 5 minute intervals to the cloud
 
 #### Format of the payload
 
 The request payload must be a JSON object, which typically consists of named parameter value fields and/or lists. Values can be basic types like boolean, int, float or string values. But they can also be objects or lists and therefore be nested. Following is a basic guideline how you have to format your YAML input for the payload parameter to have it properly converted to JSON structures.
-- Basic type values are specified as number (int), decimal (float), true/false (boolean) or text with or without quotes (string)
-  - Use quotes to enforce any value interpretation as string
-- A new object is started by a new line with indent
-  - All parameters with same indent belong to the object
-- A new list is also started by a new line with indent
-  - Each list item starts with a dash, indicating start of new list item
-  - Each parameter with the same indent belongs to the same list item
-- You can also use Jinja templating for the values like for other HA automation or scripts
-- To specify a Jinja template, you can specify:
-  - A quoted template string in the same line as the parameter
-  - End the parameter line with `>` or `|` character and start the template in new lines with indent
+
+* Basic type values are specified as number (int), decimal (float), true/false (boolean) or text with or without quotes (string)
+  * Use quotes to enforce any value interpretation as string
+* A new object is started by a new line with indent
+  * All parameters with same indent belong to the object
+* A new list is also started by a new line with indent
+  * Each list item starts with a dash, indicating start of new list item
+  * Each parameter with the same indent belongs to the same list item
+* You can also use Jinja templating for the values like for other HA automation or scripts
+* To specify a Jinja template, you can specify:
+  * A quoted template string in the same line as the parameter
+  * End the parameter line with `>` or `|` character and start the template in new lines with indent
 
 Example:
+
 ```yaml
   payload:
     parm_bool: true
@@ -2321,7 +2365,8 @@ data:
 
 If you like this project, please give it a star on [GitHub][anker-solix]. If you want to show your appreciation for the countless hours spent to enhance and maintain it, I would be happy for a 🍵coffee ☕ or if you become a [sponsor 💖](https://github.com/sponsors/thomluther).
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)][buy-me-coffee]
-***
+
+---
 
 [anker-solix]: https://github.com/thomluther/ha-anker-solix
 [releases]: https://github.com/thomluther/ha-anker-solix/releases
@@ -2347,13 +2392,10 @@ If you like this project, please give it a star on [GitHub][anker-solix]. If you
 [solarbank-img]: doc/solarbank.png
 [connected-img]: doc/connected_devices.png
 [notification-img]: doc/notification.png
-[solarbank-dashboard-img]: doc/solarbank-dashboard.png
 [solarbank-dashboard-light-img]: doc/solarbank-dashboard-light.png
 [ev-charger-dashboard-img]: doc/ev-charger-dashboard.png
 [dual-solarbank-entities-img]:  doc/dual-solarbank-entities.png
-[system-dashboard-img]: doc/system-dashboard.png
 [schedule-markdown-img]: doc/schedule-markdown.png
-[schedule-2-markdown-img]: doc/schedule-2-markdown.png
 [schedule-3-markdown-img]: doc/schedule-3-markdown.png
 [schedule-script-img]: doc/change-schedule-script.png
 [schedule-service-img]: doc/schedule-service.png
@@ -2375,7 +2417,6 @@ If you like this project, please give it a star on [GitHub][anker-solix]. If you
 [ac-tariff-control-img]: doc/ac-tariff-control.png
 [ac-time-of-use-service-img]: doc/ac-time-of-use-service.png
 [pps-time-of-use-service-img]: doc/pps-time-of-use-service.png
-[dynamic-price-diagram-img]: doc/dynamic-price-diagram.png
 [forecast-data-diagram-img]: doc/forecast-data-diagram.png
 [power-dock-device-img]: doc/power-dock-device.png
 [vehicle-device-img]: doc/vehicle-device.png
@@ -2385,6 +2426,3 @@ If you like this project, please give it a star on [GitHub][anker-solix]. If you
 [entity-attributes-img]: doc/entity-attributes.png
 [mqtt-statistics-img]: doc/mqtt-statistics.png
 [mqtt-local-mode-img]: doc/mqtt_local_mode.png
-
-
-

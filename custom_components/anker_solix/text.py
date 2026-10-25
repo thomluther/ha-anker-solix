@@ -108,9 +108,9 @@ DEVICE_TEXTS = [
     *[
         AnkerSolixTextDescription(
             key=f"{idx}_start_weekdays",
-            translation_key="usb_x_start_weekdays",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_start_weekdays",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_start_weekdays",
             entity_category=EntityCategory.CONFIG,
@@ -134,15 +134,17 @@ DEVICE_TEXTS = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     # repeated element
     *[
         AnkerSolixTextDescription(
             key=f"{idx}_end_weekdays",
-            translation_key="usb_x_end_weekdays",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_end_weekdays",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_end_weekdays",
             entity_category=EntityCategory.CONFIG,
@@ -166,6 +168,8 @@ DEVICE_TEXTS = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     AnkerSolixTextDescription(

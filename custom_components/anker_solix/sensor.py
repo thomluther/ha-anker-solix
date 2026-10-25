@@ -316,9 +316,28 @@ DEVICE_SENSORS = [
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         attrib_fn=lambda d, _: (
-            {"ac_input_plug_status": v}
-            if (v := str(d.get("ac_input_plug_status", "")))
-            else {}
+            (
+                {
+                    "ac_input_plug_status": get_enum_name(
+                        SolixConnectionStatus,
+                        str(v),
+                        default=SolixConnectionStatus.unknown.name,
+                    )
+                }
+                if (v := d.get("ac_input_plug_status")) is not None
+                else {}
+            )
+            | (
+                {
+                    "ac_input_status": get_enum_name(
+                        SolixChargerPortStatus,
+                        str(v),
+                        default=SolixChargerPortStatus.unknown.name,
+                    )
+                }
+                if (v := d.get("ac_input_status")) is not None
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -764,6 +783,7 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixSensorDescription(
+        # smart plug energy
         key="energy_today",
         translation_key="energy_today",
         json_key="energy_today",
@@ -1718,14 +1738,15 @@ DEVICE_SENSORS = [
         value_fn=lambda d, jk, _: (
             None
             if not (items := d.get("energy_details", {}).get("today", {}))
-            else items.get(jk)
+            else items.get(jk) or items.get("pv_yield")
         ),
         attrib_fn=lambda d, _: (
             {
                 "date": d.get("energy_details", {}).get("today", {}).get("date"),
-                "last_period": d.get("energy_details", {})
-                .get("last_period", {})
-                .get("solar_production"),
+                "last_period": (
+                    items := d.get("energy_details", {}).get("last_period", {})
+                ).get("solar_production")
+                or items.get("pv_yield"),
             }
         ),
         exclude_fn=lambda s, d: (
@@ -1973,6 +1994,144 @@ DEVICE_SENSORS = [
         ),
     ),
     AnkerSolixSensorDescription(
+        key="daily_import_energy",
+        translation_key="daily_import_energy",
+        json_key="import_energy",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("import_energy"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_export_energy",
+        translation_key="daily_export_energy",
+        json_key="export_energy",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("export_energy"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_ac_consumed_energy",
+        translation_key="daily_ac_consumed_energy",
+        json_key="ac_consumed",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("ac_consumed"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_dc_consumed_energy",
+        translation_key="daily_dc_consumed_energy",
+        json_key="dc_consumed",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("dc_consumed"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_ac_charge_energy",
+        translation_key="daily_ac_charge_energy",
+        json_key="ac_charged",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("ac_charged"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
+        key="daily_dc_charge_energy",
+        translation_key="daily_dc_charge_energy",
+        json_key="dc_charged",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        suggested_display_precision=2,
+        value_fn=lambda d, jk, _: (
+            None
+            if not (items := d.get("energy_details", {}).get("today", {}))
+            else items.get(jk)
+        ),
+        attrib_fn=lambda d, _: {
+            "date": d.get("energy_details", {}).get("today", {}).get("date"),
+            "last_period": d.get("energy_details", {})
+            .get("last_period", {})
+            .get("dc_charged"),
+        },
+        exclude_fn=lambda s, d: (
+            not ({d.get("type")} - s and ({f"{d.get('type', '')!s}_energy"} - s))
+        ),
+    ),
+    AnkerSolixSensorDescription(
         # timestamp of last MQTT message with any update
         key="mqtt_timestamp",
         translation_key="mqtt_timestamp",
@@ -1992,9 +2151,9 @@ DEVICE_SENSORS = [
     *[
         AnkerSolixSensorDescription(
             key=f"{idx}_power",
-            translation_key=f"{(idx[:-2] if '_' in idx else idx).rstrip('ac')}_x_power",
+            translation_key=f"{('usb' if idx.startswith('usb') else idx[:-2] if '_' in idx else idx)}_x_power",
             translation_placeholders={
-                "id": f"{'-' if idx.startswith(('usbc', 'usba')) else ' ' if idx.startswith('usb') else ''}{idx.strip('usb').replace('dc_12v_', '').replace('_', '').upper()}"
+                "id": f"{' ' if idx == 'usb' else '-' if idx.startswith('usb') else ''}{idx.lstrip('usb').replace('ac', '').replace('dc_12v_', '').replace('_', '').upper()}"
             },
             json_key=f"{idx}_power",
             native_unit_of_measurement=UnitOfPower.WATT,
@@ -2046,6 +2205,8 @@ DEVICE_SENSORS = [
             "usba_2",
             "dc_12v_1",
             "dc_12v_2",
+            "ac_1",
+            "ac_2",
         ]
     ],
     AnkerSolixSensorDescription(
@@ -2107,6 +2268,19 @@ DEVICE_SENSORS = [
         value_fn=lambda d, jk, _: get_enum_name(SolixPpsDcChargingStatus, d.get(jk)),
         attrib_fn=lambda d, _: {
             "status": d.get("dc_charging_status"),
+        },
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+    ),
+    AnkerSolixSensorDescription(
+        key="ac_charging_status",
+        translation_key="ac_charging_status",
+        json_key="ac_charging_status",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=[status.name for status in SolixPpsDcChargingStatus],
+        value_fn=lambda d, jk, _: get_enum_name(SolixPpsDcChargingStatus, d.get(jk)),
+        attrib_fn=lambda d, _: {
+            "status": d.get("ac_charging_status"),
         },
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
@@ -2211,6 +2385,7 @@ DEVICE_SENSORS = [
             if d.get("type")
             in [
                 SolixDeviceType.PPS.value,
+                SolixDeviceType.SOLARBANK_PPS.value,
                 SolixDeviceType.CHARGER.value,
                 SolixDeviceType.POWERPANEL.value,
             ]
@@ -2280,20 +2455,20 @@ DEVICE_SENSORS = [
             {"status": d.get("backup_status")}
             | (
                 {
-                    "auto_backup_start": datetime.fromtimestamp(v)
+                    "backup_start": datetime.fromtimestamp(v)
                     .astimezone()
                     .isoformat(sep=" "),
                 }
-                if str(v := d.get("auto_backup_start_timestamp", ""))
+                if str(v := d.get("active_backup_start_timestamp", ""))
                 else {}
             )
             | (
                 {
-                    "auto_backup_end": datetime.fromtimestamp(v)
+                    "backup_end": datetime.fromtimestamp(v)
                     .astimezone()
                     .isoformat(sep=" "),
                 }
-                if str(v := d.get("auto_backup_end_timestamp", ""))
+                if str(v := d.get("active_backup_end_timestamp", ""))
                 else {}
             )
             | (
@@ -4139,9 +4314,11 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
         {
             "advantage",
             "ac_input_plug_status",
+            "ac_input_status",
             "ac_frequency",
-            "auto_backup_start",
-            "auto_backup_end",
+            "backup_start",
+            "backup_end",
+            "backup_charge_time",
             "avg_today",
             "avg_tomorrow",
             "branch_ct_number",
@@ -4351,6 +4528,7 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
 
         self._native_value = None
         self._assumed_state = False
+        self._last_known_value = None
         self.update_state_value()
         self._last_known_value = self._native_value
 

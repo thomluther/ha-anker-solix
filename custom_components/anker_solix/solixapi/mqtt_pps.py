@@ -6,9 +6,13 @@ These methods provide comprehensive device control via MQTT commands.
 
 from __future__ import annotations  # noqa: TID251
 
+import calendar
+import contextlib
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
+from .apitypes import SolixPpsPresetLoadType, SolixPpsUsageMode
+from .helpers import next_occurrence
 from .mqtt_device import SolixMqttDevice
 from .mqttcmdmap import SolixMqttCommands
 
@@ -42,6 +46,7 @@ MODELS = {
     "A1785",  # SOLIX C2000X Gen 2
     "A1790",  # SOLIX F3800 Power Panel PPS
     "A1790P",  # SOLIX F3800 Plus Power Panel PPS
+    "AS100",  # C1000X Gen 2 LE
     "AS220",  # SOLIX S2000
 }
 
@@ -74,13 +79,23 @@ FEATURES = {
     SolixMqttCommands.soc_limits: MODELS,
     SolixMqttCommands.pps_usage_mode: MODELS,
     SolixMqttCommands.silent_schedule: MODELS,
-    # SolixMqttCommands.pps_custom_schedule: MODELS,  # TODO: Enable once fully supported
-    # SolixMqttCommands.pps_tou_schedule: MODELS,  # TODO: Enable once fully supported
-    # SolixMqttCommands.pps_output_schedule: MODELS,  # TODO: Enable once fully supported
+    SolixMqttCommands.pps_custom_schedule: MODELS,
+    #SolixMqttCommands.pps_tou_schedule: MODELS,  # IMPORTANT: TOU overruled by cloud Api, command structure not fully described
+    SolixMqttCommands.pps_output_schedule: MODELS,
     SolixMqttCommands.backup_soc: MODELS,
     SolixMqttCommands.backup_charge_storm_guard: MODELS,
     SolixMqttCommands.backup_charge_plan: MODELS,
     SolixMqttCommands.backup_charge_timestamps: MODELS,
+    SolixMqttCommands.display_theme: MODELS,
+    SolixMqttCommands.clock_mode_select: MODELS,
+    SolixMqttCommands.display_brightness_select: MODELS,
+    SolixMqttCommands.display_night_brightness_select: MODELS,
+    SolixMqttCommands.clock_display_schedule: MODELS,
+    SolixMqttCommands.theme_request: MODELS,
+    SolixMqttCommands.battery_only_switch: MODELS,
+    SolixMqttCommands.display_language_select: MODELS,
+    SolixMqttCommands.outage_alert_switch: MODELS,
+    # SolixMqttCommands.ac_frequency_select: MODELS, # NOTE: May have dependencies and should not be used
 }
 
 
@@ -98,51 +113,134 @@ class SolixMqttDevicePps(SolixMqttDevice):
     ) -> None:
         """Define callback for Api device updates."""
         super().update_device(device=device, dynamic_descriptions=dynamic_descriptions)
-        # TODO: Call methods to extract actual presets from plans if available
+        # Call methods to extract actual presets from plans if available, consider mocked cache if used
+        self.get_custom_schedule_presets(fromFile=True)
+        self.get_ac_output_schedule_presets(fromFile=True)
 
-    def update_custom_plan_presets(
+    def get_custom_schedule_presets(
         self,
         fromFile: bool = False,
     ) -> dict | None:
-        """Update the presets from actual custom plan based on time.
+        """Update the presets from actual custom mode schedule based on time.
 
         Args:
             fromFile: If True, consider the mocked cache
 
         Returns:
-            dict: Custom plan presets as updated in mqttdata. None will be returned upon error.
+            dict: Custom mode schedule presets as updated in mqttdata. None will be returned upon error.
 
         Example output:
-            {"preset_load_mode": 1}
+            {"preset_load_type": 1}
 
         """
 
         cache = self.get_status(fromFile=fromFile)
         presets = {}
-        schedule = cache.get("custom_mode_schedule") or {}  # noqa: F841
-        # TODO: Add code to extract active preset
+        # check if device supports / mapped custom usage mode schedule
+        if (plan := cache.get("custom_mode_schedule")) is not None:
+            # define default presets, will be updated if active slot found
+            presets["preset_load_type"] = SolixPpsPresetLoadType.none.value
+            # get actual presets from current slot if plan active
+            if str(cache.get("usage_mode")) == SolixPpsUsageMode.custom.value:
+                # Consider time zone shifts
+                tz_offset = self.device.get("energy_offset_tz") or 0
+                now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
+                now_time = now.time().replace(microsecond=0)
+                # set now to new daytime if close to end of day
+                if (
+                    now_time
+                    >= datetime.strptime("23:59:58", "%H:%M:%S").astimezone().time()
+                ):
+                    now_time = datetime.strptime("00:00", "%H:%M").astimezone().time()
+                weekday = calendar.day_abbr[now.weekday()].lower()
+                # weekday = now.strftime("%a").lower() # locale dependend
+                group_ranges = next(
+                    iter(
+                        [
+                            group.get("ranges") or []
+                            for group in (plan.get("groups") or [{}])
+                            if any(
+                                x in group.get("weekdays", []) for x in (weekday, "all")
+                            )
+                        ]
+                    ),
+                    [],
+                )
+                for slot in group_ranges:
+                    with contextlib.suppress(ValueError):
+                        start_time = (
+                            datetime.strptime(
+                                slot.get("start_time") or "00:00", "%H:%M"
+                            )
+                            .astimezone()
+                            .time()
+                        )
+                        end_time = slot.get("end_time") or "00:00"
+                        # "24:00" format not supported in strptime
+                        if end_time == "24:00":
+                            end_time = (
+                                datetime.strptime("23:59:59", "%H:%M:%S")
+                                .astimezone()
+                                .time()
+                            )
+                        else:
+                            end_time = (
+                                datetime.strptime(end_time, "%H:%M").astimezone().time()
+                            )
+                        if start_time <= now_time < end_time:
+                            presets["preset_load_type"] = (
+                                slot.get("load_type")
+                                or SolixPpsPresetLoadType.none.value
+                            )
+                            break
+            self.mqttdata.update(presets)
         return presets
 
-    def update_tou_plan_presets(
+    def get_ac_output_schedule_presets(
         self,
         fromFile: bool = False,
     ) -> dict | None:
-        """Update the presets from actual time of use plan based on time.
+        """Update the presets from actual AC output schedule based on time.
 
         Args:
             fromFile: If True, consider the mocked cache
 
         Returns:
-            dict: TOU plan presets as updated in mqttdata. None will be returned upon error.
+            dict: AC output schedule presets as updated in mqttdata. None will be returned upon error.
 
         Example output:
-            {"preset_tariff": 1}
+            {"ac_output_next_toggle_time": "2026-10-02 13:45:00", "ac_output_next_toggle_switch": 1, "ac_output_next_toggle_active": True}
 
         """
+
         cache = self.get_status(fromFile=fromFile)
         presets = {}
-        schedule = cache.get("tou_mode_schedule") or {}  # noqa: F841
-        # TODO: Add code to extract active preset
+        # check if device supports / mapped ac output schedule
+        if (plan := cache.get("ac_output_schedule")) is not None:
+            # define default presets, will be updated if active slot found
+            presets["ac_output_next_toggle_time"] = None
+            presets["ac_output_next_toggle_switch"] = None
+            presets["ac_output_next_toggle_active"] = None
+            # get actual presets from next slot in plan, consider weekday repeats
+            # Consider time zone shifts
+            tz_offset = self.device.get("energy_offset_tz") or 0
+            now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
+            slots = plan.get("slots") or []
+            slot_occurrences = [
+                x
+                for x in [next_occurrence(slot, now) for slot in slots]
+                if x is not None
+            ]
+            if slot_occurrences:
+                idx, min_occurrence = min(
+                    enumerate(slot_occurrences), key=lambda x: x[1]
+                )
+                presets["ac_output_next_toggle_time"] = min_occurrence.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+                presets["ac_output_next_toggle_switch"] = slots[idx].get("switch")
+                presets["ac_output_next_toggle_active"] = slots[idx].get("active")
+            self.mqttdata.update(presets)
         return presets
 
     async def set_backup_charge_plan(
@@ -239,8 +337,12 @@ class SolixMqttDevicePps(SolixMqttDevice):
             backup_start = min(backup_start or backup_end, backup_end or backup_start)
             if backup_start == backup_end or backup_duration:
                 backup_end = backup_start + (backup_duration or def_duration)
-            parm_map["set_backup_start_timestamp"] = round(backup_start.timestamp() / 60) * 60
-            parm_map["set_backup_end_timestamp"] = round(backup_end.timestamp() / 60) * 60
+            parm_map["set_backup_start_timestamp"] = (
+                round(backup_start.timestamp() / 60) * 60
+            )
+            parm_map["set_backup_end_timestamp"] = (
+                round(backup_end.timestamp() / 60) * 60
+            )
         # Send command if any parameters to update
         if parm_map:
             if (

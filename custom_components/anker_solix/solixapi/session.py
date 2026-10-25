@@ -532,7 +532,8 @@ class AnkerSolixClientSession:
             #     'x-key-ident': the key pair id, 32 hex chars, constant per session
             #     'x-request-once': a fresh random nonce, 32 hex chars, per request
             #     'x-request-ts': [request timestamp] # Unix Timestamp in s as string
-            #     'x-signature': HMAC-SHA256(presetKey_hex, ts+once+encrypted_body)
+            #     'x-signature': HMAC-SHA256(shared_secret[:16].hex(), ts+once+encrypted_body)
+            #         (the presetKey signs only the openapi/oauth/key/exchange handshake)
             # The body goes on the wire as text/plain base64 ciphertext, and the
             # response returns an encrypted "data" field alongside a "signature".
             timestamp = generateTimestamp()
@@ -632,10 +633,10 @@ class AnkerSolixClientSession:
                 else:
                     self._logger.debug("Response Data: %s", data)
 
-                # valid client response at this point, mark login to avoid repeated authentication
-                self._loggedIn = True
                 # check the Api response status code in the data
                 errors.raise_error(data)
+                # valid Api response at this point, mark login to avoid repeated authentication
+                self._loggedIn = True
 
                 # reset retry flag for normal request retry attempts
                 self._retry_attempt = False

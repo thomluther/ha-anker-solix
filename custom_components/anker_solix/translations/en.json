@@ -26,6 +26,7 @@
                 "smartmeter_energy": "Smart meter energy stats",
                 "smartplug": "Smart plugs",
                 "smartplug_energy": "Smart plug energy stats",
+                "pps_energy": "PPS energy stats",
                 "hes": "Home energy systems",
                 "hes_energy": "HES energy stats",
                 "hes_avg_power": "HES ⌀-power",
@@ -439,6 +440,36 @@
                     "off": "Off"
                 }
             },
+            "device_problem": {
+                "name": "Device status",
+                "state": {
+                    "on": "Problem",
+                    "off": "Ok"
+                },
+                "state_attributes": {
+                    "over_temperature": {
+                        "name": "Over temperature"
+                    },
+                    "usba_undervoltage": {
+                        "name": "USB-A undervoltage"
+                    },
+                    "usba_fault": {
+                        "name": "USB-A fault"
+                    },
+                    "usbc_1_fault": {
+                        "name": "USB-C1 fault"
+                    },
+                    "usbc_2_fault": {
+                        "name": "USB-C2 fault"
+                    },
+                    "usbc_3_fault": {
+                        "name": "USB-C3 fault"
+                    },
+                    "usbc_4_fault": {
+                        "name": "USB-C4 fault"
+                    }
+                }
+            },
             "protection_status": {
                 "name": "Storm guard",
                 "state": {
@@ -787,6 +818,13 @@
                     "blinking": "Blinking"
                 }
             },
+            "ac_light_mode": {
+                "name": "AC LED mode",
+                "state": {
+                    "normal": "Normal",
+                    "sleep": "Sleep"
+                }
+            },
             "display_timeout": {
                 "name": "Display timeout"
             },
@@ -926,6 +964,10 @@
                     "custom-3": "Custom-3",
                     "custom-4": "Custom-4",
                     "custom-5": "Custom-5",
+                    "smart_dynamic": "Smart Dynamic",
+                    "high_power_1": "High power mode 1",
+                    "high_power_2": "High power mode 2",
+                    "high_power_3": "High power mode 3",
                     "unknown": "Unknown"
                 },
                 "state_attributes": {
@@ -1216,7 +1258,20 @@
                 "name": "AC input power",
                 "state_attributes": {
                     "ac_input_plug_status": {
-                        "name": "Plug status"
+                        "name": "AC plug status",
+                        "state": {
+                            "disconnected": "Disconnected",
+                            "connected": "Connected",
+                            "unknown": "Unknown"
+                        }
+                    },
+                    "ac_input_status": {
+                        "name": "AC input status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "active": "Active",
+                            "unknown": "Unknown"
+                        }
                     }
                 }
             },
@@ -1447,6 +1502,20 @@
                     }
                 }
             },
+            "ac_charging_status": {
+                "name": "AC charge status",
+                "state": {
+                    "inactive": "Inactive",
+                    "charging": "Charging",
+                    "discharging": "Discharging",
+                    "unknown": "Unknown"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Status code"
+                    }
+                }
+            },
             "plant_status": {
                 "name": "Plant status",
                 "state": {
@@ -1492,11 +1561,14 @@
                     "status": {
                         "name": "Status code"
                     },
-                    "auto_backup_start": {
-                        "name": "Auto backup start"
+                    "backup_start": {
+                        "name": "Backup start"
                     },
-                    "auto_backup_end": {
-                        "name": "Auto backup end"
+                    "backup_end": {
+                        "name": "Backup end"
+                    },
+                    "backup_charge_time": {
+                        "name": "Backup charge time"
                     }
                 }
             },
@@ -2149,6 +2221,72 @@
                     }
                 }
             },
+            "daily_import_energy": {
+                "name": "Daily grid import",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_export_energy": {
+                "name": "Daily grid export",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_ac_consumed_energy": {
+                "name": "Daily consumed AC energy",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_dc_consumed_energy": {
+                "name": "Daily consumed DC energy",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_ac_charge_energy": {
+                "name": "Daily charged AC energy",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
+            "daily_dc_charge_energy": {
+                "name": "Daily charged DC energy",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Last period"
+                    }
+                }
+            },
             "daily_solar_share": {
                 "name": "Daily share solar",
                 "state_attributes": {
@@ -2269,6 +2407,25 @@
             },
             "dc_12v_x_power": {
                 "name": "DC 12V port {id} power",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "Port status",
+                        "state": {
+                            "inactive": "Inactive",
+                            "charging": "Charging",
+                            "discharging": "Discharging"
+                        }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampere"
+                    }
+                }
+            },
+            "ac_x_power": {
+                "name": "AC {id} power",
                 "state_attributes": {
                     "port_status": {
                         "name": "Port status",
@@ -2623,11 +2780,8 @@
             "usba_x_switch": {
                 "name": "USB-{id} port"
             },
-            "ac_1_switch": {
-                "name": "Outlet 1"
-            },
-            "ac_2_switch": {
-                "name": "Outlet 2"
+            "ac_x_switch": {
+                "name": "Outlet {id}"
             },
             "plug_lock_switch": {
                 "name": "Plug lock"
@@ -2697,6 +2851,15 @@
             "usb_x_end_switch": {
                 "name": "USB-{id} end time"
             },
+            "ac_x_timer_switch": {
+                "name": "AC {id} timer"
+            },
+            "ac_x_start_switch": {
+                "name": "AC {id} start time"
+            },
+            "ac_x_end_switch": {
+                "name": "AC {id} end time"
+            },
             "silent_mode_switch": {
                 "name": "Silent mode"
             }
@@ -2707,6 +2870,12 @@
             },
             "clock_display_weekdays": {
                 "name": "Clock display weekdays"
+            },
+            "ac_x_start_weekdays": {
+                "name": "AC {id} start weekdays"
+            },
+            "ac_x_end_weekdays": {
+                "name": "AC {id} end weekdays"
             },
             "usb_x_start_weekdays": {
                 "name": "USB-{id} start weekdays"
@@ -2746,6 +2915,15 @@
             "ac_output_timer_seconds": {
                 "name": "AC output timer"
             },
+            "ac_x_timer_seconds": {
+                "name": "AC {id} timer"
+            },
+            "ac_x_start_time": {
+                "name": "AC {id} start time"
+            },
+            "ac_x_end_time": {
+                "name": "AC {id} end time"
+            },
             "usb_x_timer_seconds": {
                 "name": "USB-{id} timer"
             },
@@ -2767,7 +2945,12 @@
         },
         "update":{
             "sw_version": {
-                "name": "Firmware"
+                "name": "Firmware",
+                "state_attributes": {
+                    "ota_block_reason": {
+                        "name": "OTA block reason"
+                    }
+                }
             }
         }
     },

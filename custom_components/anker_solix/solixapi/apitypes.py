@@ -114,9 +114,10 @@ API_ENDPOINTS: Final[dict] = {
     "site_detail_by_sn": "power_service/v1/site/get_site_detail_by_sn",  # needs owner, {"device_sn": deviceSn}, site_info from site list response
     "site_rules": "power_service/v1/site/get_site_rules",  # Information for supported power site types and their min and max qty per device model types
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
+    "v2_scene_info": "power_service/v2/site/platform_get_site_scene",  # Scene info for Home Backup systems
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 24 25 26 27 28 29 30 31 32 33 34 35]
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 19 20 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
@@ -172,7 +173,7 @@ API_ENDPOINTS: Final[dict] = {
     # Power endpoints */v1/device/*
     "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
     # Power endpoints */v2/device/*
-    "get_device_energy": "power_service/v2/device/energy_analysis", # works on newer PPS {"device_sn": deviceSn,"type": "week","start_time": "2026-09-21","end_time": "2026-09-27"}
+    "get_device_energy": "power_service/v2/device/energy_analysis",  # works on newer PPS {"device_sn": deviceSn,"type": "week","start_time": "2026-09-21","end_time": "2026-09-27"}
     # Power endpoints */v1/dynamic_price/*
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
     "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
@@ -361,7 +362,7 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/set_oil_consumption_reminder_plan'
     'power_service/v1/app/set_maintain_parts_ignore_reminders'
 
-related to power V2: 15 + 1 used => 16 total
+related to power V2: 14 + 2 used => 16 total
     'power_service/v2/app/get_custom_branch_icon' # get list of branch icons and url
     'power_service/v2/app/get_hardware_relation'# shows empty list, {"sn_list": [deviceSn]}
     'power_service/v2/platform_get_pn_region_code'# {"product_code": "AE103"})) SB4 => {"product_code": "AE103","region_codes": [{"country_code": "DE","states": [{"state_code": "DE","grid_code": 3,"grid_code_name": "VDE-AR-N 4105"}]},...]}
@@ -376,7 +377,6 @@ related to power V2: 15 + 1 used => 16 total
     'power_service/v2/platform_set_user_region_param'
     'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
     'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
-    'power_service/v2/site/platform_get_site_scene'  # may need special site?
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -568,6 +568,7 @@ API_FILEPREFIXES: Final[dict] = {
     "get_shelly_status": "shelly_status",
     "get_site_csv_export": "site_csv_export",  # works for member, but system must support csv export, {"site_id": siteId, "start_time": "2026-03-14", "end_time": "2026-03-15"}, filename and URL for CSV download
     "scene_info": "scene",
+    "v2_scene_info": "v2_scene",
     "site_detail": "site_detail",
     "site_detail_by_sn": "site_detail_sn",
     "wifi_list": "wifi_list",
@@ -747,6 +748,7 @@ A1903  150W Charging Base                       Charger
 A2345  250W Prime Charger                       Charger
 A25X7  Prime Wireless Charger                   Charger
 A2687  160W Prime Charger                       Charger
+A91B2  240W Charging Station                    Charger
 A5101  X1-P6K-US/S                              Residential Storage System
 A5102  X1-H(3.68~6)K-S                          Residential Storage System
 A5103  X1-H (5~12)K-T                           Residential Storage System
@@ -758,7 +760,6 @@ A5220  X1 Battery Module                        Residential Storage System
 A5341  Backup Controller                        Residential Storage System
 A5450  Zigbee Dongle                            Residential Storage System
 AE113  XE 6/8kW                                 Residential Storage System
-A91B2  240W Charging Station                    Charger
 AE100  SOLIX Power Dock                         Plug-in Home Battery
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 AE1X0  Smart Meter Gen 2                        Accessory
@@ -1003,6 +1004,69 @@ PRODUCT_CODES: Final[dict] = {
 }
 
 
+# Define product embedded display themes, the embedded url is hard coded and varies per model
+EMBEDDED_THEMES: Final[dict] = {
+    "A2345": {
+        "theme_1": {
+            "category_name": "Embedded",
+            "title": "Theme 1",
+            "type": 0,
+            "file_hash": "0x00000000",
+            "image_url": "assets/img/shared/icl_a2345_theme1.png",
+            "id": None,
+            "theme_name": "Embedded - Theme 1",
+        },
+        "theme_2": {
+            "category_name": "Embedded",
+            "title": "Theme 2",
+            "type": 1,
+            "file_hash": "0x00000000",
+            "image_url": "assets/img/a2345/icl_a2345_theme2.png",
+            "id": None,
+            "theme_name": "Embedded - Theme 2",
+        },
+        "theme_3": {
+            "category_name": "Embedded",
+            "title": "Theme 3",
+            "type": 2,
+            "file_hash": "0x00000000",
+            "image_url": "assets/img/a2345/icl_a2345_theme3.png",
+            "id": None,
+            "theme_name": "Embedded - Theme 3",
+        },
+    },
+    "default": {
+        "theme_1": {
+            "category_name": "Embedded",
+            "title": "Theme 1",
+            "type": 0,
+            "file_hash": "",
+            "image_url": "",
+            "id": None,
+            "theme_name": "Embedded - Theme 1",
+        },
+        "theme_2": {
+            "category_name": "Embedded",
+            "title": "Theme 2",
+            "type": 1,
+            "file_hash": "",
+            "image_url": "",
+            "id": None,
+            "theme_name": "Embedded - Theme 2",
+        },
+        "theme_3": {
+            "category_name": "Embedded",
+            "title": "Theme 3",
+            "type": 2,
+            "file_hash": "",
+            "image_url": "",
+            "id": None,
+            "theme_name": "Embedded - Theme 3",
+        },
+    }
+}
+
+
 class SolixDeviceType(Enum):
     """Enumeration for Anker Solix device types."""
 
@@ -1182,6 +1246,7 @@ class ApiCategories:
     solarbank_pps_energy: str = "solarbank_pps_energy"
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
+    pps_energy: str = "pps_energy"
     charger_energy: str = "charger_energy"
     charger_usb_settings: str = "charger_usb_settings"
     powerpanel_energy: str = "powerpanel_energy"
@@ -1244,6 +1309,12 @@ class SolixDeviceCapacity:
     A1762: int = 1056  # SOLIX Portable Power Station 1000
     A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
+    A17A0: int = 299  # SOLIX EverFrost Powered Cooler 30, Only BT
+    A17A1: int = 299  # SOLIX EverFrost Powered Cooler 40, Only BT
+    A17A2: int = 299  # SOLIX EverFrost Powered Cooler 50, Only BT
+    A17A3: int = 288  # SOLIX EverFrost 2 Powered Cooler 23L
+    A17A4: int = 288  # SOLIX EverFrost 2 Powered Cooler 40L
+    A17A5: int = 288  # SOLIX EverFrost 2 Powered Cooler 58L
     AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
     AS220: int = 2010  # SOLIX S2000 Portable Power Station
     AS510: int = 5000  # SOLIX S5000 Portable Power Station
@@ -1420,9 +1491,9 @@ class SolixDeviceCategory:
     A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
     AE113: str = SolixDeviceType.HES.value  # SOLIX XE 6/8kW
     # Power Cooler
-    A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
-    A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
-    A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50
+    A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30, NO Wifi
+    A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40, NO Wifi
+    A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50, NO Wifi
     A17A3: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 23L
     A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
@@ -1693,10 +1764,10 @@ class SolixDefaults:
     DEVICE_ENERGY: ClassVar[set[str]] = {
         "A1763",  # C1000 Gen 2
         "A1765",  # C1000X Gen 2
-        "AS100", # C1000X Gen 2 LE
-        "A1783", # C2000 Gen 2
-        "A1785", # C2000X Gen 2
-        "AS220", # S2000
+        "AS100",  # C1000X Gen 2 LE
+        "A1783",  # C2000 Gen 2
+        "A1785",  # C2000X Gen 2
+        "AS220",  # S2000
     }
 
 
@@ -1842,7 +1913,17 @@ class SolixPpsWorkStatus(StrEnum):
     charging = "2"
     sleep = "3"
     shutdown = "4"
+    ota_upgrade = "5"
     unknown = "unknown"
+
+
+class SolixPpsPresetLoadType(IntEnum):
+    """Int Enumeration for Anker Solix PPS custom plan load modes."""
+
+    unknown = -1
+    none = 0
+    ac_charge = 1
+    discharge = 2
 
 
 class SolixBackupStatus(StrEnum):
@@ -2195,7 +2276,7 @@ class SolixPlugTimerMode(StrEnum):
 
 
 class SolixPortId(StrEnum):
-    """Str Enumeration for Solix Port Identifiers."""
+    """Str Enumeration for default Solix Port Identifiers."""
 
     usbc_1 = "0"
     usbc_2 = "1"
@@ -2203,6 +2284,19 @@ class SolixPortId(StrEnum):
     usbc_4 = "3"
     usba = "4"
     unknown = "unknown"
+
+
+class SolixStationPortId(StrEnum):
+    """Str Enumeration for Special Solix Port Identifiers of defined models."""
+
+    ac_1 = "0"
+    ac_2 = "1"
+    usbc_1 = "2"
+    usbc_2 = "3"
+    usbc_3 = "4"
+    usbc_4 = "5"
+    unknown = "unknown"
+    A91B2 = "A91B2"
 
 
 class SolixPortPriority(StrEnum):

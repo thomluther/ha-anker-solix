@@ -134,6 +134,45 @@ DEVICE_SENSORS = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
     AnkerSolixBinarySensorDescription(
+        key="device_problem",
+        translation_key="device_problem",
+        json_key="device_problem",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk: (
+            bool(
+                d.get("over_temperature")
+                or any(d.get(f"usbc_{port}_fault") for port in range(1, 5))
+                or d.get("usba_fault")
+                or d.get("usba_undervoltage")
+            )
+            if any(
+                k in d
+                for k in [
+                    "over_temperature",
+                    "usba_undervoltage",
+                    "usbc_1_fault",
+                    "usba_fault",
+                ]
+            )
+            else None
+        ),
+        attrib_fn=lambda d, _: (
+            {
+                key: v
+                for key in ["over_temperature", "usba_undervoltage", "usba_fault"]
+                if (v := d.get(key)) is not None
+            }
+            | {
+                f"usbc_{port}_fault": v
+                for port in range(1, 5)
+                if (v := d.get(f"usbc_{port}_fault")) is not None
+            }
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+    ),
+    AnkerSolixBinarySensorDescription(
         key="protection_status",
         translation_key="protection_status",
         json_key="protection_status",
@@ -489,6 +528,13 @@ class AnkerSolixBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "wifi_signal",
             "wireless_type",
             "wifi_mac",
+            "over_temperature",
+            "usbc_1_fault",
+            "usbc_2_fault",
+            "usbc_3_fault",
+            "usbc_4_fault",
+            "usba_fault",
+            "usba_undervoltage",
         }
     )
 

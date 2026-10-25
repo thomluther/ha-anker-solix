@@ -473,6 +473,16 @@ DEVICE_SELECTS = [
         mqtt_cmd=SolixMqttCommands.light_mode_select,
     ),
     AnkerSolixSelectDescription(
+        key="ac_light_mode",
+        translation_key="ac_light_mode",
+        json_key="ac_light_mode",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda d, jk: d.get(jk),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.ac_light_mode_select,
+    ),
+    AnkerSolixSelectDescription(
         key="display_timeout",
         translation_key="display_timeout",
         json_key="display_timeout_seconds",
@@ -1588,9 +1598,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                                 )
                             )
                             self._attr_options.sort()
-                            # trigger A2345 theme request to update MQTT theme detail settings if changed externally
+                            # trigger MQTT theme request to update MQTT theme detail settings if changed externally
                             # wrap the async method
-                            if self.hass:
+                            if self.hass and SolixMqttCommands.theme_request in mdev.controls:
                                 self.hass.add_job(
                                     mdev.run_command(
                                         cmd=SolixMqttCommands.theme_request,
@@ -2296,7 +2306,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 if await self._async_mqtt_option(
                     mdev=mdev,
                     option=option,
-                    cmd=SolixMqttCommands.charger_theme_custom,
+                    cmd=SolixMqttCommands.display_theme_custom,
                     parm="set_theme_url",
                 ):
                     # trigger a delayed theme request to get updated MQTT message

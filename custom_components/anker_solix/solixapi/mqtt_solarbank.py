@@ -25,6 +25,7 @@ MODELS = {
     "A17C3",  # Solarbank 2 E1600 Plus
     "A17C5",  # Solarbank 3 E2700 Pro
     "AE100",  # Power Dock Solarbank
+    "A17E1",  # SOLIX E10 Controller, Home Backup system
     "AX170",  # Power Dock Home Backup System
 }
 # Define possible controls per Model
@@ -52,6 +53,8 @@ FEATURES = {
     # SolixMqttCommands.sb_3rd_party_pv_switch: MODELS, # TODO: requires also Api support
     # SolixMqttCommands.sb_ev_charger_switch: {"AE100"}, # TODO: requires also Api support
     SolixMqttCommands.circuit_priority: MODELS,
+    SolixMqttCommands.hb_power_limits: MODELS,
+    SolixMqttCommands.ac_socket_always_on_switch: MODELS,
 }
 
 

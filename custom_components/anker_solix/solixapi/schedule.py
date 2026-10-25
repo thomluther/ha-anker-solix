@@ -286,8 +286,13 @@ async def get_device_parm(
         sn
         for sn, sb in self.devices.items()
         if sb.get("site_id") == siteId
-        and sb.get("type") == SolixDeviceType.SOLARBANK.value
-        and (sb.get("generation") or 0) >= 2
+        and (
+            sb.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+            or (
+                sb.get("type") == SolixDeviceType.SOLARBANK.value
+                and (sb.get("generation") or 0) >= 2
+            )
+        )
     }
     if paramType in [
         SolixParmType.SOLARBANK_SCHEDULE.value,
@@ -1493,8 +1498,9 @@ async def set_sb2_home_load(  # noqa: C901
     | None = None,  # used for testing or to apply changes only to api cache
     toFile: bool = False,  # for testing in file usage mode
 ) -> bool | dict:
-    """Set or change the home load parameters for a given site id and solarbank 2 device for any slot in the existing schedule.
+    """Set or change the usage mode and/or home load parameters for a given site id and Solarbank 2+ system or Solarbank PPS for any slot in the existing schedule.
 
+    Only manual plans and smartplug plan changes are supported. Other plan changes must use set_sb2_ac_charge or set_sb2_use_time methods.
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
     Optionally when set_slot is provided, the given slot will replace the existing schedule for the requested weekdays completely.
     When insert_slot is provided, the given slot will be incorporated into existing schedule for the requested weekdays.
@@ -1583,8 +1589,8 @@ async def set_sb2_home_load(  # noqa: C901
         max_load = SolixDefaults.PRESET_MAX
     # Adjust provided appliance limits
     # Relaxed max_load to device type max if schedule max_load no longer reflecting active device limit, see issue #309
-    if (d := self.devices.get(deviceSn, {})).get("generation", 0) >= 2:
-        model = d.get("device_pn") or ""
+    if (device := self.devices.get(deviceSn, {})).get("generation", 0) >= 2:
+        model = device.get("device_pn") or ""
         max_load = max(
             [
                 int(x)
@@ -1626,9 +1632,11 @@ async def set_sb2_home_load(  # noqa: C901
             get_enum_name(
                 SolarbankUsageMode,
                 usage_mode,
-                default=SolarbankUsageMode.manual.name,
+                default=None
+                if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                else SolarbankUsageMode.manual.name,
             ),
-            SolarbankRatePlan.manual,
+            None,
         ),
     )
     rate_plan = schedule.get(rate_plan_name) or []
@@ -2094,11 +2102,12 @@ async def set_sb2_home_load(  # noqa: C901
     # Update existing usage mode, reset to an available automatic or manual mode if required rate plan deleted
     # TODO(SB3): Once time_slot rate plan is available in schedule, verify against existing plan instead of dynamic provider setup
     mode_type = (
-        getattr(
-            SolarbankUsageMode,
-            ({usage_mode_options} & {SolarbankUsageMode.smartmeter.name})
-            or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
-            or SolarbankUsageMode.manual.name,
+        (
+            SolarbankUsageMode.smartmeter.value
+            if SolarbankUsageMode.smartmeter.name in usage_mode_options
+            else SolarbankUsageMode.smartplugs.value
+            if SolarbankUsageMode.smartplugs.name in usage_mode_options
+            else SolarbankUsageMode.manual.value
         )
         if (
             usage_mode == SolarbankUsageMode.use_time.value
@@ -2111,6 +2120,9 @@ async def set_sb2_home_load(  # noqa: C901
         else usage_mode
     )
     schedule["mode_type"] = mode_type
+    # Update schedule_mode if available
+    if isinstance(schedule.get("schedule_mode"), dict):
+        schedule["schedule_mode"] = {"last_select_mode": mode_type}
     self._logger.debug(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
@@ -2125,9 +2137,13 @@ async def set_sb2_home_load(  # noqa: C901
         )
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
-    # The mode_type must always be contained
-    # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
+    # Add required fields to new schedule to be applied via Api
     new_schedule = {"mode_type": mode_type}
+    if isinstance(schedule_mode := schedule.get("schedule_mode"), dict):
+        new_schedule["schedule_mode"] = schedule_mode
+    if "reserved_soc" in schedule:
+        new_schedule["reserved_soc"] = schedule.get("reserved_soc")
+    # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
         new_schedule.update(
             {
@@ -2201,7 +2217,7 @@ async def set_sb2_ac_charge(
     | None = None,  # used for testing or to apply changes only to api cache
     toFile: bool = False,  # used for testing with files
 ) -> bool | dict:
-    """Set or change the AC charge parameters for a given site id and solarbank 2 AC device.
+    """Set or change the AC charge parameters for a given site id and Solarbank AC chargeable device.
 
     The backup definition is part of the SB2 device schedule object. If no end_time or duration is specified, a default duration of 1 hour will be used
     manual_backup: Used for the manual backup period definition for max AC charge.
@@ -2360,6 +2376,7 @@ async def set_sb2_use_time(  # noqa: C901
     tariff_price: float | str | None = None,
     tariff_sell_price: float | str | None = None,
     currency: str | None = None,
+    backup_soc: float | str | None = None,
     delete: bool | None = False,
     merge_tariff_slots: bool = True,  # merge time slots with same tariff
     clear_unused_tariff: bool = True,  # clear price of unsused tariff in season/daytype
@@ -2367,7 +2384,7 @@ async def set_sb2_use_time(  # noqa: C901
     | None = None,  # used for testing or to apply changes only to api cache
     toFile: bool = False,  # for testing with files
 ) -> bool | dict:
-    r"""Set or change the AC use time parameters for a given site id and solarbank 2 AC device.
+    r"""Set or change the use time plan parameters for a given site id and Solarbank or Solarbank_PPS device.
 
     The is part of the device schedule object
     Example schedule for Solarbank 2 AC as provided via Api:
@@ -2398,6 +2415,35 @@ async def set_sb2_use_time(  # noqa: C901
             "unit":"$","is_same":true}],
     "manual_backup":null,
     "default_home_load":200,"max_load":800,"min_load":0,"step":10}
+
+    Example schedule for Solarbank PPS as provided via Api:
+    {"mode_type": 5,"custom_rate_plan": null,"blend_plan": null,
+    "use_time": [{"sea": {"start_month": 1,"end_month": 5},
+            "weekday": [{"start_time": 0,"end_time": 8,"type": 2},{"start_time": 8,"end_time": 17,"type": 3},
+                {"start_time": 17,"end_time": 20,"type": 1},{"start_time": 20,"end_time": 24,"type": 2}],
+            "weekend": [{"start_time": 0,"end_time": 8,"type": 2},{"start_time": 8,"end_time": 17,"type": 3},
+                {"start_time": 17,"end_time": 20,"type": 1},{"start_time": 20,"end_time": 24,"type": 2}],
+            "weekday_price": [{"price": "0.36","type": 2,"sell_price": ""},{"price": "0.31","type": 3,"sell_price": ""},{"price": "0.60","type": 1,"sell_price": ""}],
+            "weekend_price": [{"price": "0.36","type": 2,"sell_price": ""},{"price": "0.31","type": 3,"sell_price": ""},{"price": "0.60","type": 1,"sell_price": ""}],
+            "unit": "$","is_same": false},
+        {"sea": {"start_month": 6,"end_month": 9},
+            "weekday": [{"start_time": 0,"end_time": 17,"type": 3},{"start_time": 17,"end_time": 20,"type": 1},{"start_time": 20,"end_time": 24,"type": 2}],
+            "weekend": [{"start_time": 0,"end_time": 17,"type": 3},{"start_time": 17,"end_time": 20,"type": 1},{"start_time": 20,"end_time": 24,"type": 2}],
+            "weekday_price": [{"price": "0.35","type": 3,"sell_price": ""},{"price": "0.71","type": 1,"sell_price": ""},{"price": "0.55","type": 2,"sell_price": ""}],
+            "weekend_price": [{"price": "0.35","type": 3,"sell_price": ""},{"price": "0.53","type": 1,"sell_price": ""},{"price": "0.45","type": 2,"sell_price": ""}],
+            "unit": "$","is_same": false},
+        {"sea": {"start_month": 10,"end_month": 12},
+            "weekday": [{"start_time": 0,"end_time": 8,"type": 2},{"start_time": 8,"end_time": 17,"type": 3},
+                {"start_time": 17,"end_time": 20,"type": 1},{"start_time": 20,"end_time": 24,"type": 2}],
+            "weekend": [{"start_time": 0,"end_time": 8,"type": 2},{"start_time": 8,"end_time": 17,"type": 3},
+                {"start_time": 17,"end_time": 20,"type": 1},{"start_time": 20,"end_time": 24,"type": 2}],
+          "weekday_price": [{"price": "0.36","type": 2,"sell_price": ""},{"price": "0.31","type": 3,"sell_price": ""},{"price": "0.54","type": 1,"sell_price": ""}],
+          "weekend_price": [{"price": "0.36","type": 2,"sell_price": ""},{"price": "0.31","type": 3,"sell_price": ""},{"price": "0.54","type": 1,"sell_price": ""}],
+          "unit": "$","is_same": false}],
+      "manual_backup": null,"dynamic_price": null,"ai_ems": null,"time_slot": null,
+      "reserved_soc": 10,
+      "schedule_mode": {"last_select_mode": 5},
+      "default_home_load": 0,"max_load": 0,"min_load": 0,"step": 0}
 
     Applied Parameter logic:
     - Optional season start_month
@@ -2442,6 +2488,9 @@ async def set_sb2_use_time(  # noqa: C901
     - Optional currency
         - Set default currency to site currency or default account currency or hard coded default
         - Change currency in all seasons if provided
+    - Optional backup_soc (Solarbank PPS only)
+        - Set default to actual backup soc or default pps_backup
+        - Change backup SOC if provided
     - Optional delete
         - Deletion has various scope, depending which other options provided
         - If tariff given, delete tariff and all slots with it from selected day type(s)
@@ -2547,6 +2596,12 @@ async def set_sb2_use_time(  # noqa: C901
         else None
     )
     currency = str(currency)[0:3] if currency else None
+    backup_soc = (
+        int(backup_soc)
+        if isinstance(backup_soc, int | float)
+        or str(backup_soc).replace(".", "", 1).isdigit()
+        else None
+    )
     delete = delete if isinstance(delete, bool) else False
     merge_tariff_slots = (
         merge_tariff_slots if isinstance(merge_tariff_slots, bool) else True
@@ -2566,6 +2621,7 @@ async def set_sb2_use_time(  # noqa: C901
         or tariff_price is not None
         or tariff_sell_price is not None
         or currency
+        or backup_soc is not None
         or delete is not None
     ):
         self._logger.error(
@@ -2602,7 +2658,12 @@ async def set_sb2_use_time(  # noqa: C901
             delete_scope = "daytype"
         elif start_month or end_month:
             delete_scope = "season"
-        elif not (tariff_price or tariff_sell_price or currency):
+        elif (
+            tariff_price is None
+            and tariff_sell_price is None
+            and not currency
+            and backup_soc is None
+        ):
             delete_scope = "plan"
 
     # set defaults if needed
@@ -3053,6 +3114,20 @@ async def set_sb2_use_time(  # noqa: C901
                 split_season = {}
 
     schedule[rate_plan_name] = new_ranges
+    # Apply Solarbank PPS specific fields
+    dev = self.devices.get(deviceSn, {})
+    mqtt = dev.get("mqtt_data") or {}
+    if "reserved_soc" in schedule:
+        # given, existing or default backup soc, ensure backup soc is max(min_soc,5) <= backup <= max_soc
+        schedule["reserved_soc"] = min(
+            int(mqtt.get("max_soc") or dev.get("charge_upper_limit") or 80),
+            max(
+                int(mqtt.get("power_cutoff") or dev.get("discharge_lower_limit") or 20),
+                int(backup_soc or schedule.get("reserved_soc") or 0),
+                5,
+            ),
+        )
+
     # toggle usage mode in schedule back to possible mode if no use_time plan remains
     if (
         not new_ranges
@@ -3060,12 +3135,15 @@ async def set_sb2_use_time(  # noqa: C901
     ):
         # Allow automatic modes only when smart meter or smart plugs available in site
         usage_mode_options = self.solarbank_usage_mode_options(deviceSn=deviceSn)
-        schedule["mode_type"] = getattr(
-            SolarbankUsageMode,
-            ({usage_mode_options} & {SolarbankUsageMode.smartmeter.name})
-            or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
-            or SolarbankUsageMode.manual.name,
+        schedule["mode_type"] = (
+            SolarbankUsageMode.smartmeter.value
+            if SolarbankUsageMode.smartmeter.name in usage_mode_options
+            else SolarbankUsageMode.smartplugs.value
+            if SolarbankUsageMode.smartplugs.name in usage_mode_options
+            else SolarbankUsageMode.manual.value
         )
+        if isinstance(schedule.get("schedule_mode"), dict):
+            schedule["schedule_mode"] = {"last_select_mode": schedule["mode_type"]}
     self._logger.debug(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
@@ -3080,10 +3158,14 @@ async def set_sb2_use_time(  # noqa: C901
         )
         return schedule
     # The applied schedule need to separate plans for AC model and common SB2 plans
-    # The mode_type must always be contained
-    # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
+    # Add required fields to new schedule to be applied via Api
     mode_type = schedule.get("mode_type")
     new_schedule = {"mode_type": mode_type}
+    if isinstance(schedule_mode := schedule.get("schedule_mode"), dict):
+        new_schedule["schedule_mode"] = schedule_mode
+    if "reserved_soc" in schedule:
+        new_schedule["reserved_soc"] = schedule.get("reserved_soc")
+    # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
         new_schedule.update(
             {
@@ -3116,9 +3198,8 @@ async def set_sb2_use_time(  # noqa: C901
     )
     new_price_type = None
     if (
-        mode_type in iter(SolarbankUsageMode)
+        mode_type == SolarbankUsageMode.use_time.value
         and price_type
-        and mode_type == SolarbankUsageMode.use_time.value
         and schedule.get(SolarbankRatePlan.use_time)
         and price_type != SolixPriceTypes.USE_TIME.value
     ):
@@ -3269,7 +3350,7 @@ async def set_pps_use_time(  # noqa: C901
         or tariff_type
         or tariff_price is not None
         or currency
-        or backup_soc
+        or backup_soc is not None
         or delete is not None
     ):
         self._logger.error(

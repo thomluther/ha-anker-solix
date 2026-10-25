@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.update import (
@@ -19,7 +20,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ATTRIBUTION, CREATE_ALL_ENTITIES, DOMAIN, MQTT_OVERLAY
+from .const import (
+    ATTRIBUTION,
+    CREATE_ALL_ENTITIES,
+    DOMAIN,
+    MQTT_OVERLAY,
+    TEST_NUMBERVARIANCE,
+)
 from .coordinator import AnkerSolixDataUpdateCoordinator
 from .entity import (
     AnkerSolixEntityRequiredKeyMixin,
@@ -56,6 +63,9 @@ DEVICE_UPDATES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         device_class=UpdateDeviceClass.FIRMWARE,
         value_fn=lambda d, jk: str(d.get(jk) or "").lstrip("v") or None,
+        attrib_fn=lambda d, _: (
+            {"ota_block_reason": v} if (v := d.get("ota_block_reason")) else {}
+        ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
     ),
 ]
@@ -142,7 +152,9 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
     coordinator: AnkerSolixDataUpdateCoordinator
     entity_description: AnkerSolixUpdateDescription
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset()
+    _unrecorded_attributes = frozenset(
+        {"ota_block_reason"}
+    )
 
     def __init__(
         self,
@@ -160,7 +172,9 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
         self.entity_description = description
         self.entity_type = entity_type
         self._attr_extra_state_attributes = None
-        self._attr_supported_features = UpdateEntityFeature.RELEASE_NOTES
+        self._attr_supported_features = (
+            UpdateEntityFeature.RELEASE_NOTES | UpdateEntityFeature.PROGRESS
+        )
 
         if self.entity_type == AnkerSolixEntityType.DEVICE:
             # get the device data from device context entry of coordinator data
@@ -196,6 +210,16 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
     def native_value(self):
         """Return the native value of the entity."""
         return self._native_value
+
+    @property
+    def in_progress(self) -> bool:
+        """Return whether the firmware is being installed."""
+        return self._attr_in_progress
+
+    @property
+    def update_percentage(self) -> int | None:
+        """Return the install progress."""
+        return self._attr_update_percentage
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -265,8 +289,35 @@ class AnkerSolixUpdate(CoordinatorEntity, UpdateEntity):
                 self._attr_release_summary = (
                     "Components available" if data.get("ota_children") else ""
                 )
+                # update progress attributes
+                if self.coordinator.client.testmode() and TEST_NUMBERVARIANCE:
+                    # simulate progress every second minute in testmode
+                    self._attr_update_percentage = (
+                        int(
+                            min(
+                                100,
+                                (datetime.now().minute % 2)
+                                * datetime.now().second
+                                * 100
+                                / 60,
+                            )
+                        )
+                        or None
+                    )
+                else:
+                    self._attr_update_percentage = (
+                        None if (v := data.get("ota_progress")) is None else int(v)
+                    )
+                # determine if update in progress
+                self._attr_in_progress = data.get("ota_busy") or bool(
+                    self._attr_update_percentage
+                )
+                # update auto update
+                self._attr_auto_update = data.get("auto_upgrade")
         else:
             self._attr_installed_version = None
+            self._attr_update_percentage = None
+            self._attr_in_progress = False
 
         # Mark availability based on value
         self._attr_available = self._attr_installed_version is not None

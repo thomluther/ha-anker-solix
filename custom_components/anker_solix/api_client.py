@@ -86,6 +86,7 @@ API_CATEGORIES: list = [
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
+    ApiCategories.pps_energy,
     ApiCategories.charger_energy,
     ApiCategories.charger_usb_settings,
     ApiCategories.powerpanel_energy,
@@ -105,6 +106,7 @@ DEFAULT_EXCLUDE_CATEGORIES: list = [
     ApiCategories.smartmeter_energy,
     ApiCategories.solar_energy,
     ApiCategories.smartplug_energy,
+    ApiCategories.pps_energy,
     ApiCategories.charger_energy,
     ApiCategories.powerpanel_energy,
     ApiCategories.hes_energy,
@@ -503,8 +505,6 @@ class AnkerSolixApiClient:
                         self._intervalcount = self._deviceintervals
                         self.last_device_refresh = datetime.now().astimezone()
                         self.active_device_refresh = False
-                        # ensure MQTT session status is as required
-                        await self.check_mqtt_session()
                     elif self.startup and not self.deferred_data:
                         self.active_device_refresh = True
                         # Fetch deferred energy skipped from first device refresh
@@ -519,6 +519,8 @@ class AnkerSolixApiClient:
                         self.deferred_data = True
                         self.startup = False
                         self.active_device_refresh = False
+                    # ensure MQTT session status is as required
+                    await self.check_mqtt_session()
                     self.last_site_refresh = datetime.now().astimezone()
                     if not self._testmode:
                         _LOGGER.debug(
@@ -533,7 +535,9 @@ class AnkerSolixApiClient:
                 data = {}
             if not from_cache:
                 # Avoid debug spam for frequent MQTT updates from cache
-                _LOGGER.debug("Coordinator %s data: %s", self.api.apisession.nickname, data)
+                _LOGGER.debug(
+                    "Coordinator %s data: %s", self.api.apisession.nickname, data
+                )
             return data  # noqa: TRY300
         except TimeoutError as exception:
             raise AnkerSolixApiClientCommunicationError(
@@ -776,7 +780,9 @@ class AnkerSolixApiClient:
         """Check mqtt usage and status of session, restart if required."""
         if self._mqtt_usage:
             # restart connection if not connected
-            if not self.api.mqttsession or not self.api.mqttsession.is_connected():
+            if not self.api.mqttsession or (
+                not self._testmode and not self.api.mqttsession.is_connected()
+            ):
                 _LOGGER.info(
                     "Api Coordinator %s is (re-)starting MQTT session",
                     self.api.apisession.nickname,
@@ -788,6 +794,10 @@ class AnkerSolixApiClient:
                         if dev.get("mqtt_supported")
                     ]
                     if self._testmode:
+                        # stop any active file poller task first
+                        if self._mqtt_task:
+                            self._mqtt_task.cancel()
+                            self._mqtt_task = None
                         # start MQTT file poller in file mode
                         # update the folder in the task dictionary for MQTT file polling
                         self._task_dict["folder"] = self.api.testDir()
@@ -811,10 +821,10 @@ class AnkerSolixApiClient:
                             self.api.apisession.nickname,
                         )
                         for dev in mqtt_devs:
-                            self.subscribe_device(dev)
+                            await self.subscribe_device(dev)
                         if not mqtt_devs:
                             _LOGGER.warning(
-                                "Api Coordinator %s did not find eligible devices for MQTT subscription",
+                                "Api Coordinator %s did not find eligible devices for MQTT subscription, you may disable MQTT connection to prevent device subscription attempts",
                                 self.api.apisession.nickname,
                             )
                     # create MQTT device instances
@@ -828,8 +838,8 @@ class AnkerSolixApiClient:
                             self.mqtt_devices[sn] = mdev
                             # Do initial MQTT commands as required per device type
                             # Note: Single status requests or RT triggers should not be done once, since that may cause stale enties if not repeated
-                            if mdev.pn == "A2345":
-                                # trigger A2345 theme request to initialize theme detail settings not returned otherwise
+                            if SolixMqttCommands.theme_request in mdev.controls:
+                                # trigger display theme request to initialize theme detail settings not returned otherwise
                                 await mdev.run_command(
                                     cmd=SolixMqttCommands.theme_request,
                                     toFile=self._testmode,
@@ -846,23 +856,25 @@ class AnkerSolixApiClient:
             # check and redo subscription for existing mqtt devices
             elif not self._testmode:
                 for mdev in self.mqtt_devices.values():
-                    if not mdev.is_subscribed() and not self.subscribe_device(
+                    if not mdev.is_subscribed() and not await self.subscribe_device(
                         mdev.device
                     ):
                         # clear mqtt data cache to avoid orphaned data
                         mdev.mqttdata.clear()
 
-    def subscribe_device(self, deviceDict: dict) -> bool:
+    async def subscribe_device(self, deviceDict: dict) -> bool:
         """Subscribe a device to MQTT messages."""
         if self.api.mqttsession.is_connected():
             topic = f"{self.api.mqttsession.get_topic_prefix(deviceDict=deviceDict)}#"
-            resp = self.api.mqttsession.subscribe(topic)
-            if resp and resp.is_failure:
+            if mqtterror := self.api.mqttsession.subscribe(topic):
                 _LOGGER.warning(
-                    "Api Coordinator %s failed subscription for MQTT topic: %s",
+                    "Api Coordinator %s failed subscription for MQTT topic: %s (%s)",
                     self.api.apisession.nickname,
                     topic,
+                    mqtterror,
                 )
                 return False
+            # Add small delay for subscription
+            await asyncio.sleep(0.1)
             return True
         return False

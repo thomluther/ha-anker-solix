@@ -26,6 +26,7 @@
                 "smartmeter_energy": "Statistiques énergétiques du compteur intelligent",
                 "smartplug": "Prises intelligentes",
                 "smartplug_energy": "Statistiques énergétiques des prises intelligentes",
+                "pps_energy": "Statistiques énergétiques du PPS",
                 "hes": "Systèmes énergétiques domestiques (HES)",
                 "hes_energy": "Statistiques énergétiques du HES",
                 "hes_avg_power": "⌀-puissance du HES",
@@ -439,6 +440,36 @@
                     "off": "Inactif"
                 }
             },
+            "device_problem": {
+                "name": "État de l'appareil",
+                "state": {
+                    "on": "Problème",
+                    "off": "Ok"
+                },
+                "state_attributes": {
+                    "over_temperature": {
+                        "name": "Surchauffe"
+                    },
+                    "usba_undervoltage": {
+                        "name": "USB-A sous-tension"
+                    },
+                    "usba_fault": {
+                        "name": "USB-A défaillance"
+                    },
+                    "usbc_1_fault": {
+                        "name": "USB-C1 défaillance"
+                    },
+                    "usbc_2_fault": {
+                        "name": "USB-C2 défaillance"
+                    },
+                    "usbc_3_fault": {
+                        "name": "USB-C3 défaillance"
+                    },
+                    "usbc_4_fault": {
+                        "name": "USB-C4 défaillance"
+                    }
+                }
+            },
             "protection_status": {
                 "name": "Protection anti-tempête",
                 "state": {
@@ -787,6 +818,13 @@
                     "blinking": "Clignement"
                 }
             },
+            "ac_light_mode": {
+                "name": "AC LED mode",
+                "state": {
+                    "normal": "Normal",
+                    "sleep": "Sommeil"
+                }
+            },
             "display_timeout": {
                 "name": "Délai d'affichage"
             },
@@ -926,6 +964,10 @@
                     "custom-3": "Personnalisé-3",
                     "custom-4": "Personnalisé-4",
                     "custom-5": "Personnalisé-5",
+                    "smart_dynamic": "Smart Dynamic",
+                    "high_power_1": "Mode haute puissance 1",
+                    "high_power_2": "Mode haute puissance 2",
+                    "high_power_3": "Mode haute puissance 3",
                     "unknown": "Inconnu"
                 },
                 "state_attributes": {
@@ -1216,7 +1258,20 @@
                 "name": "Puissance d'entrée CA",
                 "state_attributes": {
                     "ac_input_plug_status": {
-                        "name": "État de la prise"
+                        "name": "État de la prise CA",
+                        "state": {
+                            "disconnected": "Déconnecté",
+                            "connected": "Connecté",
+                            "unknown": "Inconnu"
+                        }
+                    },
+                    "ac_input_status": {
+                        "name": "AC input status",
+                        "state": {
+                            "inactive": "Inactif",
+                            "active": "Actif",
+                            "unknown": "Inconnu"
+                        }
                     }
                 }
             },
@@ -1447,6 +1502,20 @@
                     }
                 }
             },
+            "ac_charging_status": {
+                "name": "État de charge CA",
+                "state": {
+                    "inactive": "Inactif",
+                    "charging": "Recharge",
+                    "discharging": "Décharge",
+                    "unknown": "Inconnu"
+                },
+                "state_attributes": {
+                    "status": {
+                        "name": "Code d'état"
+                    }
+                }
+            },
             "plant_status": {
                 "name": "État de la centrale électrique",
                 "state": {
@@ -1492,11 +1561,14 @@
                     "status": {
                         "name": "Code d'état"
                     },
-                    "auto_backup_start": {
-                        "name": "Démarrage automatique"
+                    "backup_start": {
+                        "name": "Démarrage de recharge de secours"
                     },
-                    "auto_backup_end": {
-                        "name": "Fin automatique"
+                    "backup_end": {
+                        "name": "Fin de recharge de secours"
+                    },
+                    "backup_charge_time": {
+                        "name": "Temps de recharge de secours"
                     }
                 }
             },
@@ -2149,6 +2221,72 @@
                     }
                 }
             },
+            "daily_import_energy": {
+                "name": "Énergie réseau journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_export_energy": {
+                "name": "Exportation journalière du réseau",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_ac_consumed_energy": {
+                "name": "Énergie CA consommée journalièrement",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_dc_consumed_energy": {
+                "name": "Énergie CC consommée journalièrement",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_ac_charge_energy": {
+                "name": "Énergie de charge CA journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
+            "daily_dc_charge_energy": {
+                "name": "Énergie de charge CC journalière",
+                "state_attributes": {
+                    "date": {
+                        "name": "Date"
+                    },
+                    "last_period": {
+                        "name": "Dernière période"
+                    }
+                }
+            },
             "daily_solar_share": {
                 "name": "Part journalière de solaire",
                 "state_attributes": {
@@ -2269,6 +2407,25 @@
             },
             "dc_12v_x_power": {
                 "name": "CC 12V port {id} puissance",
+                "state_attributes": {
+                    "port_status": {
+                        "name": "État du port",
+                        "state": {
+                            "inactive": "Inactif",
+                            "charging": "Recharge",
+                            "discharging": "Décharge"
+                        }
+                    },
+                    "voltage": {
+                        "name": "Volt"
+                    },
+                    "current": {
+                        "name": "Ampère"
+                    }
+                }
+            },
+            "ac_x_power": {
+                "name": "CA {id} puissance",
                 "state_attributes": {
                     "port_status": {
                         "name": "État du port",
@@ -2623,11 +2780,8 @@
             "usba_x_switch": {
                 "name": "USB-{id} port"
             },
-            "ac_1_switch": {
-                "name": "Prise 1"
-            },
-            "ac_2_switch": {
-                "name": "Prise 2"
+            "ac_x_switch": {
+                "name": "Prise {id}"
             },
             "plug_lock_switch": {
                 "name": "Verrou de prise"
@@ -2697,6 +2851,15 @@
             "usb_x_end_switch": {
                 "name": "USB-{id} heure de fin"
             },
+            "ac_x_timer_switch": {
+                "name": "CA {id} minuterie"
+            },
+            "ac_x_start_switch": {
+                "name": "CA {id} heure de début"
+            },
+            "ac_x_end_switch": {
+                "name": "CA {id} heure de fin"
+            },
             "silent_mode_switch": {
                 "name": "Mode silencieux"
             }
@@ -2707,6 +2870,12 @@
             },
             "clock_display_weekdays": {
                 "name": "Affichage de l'heure a jours de la semaine"
+            },
+            "ac_x_start_weekdays": {
+                "name": "CA {id} début a jours de la semaine"
+            },
+            "ac_x_end_weekdays": {
+                "name": "CA {id} fin a jours de la semaine"
             },
             "usb_x_start_weekdays": {
                 "name": "USB-{id} début a jours de la semaine"
@@ -2746,6 +2915,15 @@
             "ac_output_timer_seconds": {
                 "name": "Minuterie de sortie CA"
             },
+            "ac_x_timer_seconds": {
+                "name": "CA {id} minuterie"
+            },
+            "ac_x_start_time": {
+                "name": "CA {id} heure de début"
+            },
+            "ac_x_end_time": {
+                "name": "CA {id} heure de fin"
+            },
             "usb_x_timer_seconds": {
                 "name": "USB-{id} minuterie"
             },
@@ -2767,7 +2945,12 @@
         },
         "update":{
             "sw_version": {
-                "name": "Firmware"
+                "name": "Firmware",
+                "state_attributes": {
+                    "ota_block_reason": {
+                        "name": "Motif du blocage OTA"
+                    }
+                }
             }
         }
     },

@@ -668,6 +668,7 @@ async def async_check_and_remove_devices(
             ApiCategories.smartmeter_energy,
             ApiCategories.smartplug_energy,
             ApiCategories.solar_energy,
+            ApiCategories.pps_energy,
             ApiCategories.powerpanel_energy,
             ApiCategories.hes_energy,
         } & excluded:
@@ -695,6 +696,11 @@ async def async_check_and_remove_devices(
             ApiCategories.charger_usb_settings,
         } & excluded:
             excluded = excluded | {SolixDeviceType.CHARGER.value}
+        # Subcategories for PPS only
+        if {
+            ApiCategories.pps_energy,
+        } & excluded:
+            excluded = excluded | {SolixDeviceType.PPS.value}
         # Subcategories for Power Panels only
         if {
             ApiCategories.powerpanel_avg_power,

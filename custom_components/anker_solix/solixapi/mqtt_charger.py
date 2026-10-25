@@ -36,23 +36,29 @@ FEATURES = {
     SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
     SolixMqttCommands.temp_unit_switch: MODELS,
+    SolixMqttCommands.ac_1_port_switch: MODELS,
+    SolixMqttCommands.ac_2_port_switch: MODELS,
     SolixMqttCommands.usbc_1_port_switch: MODELS,
     SolixMqttCommands.usbc_2_port_switch: MODELS,
     SolixMqttCommands.usbc_3_port_switch: MODELS,
     SolixMqttCommands.usbc_4_port_switch: MODELS,
     SolixMqttCommands.usba_port_switch: MODELS,
-    SolixMqttCommands.ac_1_port_switch: MODELS,
-    SolixMqttCommands.ac_2_port_switch: MODELS,
+    SolixMqttCommands.ac_1_port_timer: MODELS,
+    SolixMqttCommands.ac_2_port_timer: MODELS,
     SolixMqttCommands.usbc_1_port_timer: MODELS,
     SolixMqttCommands.usbc_2_port_timer: MODELS,
     SolixMqttCommands.usbc_3_port_timer: MODELS,
     SolixMqttCommands.usbc_4_port_timer: MODELS,
     SolixMqttCommands.usba_port_timer: MODELS,
+    SolixMqttCommands.ac_1_start_time: MODELS,
+    SolixMqttCommands.ac_2_start_time: MODELS,
     SolixMqttCommands.usbc_1_start_time: MODELS,
     SolixMqttCommands.usbc_2_start_time: MODELS,
     SolixMqttCommands.usbc_3_start_time: MODELS,
     SolixMqttCommands.usbc_4_start_time: MODELS,
     SolixMqttCommands.usba_start_time: MODELS,
+    SolixMqttCommands.ac_1_end_time: MODELS,
+    SolixMqttCommands.ac_2_end_time: MODELS,
     SolixMqttCommands.usbc_1_end_time: MODELS,
     SolixMqttCommands.usbc_2_end_time: MODELS,
     SolixMqttCommands.usbc_3_end_time: MODELS,
@@ -73,6 +79,7 @@ FEATURES = {
     SolixMqttCommands.display_brightness: MODELS,
     SolixMqttCommands.light_brightness: MODELS,
     SolixMqttCommands.light_off_schedule: MODELS,
+    SolixMqttCommands.ac_light_mode_select: MODELS,
     SolixMqttCommands.smart_touch_mode_select: MODELS,
     SolixMqttCommands.swipe_up_mode_select: MODELS,
     SolixMqttCommands.swipe_down_mode_select: MODELS,
@@ -83,20 +90,23 @@ FEATURES = {
     SolixMqttCommands.charger_custom_usage_mode: MODELS,
     SolixMqttCommands.charger_mode_select: MODELS,
     SolixMqttCommands.theme_request: MODELS,
-    SolixMqttCommands.charger_theme: MODELS,
-    SolixMqttCommands.charger_theme_custom: MODELS,
+    SolixMqttCommands.display_theme: MODELS,
+    SolixMqttCommands.display_theme_custom: MODELS,
     SolixMqttCommands.port_priority: MODELS,
+    SolixMqttCommands.display_mode_select: MODELS,
     SolixMqttCommands.display_timeout_mode_select: MODELS,
     SolixMqttCommands.clock_mode_select: MODELS,
     SolixMqttCommands.clock_display_schedule: MODELS,
     SolixMqttCommands.clock_holiday_switch: MODELS,
+    SolixMqttCommands.clock_time_switch: MODELS,
     SolixMqttCommands.knob_mode_select: MODELS,
     SolixMqttCommands.car_battery_type: MODELS,
     SolixMqttCommands.battery_charge_limits: MODELS,
     SolixMqttCommands.reverse_charge_limits: MODELS,
     SolixMqttCommands.device_switch: MODELS,
     SolixMqttCommands.device_timeout_minutes: MODELS,
-    SolixMqttCommands.tbd_switch: MODELS,
+    SolixMqttCommands.compatibility_switch: MODELS, # NOTE: Has dependencies to other controls, should not be used alone
+    SolixMqttCommands.device_id_switch: MODELS, # NOTE: Has dependencies to other controls, should not be used alone
 }
 
 
@@ -438,9 +448,9 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 json.dumps(theme, indent=2 if len(json.dumps(theme)) < 200 else None),
             )
             cmd1 = (
-                SolixMqttCommands.charger_theme_custom
+                SolixMqttCommands.display_theme_custom
                 if category.lower() == "custom"
-                else SolixMqttCommands.charger_theme
+                else SolixMqttCommands.display_theme
             )
             # Build parameter map
             parm_map = {

@@ -195,9 +195,9 @@ DEVICE_TIMES = [
     *[
         AnkerSolixTimeDescription(
             key=f"{idx}_timer_seconds",
-            translation_key="usb_x_timer_seconds",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_timer_seconds",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_timer_seconds",
             value_fn=lambda d, jk: (
@@ -233,15 +233,17 @@ DEVICE_TIMES = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     # repeated element
     *[
         AnkerSolixTimeDescription(
             key=f"{idx}_start_time",
-            translation_key="usb_x_start_time",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_start_time",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_start_hour",
             entity_category=EntityCategory.CONFIG,
@@ -264,15 +266,17 @@ DEVICE_TIMES = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     # repeated element
     *[
         AnkerSolixTimeDescription(
             key=f"{idx}_end_time",
-            translation_key="usb_x_end_time",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_end_time",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_end_hour",
             entity_category=EntityCategory.CONFIG,
@@ -295,6 +299,8 @@ DEVICE_TIMES = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     AnkerSolixTimeDescription(
@@ -600,7 +606,7 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
                         },
                     )
                 elif self._attribute_name.startswith(
-                    "usb"
+                    ("usb", "ac_")
                 ) and self._attribute_name.endswith("_time"):
                     await self._async_mqtt_time(
                         mdev=mdev,

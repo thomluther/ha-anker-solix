@@ -13,6 +13,7 @@ from .apitypes import (
     ApiCategories,
     SolarbankStatus,
     SolarbankUsageMode,
+    SolixDefaults,
     SolixDeviceType,
     SolixParmType,
     SolixPriceProvider,
@@ -219,12 +220,11 @@ async def poll_sites(  # noqa: C901
                     oldstamp = (mysite.get("solarbank_info") or {}).get(
                         "updated_time"
                     ) or ""
-                    timestamp = datetime.now().astimezone().replace(year=1970)
+                    timestamp = datetime.now().replace(year=1970)
                     fmt = "%Y-%m-%d %H:%M:%S"
                     with contextlib.suppress(ValueError):
-                        timestamp = datetime.strptime(
-                            sb_info.get("updated_time"), fmt
-                        ).astimezone()
+                        # .astimezone() may cause Windows OS error for 0 timestamps
+                        timestamp = datetime.strptime(sb_info.get("updated_time"), fmt)
                     if timestamp.year == 1970:
                         # replace the field in the new scene referenced sb info
                         sb_info["updated_time"] = (
@@ -233,6 +233,7 @@ async def poll_sites(  # noqa: C901
                             else oldstamp
                         )
                     else:
+                        timestamp = timestamp.astimezone()
                         # valid timestamp received from solarbank, calculate min offset to energy data in cloud
                         offset: timedelta = timedelta(
                             seconds=mysite.get("energy_offset_seconds") or 0
@@ -846,24 +847,35 @@ async def poll_sites(  # noqa: C901
     ]:
         await api.get_device_pv_status(devices=inverters, fromFile=fromFile)
 
-    # update disaster status if supported
-    if api.powerpanelApi:
-        await api.powerpanelApi.update_disaster_status(
-            fromFile=fromFile, exclude=exclude
-        )
+    # update disaster status for all sites and stand alone devices if supported
+    await api.update_disaster_status(devices=True, fromFile=fromFile, exclude=exclude)
 
-    # as time progressed, update actual pps_use_time presets from a cached PPS device if available
-    for pps in [
-        dev
+    # updates to standalone devices
+    for sn, device in {
+        sn: dev
         for sn, dev in api.devices.items()
-        if dev.get("pps_use_time") is not None and {dev.get("type")} - exclude
-    ]:
-        api._update_dev(
-            {
-                "device_sn": pps.get("device_sn"),
-                "pps_use_time": pps.get("pps_use_time"),
-            }
-        )
+        if not dev.get("site_id") and {dev.get("type")} - exclude
+    }.items():
+        # Update energy offset for supported devices
+        if device.get("device_pn") in SolixDefaults.DEVICE_ENERGY:
+            # Add energy offset to device cache
+            device.update(
+                await api.get_device_energy_offset(deviceSn=sn, fromFile=fromFile)
+            )
+        # as time progressed, update actual pps_use_time presets from a cached PPS device if available
+        if device.get("pps_use_time") is not None:
+            api._update_dev(
+                {
+                    "device_sn": sn,
+                    "pps_use_time": device.get("pps_use_time"),
+                }
+            )
+        # as time progressed, update actual mqtt schedule presets from a cached PPS device if available
+        if any(
+            device.get("mqtt_data", {}).get(key) is not None
+            for key in ["custom_mode_schedule", "ac_output_schedule"]
+        ):
+            api.notify_device(deviceSn=sn)
 
     # update account dictionary with Api metrics
     api._update_account(
@@ -1029,6 +1041,17 @@ async def poll_site_details(
                             )
                         },
                     )
+            # fetch disaster status
+            # Get disaster support once for site
+            if "disaster_support" not in site.get("site_details", {}):
+                await api.get_disaster_support(identifier=site_id, fromFile=fromFile)
+            # Fetch disaster settings if supported
+            if site.get("site_details").get("disaster_support"):
+                await api.get_device_disaster(identifier=site_id, fromFile=fromFile)
+                # fetch first status if not done yet by update sites
+                if not site.get("site_details").get("device_disaster_status"):
+                    await api.update_disaster_status(fromFile=fromFile, exclude=exclude)
+
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
     return api.sites
@@ -1093,18 +1116,6 @@ async def poll_device_details(  # noqa: C901
             await api.get_vehicle_details(
                 vehicleId=vehicle.get("vehicle_id"), fromFile=fromFile
             )
-
-    # initialize power panel Api for standalone PPS that support storm guard auto disaster
-    if not api.powerpanelApi and (
-        pps := {
-            k: v
-            for k, v in api.devices.items()
-            if not v.get("site_id") and v.get("type") == SolixDeviceType.PPS.value
-        }
-    ):
-        api.powerpanelApi = AnkerSolixPowerpanelApi(apisession=api.apisession)
-        api.powerpanelApi.account = api.account
-        api.powerpanelApi.devices = pps
 
     # Get Power Panel device specific updates and merge them
     if api.powerpanelApi:
@@ -1297,6 +1308,27 @@ async def poll_device_details(  # noqa: C901
                     await api.get_power_cutoff(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
+            elif dev_type in ({SolixDeviceType.SOLARBANK_PPS.value} - exclude):
+                # Fetch Solarbank PPS device parameters once per site
+                if (
+                    f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}"
+                    not in queried_sites_parm
+                ):
+                    # add queried site ID and parm to skip same queries for other parallel devices in site
+                    queried_sites_parm.add(
+                        f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}"
+                    )
+                    # Fetch schedule once and add to each device in site
+                    api._logger.debug(
+                        "Getting api %s schedule details for device",
+                        api.apisession.nickname,
+                    )
+                    await api.get_device_parm(
+                        siteId=site_id,
+                        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                        deviceSn=sn,
+                        fromFile=fromFile,
+                    )
 
         # Fetch device type specific details, if device type not excluded
         if dev_type in ({SolixDeviceType.EV_CHARGER.value} - exclude):
@@ -1304,23 +1336,51 @@ async def poll_device_details(  # noqa: C901
             await api.get_device_charge_order_stats(deviceSn=sn, fromFile=fromFile)
 
         elif dev_type in ({SolixDeviceType.PPS.value} - exclude):
-            # Fetch PPS TOU plan (pps_use_time) attribute
-            # Only owned (admin) devices can query device attributes, shared devices have no permission (Anker Could Bug?)
-            if device.get("is_admin"):
-                await api.get_device_attributes(
-                    deviceSn=sn,
-                    attributes=["pps_use_time", "ip_region", "currency"],
-                    fromFile=fromFile,
-                )
+            # fetch info for standalone devices, those are owned or shared devices
+            if not site_id:
+                # Get auto disaster support once for device
+                if "disaster_support" not in device:
+                    support = await api.get_disaster_support(
+                        identifier=sn, id_type=1, fromFile=fromFile
+                    )
+                    # Fetch initial disaster status if supported
+                    if support.get("support_auto_disaster"):
+                        await api.get_device_disaster_status(
+                            identifier=sn, id_type=1, fromFile=fromFile
+                        )
+                else:
+                    support = device.get("disaster_support", {})
+                # Fetch disaster settings if supported
+                if support.get("support_auto_disaster"):
+                    await api.get_device_disaster(
+                        identifier=sn, id_type=1, fromFile=fromFile
+                    )
+                # Fetch PPS TOU plan (pps_use_time) attribute
+                # Only owned (admin) devices can query device attributes, shared devices have no permission (Anker Could Bug?)
+                if device.get("is_admin"):
+                    await api.get_device_attributes(
+                        deviceSn=sn,
+                        attributes=["pps_use_time", "ip_region", "currency"],
+                        fromFile=fromFile,
+                    )
             # fetch account currency list once for TOU price unit options
             if "currency_list" not in api.account and (
                 {ApiCategories.site_price} - exclude
             ):
                 await api.get_currency_list(fromFile=fromFile)
+            # fetch energy offset initially
+            if (
+                device.get("device_pn") in SolixDefaults.DEVICE_ENERGY
+                and device.get("energy_offset_tz") is None
+            ):
+                # Add energy offset to device cache
+                device.update(
+                    await api.get_device_energy_offset(deviceSn=sn, fromFile=fromFile)
+                )
 
         elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
             # Fetch mini charger datails for supported models
-            if (pn := device.get("device_pn")) == "A2345":
+            if (pn := device.get("device_pn")) in ["A2345", "A91B2"]:
                 # Fetch custom screensavers for device and flatten it for merge with stock screensavers
                 await api.get_charger_manual_screensavers(
                     deviceSn=sn, fromFile=fromFile
@@ -1388,14 +1448,6 @@ async def poll_device_details(  # noqa: C901
             # Fetch other charger datails for supported models
             else:
                 pass
-
-        # # Merge additional powerpanel data
-        # if api.powerpanelApi:
-        #     device.update(api.powerpanelApi.devices.get(sn) or {})
-
-        # # Merge additional hes data
-        # if api.hesApi:
-        #     device.update(api.hesApi.devices.get(sn) or {})
 
         # update entry in devices and notify registered callbacks
         api.devices.update({sn: device})
@@ -1787,6 +1839,46 @@ async def poll_device_energy(  # noqa: C901
                     site_id,
                 )
                 await api.refresh_pv_forecast(siteId=site_id, fromFile=fromFile)
+
+    # Daily device energy for standalone devices supporting the query
+    for sn, device in {
+        sn: dev
+        for sn, dev in api.devices.items()
+        if not dev.get("site_id")
+        and not ({dev.get("type"), f"{dev.get('type')}_energy"} & exclude)
+        and dev.get("device_pn") in SolixDefaults.DEVICE_ENERGY
+    }.items():
+        api._logger.debug(
+            "Getting api %s energy details for device %s", api.apisession.nickname, sn
+        )
+        # obtain previous energy details to check if yesterday must be queried as well
+        energy = device.get("energy_details") or {}
+        # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
+        # Cloud server energy stat updates may be delayed by 5 minutes, depending when they receive device energy messages
+        # min Offset to last energy data, reduce query time by 5 minutes to ensure last record is made
+        energy_offset = (device.get("energy_offset_seconds") or 0) - 300
+        time: datetime = datetime.now().astimezone() + timedelta(seconds=energy_offset)
+        today = time.strftime("%Y-%m-%d")
+        yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
+        # Fetch energy from today or both days
+        data: dict = {}
+        both = bool(yesterday != (energy.get("last_period") or {}).get("date"))
+        data.update(
+            await api.device_energy_daily(
+                deviceSn=sn,
+                startDay=datetime.fromisoformat(
+                    yesterday if both else today
+                ).astimezone(),
+                numDays=2 if both else 1,
+                fromFile=fromFile,
+            )
+        )
+        # Note: File dates are corrected already by the daily query if today is in the query range
+        energy["today"] = data.get(today) or {}
+        if data.get(yesterday):
+            energy["last_period"] = data.get(yesterday) or {}
+        # save energy stats with sites dictionary
+        device["energy_details"] = energy
 
     # update account dictionary with number of requests
     api._update_account(

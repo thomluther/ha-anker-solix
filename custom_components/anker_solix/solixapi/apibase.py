@@ -12,9 +12,11 @@ from typing import Any
 from aiohttp import ClientError, ClientSession
 
 from .apitypes import (
+    API_CHARGING_ENDPOINTS,
     API_ENDPOINTS,
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
+    EMBEDDED_THEMES,
     SolixDefaults,
     SolixDeviceCapacity,
     SolixDeviceCategory,
@@ -23,6 +25,7 @@ from .apitypes import (
     SolixPortId,
     SolixPriceProvider,
     SolixPriceTypes,
+    SolixStationPortId,
 )
 from .errors import AnkerSolixError
 from .helpers import get_enum_name, get_solix_product_code
@@ -531,7 +534,7 @@ class AnkerSolixBaseApi:
         This will consolidate various device related mqtt key values under a common set of device keys.
         """
         updated = False
-        dyn_desc = False
+        notify = False  # flag whether mqtt device should be notified
         if self.mqttsession:
             if values and (device := self.devices.get(deviceSn or "")):
                 # update specific device from values
@@ -757,6 +760,18 @@ class AnkerSolixBaseApi:
                                 device_mqtt[f"device_{idx}_pv_power"] = (
                                     f"{pv_power:.0f}"
                                 )
+                            # calculate device PV total if not included in particular MQTT message
+                            elif (
+                                key == "pv_2_power"
+                                and "photovoltaic_power" not in check_values
+                            ):
+                                # accumulate all PV channels
+                                pv_power = 0
+                                for i in range(1, 5):
+                                    pv_power += float(
+                                        check_values.get(f"pv_{i}_power") or 0
+                                    )
+                                device_mqtt["photovoltaic_power"] = f"{pv_power:.0f}"
                         elif (
                             key
                             in [
@@ -811,7 +826,11 @@ class AnkerSolixBaseApi:
                                     "dc_12v_1",
                                     "dc_12v_2",
                                 ]:
-                                    power += float(check_values.get(f"{i}_power") or 0)
+                                    power += (
+                                        float(check_values.get(f"{i}_power") or 0)
+                                        if check_values.get(f"{i}_status") != 2
+                                        else 0
+                                    )
                                 device_mqtt["dc_output_power_total"] = (
                                     f"{float(power):.3f}"
                                 )
@@ -828,12 +847,11 @@ class AnkerSolixBaseApi:
                             )  # HA missing, how to merge to avoid decrease?
                         ):
                             # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
-                            # 0 value should be ignored for aggregated, since that may reset energy counters if 0 values read on startup
                             if (
                                 str(key).startswith("charging_")
                                 or str(key).endswith("_today")
                                 # remaining aggregated energies must increase to be updated in cache
-                                or 0 < float(value) > float(device_mqtt.get(key, 0))
+                                or 0 <= float(value) > float(device_mqtt.get(key, -1))
                             ):
                                 device_mqtt[key] = f"{float(value):.3f}"
                                 if key in [
@@ -850,6 +868,7 @@ class AnkerSolixBaseApi:
                                 # keys with value being saved unchanged
                                 "topics",
                                 "error_code",
+                                "over_temperature",
                                 "dc_12v_auto_on",  # missing MQTT control command
                                 "grid_export_disabled",
                                 "temp_unit_fahrenheit",
@@ -861,11 +880,15 @@ class AnkerSolixBaseApi:
                                 "car_battery_voltage_type",
                                 "xt60i_cable",
                                 "theme_id",
+                                "theme_type",
                                 "custom_profile_number",
                                 "circuit_setup",
                                 "charging_time",
                                 "mtu_size",
                                 "active_plan",
+                                "ota_allowed",
+                                "ota_block_reason",
+                                "ota_busy",
                             ]
                             or (
                                 str(key).endswith(
@@ -888,12 +911,23 @@ class AnkerSolixBaseApi:
                                         "_protocols",
                                         "_settings",
                                         "_data",
+                                        "_progress",
+                                        "_fault",
+                                        "_undervoltage",
                                         # "?",  # Add for decoder testing in monitor
                                     )
                                 )
                             )
                             or str(key).startswith("disaster_protection_")
                         ) and value is not None:
+                            # check whether device should be notified on schedule changes to extract actual presets
+                            if key in [
+                                "usage_mode",
+                                "tou_mode_schedule",
+                                "custom_mode_schedule",
+                                "ac_output_schedule",
+                            ] and str(value) != str(device_mqtt.get(key)):
+                                notify = True
                             device_mqtt[key] = value
                             # determine EV charger model 3 phase capability
                             if key == "charging_duration_seconds":
@@ -935,6 +969,9 @@ class AnkerSolixBaseApi:
                                     device_mqtt[f"{idx}_priority"] = 1 + int(
                                         bool(1 & (value >> bit))
                                     )
+                            elif key == "ota_progress":
+                                # cap any progress numbers 0-100%
+                                device_mqtt["ota_progress"] = min(100, max(0, value))
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
@@ -991,7 +1028,10 @@ class AnkerSolixBaseApi:
                                     is not None
                                     and (
                                         port_name := get_enum_name(
-                                            SolixPortId, str(value)
+                                            SolixStationPortId
+                                            if model in SolixStationPortId
+                                            else SolixPortId,
+                                            str(value),
                                         )
                                     )
                                     and (switch_name := f"{port_name}_switch")
@@ -1006,7 +1046,10 @@ class AnkerSolixBaseApi:
                                     and (
                                         (
                                             port_name := get_enum_name(
-                                                SolixPortId, str(value)
+                                                SolixStationPortId
+                                                if model in SolixStationPortId
+                                                else SolixPortId,
+                                                str(value),
                                             )
                                         )
                                         and (switch_name := f"{port_name}_timer_switch")
@@ -1349,17 +1392,35 @@ class AnkerSolixBaseApi:
                                     self.notify_device(deviceSn=pps_sn)
                                 # update device Api cache for capacity calculations
                                 self.powerpanelApi._update_dev(pps_update)  # noqa: SLF001
-                    # trigger device cache update for display theme
-                    if "theme_id" in check_values and str(
-                        check_values.get("theme_id")
-                    ) != device.get("display_theme", {}).get("id"):
-                        # update only if cached value different
-                        self._update_dev(
-                            {
-                                "device_sn": sn,
-                                "theme_id": check_values.get("theme_id"),
-                            }
-                        )
+                    # trigger creation of embedded themes structure once
+                    if "theme_type" in check_values and "embedded_themes" not in device:
+                        device["embedded_themes"] = EMBEDDED_THEMES.get(
+                            model
+                        ) or EMBEDDED_THEMES.get("default")
+                    # trigger device cache update for display theme id change
+                    if "theme_id" in check_values:
+                        theme_type = int(check_values.get("theme_type", -1))
+                        # update web theme only if cached value different
+                        if theme_type > 2 and str(
+                            check_values.get("theme_id")
+                        ) != device.get("display_theme", {}).get("id"):
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "theme_id": check_values.get("theme_id"),
+                                }
+                            )
+                        # update embedded theme only if cached value different
+                        # TODO: Update check to make cache update also upon embedded type changes on supported
+                        elif 0 <= theme_type <= 2 and theme_type != device.get(
+                            "display_theme", {}
+                        ).get("type", theme_type):
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "theme_type": theme_type,
+                                }
+                            )
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed
@@ -1372,17 +1433,10 @@ class AnkerSolixBaseApi:
                             device_mqtt.get(key)
                         ) != str(item.get("last_value", "")):
                             # flag to trigger update if dynamic description value changed
-                            dyn_desc = True
+                            notify = True
                             break
                     # callback registered MQTT device if required
-                    if (
-                        oldsize == 0
-                        or dyn_desc
-                        or any(
-                            key in check_values
-                            for key in ["tou_mode_schedule", "custom_mode_schedule"]
-                        )
-                    ):
+                    if oldsize == 0 or notify:
                         self.notify_device(deviceSn=sn)
             # update MQTT statistic in account cache, convert datetime to json compatible format
             stats = self.mqttsession.mqtt_stats.asdict()
@@ -1628,6 +1682,61 @@ class AnkerSolixBaseApi:
             )
         return resp.get("data") or {}
 
+    async def get_v2_scene_info(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get V2 scene info. It reflects mostly data visible in the Anker App home page for the site. It works for Home Backup systems and also for shared accounts.
+
+        Example data for provided site_id:
+        {"solarbank_info": {"solarbank_list": [],"total_charge_power": "","power_unit": "","charging_status": "","total_bat_soc": "","total_photovoltaic_power": "",
+            "total_output_power": "","total_input_power": "","total_discharge_power": "","is_display_data": false,"to_home_load": "","solar_power_1": "","solar_power_2": "",
+            "solar_name_1": "","solar_name_2": "","third_party_pv_connected": false,"third_party_pv_power": "","grid_to_battery_power": "","pei_heating_power": "",
+            "backup_info": {"start_time": 0,  "end_time": 0,  "full_time": 0},
+            "third_party_diesel_power": "","total_operating_power": "","feeder_0w": 0,"grid_port_input": "","grid_port_output": ""},
+        "grid_info": {"grid_list": [],"photovoltaic_to_grid_power": "0","grid_to_home_power": "8150","has_history_data": false,
+            "meter_phase": 0,"meter_l1_power": 0,"meter_l2_power": 0,"is_show_grid": false},
+        "diesel_info": {"diesel_list": [],"total_diesel_power": "0","third_party_diesel_power": "0","third_party_diesel_plugged": true,"third_party_diesel_mode": 0,
+            "third_party_diesel_connect_type": 0,"third_party_diesel_type": 0,"third_party_diesel_connected": true,"total_diesel_remain_time": 0,"ac_diesel_power": "","dc_diesel_power": ""},
+        "home_load_power": "1240","ems_mode": 5,"ems_mode_power": 0,"custom_charging_type": 0,"is_downgrade": false,"error_code": 0,
+        "function_switch": {"ct_available": true,"diesel_ac_output": false,"diesel_connected": false,"exceed_power": false,"grid_available": false,"grid_online": true,
+            "heating": false,"is_downgrade": false,"is_greater_30v": true,"low_light_detection": false,"off_grid": false,"physical_grid": true,"soc_calibration": false,
+            "sub_package_version_mismatch": false,"system_forced_charge": false,"temperature_unit": true,"third_party_diesel_connected": true,"third_party_pv_connected": false},
+        "site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_site_type": 15,"init_status": 1,"self_test_status": 3,"use_time_type": 3,"energy_flow_bits": 8192,
+        "branch_info": {"ats_load_power": "","other_load_power": "","branch_list": [],"branch_conf_soc": "0"},
+        "off_grid_info": {"off_grid_start_time": 0,"off_grid_available_time": 0,"outage_date": 0,"outage_duration": 0,"back_up_duration_1": 0,"back_up_duration_2": 0},
+        "charging_pile_info": {"charging_pile_list": null},
+        "smart_plug_info": {"smart_plug_list": [],"total_power": ""},
+        "other_load_power": "","heat_pump_connected": false,"user_ems_mode": 0,
+        "aiems_profit": {"unit": "","aiems_profit_total": "","percentage": "","show_percentage": false,"aiems_self_use_diff": ""},
+        "style_id": 0,"switch_0w": 0,
+        "home_backup_system_info": {"solarbank_list": [
+            {"device_pn": "A17E1","device_sn": "6A44D4B7135050595","device_name": "496F9769FBB03B8","device_img": "","bat_soc": "90","bind_site_status": "","bat_charge_power": "7560",
+                "bat_discharge_power": "0","power_unit": "W","charging_status": "","status": "1","wireless_type": "1","photovoltaic_power": "650","output_power": "0",
+                "create_time": 1773268480,"sub_package_num": 0,"solar_power_1": "","solar_power_2": "","solar_name_1": "","solar_name_2": "","pei_heating_power": "","function_switch": null,
+                "pv_list": [{"pv_power": 0,"pv_name": "PV1"},{"pv_power": 0,"pv_name": "PV2"}],
+                "load_port_power": "","load_port_name": "","load_port_switch": 0,"load_port_auto": 0,"load_port_mode": 0,"load_port_status": 0,"bat_temperature": 0,
+                "bms_list": null,"self_test_status": 0,"phase": 0,"max_battery_pack_num": 5,"install_method": 0,"enwg_status": 0,"rssi": 0,
+                "ac_output_power": "","dc_load_power": "","ac_output_status": 0,"used_sub_package_num": 0}],
+            "total_charge_power": "7560","power_unit": "W","charging_status": "","total_bat_soc": "90","total_photovoltaic_power": "650","total_output_power": "0",
+            "total_input_power": "","total_discharge_power": "0","is_display_data": false,"to_home_load": "0","solar_power_1": "0","solar_power_2": "0","solar_name_1": "","solar_name_2": "",
+            "third_party_pv_connected": false,"third_party_pv_power": "0","grid_to_battery_power": "0","pei_heating_power": "0",
+            "backup_info": {"start_time": 0,"end_time": 0,"full_time": 0},
+            "third_party_diesel_power": "","total_operating_power": "7560","feeder_0w": 0,"grid_port_input": "","grid_port_output": ""},
+        "is_site_created_by_installer": false,"is_show_pv": false,"price_level": 0,"pps_info": null,"meter_power": 0,
+        "hardware_info": {"hardware_list": []},
+        "reason_code": 0,"ct2_self_test_status": 0,"self_test_fault_bits": 0,"grid_ov_auto_reduce_capability": 0}
+        """
+        siteId = str(siteId) or ""
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['v2_scene_info']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["v2_scene_info"], json=data
+            )
+        return resp.get("data") or {}
+
     async def get_bind_devices(self, fromFile: bool = False) -> dict:
         """Get the bind device information, which will list all devices the account has admin rights for. It also contains firmware level of devices.
 
@@ -1651,9 +1760,17 @@ class AnkerSolixBaseApi:
                     {"products": await self.get_products(fromFile=fromFile)}
                 )
             # Bind devices also list shared devices, device admin cannot longer be assumed per default and must be determined
-            if sn := self._update_dev(device.copy()):
+            # Mark device as passive MQTT device if wifi not in bound protocols
+            if sn := self._update_dev(
+                device.copy()
+                | (
+                    {}
+                    if "wifi" in (device.get("relate_type") or [])
+                    else {"is_passive": True}
+                )
+            ):
                 active_devices.add(sn)
-        # avoid removal of passive devices from active sites, since they are not listed in bind_devices
+        # avoid removal of passive devices from active sites, since they may not be listed in bind_devices
         for sn, device in self.devices.items():
             if device.get("is_passive") and (device.get("site_id") or "") in self.sites:
                 active_devices.add(sn)
@@ -2128,7 +2245,7 @@ class AnkerSolixBaseApi:
                 "post", API_ENDPOINTS["get_currency_list"]
             )
         # cache the currency list in the account
-        if (data := resp.get("data") or {}):
+        if data := resp.get("data") or {}:
             self._update_account(
                 {
                     "currency_list": data.get("currency_list") or [],
@@ -2220,6 +2337,8 @@ class AnkerSolixBaseApi:
         }}
         Enhanced base data with sell price in 2026
         {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"sell_price": 0,"site_co2": 0,"site_price_unit": "\u20ac"}
+
+        NOTE: When price_type is "use_time", price, sell_price and decimals used for fixed price in the payload are ignored
         """
         siteId = str(siteId) or ""
         decimals = int(decimals) if isinstance(decimals, int | float) else None
@@ -2320,7 +2439,7 @@ class AnkerSolixBaseApi:
             )
             and provider.area
             # #619: Limit detail queries to Nordpool only to avoid request errors
-            and str(provider.company).lower() == 'nordpool'
+            and str(provider.company).lower() == "nordpool"
         ):
             return {}
         # validate date
@@ -2660,3 +2779,297 @@ class AnkerSolixBaseApi:
                 # do inplace update
                 fcdetails["time_next_hour"] = slot.get("timestamp") or ""
                 fcdetails["trend_next_hour"] = slot.get("power") or ""
+
+    async def get_disaster_support(
+        self, identifier: str, id_type: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get backup feature support info (auto disaster support, allowed country codes).
+
+        Example data:
+        {"support_auto_disaster": true,"support_country_code": [
+            {"code": "US","google_code": "ChIJCzYy5IS16lQRQrfeQ5K5Oxw"},
+            {"code": "PR","google_code": "ChIJ-aeSGyaWAowRGpsEGCjsNvM"}]}
+        """
+        data = {"identifier_id": identifier, "type": id_type}
+        self._logger.debug(
+            "Getting api %s site device disaster feature support for ID %s",
+            self.apisession.nickname,
+            identifier,
+        )
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{identifier}.json"
+            )
+        else:
+            # Ignore Api errors from endpoint if they fail
+            try:
+                resp = await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["get_disaster_support_func"],
+                    json=data,
+                )
+            except AnkerSolixError:
+                resp = {}
+        # Add result to site or device details
+        result = resp.get("data") or {}
+        if id_type == 1:
+            # cache under device_details
+            self._update_dev({"device_sn": identifier, "disaster_support": result})
+        else:
+            # cache under site_details
+            self._update_site(identifier, {"disaster_support": result})
+        return result
+
+    async def get_device_disaster(
+        self, identifier: str, id_type: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get the manual/auto backup (disaster preparedness) configuration of a system or standalone device.
+
+        Verified on A17B1 Home Power Panel, id_type=2 for power panel sites, and AS220 id_type=1 for S2000 PPS
+        Example data:
+        {"auto_disaster_switch": false,"manual_disaster_switch": true,"disaster_details": [
+            {"uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
+            "end_time": 1780991880,"charging_time": 36,"event_key": ""}]}
+        """
+        self._logger.debug(
+            "Getting api %s site device disaster config for ID %s",
+            self.apisession.nickname,
+            identifier,
+        )
+        data = {"identifier_id": identifier, "type": id_type}
+        if fromFile:
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{identifier}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_site_device_disaster"], json=data
+            )
+        if result := resp.get("data") or {}:
+            if id_type == 1:
+                # cache under device_details
+                self._update_dev({"device_sn": identifier, "device_disaster": result})
+            else:
+                # cache under site_details
+                self._update_site(identifier, {"device_disaster": result})
+        return result
+
+    async def get_device_disaster_status(
+        self, identifier: str, id_type: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get the live backup-preparedness status of a system or standalone device.
+
+        auto_disaster_status: 1 = progressing, 2 = inactive.
+        manual_disaster_status: 1 = progressing, 2 = inactive.
+        current_disaster_detail is only populated while a window is active.
+        Note: status flips to 1 only once start_time is reached, back to 2 after end_time.
+        Example data:
+        {"auto_disaster_status": 2,"manual_disaster_status": 1,"current_disaster_detail": {
+            "uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
+            "end_time": 1780991880,"charging_time": 36,"event_key": ""}}
+        """
+        self._logger.debug(
+            "Getting api %s site device disaster status for ID %s",
+            self.apisession.nickname,
+            identifier,
+        )
+        data = {"identifier_id": identifier, "type": id_type}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{identifier}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post",
+                API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
+                json=data,
+            )
+        if result := resp.get("data") or {}:
+            if id_type == 1:
+                # cache under device_details
+                self._update_dev(
+                    {"device_sn": identifier, "device_disaster_status": result}
+                )
+            else:
+                # cache under site_details
+                self._update_site(identifier, {"device_disaster_status": result})
+        return result
+
+    async def set_auto_disaster(
+        self,
+        identifier: str,
+        id_type: int = 2,
+        enable: bool = False,
+        toFile: bool = False,
+    ) -> dict:
+        """Disable or enable auto disaster (storm guard) for a system or standalone device.
+
+        Notes: When disabled, the device may ramp power down gradually rather than cutting off instantly.
+        Returns the refreshed disaster configuration or an empty dict upon error
+        """
+        data = {
+            "identifier_id": identifier,
+            "type": id_type,
+            "auto_disaster_switch": bool(enable),
+        }
+        if toFile:
+            # change only relevant parts of existing status
+            if id_type == 1:
+                filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
+            else:
+                filedata = (
+                    self.sites.get(identifier, {})
+                    .get("site_details", {})
+                    .get("device_disaster")
+                    or {}
+                )
+            filedata["auto_disaster_switch"] = bool(enable)
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json",
+                data={"code": 0, "msg": "success!", "data": data},
+            ):
+                return {}
+        else:
+            code = (
+                await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return {}
+        # return refreshed config and update cache
+        return await self.get_device_disaster(
+            identifier=identifier, id_type=id_type, fromFile=toFile
+        )
+
+    async def set_manual_backup(
+        self,
+        identifier: str,
+        id_type: int = 2,
+        enable: bool = False,
+        start_time: int | datetime | None = None,
+        end_time: int | datetime | None = None,
+        disaster_type: int = 1,
+        toFile: bool = False,
+    ) -> dict:
+        """Disable or enable manual backup mode for a system or standalone device over a time window.
+
+        Notes: When disabled, the device ramps power down gradually rather than cutting off instantly.
+        Disaster_type other than 1 is accepted but stored/returned as 1;
+        start_time / end_time are unix epoch seconds; end_time must be after start_time.
+        The server auto-generates the event uuid.
+        Returns the refreshed disaster configuration or an empty dict upon error
+        """
+        if isinstance(start_time, datetime):
+            start_time = int(start_time.timestamp())
+        elif not isinstance(start_time, int):
+            start_time = 0
+        if isinstance(end_time, datetime):
+            end_time = int(end_time.timestamp())
+        elif not isinstance(end_time, int):
+            end_time = 0
+        data = {
+            "identifier_id": identifier,
+            "type": id_type,
+            "manual_disaster_switch": bool(enable),
+        }
+        # When disabled, the payload MUST omit manual_disaster_detail.
+        # Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
+        if enable:
+            if end_time <= start_time:
+                self._logger.error(
+                    "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
+                    self.apisession.nickname,
+                    start_time,
+                    end_time,
+                )
+                return {}
+            data["manual_disaster_detail"] = {
+                "disaster_type": disaster_type,
+                "start_time": start_time,
+                "end_time": end_time,
+            }
+        if toFile:
+            # change only relevant parts of existing status
+            if id_type == 1:
+                filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
+            else:
+                filedata = (
+                    self.sites.get(identifier, {})
+                    .get("site_details", {})
+                    .get("device_disaster")
+                    or {}
+                )
+            filedata["manual_disaster_switch"] = bool(enable)
+            if details := data.get("manual_disaster_detail"):
+                if (filedetails := filedata.get("disaster_details")) and isinstance(
+                    filedetails, list
+                ):
+                    filedetails[0].update(details)
+                else:
+                    # Mock the details if it just got enabled without previous information
+                    filedetails = (
+                        {"uuid": "00000000-0000-0000-0000-000000000001"}
+                        | details
+                        | {"charging_time": 36, "event_key": ""}
+                    )
+                filedata["disaster_details"] = [filedetails]
+            else:
+                filedata["disaster_details"] = []
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json",
+                data={"code": 0, "msg": "success!", "data": data},
+            ):
+                return {}
+        else:
+            code = (
+                await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return {}
+        # return refreshed config and update cache
+        return await self.get_device_disaster(
+            identifier=identifier, id_type=id_type, fromFile=toFile
+        )
+
+    async def update_disaster_status(
+        self, devices: bool = False, fromFile: bool = False, exclude: set | None = None
+    ) -> dict:
+        """Update the manual and auto disaster status if supported by site or optional standalone devices."""
+        # cycle through all sites
+        for site_id, site in self.sites.items():
+            if {site.get("site_type")} - exclude and site.get("site_details", {}).get(
+                "disaster_support", {}
+            ).get("support_auto_disaster"):
+                await self.get_device_disaster_status(
+                    identifier=site_id, fromFile=fromFile
+                )
+        # cycle through all stand alone devices which support auto disaster
+        if devices:
+            for device_sn, device in self.devices.items():
+                if (
+                    {device.get("type")} - exclude
+                    and not device.get("site_id")
+                    and device.get("disaster_support", {}).get("support_auto_disaster")
+                ):
+                    await self.get_device_disaster_status(
+                        identifier=device_sn, id_type=1, fromFile=fromFile
+                    )

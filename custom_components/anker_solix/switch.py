@@ -311,36 +311,20 @@ DEVICE_SWITCHES = [
     *[
         AnkerSolixSwitchDescription(
             key=f"{idx}_switch",
-            translation_key=f"{idx[:4]}_x_switch",
+            translation_key=f"{idx[:4] if idx.startswith('usb') else 'ac'}_x_switch",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_switch",
             exclude_fn=lambda s, d: not ({d.get("type")} - s),
-            device_class=SwitchDeviceClass.SWITCH,
+            device_class=SwitchDeviceClass.OUTLET
+            if idx.startswith("ac")
+            else SwitchDeviceClass.SWITCH,
             mqtt=True,
             mqtt_cmd=getattr(SolixMqttCommands, f"{idx}_port_switch", None),
         )
-        for idx in ["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"]
+        for idx in ["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba", "ac_1", "ac_2"]
     ],
-    AnkerSolixSwitchDescription(
-        key="ac_1_switch",
-        translation_key="ac_1_switch",
-        json_key="ac_1_switch",
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        device_class=SwitchDeviceClass.OUTLET,
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.ac_1_port_switch,
-    ),
-    AnkerSolixSwitchDescription(
-        key="ac_2_switch",
-        translation_key="ac_2_switch",
-        json_key="ac_2_switch",
-        exclude_fn=lambda s, d: not ({d.get("type")} - s),
-        device_class=SwitchDeviceClass.OUTLET,
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.ac_2_port_switch,
-    ),
     AnkerSolixSwitchDescription(
         key="plug_lock_switch",
         translation_key="plug_lock_switch",
@@ -502,8 +486,8 @@ DEVICE_SWITCHES = [
         device_class=SwitchDeviceClass.SWITCH,
         entity_category=EntityCategory.CONFIG,
         mqtt=True,
-        # Command may need to be changed to charger_theme_custom if custom theme active
-        mqtt_cmd=SolixMqttCommands.charger_theme,
+        # Command may need to be changed to display_theme_custom if custom theme active
+        mqtt_cmd=SolixMqttCommands.display_theme,
         mqtt_cmd_parm="set_clock_switch",
     ),
     AnkerSolixSwitchDescription(
@@ -520,9 +504,9 @@ DEVICE_SWITCHES = [
     *[
         AnkerSolixSwitchDescription(
             key=f"{idx}_timer_switch",
-            translation_key="usb_x_timer_switch",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_timer_switch",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_timer_switch",
             exclude_fn=lambda s, d: (
@@ -541,15 +525,17 @@ DEVICE_SWITCHES = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     # repeated element
     *[
         AnkerSolixSwitchDescription(
             key=f"{idx}_start_switch",
-            translation_key="usb_x_start_switch",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_start_switch",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_start_switch",
             entity_category=EntityCategory.CONFIG,
@@ -571,15 +557,17 @@ DEVICE_SWITCHES = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     # repeated element
     *[
         AnkerSolixSwitchDescription(
             key=f"{idx}_end_switch",
-            translation_key="usb_x_end_switch",
+            translation_key=f"{'usb' if idx.startswith('usb') else 'ac'}_x_end_switch",
             translation_placeholders={
-                "id": f"{idx.strip('usb').replace('_', '').upper()}"
+                "id": f"{idx.lstrip('ac').lstrip('usb').replace('_', '').upper()}"
             },
             json_key=f"{idx}_end_switch",
             entity_category=EntityCategory.CONFIG,
@@ -601,6 +589,8 @@ DEVICE_SWITCHES = [
             "usbc_3",
             "usbc_4",
             "usba",
+            "ac_1",
+            "ac_2",
         ]
     ],
     AnkerSolixSwitchDescription(
@@ -1164,7 +1154,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             )
             # First control settings via Api for the cloud service
             resp = (
-                await self.coordinator.client.api.powerpanelApi.set_auto_disaster(
+                await self.coordinator.client.api.set_auto_disaster(
                     identifier=self.coordinator_context,
                     id_type=1,
                     enable=enable ^ self.entity_description.inverted,
@@ -1198,9 +1188,9 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                     mdev=mdev,
                     enable=enable,
                     cmd=(
-                        SolixMqttCommands.charger_theme_custom
+                        SolixMqttCommands.display_theme_custom
                         if category == "Custom"
-                        else SolixMqttCommands.charger_theme
+                        else SolixMqttCommands.display_theme
                     ),
                     parm=self.entity_description.mqtt_cmd_parm,
                     parm_map={

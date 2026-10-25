@@ -50,7 +50,6 @@ People *love* thorough bug reports. I'm not even kidding.
 If you have no Python knowledge, you can contribute by exploring the Anker Solix Api via the [Api request action](INFO.md#api-request-action) and document your discovery of new, unknown Api request capabilities and information about your owned Anker Solix devices that you still miss in the integration.
 If you don't find any data for your owned devices although you enabled the MQTT server connection, your device model still has to be decoded and described. You can contribute by starting with the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) from the [Api library](https://github.com/thomluther/anker-solix-api) and follow the [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222). In order to decode MQTT commands of your device, please follow this [MQTT command and state analysis and description](https://github.com/thomluther/anker-solix-api/discussions/222#discussioncomment-14660599).
 
-
 ## Use a Consistent Coding Style
 
 Use [black](https://github.com/ambv/black) to make sure the code follows the style.
