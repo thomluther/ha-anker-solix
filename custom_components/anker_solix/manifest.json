@@ -10,7 +10,6 @@
   "documentation": "https://github.com/thomluther/ha-anker-solix",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
-  "categories": ["energy"],
   "issue_tracker": "https://github.com/thomluther/ha-anker-solix/issues",
   "requirements": [
     "aiofiles>=25.1.0",
