@@ -662,7 +662,7 @@ CMD_OUTAGE_ALERT_SWITCH_V2 = CMD_COMMON_V2 | {
     "b0": CMD_SWITCH["a2"]
     | {
         NAME: "set_outage_alert_switch",  # Off (0), On (1)
-        STATE_NAME: "outage_alert",
+        STATE_NAME: "outage_alert_switch",
     },
 }
 

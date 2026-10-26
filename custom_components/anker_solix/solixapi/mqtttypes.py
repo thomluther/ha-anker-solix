@@ -307,7 +307,7 @@ class DeviceHexDataField:
         """Return the data field representation in human readable format, including color highlighting."""
         if self.f_name:
             typ = (
-                DeviceHexDataTypes(self.f_type).name
+                DeviceHexDataTypes(bytes(self.f_type)).name
                 if bytes(self.f_type) in DeviceHexDataTypes
                 else DeviceHexDataTypes.unk.name
             )

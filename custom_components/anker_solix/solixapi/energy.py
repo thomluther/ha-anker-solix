@@ -949,6 +949,7 @@ async def device_energy_daily(
     Example:
     {"2026-09-29":{"date":"2026-09-29","import_energy":"0.27","export_energy":"0.33","ac_consumed":"0.27","dc_consumed":"0.06","ac_charged":"0.27","dc_charged":"0","pv_yield":"0"},
      "2026-09-30":{"date":"2026-09-30","import_energy":"0.12","export_energy":"0.14","ac_consumed":"0.11","dc_consumed":"0.03","ac_charged":"0.12","dc_charged":"0","pv_yield":"0"}}
+
     """
 
     table = {}
