@@ -345,6 +345,15 @@
                     "high": "mdi:brightness-5"
                 }
             },
+            "display_brightness": {
+                "default": "mdi:brightness-percent"
+            },
+            "display_night_brightness": {
+                "default": "mdi:brightness-percent"
+            },
+            "display_language": {
+                "default": "mdi:translate"
+            },
             "ac_output_mode": {
                 "default": "mdi:flash-outline",
                 "state": {
@@ -1257,6 +1266,13 @@
                     "off": "mdi:firework-off"
                 }
             },
+            "display_night_switch": {
+                "default": "mdi:brightness-7",
+                "state": {
+                    "on": "mdi:brightness-4",
+                    "off": "mdi:brightness-7"
+                }
+            },
             "usb_x_timer_switch": {
                 "default": "mdi:timer-remove-outline",
                 "state": {
@@ -1288,6 +1304,20 @@
                 "state": {
                     "on": "mdi:volume-off",
                     "off": "mdi:volume-high"
+                }
+            },
+            "battery_only_switch": {
+                "default": "mdi:power-plug-battery",
+                "state": {
+                    "on": "mdi:battery",
+                    "off": "mdi:power-plug-battery"
+                }
+            },
+            "outage_alert_switch": {
+                "default": "mdi:flash-alert",
+                "state": {
+                    "on": "mdi:flash-alert",
+                    "off": "mdi:flash-off"
                 }
             }
         },
@@ -1337,6 +1367,12 @@
                 "default": "mdi:clock-start"
             },
             "clock_display_end_time": {
+                "default": "mdi:clock-end"
+            },
+            "display_night_start_time": {
+                "default": "mdi:clock-start"
+            },
+            "display_night_end_time": {
                 "default": "mdi:clock-end"
             },
             "ac_output_timer_seconds": {

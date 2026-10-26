@@ -837,6 +837,22 @@
                     "high": "Hell"
                 }
             },
+            "display_brightness": {
+                "name": "Bildschirmhelligkeit"
+            },
+            "display_night_brightness": {
+                "name": "Nachtanzeige Helligkeit"
+            },
+            "display_language": {
+                "name": "Bildschirmsprache",
+                "state": {
+                    "english": "English",
+                    "chinese": "中文",
+                    "french": "Français",
+                    "german": "Deutsch",
+                    "japanese": "日本語"
+                }
+            },
             "ac_output_mode": {
                 "name": "AC Ausgansmodus",
                 "state": {
@@ -2842,6 +2858,9 @@
             "holiday_switch": {
                 "name": "Uhranzeige Festtage"
             },
+            "display_night_switch": {
+                "name": "Nachtanzeige"
+            },
             "usb_x_timer_switch": {
                 "name": "USB-{id} Timer"
             },
@@ -2862,6 +2881,12 @@
             },
             "silent_mode_switch": {
                 "name": "Lautlosmodus"
+            },
+            "battery_only_switch": {
+                "name": "Nur Akku"
+            },
+            "outage_alert_switch": {
+                "name": "Ausfallalarm"
             }
         },
         "text":{
@@ -2911,6 +2936,12 @@
             },
             "clock_display_end_time": {
                 "name": "Uhranzeige Endzeit"
+            },
+            "display_night_start_time": {
+                "name": "Nachtanzeige Startzeit"
+            },
+            "display_night_end_time": {
+                "name": "Nachtanzeige Endzeit"
             },
             "ac_output_timer_seconds": {
                 "name": "AC Ausgangstimer"
@@ -3172,25 +3203,25 @@
             "sections": {
                 "sb_fields": {
                     "name": "Solarbank Optionen",
-                    "description": "Für Solarbank 2+ Systeme mit AC Ladung können folgende Optionen angegeben werden (ignoriert für PPS Geräte)"
+                    "description": "Für Solarbank 2+ und Solarbank PPS Systeme mit AC Ladung können folgende Optionen angegeben werden (ignoriert für PPS Einzelgeräte)"
                 },
                 "pps_fields": {
                     "name": "PPS Optionen",
-                    "description": "Für PPS Geräte können folgende Optionen angegeben werden (ignoriert für Solarbank Systeme)"
+                    "description": "Für PPS und Solarbank PPS Geräte können folgende Optionen angegeben werden (ignoriert für Solarbank Systeme)"
                 }
             },
             "fields": {
                 "start_month": {
                     "name": "Anfangsmonat",
-                    "description": "Anfangsmonat der zu ändernden Saison (ignoriert für PPS Geräte)"
+                    "description": "Anfangsmonat der zu ändernden Saison (ignoriert für PPS Einzelgeräte)"
                 },
                 "end_month": {
                     "name": "Endmonat",
-                    "description": "Endmonat der zu ändernden Saison (ignoriert für PPS Geräte)"
+                    "description": "Endmonat der zu ändernden Saison (ignoriert für PPS Einzelgeräte)"
                 },
                 "day_type": {
                     "name": "Tagesart",
-                    "description": "Tagesart der in der Saison zu ändernden Tage (ignoriert für PPS Geräte)"
+                    "description": "Tagesart der in der Saison zu ändernden Tage (ignoriert für PPS Einzelgeräte)"
                 },
                 "start_hour": {
                     "name": "Anfangsstunde",

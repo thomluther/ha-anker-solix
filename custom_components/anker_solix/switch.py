@@ -500,6 +500,17 @@ DEVICE_SWITCHES = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.clock_holiday_switch,
     ),
+    AnkerSolixSwitchDescription(
+        key="display_night_switch",
+        translation_key="display_night_switch",
+        json_key="display_night_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.CONFIG,
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        mqtt_cmd_parm="set_display_night_switch",
+    ),
     # repeated element
     *[
         AnkerSolixSwitchDescription(
@@ -622,6 +633,22 @@ DEVICE_SWITCHES = [
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.backup_charge_plan,
         mqtt_cmd_parm="set_backup_option_switch",
+    ),
+    AnkerSolixSwitchDescription(
+        key="battery_only_switch",
+        translation_key="battery_only_switch",
+        json_key="battery_only_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.battery_only_switch,
+    ),
+    AnkerSolixSwitchDescription(
+        key="outage_alert_switch",
+        translation_key="outage_alert_switch",
+        json_key="outage_alert_switch",
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.outage_alert_switch,
     ),
 ]
 
@@ -1184,21 +1211,27 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 # prepare parameter map and correct command
                 theme = data.get("display_theme", {})
                 category = theme.get("theme_name", "").split("-")[:1][0].strip()
+                command = (
+                    SolixMqttCommands.display_theme_custom
+                    if category == "Custom"
+                    else SolixMqttCommands.display_theme
+                )
+                parms = mdev.get_cmd_parms(cmd=command, defaults=True, state_parms=True)
+                parm_map = {}
+                if "set_theme_hash" in parms:
+                    parm_map["set_theme_hash"] = mdev.mqttdata.get("theme_hash") or int(
+                        theme.get("file_hash") or "0", 16
+                    )
+                if "set_theme_url" in parms:
+                    parm_map["set_theme_url"] = mdev.mqttdata.get(
+                        "theme_url"
+                    ) or theme.get("image_url", "")
                 await self._async_mqtt_toggle(
                     mdev=mdev,
                     enable=enable,
-                    cmd=(
-                        SolixMqttCommands.display_theme_custom
-                        if category == "Custom"
-                        else SolixMqttCommands.display_theme
-                    ),
+                    cmd=command,
                     parm=self.entity_description.mqtt_cmd_parm,
-                    parm_map={
-                        "set_theme_hash": mdev.mqttdata.get("theme_hash")
-                        or int(theme.get("file_hash") or 0, 16),
-                        "set_theme_url": mdev.mqttdata.get("theme_url")
-                        or theme.get("image_url", ""),
-                    },
+                    parm_map=parm_map,
                 )
             elif self._attribute_name == "pps_manual_backup_switch":
                 # consider cached timestamps when enabling the backup mode

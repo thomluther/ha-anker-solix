@@ -138,6 +138,7 @@ DEVICE_TIMES = [
         mqtt_cmd_parm="set_weekend_end_time",
     ),
     AnkerSolixTimeDescription(
+        # display time in hour and minute fields
         key="clock_display_start_time",
         translation_key="clock_display_start_time",
         json_key="clock_display_start_hour",
@@ -150,8 +151,10 @@ DEVICE_TIMES = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        # multiple mqtt_cmd_parm must be chosen by the methods
     ),
     AnkerSolixTimeDescription(
+        # display time in hour and minute fields
         key="clock_display_end_time",
         translation_key="clock_display_end_time",
         json_key="clock_display_end_hour",
@@ -164,6 +167,61 @@ DEVICE_TIMES = [
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        # multiple mqtt_cmd_parm must be chosen by the methods
+    ),
+    AnkerSolixTimeDescription(
+        # display time in minutes field
+        key="clock_display_start_time",
+        translation_key="clock_display_start_time",
+        json_key="clock_display_start_minutes",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda d, jk: (
+            convert_time_minutes(v) if str(v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        mqtt_cmd_parm="set_clock_display_start_minutes",
+    ),
+    AnkerSolixTimeDescription(
+        # display time in minutes field
+        key="clock_display_end_time",
+        translation_key="clock_display_end_time",
+        json_key="clock_display_end_minutes",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda d, jk: (
+            convert_time_minutes(v) if str(v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        mqtt_cmd_parm="set_clock_display_end_minutes",
+    ),
+    AnkerSolixTimeDescription(
+        key="display_night_start_time",
+        translation_key="display_night_start_time",
+        json_key="display_night_start_minutes",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda d, jk: (
+            convert_time_minutes(v) if str(v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        mqtt_cmd_parm="set_display_night_start_minutes",
+    ),
+    AnkerSolixTimeDescription(
+        key="display_night_end_time",
+        translation_key="display_night_end_time",
+        json_key="display_night_end_minutes",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda d, jk: (
+            convert_time_minutes(v) if str(v := d.get(jk, "")) else None
+        ),
+        exclude_fn=lambda s, d: not ({d.get("type")} - s),
+        mqtt=True,
+        mqtt_cmd=SolixMqttCommands.clock_display_schedule,
+        mqtt_cmd_parm="set_display_night_end_minutes",
     ),
     AnkerSolixTimeDescription(
         key="ac_output_timer_seconds",
@@ -597,7 +655,8 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
                 )
                 if self._attribute_name.startswith(
                     "clock"
-                ) and self._attribute_name.endswith("_time"):
+                ) and self._attribute_name.endswith("_time") and not self.entity_description.mqtt_cmd_parm:
+                    # Command requires multiple parameters for individual hour and minute fields
                     await self._async_mqtt_time(
                         mdev=mdev,
                         parm_map={
@@ -608,6 +667,7 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
                 elif self._attribute_name.startswith(
                     ("usb", "ac_")
                 ) and self._attribute_name.endswith("_time"):
+                    # Command requires multiple parameters for individual hour and minute fields
                     await self._async_mqtt_time(
                         mdev=mdev,
                         parm_map={
@@ -615,13 +675,13 @@ class AnkerSolixTime(CoordinatorEntity, TimeEntity):
                             "set_port_time_minute": value.minute,
                         },
                     )
-                elif self._attribute_name.endswith("_timer_seconds"):
+                elif self.entity_description.json_key.endswith("_timer_seconds"):
                     # convert time into seconds
                     await self._async_mqtt_time(
                         mdev=mdev,
                         value=convert_time_seconds(value),
                     )
-                elif self._attribute_name.endswith("_minutes"):
+                elif self.entity_description.json_key.endswith("_minutes"):
                     # convert time into minutes
                     await self._async_mqtt_time(
                         mdev=mdev,

@@ -912,6 +912,8 @@ class AnkerSolixBaseApi:
                                         "_settings",
                                         "_data",
                                         "_progress",
+                                        "_level",
+                                        "_language",
                                         "_fault",
                                         "_undervoltage",
                                         # "?",  # Add for decoder testing in monitor

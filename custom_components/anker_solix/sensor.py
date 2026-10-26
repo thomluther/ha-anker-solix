@@ -2203,6 +2203,8 @@ DEVICE_SENSORS = [
             "usbc_4",
             "usba_1",
             "usba_2",
+            "usba_3",
+            "usba_4",
             "dc_12v_1",
             "dc_12v_2",
             "ac_1",

@@ -837,6 +837,22 @@
                     "high": "Bright"
                 }
             },
+            "display_brightness": {
+                "name": "Display brightness"
+            },
+            "display_night_brightness": {
+                "name": "Night display brightness"
+            },
+            "display_language": {
+                "name": "Display language",
+                "state": {
+                    "english": "English",
+                    "chinese": "中文",
+                    "french": "Français",
+                    "german": "Deutsch",
+                    "japanese": "日本語"
+                }
+            },
             "ac_output_mode": {
                 "name": "AC output mode",
                 "state": {
@@ -2842,6 +2858,9 @@
             "holiday_switch": {
                 "name": "Clock display holidays"
             },
+            "display_night_switch": {
+                "name": "Night display"
+            },
             "usb_x_timer_switch": {
                 "name": "USB-{id} timer"
             },
@@ -2862,6 +2881,12 @@
             },
             "silent_mode_switch": {
                 "name": "Silent mode"
+            },
+            "battery_only_switch": {
+                "name": "Battery only"
+            },
+            "outage_alert_switch": {
+                "name": "Outage alerts"
             }
         },
         "text":{
@@ -2911,6 +2936,12 @@
             },
             "clock_display_end_time": {
                 "name": "Clock display end time"
+            },
+            "display_night_start_time": {
+                "name": "Night display start time"
+            },
+            "display_night_end_time": {
+                "name": "Night display end time"
             },
             "ac_output_timer_seconds": {
                 "name": "AC output timer"
@@ -3172,25 +3203,25 @@
             "sections": {
                 "sb_fields": {
                     "name": "Solarbank options",
-                    "description": "For Solarbank 2+ systems supporting AC charge, you can specify following options (ignored for PPS devices)"
+                    "description": "For Solarbank 2+ and Solarbank PPS systems supporting AC charge, you can specify following options (ignored for standalone PPS devices)"
                 },
                 "pps_fields": {
                     "name": "PPS options",
-                    "description": "For stand alone PPS devices, you can specify following options (ignored for Solarbank systems)"
+                    "description": "For stand alone and Solarbank PPS devices, you can specify following options (ignored for Solarbank systems)"
                 }
             },
             "fields": {
                 "start_month": {
                     "name": "Start month",
-                    "description": "Start month for the season to be modified (ignored for PPS devices)"
+                    "description": "Start month for the season to be modified (ignored for standalone PPS devices)"
                 },
                 "end_month": {
                     "name": "End month",
-                    "description": "End month for the season to be modified (ignored for PPS devices)"
+                    "description": "End month for the season to be modified (ignored for standalone PPS devices)"
                 },
                 "day_type": {
                     "name": "Day type",
-                    "description": "Type of days to be modified in the season (ignored for PPS devices)"
+                    "description": "Type of days to be modified in the season (ignored for standalone PPS devices)"
                 },
                 "start_hour": {
                     "name": "Start hour",

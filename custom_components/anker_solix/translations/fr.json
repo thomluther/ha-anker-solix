@@ -837,6 +837,22 @@
                     "high": "Lumineux"
                 }
             },
+            "display_brightness": {
+                "name": "Luminosité d'affichage"
+            },
+            "display_night_brightness": {
+                "name": "Luminosité d'affichage la nuit"
+            },
+            "display_language": {
+                "name": "Langue d'affichage",
+                "state": {
+                    "english": "English",
+                    "chinese": "中文",
+                    "french": "Français",
+                    "german": "Deutsch",
+                    "japanese": "日本語"
+                }
+            },
             "ac_output_mode": {
                 "name": "Mode de sortie CA",
                 "state": {
@@ -2842,6 +2858,9 @@
             "holiday_switch": {
                 "name": "Affichage de l'heure les jours fériés"
             },
+            "display_night_switch": {
+                "name": "Affichage de nuit"
+            },
             "usb_x_timer_switch": {
                 "name": "USB-{id} minuterie"
             },
@@ -2862,6 +2881,12 @@
             },
             "silent_mode_switch": {
                 "name": "Mode silencieux"
+            },
+            "battery_only_switch": {
+                "name": "Batterie seule"
+            },
+            "outage_alert_switch": {
+                "name": "Alertes de coupure d'électricité"
             }
         },
         "text":{
@@ -2911,6 +2936,12 @@
             },
             "clock_display_end_time": {
                 "name": "Affichage de l'heure fin"
+            },
+            "display_night_start_time": {
+                "name": "Affichage de l'heure début de la nuit"
+            },
+            "display_night_end_time": {
+                "name": "Affichage de l'heure fin de la nuit"
             },
             "ac_output_timer_seconds": {
                 "name": "Minuterie de sortie CA"
@@ -3172,25 +3203,25 @@
             "sections": {
                 "sb_fields": {
                     "name": "Options de Solarbank",
-                    "description": "Pour les systèmes Solarbank 2+ prenant en charge la recharge en courant alternatif, vous pouvez spécifier les options suivantes (ignorées pour les appareils PPS)"
+                    "description": "Pour les systèmes Solarbank 2+ prenant en charge la recharge en courant alternatif, vous pouvez spécifier les options suivantes (ignorées pour les appareils PPS autonomes)"
                 },
                 "pps_fields": {
                     "name": "Options de PPS",
-                    "description": "Pour les appareils PPS autonomes, vous pouvez définir les options suivantes (ces options ne sont pas prises en compte pour les systèmes Solarbank)"
+                    "description": "Pour les appareils PPS autonomes et Solarbank PPS, vous pouvez définir les options suivantes (ces options ne sont pas prises en compte pour les systèmes Solarbank)"
                 }
             },
             "fields": {
                 "start_month": {
                     "name": "Mois de début",
-                    "description": "Mois de début de la saison à modifier (ignoré pour les appareils PPS)"
+                    "description": "Mois de début de la saison à modifier (ignoré pour les appareils PPS autonomes)"
                 },
                 "end_month": {
                     "name": "Mois de fin",
-                    "description": "Mois de fin de la saison à modifier (ignoré pour les appareils PPS)"
+                    "description": "Mois de fin de la saison à modifier (ignoré pour les appareils PPS autonomes)"
                 },
                 "day_type": {
                     "name": "Type de jours",
-                    "description": "Type de jours à modifier dans la saison (ignoré pour les appareils PPS)"
+                    "description": "Type de jours à modifier dans la saison (ignoré pour les appareils PPS autonomes)"
                 },
                 "start_hour": {
                     "name": "Heure de début",
