@@ -485,7 +485,7 @@ Depending on how devices publish their data in regular, status request or real t
 >
 > For those reasons, the trigger is only a button that satisfies the MQTT real time data trigger command and it will not be provided as permanent switch control. I would not recommend permanent trigger usage either, unless you have no other choice to receive desired device data updates permanently.
 
-Integration version 3.8.2 added an MQTT status interval control entity for eligible devices. Per default, automated status requests are disabled (interval 0 sec), but you can enable the automated status requests by changing the interval between 5-60 seconds. This setting is a restore entity and should be maintained upon integration restarts or reloads. If enabled, a regular task will be added to the HA loop to send automated MQTT status requests for the device.
+Integration version 3.8.2 added an MQTT status interval control entity for eligible devices. Per default, automated status requests are disabled (interval 0 sec), but you can enable the automated status requests by changing the interval between 5-300 seconds. This setting is a restore entity and will be maintained upon integration restarts or reloads. If enabled, a regular task will be added to the HA loop and send automated MQTT status requests to the device.
 
 Integration version 3.5.0 added control entities for MQTT manageable devices. If the various MQTT commands for the device model have been decoded and described by the community, the integration can now control those devices as well and provide similar management experience as the mobile app.
 
