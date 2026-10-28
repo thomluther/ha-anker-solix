@@ -824,7 +824,7 @@ class AnkerSolixApiClient:
                             await self.subscribe_device(dev)
                         if not mqtt_devs:
                             _LOGGER.warning(
-                                "Api Coordinator %s did not find eligible devices for MQTT subscription, you may disable MQTT connection to prevent device subscription attempts.",
+                                "Api Coordinator %s did not find eligible devices for MQTT subscription, you may disable MQTT connection to prevent device subscription attempts",
                                 self.api.apisession.nickname,
                             )
                     # create MQTT device instances
@@ -856,8 +856,10 @@ class AnkerSolixApiClient:
             # check and redo subscription for existing mqtt devices
             elif not self._testmode:
                 for mdev in self.mqtt_devices.values():
-                    if not mdev.is_subscribed() and not await self.subscribe_device(
-                        mdev.device
+                    if (
+                        not mdev.is_passive()
+                        and not mdev.is_subscribed()
+                        and not await self.subscribe_device(mdev.device)
                     ):
                         # clear mqtt data cache to avoid orphaned data
                         mdev.mqttdata.clear()
