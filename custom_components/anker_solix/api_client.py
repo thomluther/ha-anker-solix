@@ -864,7 +864,7 @@ class AnkerSolixApiClient:
 
     async def subscribe_device(self, deviceDict: dict) -> bool:
         """Subscribe a device to MQTT messages."""
-        if self.api.mqttsession.is_connected():
+        if self.api.mqttsession.is_connected() and not deviceDict.get("is_passive"):
             topic = f"{self.api.mqttsession.get_topic_prefix(deviceDict=deviceDict)}#"
             if mqtterror := self.api.mqttsession.subscribe(topic):
                 _LOGGER.warning(
