@@ -2442,6 +2442,9 @@ class AnkerSolixBaseApi:
             and provider.area
             # #619: Limit detail queries to Nordpool only to avoid request errors
             and str(provider.company).lower() == "nordpool"
+            # #658: price details endpoint deprecated 29.10.2026 and must not longer be used
+            # #659: Deprecation caused initially http 403 error, causing a reauthentication loop and 24h IP ban
+            and False
         ):
             return {}
         # validate date

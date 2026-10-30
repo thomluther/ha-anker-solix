@@ -521,21 +521,22 @@ class AnkerSolixApiExport:
                                     )
                                 )
             # export prices for all provider options
-            for provider in [SolixPriceProvider(provider=p) for p in providers]:
-                self._logger.info(
-                    "Exporting dynamic price details for %s...",
-                    provider,
-                )
-                await self.query(
-                    endpoint=API_ENDPOINTS["get_dynamic_price_details"],
-                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/', '_')}.json",
-                    payload={
-                        "company": provider.company,
-                        "area": provider.area,
-                        "date": str(int(datetime.today().astimezone().timestamp())),
-                        "device_sn": "",
-                    },
-                )
+            # power_service/v1/dynamic_price/price_detail deprecated and non functional as of 29.10.2026 due to cloud memory issues
+            # for provider in [SolixPriceProvider(provider=p) for p in providers]:
+            #     self._logger.info(
+            #         "Exporting dynamic price details for %s...",
+            #         provider,
+            #     )
+            #     await self.query(
+            #         endpoint=API_ENDPOINTS["get_dynamic_price_details"],
+            #         filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/', '_')}.json",
+            #         payload={
+            #             "company": provider.company,
+            #             "area": provider.area,
+            #             "date": str(int(datetime.today().astimezone().timestamp())),
+            #             "device_sn": "",
+            #         },
+            #     )
             # Export user vehicles
             self._logger.info("Get user vehicle list...")
             response = await self.query(
