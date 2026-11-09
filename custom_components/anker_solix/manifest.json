@@ -2,6 +2,9 @@
   "domain": "anker_solix",
   "name": "Anker Solix",
   "after_dependencies": [],
+  "categories": [
+    "energy"
+  ],
   "codeowners": [
     "@thomluther"
   ],
