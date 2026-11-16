@@ -2887,6 +2887,14 @@
             },
             "outage_alert_switch": {
                 "name": "Alertes de coupure d'électricité"
+            },
+            "manual_backup_switch": {
+                "name": "Secours manuel",
+                "state_attributes": {
+                    "backup_start": {"name": "Début du secours"},
+                    "backup_end": {"name": "Fin du secours"},
+                    "backup_active": {"name": "Secours actif"}
+                }
             }
         },
         "text":{

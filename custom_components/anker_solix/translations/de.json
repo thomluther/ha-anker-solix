@@ -2887,6 +2887,14 @@
             },
             "outage_alert_switch": {
                 "name": "Ausfallalarm"
+            },
+            "manual_backup_switch": {
+                "name": "Manuelle Notladung",
+                "state_attributes": {
+                    "backup_start": {"name": "Beginn der Notladung"},
+                    "backup_end": {"name": "Ende der Notladung"},
+                    "backup_active": {"name": "Notladung aktiv"}
+                }
             }
         },
         "text":{

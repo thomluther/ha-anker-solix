@@ -32,7 +32,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import UTC
+from homeassistant.util.dt import UTC, get_default_time_zone
 
 from .api_client import AnkerSolixApiClientCommunicationError, AnkerSolixApiClientError
 from .const import (
@@ -653,7 +653,54 @@ DEVICE_SWITCHES = [
 ]
 
 
-SITE_SWITCHES = []
+SITE_SWITCHES = [
+    AnkerSolixSwitchDescription(
+        key="site_manual_backup_switch",
+        translation_key="manual_backup_switch",
+        json_key="manual_disaster_switch",
+        feature=AnkerSolixEntityFeature.AC_CHARGE,
+        value_fn=lambda d, jk: (
+            d.get("site_details", {}).get("device_disaster") or {}
+        ).get(jk),
+        attrib_fn=lambda d, jk: (
+            {
+                "backup_start": datetime.fromtimestamp(
+                    int(detail.get("start_time") or 0), get_default_time_zone()
+                ).isoformat(),
+                "backup_end": datetime.fromtimestamp(
+                    int(detail.get("end_time") or 0), get_default_time_zone()
+                ).isoformat(),
+                "backup_active": (
+                    d.get("site_details", {}).get("device_disaster_status") or {}
+                ).get("manual_disaster_status")
+                == 1,
+            }
+            if (
+                detail := next(
+                    iter(
+                        (d.get("site_details", {}).get("device_disaster") or {}).get(
+                            "disaster_details"
+                        )
+                        or []
+                    ),
+                    None,
+                )
+            )
+            and (d.get("site_details", {}).get("device_disaster") or {}).get(jk)
+            else {}
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                d.get("site_type") == SolixDeviceType.POWERPANEL.value
+                and {d.get("site_type")} - s
+                and d.get("site_admin")
+                and d.get("site_details", {})
+                .get("disaster_support", {})
+                .get("support_auto_disaster")
+            )
+        ),
+    ),
+]
 
 
 ACCOUNT_SWITCHES = [
@@ -983,6 +1030,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 "preset_allow_export",
                 "preset_discharge_priority",
                 "preset_backup_option",
+                "site_manual_backup_switch",
                 "default_vehicle",
                 "allow_grid_export",
                 MQTT_OVERLAY,
@@ -1093,6 +1141,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 else None,
                 backup_switch=enable ^ self.entity_description.inverted,
                 toFile=self.coordinator.client.testmode(),
+            )
+        elif self._attribute_name == "site_manual_backup_switch":
+            resp = await self._async_site_manual_backup(
+                enable=enable ^ self.entity_description.inverted
             )
         elif self._attribute_name == "allow_grid_export":
             LOGGER.debug(
@@ -1263,6 +1315,70 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 json.dumps(resp, indent=2 if len(json.dumps(resp)) < 200 else None),
             )
         await self.coordinator.async_refresh_data_from_apidict()
+
+    async def _async_site_manual_backup(
+        self,
+        enable: bool,
+        backup_start: datetime | None = None,
+        backup_end: datetime | None = None,
+        backup_duration: timedelta | None = None,
+    ) -> dict:
+        """Enable or disable Power Panel manual backup via the cloud API."""
+        api = self.coordinator.client.api
+        if not self.coordinator.client.allow_refresh():
+            raise ServiceValidationError(
+                f"'{self.entity_id}' cannot be used while API usage is deactivated",
+                translation_domain=DOMAIN,
+                translation_key="apiusage_deactivated",
+                translation_placeholders={
+                    "entity_id": self.entity_id,
+                    "action_name": "set_manual_backup",
+                },
+            )
+        panel_api = api.powerpanelApi or api
+        testmode = self.coordinator.client.testmode()
+        tz = get_default_time_zone()
+        if isinstance(backup_start, datetime) and backup_start.tzinfo is None:
+            backup_start = backup_start.replace(tzinfo=tz)
+        if isinstance(backup_end, datetime) and backup_end.tzinfo is None:
+            backup_end = backup_end.replace(tzinfo=tz)
+        if enable:
+            backup_start = backup_start or datetime.now().astimezone()
+            backup_end = backup_end or (
+                backup_start + (backup_duration or timedelta(hours=24))
+            )
+        resp = await panel_api.set_manual_backup(
+            identifier=self.coordinator_context,
+            id_type=2,
+            enable=enable,
+            start_time=backup_start if enable else None,
+            end_time=backup_end if enable else None,
+            toFile=testmode,
+        )
+        for delay in (1, 2, 4):
+            if not resp or resp.get("manual_disaster_switch") == enable:
+                break
+            await sleep(delay)
+            resp = await panel_api.get_device_disaster(
+                identifier=self.coordinator_context, fromFile=testmode
+            )
+        if not resp or resp.get("manual_disaster_switch") != enable:
+            raise ServiceValidationError(
+                f"'{self.entity_id}' manual backup change could not be confirmed",
+                translation_domain=DOMAIN,
+                translation_key="service_error",
+                translation_placeholders={"service": "set_manual_backup"},
+            )
+        api._update_site(self.coordinator_context, {"device_disaster": resp})
+        await self.coordinator.async_refresh_data_from_apidict()
+        status = await panel_api.get_device_disaster_status(
+            identifier=self.coordinator_context, fromFile=testmode
+        )
+        if status:
+            api._update_site(
+                self.coordinator_context, {"device_disaster_status": status}
+            )
+        return resp
 
     async def _async_mqtt_toggle(
         self,
@@ -1582,7 +1698,18 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 # backup_end = None if not isinstance(kwargs.get(BACKUP_END), datetime) else kwargs.get(BACKUP_END)
                 # duration = None if not isinstance(kwargs.get(BACKUP_DURATION), timedelta) else kwargs.get(BACKUP_DURATION)
                 result = None
-                if self._attribute_name == "pps_manual_backup_switch":
+                if self._attribute_name == "site_manual_backup_switch":
+                    result = await self._async_site_manual_backup(
+                        enable=(
+                            self._attr_is_on
+                            if kwargs.get(ENABLE_BACKUP) is None
+                            else kwargs[ENABLE_BACKUP]
+                        ),
+                        backup_start=kwargs.get(BACKUP_START),
+                        backup_end=kwargs.get(BACKUP_END),
+                        backup_duration=kwargs.get(BACKUP_DURATION),
+                    )
+                elif self._attribute_name == "pps_manual_backup_switch":
                     if mdev := self.coordinator.client.get_mqtt_device(
                         self.coordinator_context
                     ):

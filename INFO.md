@@ -1126,6 +1126,25 @@ Forecast data entities and cloud polling can be excluded in your hub configurati
 > None of the forecast entities can be used as solar forecast entities for your HA energy dashboard. If Smart mode is inactive, no forecast data is provided and the entities will show an unknown state. Furthermore those entities are not designed to integrate with your HA energy dashboard. Instead they are usable to monitor the behavior of the 'Smart' mode since that is acting like a black box and may show weird charging and discharging behavior that may not make much sense. If you need more accurate forecast data, I recommend any of the available solar forecast integrations.
 
 
+## Home Power Panel manual backup
+
+Home Power Panel (A17B1) systems expose a **Manual backup** switch on the system device when the owner account reports disaster-preparedness support. Enabling this switch starts a 24-hour manual backup window immediately; disabling it cancels manual backup. This uses the cloud API and requires API usage to be enabled. It does not change the Backup SoC setting or Storm Guard.
+
+The switch attributes show the backup start/end and whether the window is currently active. To choose a different window, target this switch with the existing `anker_solix.modify_solix_backup_charge` action:
+
+```yaml
+action: anker_solix.modify_solix_backup_charge
+target:
+  entity_id: switch.system_home_manual_backup
+data:
+  enable_backup: true
+  backup_duration:
+    hours: 1
+```
+
+Use the entity ID created for your system. `backup_start` and `backup_end` can also be specified; timestamps without a timezone use the Home Assistant timezone. If `enable_backup` is omitted, the current enabled state is preserved. Shared-account control has not been verified.
+
+
 ## Modification of PPS settings
 
 The supported PPS devices are mostly stand alone devices and have no system controls, which are managed through the cloud Api in most cases. Most PPS controls are typcically individual entities that use MQTT commands through the connected Anker MQTT server. Newer PPS devices with advanced features however require a hybrid or cloud Api only control for those advanced features. Following cloud Api dependend features are known and may be implemented:

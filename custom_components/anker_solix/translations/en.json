@@ -2887,6 +2887,14 @@
             },
             "outage_alert_switch": {
                 "name": "Outage alerts"
+            },
+            "manual_backup_switch": {
+                "name": "Manual backup",
+                "state_attributes": {
+                    "backup_start": {"name": "Backup start"},
+                    "backup_end": {"name": "Backup end"},
+                    "backup_active": {"name": "Backup active"}
+                }
             }
         },
         "text":{
