@@ -27,7 +27,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import Undefined
+from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -2321,9 +2321,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         dev_registry = dr.async_get(self.coordinator.hass)
                         dev_registry.async_update_device(
                             self.device_entry.id,
-                            manufacturer=vehicle.brand or Undefined,
-                            model_id=vehicle.model or Undefined,
-                            hw_version=str(vehicle.productive_year or "") or Undefined,
+                            manufacturer=vehicle.brand or UNDEFINED,
+                            model_id=vehicle.model or UNDEFINED,
+                            hw_version=str(vehicle.productive_year or "") or UNDEFINED,
                         )
             elif (
                 self._attribute_name == "charger_usage_mode"
