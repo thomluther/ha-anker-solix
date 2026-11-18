@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from enum import IntFlag
 from pathlib import Path
 
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.translation import async_get_translations
 
 from .const import DOMAIN, IMAGEFOLDER, MANUFACTURER
 from .solixapi.apitypes import SolixSiteType
@@ -192,7 +194,7 @@ def get_AnkerSolixSystemInfo(data: dict, identifier: str) -> DeviceInfo:
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
         serial_number=data.get("site_id"),
-        model=(str(site_type).capitalize() + " Site").strip(),
+        model=(str(site_type).replace("_", " ").title() + " Site").strip(),
         model_id=f"Type {data.get('power_site_type')}",
         name=f"System {data.get('site_name')}",
     )
@@ -205,7 +207,7 @@ def get_AnkerSolixAccountInfo(data: dict, identifier: str) -> DeviceInfo:
         identifiers={(DOMAIN, identifier)},
         manufacturer=MANUFACTURER,
         serial_number=identifier,
-        model=str(data.get("type")).capitalize(),
+        model=str(data.get("type")).replace("_", " ").title(),
         model_id=data.get("server"),
         name=f"{data.get('nickname')} ({str(data.get('country') or '--').upper()})",
     )
@@ -218,8 +220,51 @@ def get_AnkerSolixVehicleInfo(data: dict, identifier: str) -> DeviceInfo:
         identifiers={(DOMAIN, identifier)},
         manufacturer=data.get("brand"),
         serial_number=identifier,
-        model=str(data.get("type")).capitalize(),
+        model=str(data.get("type")).replace("_", " ").title(),
         model_id=data.get("model"),
         hw_version=str(data.get("productive_year")),
         name=data.get("vehicle_name"),
     )
+
+
+async def toggle_notification(
+    hass: HomeAssistant,
+    toggle: bool,
+    notification_id: str,
+    title_key: str | None = "persistent_warning",
+    placeholders: dict[str, str] | None = None,
+    message: str = "",
+) -> None:
+    """Create or dismiss a persistent notification in UI for user warnings including translation of title."""
+
+    if not (isinstance(hass, HomeAssistant) and isinstance(notification_id, str)):
+        return
+    if toggle:
+        # hass.data has no built-in "translations" key; the official way to resolve a translated exceptions.*.message
+        # string at runtime is via the translation helper, using the user's configured language.
+        translations = await async_get_translations(
+            hass, hass.config.language, "exceptions", {DOMAIN}
+        )
+        localize_key = f"component.{DOMAIN}.exceptions.{title_key}.message"
+        title = translations.get(
+            localize_key, f"Anker Solix Warning for {notification_id}"
+        )
+        if isinstance(placeholders, dict):
+            for key, value in placeholders.items():
+                title = title.replace(f"{{{key!s}}}", str(value))
+        await hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": title,
+                "message": message,
+                "notification_id": notification_id,
+            },
+        )
+    else:
+        # dismissing an id not longer existing is HA no_op
+        await hass.services.async_call(
+            "persistent_notification",
+            "dismiss",
+            {"notification_id": notification_id},
+        )

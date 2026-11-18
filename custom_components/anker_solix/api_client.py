@@ -779,7 +779,13 @@ class AnkerSolixApiClient:
     async def check_mqtt_session(self) -> None:
         """Check mqtt usage and status of session, restart if required."""
         if self._mqtt_usage:
-            # restart connection if not connected
+            # create list of eligeable MQTT devices
+            mqtt_devs = [
+                dev
+                for dev in self.api.devices.values()
+                if dev.get("mqtt_supported")
+            ]
+            # restart MQTT session if not connected
             if not self.api.mqttsession or (
                 not self._testmode and not self.api.mqttsession.is_connected()
             ):
@@ -788,11 +794,6 @@ class AnkerSolixApiClient:
                     self.api.apisession.nickname,
                 )
                 if await self.api.startMqttSession(fromFile=self._testmode):
-                    mqtt_devs = [
-                        dev
-                        for dev in self.api.devices.values()
-                        if dev.get("mqtt_supported")
-                    ]
                     if self._testmode:
                         # stop any active file poller task first
                         if self._mqtt_task:
@@ -820,32 +821,12 @@ class AnkerSolixApiClient:
                             "Api Coordinator %s MQTT session connected, subscribing eligible devices",
                             self.api.apisession.nickname,
                         )
-                        for dev in mqtt_devs:
-                            await self.subscribe_device(dev)
                         if not mqtt_devs:
                             _LOGGER.warning(
                                 "Api Coordinator %s did not find eligible devices for MQTT subscription, you may disable MQTT connection to prevent device subscription attempts",
                                 self.api.apisession.nickname,
                             )
-                    # create MQTT device instances
-                    for dev in mqtt_devs:
-                        sn = dev.get("device_sn")
-                        if sn and (
-                            mdev := SolixMqttDeviceFactory(
-                                api_instance=self.api, device_sn=sn
-                            ).create_device()
-                        ):
-                            self.mqtt_devices[sn] = mdev
-                            # Do initial MQTT commands as required per device type
-                            # Note: Single status requests or RT triggers should not be done once, since that may cause stale enties if not repeated
-                            if SolixMqttCommands.theme_request in mdev.controls:
-                                # trigger display theme request to initialize theme detail settings not returned otherwise
-                                await mdev.run_command(
-                                    cmd=SolixMqttCommands.theme_request,
-                                    toFile=self._testmode,
-                                )
-
-                    # Note: The method for update callback will be checked and set during coordinator updates
+                    # NOTE: The method for MQTT message update callback will be checked and set during coordinator updates
                 else:
                     _LOGGER.error(
                         "Api Coordinator %s failed to start MQTT session",
@@ -853,16 +834,37 @@ class AnkerSolixApiClient:
                     )
                     # drop MQTT device instances
                     self.mqtt_devices.clear()
-            # check and redo subscription for existing mqtt devices
-            elif not self._testmode:
-                for mdev in self.mqtt_devices.values():
-                    if (
-                        not mdev.is_passive()
-                        and not mdev.is_subscribed()
-                        and not await self.subscribe_device(mdev.device)
+            if self.api.mqttsession and (
+                self._testmode or self.api.mqttsession.is_connected()
+            ):
+                # create or update MQTT device instances
+                for dev in mqtt_devs:
+                    sn = dev.get("device_sn")
+                    if sn and sn not in self.mqtt_devices and (
+                        mdev := SolixMqttDeviceFactory(
+                            api_instance=self.api, device_sn=sn
+                        ).create_device()
                     ):
-                        # clear mqtt data cache to avoid orphaned data
-                        mdev.mqttdata.clear()
+                        self.mqtt_devices[sn] = mdev
+                # check and redo subscription for existing mqtt devices
+                if not self._testmode:
+                    for mdev in self.mqtt_devices.values():
+                        if (
+                            not mdev.is_passive()
+                            and not mdev.is_subscribed()
+                        ):
+                            if await self.subscribe_device(mdev.device):
+                                # Do initial MQTT commands as required per device type
+                                # NOTE: Single status requests or RT triggers should not be done once, since that may cause stale enties if not repeated
+                                if SolixMqttCommands.theme_request in mdev.controls:
+                                    # trigger display theme request to initialize theme detail settings not returned otherwise
+                                    await mdev.run_command(
+                                        cmd=SolixMqttCommands.theme_request,
+                                        toFile=self._testmode,
+                                    )
+                            else:
+                                # clear mqtt data cache to avoid orphaned data
+                                mdev.mqttdata.clear()
 
     async def subscribe_device(self, deviceDict: dict) -> bool:
         """Subscribe a device to MQTT messages."""

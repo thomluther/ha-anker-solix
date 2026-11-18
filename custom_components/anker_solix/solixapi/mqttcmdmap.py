@@ -2130,11 +2130,12 @@ CMD_PORT_TIMER = {
                     VALUE_STATE: f"{port}_timer_switch",
                 },
                 "01": {
-                    NAME: "set_port_timer_seconds",  # Timer seconds, custom range: 0-86100, step 300
+                    # NOTE: App supports only 5 minutes but devices support 1 minute
+                    NAME: "set_port_timer_seconds",  # Timer seconds, custom range: 0-86340, step 60
                     TYPE: DeviceHexDataTypes.var.value,
                     VALUE_MIN: 0,
-                    VALUE_MAX: 86100,
-                    VALUE_STEP: 300,
+                    VALUE_MAX: 86340,
+                    VALUE_STEP: 60,
                     STATE_NAME: f"{port}_timer_seconds",
                     VALUE_STATE: f"{port}_timer_seconds",
                 },

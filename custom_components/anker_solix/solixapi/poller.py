@@ -144,7 +144,7 @@ async def poll_sites(  # noqa: C901
                     {
                         "device_sn": dev.get("device_sn"),
                         "device_pn": dev.get("device_model"),
-                        "alias": dev.get("device_name"),
+                        "alias_name": dev.get("device_name"),
                         "status": dev.get("status"),
                     },
                     siteId=myid,
@@ -232,17 +232,21 @@ async def poll_sites(  # noqa: C901
                             if data_valid or not oldstamp
                             else oldstamp
                         )
-                    else:
+                    elif str(mysite.get("energy_offset_check")) != timestamp.strftime(
+                        fmt
+                    ):
+                        # valid timestamp received from solarbank, calculate min offset to energy data in cloud if not stale
                         timestamp = timestamp.astimezone()
-                        # valid timestamp received from solarbank, calculate min offset to energy data in cloud
                         offset: timedelta = timedelta(
                             seconds=mysite.get("energy_offset_seconds") or 0
                         )
+                        offset_tz = mysite.get("energy_offset_tz") or 0
                         # get min offset to provided cloud update timestamps
                         offset = min(
-                            # use default offset 1 day for first calculation
+                            # use default offset 1 day for first calculation or upon timezone change
                             timedelta(days=1)
                             if offset.total_seconds() == 0
+                            or abs(offset.total_seconds() - offset_tz) > 900
                             else offset,
                             # set offset few minutes before new data timestamp if smaller than previous offset and not aged more than one day
                             timestamp
@@ -252,14 +256,11 @@ async def poll_sites(  # noqa: C901
                             < timedelta(days=1)
                             else timedelta(seconds=0),
                         )
-                        #
-                        # Add energy offset info to site cache
+                        # Add energy offset info to site cache, offset_check will save last valid cloud timestamp
                         mysite.update(
                             {
                                 "energy_offset_seconds": round(offset.total_seconds()),
-                                "energy_offset_check": datetime.now()
-                                .astimezone()
-                                .strftime(fmt),
+                                "energy_offset_check": timestamp.strftime(fmt),
                                 "energy_offset_tz": 1800
                                 * round(round(offset.total_seconds()) / 1800),
                             }
@@ -718,6 +719,14 @@ async def poll_sites(  # noqa: C901
                                 "grid_to_home_power": str(round(max(0, ct_power))),
                             },
                         )
+                    # as time progressed, update actual schedule slot presets from a cached schedule if available
+                    if schedule := (api.devices.get(sn, {})).get("schedule"):
+                        api._update_dev(
+                            {
+                                "device_sn": sn,
+                                "schedule": schedule,
+                            }
+                        )
                     # Get total stats and update energy offset
                     if not (
                         {
@@ -983,6 +992,11 @@ async def poll_site_details(
                         api.apisession.nickname,
                     )
                     await api.get_power_limit(siteId=site_id, fromFile=fromFile)
+                # Get disaster support once for site
+                if "disaster_support" not in site.get("site_details", {}):
+                    await api.get_disaster_support(
+                        identifier=site_id, fromFile=fromFile
+                    )
             # Fetch CO2 Ranking if not excluded
             if not ({f"{site_type}_energy"} & exclude):
                 api._logger.debug(
@@ -1041,10 +1055,6 @@ async def poll_site_details(
                             )
                         },
                     )
-            # fetch disaster status
-            # Get disaster support once for site
-            if "disaster_support" not in site.get("site_details", {}):
-                await api.get_disaster_support(identifier=site_id, fromFile=fromFile)
             # Fetch disaster settings if supported
             if site.get("site_details").get("disaster_support"):
                 await api.get_device_disaster(identifier=site_id, fromFile=fromFile)

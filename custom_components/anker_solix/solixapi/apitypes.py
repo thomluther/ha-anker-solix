@@ -178,6 +178,7 @@ API_ENDPOINTS: Final[dict] = {
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
     "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
     "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
+    # power_service/v1/dynamic_price/price_detail deprecated and non functional as of 29.10.2026 due to cloud memory issues
     # Power endpoints */v1/*
     "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
     "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
@@ -375,7 +376,7 @@ related to power V2: 14 + 2 used => 16 total
     'power_service/v2/device/report_data'
     'power_service/v2/platform_get_user_region_param' # {"product_code": "A17C5", "identifier_id": deviceSn, "scenario_type": 1})) # if supported, CC, grid code, advanced params settings for grid options
     'power_service/v2/platform_set_user_region_param'
-    'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
+    'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC, E10?
     'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
 
 related to micro inverter without system: 1 + 6 used => 7 total
@@ -495,10 +496,10 @@ Home Energy System related (X1): 45 + 20 used => 65 total
     "charging_hes_svc/share_device/invite_installer_member",
     "charging_hes_svc/share_device/get_installer_invited_list",
 
-Home Energy System related (X1): 6 + 0 used => 6 total
+Dynamic Price related (X1 + Solarbank): 6 + 0 used => 6 total
     "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
     "charging_hes_dynamic_price_svc/get_price_company", # needs owner
-    "charging_hes_dynamic_price_svc/get_price", # needs owner
+    "charging_hes_dynamic_price_svc/get_price", # needs owner {"type": 2, "siteId": <site_id>}
     "charging_hes_dynamic_price_svc/save_time_of_use", # needs owner
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
     "charging_hes_dynamic_price_svc/get_third_jump_url"
@@ -702,6 +703,7 @@ Model  Name                                     Platform
 A110A  26K Prime Power Bank                     Power Bank
 A110B  20K Prime Power Bank                     Power Bank
 A110G  20K Prime Power Bank                     Power Bank
+A1340  Prime Power Bank                         Power Bank
 A1722  SOLIX C300                               Portable Power Station
 A1723  SOLIX C300X                              Portable Power Station
 A1725  SOLIX C200(X)                            Portable Power Station
@@ -1271,9 +1273,10 @@ class SolixDeviceNames:
 class SolixDeviceCapacity:
     """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
 
-    A110A: int = 100  # Anker Prime Power Bank 300 W, 25Ah, 99,75 Wh
-    A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
-    A110G: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
+    A110A: int = 100  # Anker Prime Power Bank 300 W, 25Ah, 99.75 Wh
+    A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72.4 Wh
+    A110G: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72.4 Wh
+    A1340: int = 100  # Anker Prime Power Bank 250 W, 27.65Ah, 99.54 Wh (BT only)
     A17C0: int = 1600  # SOLIX Solarbank E1600
     A17C1: int = 1600  # SOLIX Solarbank 2 E1600 Pro
     BP1600: int = 1600  # Solarbank 2 Expansion BP1600 (This has no SN or product code)
@@ -1317,7 +1320,7 @@ class SolixDeviceCapacity:
     A17A5: int = 288  # SOLIX EverFrost 2 Powered Cooler 58L
     AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
     AS220: int = 2010  # SOLIX S2000 Portable Power Station
-    AS510: int = 5000  # SOLIX S5000 Portable Power Station
+    AS510: int = 5000  # SOLIX S5000 Portable Power Station with Smart Meter and power system support
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -1514,6 +1517,9 @@ class SolixDeviceCategory:
     A110G: str = (
         SolixDeviceType.POWERBANK.value
     )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
+    A1340: str = (
+        SolixDeviceType.POWERBANK.value
+    )  # Anker Prime Power Bank 250 W, 27.65Ah, 99.54 Wh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
     # Smart Generators

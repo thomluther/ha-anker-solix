@@ -220,6 +220,87 @@ DEVICE_NUMBERS = [
         restore=True,
     ),
     AnkerSolixNumberDescription(
+        # SB output limit number
+        key="max_load",
+        translation_key="max_load",
+        json_key="max_load",
+        entity_category=EntityCategory.CONFIG,
+        unit_of_measurement=UnitOfPower.WATT,
+        mode=NumberMode.BOX,
+        native_min_value=SolixDefaults.PRESET_MIN,
+        native_max_value=SolixDefaults.PRESET_MAX,  # must be updated dynamically
+        native_step=10,
+        # use different MQTT value name if overlay
+        # value_fn=lambda d, jk: None if (v := d.get(jk)) is None else str(v),
+        value_fn=lambda d, jk: (
+            int(v)
+            if str(
+                v := (d.get(jk) or d.get("power_limit"))
+                if d.get(MQTT_OVERLAY)
+                else (d.get("power_limit") or d.get(jk))
+            ).isdigit()
+            else None
+        ),
+        exclude_fn=lambda s, d: (
+            not (
+                (
+                    {d.get("type")} - s
+                    & {
+                        SolixDeviceType.SOLARBANK.value,
+                        SolixDeviceType.COMBINER_BOX.value,
+                    }
+                )
+                and "all_power_limit" not in d
+                and not d.get("station_sn")
+                # exclude number for Solarbanks not supporting granular limits
+                and d.get("generation", 0) >= 3
+            )
+        ),
+        # mqtt=True,
+        # mqtt_cmd=SolixMqttCommands.sb_max_load,
+        # api_cmd=True,
+        # ignore_opt_count=True,
+    ),
+    AnkerSolixNumberDescription(
+        # SB Multisystem output limit granular
+        key="max_load_total",
+        translation_key="max_load_total",
+        json_key="max_load_total",
+        entity_category=EntityCategory.CONFIG,
+        unit_of_measurement=UnitOfPower.WATT,
+        mode=NumberMode.BOX,
+        native_min_value=100,
+        native_max_value=800,  # must be updated dynamically
+        native_step=10,
+        # use different MQTT value name if overlay
+        value_fn=lambda d, jk: (
+            None
+            if (
+                v := (d.get(jk) or d.get("all_power_limit"))
+                if d.get(MQTT_OVERLAY)
+                else (d.get("all_power_limit") or d.get(jk))
+            )
+            is None
+            else str(v)
+        ),
+        # exclude if not main device of total load
+        exclude_fn=lambda s, d: (
+            not (
+                {d.get("type")} - s
+                and "all_power_limit" in d
+                and d.get("generation", 3) >= 3  # default generation for Combiner Boc
+                # and (
+                #     d.get("type") == SolixDeviceType.COMBINER_BOX.value
+                #     or d.get("station_sn") == d.get("device_sn")
+                # )
+            )
+        ),
+        # mqtt=True,
+        # mqtt_cmd=SolixMqttCommands.sb_max_load_parallel,
+        # api_cmd=True,
+        # ignore_opt_count=True,
+    ),
+    AnkerSolixNumberDescription(
         # Solarbank Battery min soc setting for SB 2/3 with new FW
         key="sb_min_soc",
         translation_key="min_soc",
@@ -958,6 +1039,34 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                             / (data.get("solarbank_count") or 1)
                         ),
                     )
+                # update output limit based on exceeding legal limit
+                elif self._attribute_name in ["max_load", "max_load_total"]:
+                    # Limit the range to active settings
+                    if isinstance(
+                        options := data.get("all_power_limit_option")
+                        or data.get("power_limit_option"),
+                        list,
+                    ):
+                        # Limit the options to subset as provided in Api device details (from power limit query)
+                        # [{'limit': 350, 'limit_real': 350}, {'limit': 600, 'limit_real': 600}, {'limit': 800, 'limit_real': 800}]
+                        # allow legal exceeding options only depending on setting
+                        legal = data.get("legal_limit", 0)
+                        max_limit = (
+                            0 if data.get("exceed_legal_output_limit") else legal
+                        )
+                        self.native_max_value = max(
+                            [
+                                v
+                                for opt in options
+                                if isinstance(opt, dict)
+                                and (v := int(opt.get("limit") or 0))
+                                and (not max_limit or v <= max_limit)
+                            ]
+                            + [
+                                int(self._native_value or 0),
+                                SolixDefaults.PRESET_MAX,
+                            ]  # default max range and include current state
+                        )
                 # update backup soc limits based on min/max states of Api cache
                 elif self._attribute_name == "sb_backup_soc":
                     self.native_min_value = (
@@ -1009,6 +1118,8 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                 "battery_capacity",
                 "ac_max_charging_power",
                 "energy_consumption_per_100km",
+                "max_load",
+                "max_load_total",
             ]
             and not self.entity_description.restore
             and not self.entity_description.mqtt_cmd
@@ -1333,6 +1444,45 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                                 resp, indent=2 if len(json.dumps(resp)) < 200 else None
                             ),
                         )
+                elif self._attribute_name in ["max_load", "max_load_total"]:
+                    LOGGER.debug(
+                        "'%s' change to %s will be applied", self.entity_id, value
+                    )
+                    resp = None
+                    with suppress(ValueError, TypeError):
+                        # Systems with Station support can be controlled through Api alone, and support granular output limit
+                        # Entity must not exist if no station support
+                        station_sn = (
+                            self.coordinator_context
+                            if data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                            else data.get("station_sn")
+                        )
+                        # Run Api command to update Api cache, also for test mode
+                        resp = (resp or {}) | (
+                            await self.coordinator.client.api.set_power_limit(
+                                siteId=data.get("site_id", ""),
+                                deviceSn=station_sn or self.coordinator_context,
+                                ac_output=value,
+                                toFile=self.coordinator.client.testmode(),
+                            )
+                            or {}
+                        )
+                        if isinstance(resp, dict) and ALLOW_TESTMODE:
+                            LOGGER.info(
+                                "%s: Applied limit setting:\n%s",
+                                "TESTMODE"
+                                if self.coordinator.client.testmode()
+                                else "LIVEMODE",
+                                json.dumps(
+                                    resp,
+                                    indent=2 if len(json.dumps(resp)) < 200 else None,
+                                ),
+                            )
+                        # trigger status request to get updated MQTT status if Api was used
+                        if resp and mdev:
+                            await mdev.status_request(
+                                toFile=self.coordinator.client.testmode()
+                            )
                 elif (
                     self.entity_description.mqtt_cmd == SolixMqttCommands.sb_soc_limits
                 ):

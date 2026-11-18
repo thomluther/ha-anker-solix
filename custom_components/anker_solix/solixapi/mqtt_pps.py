@@ -48,6 +48,7 @@ MODELS = {
     "A1790P",  # SOLIX F3800 Plus Power Panel PPS
     "AS100",  # C1000X Gen 2 LE
     "AS220",  # SOLIX S2000
+    "AS510",  # SOLIX S5000 Solarbank PPS
 }
 
 # Define possible controls per Model

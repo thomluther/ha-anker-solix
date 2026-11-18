@@ -201,6 +201,16 @@
             "grid_export_limit": {
                 "default": "mdi:transmission-tower-import"
             },
+            "max_load": {
+                "default": "mdi:speedometer",
+                "range": {
+                    "0": "mdi:speedometer-slow",
+                    "801": "mdi:speedometer"
+                }
+            },
+            "max_load_total": {
+                "default": "mdi:speedometer"
+            },
             "min_soc": {
                 "default": "mdi:battery-heart-outline"
             },
@@ -1129,6 +1139,13 @@
                 "state": {
                     "on": "mdi:transmission-tower-import",
                     "off": "mdi:transmission-tower-off"
+                }
+            },
+            "exceed_legal_output_limit": {
+                "default": "mdi:upload-lock",
+                "state": {
+                    "on": "mdi:upload",
+                    "off": "mdi:upload-lock"
                 }
             },
             "backup_soc_switch": {

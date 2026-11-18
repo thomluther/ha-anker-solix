@@ -1563,12 +1563,13 @@ async def get_energy_offset(
                     endDay=checkdate,
                     devType=source,
                 )
-            # generate list of SOC timestamps different from 0 and pick last one
+            # generate list of data timestamps different from power 0 and pick last one, exclude 24:00 slots since duplicates of next day 00:00
             if (
                 soclist := [
                     item
                     for item in (data.get("charge_level") or [])
                     if (item.get("value") or "0") != "0"
+                    and not str(item.get("time")).startswith("24:")
                 ]
             ) and soclist[-1].get("time"):
                 last = datetime.strptime(
@@ -1678,12 +1679,13 @@ async def get_device_energy_offset(
                     startDay=checkdate,
                     endDay=checkdate,
                 )
-            # generate list of data timestamps different from power 0 and pick last one
+            # generate list of data timestamps different from power 0 and pick last one, exclude 24:00 slots since duplicates of next day 00:00
             if (
                 datalist := [
                     item
                     for item in (data.get("data_trend") or [])
                     if item.get("power", "0") != "0"
+                    and not str(item.get("time")).startswith("24:")
                 ]
             ) and datalist[-1].get("time"):
                 last = datetime.strptime(

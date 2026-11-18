@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 import json
 import logging
 from typing import Any
@@ -27,7 +27,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import UNDEFINED
+from homeassistant.helpers.typing import Undefined
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -276,7 +276,7 @@ DEVICE_SELECTS = [
         exclude_fn=lambda s, _: not ({SolixDeviceType.INVERTER.value} - s),
     ),
     AnkerSolixSelectDescription(
-        # SB output limit
+        # SB output limit option select
         key="max_load",
         translation_key="max_load",
         json_key="max_load",
@@ -298,49 +298,51 @@ DEVICE_SELECTS = [
             not (
                 # (
                 ({d.get("type")} - s)
-                and "all_power_limit" not in d
                 #     & {
                 #         SolixDeviceType.SOLARBANK.value,
                 #         SolixDeviceType.COMBINER_BOX.value,
                 #     }
                 # )
+                and "all_power_limit" not in d
                 and not d.get("station_sn")
+                # exclude selector for Solarbanks supporting granular limits
+                and d.get("generation", 0) < 3
             )
         ),
         mqtt=True,
         mqtt_cmd=SolixMqttCommands.sb_max_load,
     ),
-    AnkerSolixSelectDescription(
-        # SB Multisystem output limit
-        key="max_load_total",
-        translation_key="max_load_total",
-        json_key="max_load_total",
-        entity_category=EntityCategory.CONFIG,
-        unit_of_measurement=UnitOfPower.WATT,
-        # use different MQTT value name if overlay
-        value_fn=lambda d, jk: (
-            None
-            if (
-                v := (d.get(jk) or d.get("all_power_limit"))
-                if d.get(MQTT_OVERLAY)
-                else (d.get("all_power_limit") or d.get(jk))
-            )
-            is None
-            else str(v)
-        ),
-        # exclude if not main device of total load
-        exclude_fn=lambda s, d: (
-            not (
-                {d.get("type")} - s and "all_power_limit" in d
-                # and (
-                #     d.get("type") == SolixDeviceType.COMBINER_BOX.value
-                #     or d.get("station_sn") == d.get("device_sn")
-                # )
-            )
-        ),
-        mqtt=True,
-        mqtt_cmd=SolixMqttCommands.sb_max_load_parallel,
-    ),
+    # AnkerSolixSelectDescription(
+    #     # SB Multisystem output limit option selector
+    #     key="max_load_total",
+    #     translation_key="max_load_total",
+    #     json_key="max_load_total",
+    #     entity_category=EntityCategory.CONFIG,
+    #     unit_of_measurement=UnitOfPower.WATT,
+    #     # use different MQTT value name if overlay
+    #     value_fn=lambda d, jk: (
+    #         None
+    #         if (
+    #             v := (d.get(jk) or d.get("all_power_limit"))
+    #             if d.get(MQTT_OVERLAY)
+    #             else (d.get("all_power_limit") or d.get(jk))
+    #         )
+    #         is None
+    #         else str(v)
+    #     ),
+    #     # exclude if not main device of total load
+    #     exclude_fn=lambda s, d: (
+    #         not (
+    #             {d.get("type")} - s and "all_power_limit" in d
+    #             # and (
+    #             #     d.get("type") == SolixDeviceType.COMBINER_BOX.value
+    #             #     or d.get("station_sn") == d.get("device_sn")
+    #             # )
+    #         )
+    #     ),
+    #     mqtt=True,
+    #     mqtt_cmd=SolixMqttCommands.sb_max_load_parallel,
+    # ),
     AnkerSolixSelectDescription(
         # PPS output limit
         key="max_load",
@@ -1265,21 +1267,26 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
         ):
             # Limit the options to subset as provided in Api device details (from power limit query)
             # [{'limit': 350, 'limit_real': 350}, {'limit': 600, 'limit_real': 600}, {'limit': 800, 'limit_real': 800}]
+            # allow legal exceeding options only depending on setting
+            legal = mdev.device.get("legal_limit", 0)
+            max_limit = 0 if mdev.device.get("exceed_legal_output_limit") else legal
             self._attr_options = [
-                str(d.get("limit"))
-                for d in options
-                if isinstance(d, dict)
-                for key, item in d.items()
-                if key == "limit"
+                str(v)
+                for opt in options
+                if isinstance(opt, dict)
+                and (v := int(opt.get("limit") or 0))
+                and (not max_limit or v <= max_limit)
             ]
             if not self._attr_options:
                 # fallback to MQTT command options
-                self._attr_options = list(
-                    mdev.get_cmd_parm_option_map(
+                self._attr_options = [
+                    v
+                    for v in mdev.get_cmd_parm_option_map(
                         cmd=self.entity_description.mqtt_cmd,
                         parm=self.entity_description.mqtt_cmd_parm,
-                    ).keys()
-                )
+                    )
+                    if (not max_limit or int(v) <= max_limit)
+                ]
             else:
                 # update mdev command description options
                 mdev.update_device(
@@ -1507,12 +1514,17 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 ):
                     # Limit the options to subset as provided in Api device details (from power limit query)
                     # [{'limit': 350, 'limit_real': 350}, {'limit': 600, 'limit_real': 600}, {'limit': 800, 'limit_real': 800}]
+                    # allow legal exceeding options only depending on setting
+                    legal = mdev.device.get("legal_limit", 0)
+                    max_limit = (
+                        0 if mdev.device.get("exceed_legal_output_limit") else legal
+                    )
                     self._attr_options = [
-                        str(d.get("limit"))
-                        for d in options
-                        if isinstance(d, dict)
-                        for key, item in d.items()
-                        if key == "limit"
+                        str(v)
+                        for opt in options
+                        if isinstance(opt, dict)
+                        and (v := int(opt.get("limit") or 0))
+                        and (not max_limit or v <= max_limit)
                     ]
                     number_sort = True
                 else:
@@ -1629,7 +1641,10 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             self._attr_options.sort()
                             # trigger MQTT theme request to update MQTT theme detail settings if changed externally
                             # wrap the async method
-                            if self.hass and SolixMqttCommands.theme_request in mdev.controls:
+                            if (
+                                self.hass
+                                and SolixMqttCommands.theme_request in mdev.controls
+                            ):
                                 self.hass.add_job(
                                     mdev.run_command(
                                         cmd=SolixMqttCommands.theme_request,
@@ -1983,11 +1998,16 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         resp = await self.coordinator.client.api.set_sb2_ac_charge(
                             siteId=data.get("site_id", ""),
                             deviceSn=self.coordinator_context,
+                            backup_start=datetime.fromtimestamp(
+                                min(ts, datetime.now().timestamp())
+                            ).astimezone()
+                            if (ts := data.get("preset_manual_backup_start"))
+                            else None,
                             backup_switch=True,
                             toFile=self.coordinator.client.testmode(),
                         )
                     else:
-                        # Ensure an active backup mode will be disabled first in cache, the Api call will be done in the home load method
+                        # Ensure an active backup mode will be disabled first in cache, the Api call for mode change will be via home load method
                         if (
                             getattr(SolarbankUsageMode, self._attr_current_option, None)
                             == SolarbankUsageMode.backup.value
@@ -2301,9 +2321,9 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                         dev_registry = dr.async_get(self.coordinator.hass)
                         dev_registry.async_update_device(
                             self.device_entry.id,
-                            manufacturer=vehicle.brand or UNDEFINED,
-                            model_id=vehicle.model or UNDEFINED,
-                            hw_version=str(vehicle.productive_year or "") or UNDEFINED,
+                            manufacturer=vehicle.brand or Undefined,
+                            model_id=vehicle.model or Undefined,
+                            hw_version=str(vehicle.productive_year or "") or Undefined,
                         )
             elif (
                 self._attribute_name == "charger_usage_mode"

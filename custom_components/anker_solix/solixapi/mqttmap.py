@@ -1469,6 +1469,12 @@ _A1783_0421 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+_A1783_0406 = {
+    # OTA update status
+    TOPIC: "param_info",
+    "a3": {NAME: "ota_progress"},  # 0-100%
+}
+
 _A1783_0503 = {
     TOPIC: "state_info",
     "a2": {
@@ -1591,6 +1597,77 @@ _A1780_0405 = {
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
 
+_A1772_0405 = {
+    # F1500 param info, similar to F2000 but 2 USB-C and 4 USB-A ports, no expansion battery
+    TOPIC: "param_info",
+    "a2": {
+        NAME: "ac_output_timeout_seconds"
+    },  # Active AC auto-off countdown in seconds
+    "a3": {
+        NAME: "dc_output_timeout_seconds"
+    },  # Active DC auto-off countdown in seconds
+    "a4": {
+        NAME: "remaining_time_hours",
+        FACTOR: 0.1,
+        SIGNED: False,
+    },  # In hours, to empty or to full; implausible values for a few seconds after charge start
+    "a5": {NAME: "ac_input_power"},  # AC charging power, includes AC pass through power
+    "a6": {NAME: "ac_output_power"},  # AC outlet power
+    "a7": {NAME: "usbc_1_power"},  # USB-C port 1 output power
+    "a8": {NAME: "usbc_2_power"},  # USB-C port 2 output power
+    "a9": {NAME: "usba_1_power"},  # USB-A port 1 output power
+    "aa": {NAME: "usba_2_power"},  # USB-A port 2 output power
+    "ab": {NAME: "usba_3_power"},  # USB-A port 3 output power
+    "ac": {NAME: "usba_4_power"},  # USB-A port 4 output power
+    "ad": {NAME: "dc_12v_1_power"},  # 12V car socket output power
+    "ae": {NAME: "dc_input_power"},  # DC input power (solar/car charging)
+    "af": {NAME: "input_power_total"},  # Mirrors AC input while charging from AC only
+    "b0": {NAME: "output_power_total"},  # Combined AC DC output power
+    "b3": {NAME: "sw_version", "values": 1},  # Main firmware version
+    "ba": {NAME: "sw_controller", "values": 1},  # Controller firmware version
+    "bc": {
+        NAME: "charging_status",  # Inactive (0), Solar (1), AC Input (2), Both (3)
+    },
+    "bd": {NAME: "temperature", SIGNED: True},  # Main device temperature (°C)
+    "bf": {NAME: "battery_status"},  # 0=standby, 1=discharge, 2=Charge
+    "c1": {NAME: "main_battery_soc"},  # Main battery state of charge (%)
+    "c6": {NAME: "usbc_1_status"},  # 0:0ff, 1:On
+    "c7": {NAME: "usbc_2_status"},  # 0:0ff, 1:On
+    "c8": {NAME: "usba_1_status"},  # 0:0ff, 1:On
+    "c9": {NAME: "usba_2_status"},  # 0:0ff, 1:On
+    "ca": {NAME: "usba_3_status"},  # 0:0ff, 1:On
+    "cb": {NAME: "usba_4_status"},  # 0:0ff, 1:On
+    "cc": {NAME: "dc_12v_1_status"},  # 0:0ff, 1:On
+    "d0": {NAME: "device_sn"},
+    "d1": {NAME: "ac_input_limit"},  # Maximum charge setting (W)
+    "d2": {
+        NAME: "device_timeout_minutes"
+    },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+    "d3": {
+        NAME: "display_timeout_seconds"
+    },  # Display timeout: 20, 30, 60, 300, 1800 seconds
+    "d7": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "da": {NAME: "ac_frequency"},  # 60 / 50 Hz
+    "db": {
+        NAME: "energy_saving_switch"
+    },  # Disabled (0) or Enabled (1), physical switch on device only
+    "dc": {NAME: "light_mode"},  # Off (0), Low (1), Medium (2), High (3), SOS (4)
+    "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "de": {NAME: "display_switch"},  # Off (0) or On (1)
+    "fe": {NAME: "msg_timestamp"},  # Message timestamp
+}
+
+_A1772_0408 = {
+    # F1500 state info
+    TOPIC: "state_info",
+    "a3": {NAME: "device_sn"},
+    "a4": {NAME: "local_timestamp"},
+    "a5": {NAME: "utc_timestamp"},
+    "ac": {NAME: "main_battery_soc"},  # in %
+}
+
 _A1780_0408 = {
     # F2000(P) state info
     TOPIC: "state_info",
@@ -1674,6 +1751,10 @@ _A1782_0421 = (
                 },
                 "18": {
                     NAME: "light_mode",  # Off (0), Low (1), Mid (2), Bright (3)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "19": {
+                    NAME: "temp_unit_fahrenheit",  # Celsius (0) or Fahrenheit (1)
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "20": {
@@ -3546,6 +3627,13 @@ _A2345_0303 = (
         "fe": {NAME: "msg_timestamp"},
     }
 )
+
+_A2345_0306 = {
+    # 250W Prime Charger
+    TOPIC: "param_info",
+    "a2": {NAME: "ota_status"}, # None (0), Preparing(1)?, Ongoing(2)
+    "a3": {NAME: "ota_progress"},  # 0-100%
+}
 
 _A2345_0a00 = (
     {
@@ -5932,6 +6020,8 @@ SOLIXMQTTMAP: Final[dict] = {
             # ab = min_soc: 1, 5, 10, 15, 20 %
             SolixMqttCommands.outage_alert_switch: CMD_OUTAGE_ALERT_SWITCH_V2,
         },
+        # Interval: ~3 second during OTA upgrades
+        "0406": _A1783_0406,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
         # Event report, sent when backup window starts or ends and on AC grid loss
@@ -5968,6 +6058,13 @@ SOLIXMQTTMAP: Final[dict] = {
         "0503": _A1783_0503,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
+        # 0089 OTA status response
+        "0889": {
+            "a2": {NAME: "ota_allowed"},  # No (0), Yes (1)
+            "a3": {
+                NAME: "ota_block_reason"
+            },  # OK (0), SoC < 6% (2), BMS boot mode w/o AC (4)
+        },
         # Clock screen read reply (to 0092), sent when the app opens the device settings
         "0892": {
             "a2": _A1783_0421["da"],
@@ -6179,6 +6276,8 @@ SOLIXMQTTMAP: Final[dict] = {
             # ab = min_soc: 1, 5, 10, 15, 20 %
             SolixMqttCommands.outage_alert_switch: CMD_OUTAGE_ALERT_SWITCH_V2,
         },
+        # Interval: ~3 second during OTA upgrades
+        "0406": _A1783_0406,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
         # Interval: Irregular, once every 11? hours
@@ -6393,6 +6492,35 @@ SOLIXMQTTMAP: Final[dict] = {
         "0830": _PPS_VERSIONS_0830,
         # Interval: Only as response to status request, same content as 0421
         "0900": _AS220_0421,
+    },
+    # PPS F1500
+    "A1772": {
+        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # AC output timeout: 0-86400 seconds, step 300
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: 0-86400 seconds, step 300
+        "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 200, max: 1000, step: 100
+        | {
+            "a2": {
+                **CMD_AC_CHARGE_LIMIT["a2"],
+                VALUE_MIN: 200,
+                VALUE_MAX: 1000,
+                VALUE_STEP: 100,
+            }
+        },
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), SOS blinking (4)
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": _A1772_0405,
+        # Interval: irregular, triggered by wifi signal change and charge limit change
+        "0407": _PPS_0407,
+        # Interval: irregular
+        "0408": _A1772_0408,
     },
     # PPS F2000
     "A1780": {
@@ -6630,6 +6758,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.display_switch,  # field a2
                 SolixMqttCommands.display_mode_select,  # field a3
                 SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.temp_unit_switch,  # field a5
                 SolixMqttCommands.device_timeout_minutes,  # field a6
                 SolixMqttCommands.light_mode_select,  # field a7
                 SolixMqttCommands.port_memory_switch,  # field a8
@@ -6651,6 +6780,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Celsius (0) | Fahrenheit (1)
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
                 "a6": CMD_DEVICE_TIMEOUT_MIN["a2"],
@@ -7453,6 +7583,8 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~1 second, but only with realtime trigger. Consumption data, all data fields are also in 0a00 message
         "0303": _A2345_0303,
+        # Interval: ~1 second during OTA upgrades
+        "0306": _A2345_0306,
         # Interval: Upon change of the port timer
         "0307": {
             "a2": {NAME: "set_port_timer_select"},
@@ -7677,6 +7809,8 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~1 second with realtime trigger. USB port consumption data.
         "0303": _A91B2_0303,
+        # Interval: ~1 second during OTA upgrades
+        "0306": _A2345_0306,
         # Interval: Upon change of a port timer's switch, same port ids as 0207
         # The two u32 values are in the reverse order of the A2345 0307
         "0307": {

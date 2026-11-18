@@ -32,7 +32,6 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import UTC
 
 from .api_client import AnkerSolixApiClientCommunicationError, AnkerSolixApiClientError
 from .const import (
@@ -64,6 +63,7 @@ from .entity import (
     get_AnkerSolixSubdeviceInfo,
     get_AnkerSolixSystemInfo,
     get_AnkerSolixVehicleInfo,
+    toggle_notification,
 )
 from .solixapi import export
 from .solixapi.apitypes import (
@@ -136,6 +136,7 @@ DEVICE_SWITCHES = [
         exclude_fn=lambda s, d: (
             not (
                 {d.get("type")} - s
+                and d.get("preset_backup_option") is not None
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
         ),
@@ -237,6 +238,39 @@ DEVICE_SWITCHES = [
         exclude_fn=lambda s, d: not (({d.get("type")} - s) and d.get("mqtt_data")),
         restore=True,
         mqtt=True,
+    ),
+    AnkerSolixSwitchDescription(
+        # Virtual switch for user confirmation exceeding legal output limits
+        key="exceed_legal_output_limit",
+        translation_key="exceed_legal_output_limit",
+        json_key="exceed_legal_output_limit",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d, jk: (
+            bool(v)
+            if (v := (d.get("customized") or {}).get(jk)) is not None
+            else d.get(jk)
+        ),
+        attrib_fn=lambda d, _: (
+            {"customized": c}
+            if (c := (d.get("customized") or {}).get("exceed_legal_output_limit"))
+            is not None
+            else {}
+        ),
+        # Exclude for Solarbanks not needing confirmation switch
+        exclude_fn=lambda s, d: (
+            not (
+                (
+                    ({d.get("type")} - s)
+                    & {
+                        SolixDeviceType.SOLARBANK.value,
+                        SolixDeviceType.COMBINER_BOX.value,
+                    }
+                )
+                and "exceed_legal_output_limit" in d
+                and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
+            )
+        ),
+        restore=True,
     ),
     AnkerSolixSwitchDescription(
         key="ac_socket_switch",
@@ -433,7 +467,7 @@ DEVICE_SWITCHES = [
         translation_key="ev_charger_mode_switch",
         json_key="ev_charger_mode",
         # state values are mdev functions, depending on charger status, must be converted into binary switch state
-        value_fn=lambda d, jk: bool(d.get(jk)),
+        value_fn=lambda d, jk: bool(v) if (v := d.get(jk)) is not None else None,
         force_creation_fn=lambda d, _: (
             d.get("mqtt_data", {}).get("ev_charger_status") is not None
         ),
@@ -986,6 +1020,7 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 "default_vehicle",
                 "allow_grid_export",
                 MQTT_OVERLAY,
+                "exceed_legal_output_limit",
             ]
             and not self.entity_description.mqtt_cmd
         ):
@@ -1011,19 +1046,65 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 translation_key="local_mode",
                 translation_placeholders={"entity_id": self.entity_id},
             )
+        # Customize cache if restore entity
         if self.entity_description.restore:
             LOGGER.info(
                 "%s will be %s",
                 self.entity_id,
                 "enabled" if enable else "disabled",
             )
-            # Customize cache if restore entity
             value = enable ^ self.entity_description.inverted
             self.coordinator.client.api.customizeCacheId(
                 id=self.coordinator_context,
                 key=self.entity_description.json_key,
                 value=value,
             )
+            if self._attribute_name == "exceed_legal_output_limit":
+                if site_id := data.get("site_id", ""):
+                    # customize all other parallel devices in system
+                    station_sn = (
+                        self.coordinator_context
+                        if data.get("type") == SolixDeviceType.COMBINER_BOX.value
+                        else data.get("station_sn", "")
+                    )
+                    for sn, dev in self.coordinator.data.items():
+                        if (
+                            sn != self.coordinator_context
+                            and dev.get("site_id") == site_id
+                            and dev.get("station_sn") == station_sn
+                        ):
+                            self.coordinator.client.api.customizeCacheId(
+                                id=sn,
+                                key=self.entity_description.json_key,
+                                value=value,
+                            )
+                            if ALLOW_TESTMODE:
+                                LOGGER.info(
+                                    "%s: State value of entity name '%s' for other device '%s' has been customized in Api cache to: %s",
+                                    "TESTMODE"
+                                    if self.coordinator.client.testmode()
+                                    else "LIVEMODE",
+                                    self._attribute_name,
+                                    sn,
+                                    value,
+                                )
+                # toggle persistent notification for system if unlock message exists
+                site = self.coordinator.data.get(site_id, {})
+                site_details = site.get("site_details", {})
+                message = site_details.get("unlock_pop_content", "")
+                if image := site_details.get("unlock_pop_image", ""):
+                    # compose markdown
+                    message = f"![image]({image})\n\n{message}"
+                await toggle_notification(
+                    hass=self.hass,
+                    toggle=value and message,
+                    notification_id=f"{site_id}_{self._attribute_name}",
+                    title_key="output_limit",
+                    placeholders={
+                        "id": f"{(site.get('site_info') or {}).get('site_name') or site_id}"
+                    },
+                    message=message,
+                )
             if ALLOW_TESTMODE:
                 LOGGER.info(
                     "%s: State value of entity '%s' has been customized in Api cache to: %s",
@@ -1077,20 +1158,10 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
             LOGGER.debug(
                 "'%s' will be %s", self.entity_id, "enabled" if enable else "disabled"
             )
-            # SB2 AC option
+            # System backup charge option
             resp = await self.coordinator.client.api.set_sb2_ac_charge(
                 siteId=data.get("site_id") or "",
                 deviceSn=self.coordinator_context,
-                backup_start=datetime.fromtimestamp(
-                    data.get("preset_manual_backup_start") or 0, UTC
-                ).astimezone()
-                if enable ^ self.entity_description.inverted
-                else None,
-                backup_end=datetime.fromtimestamp(
-                    data.get("preset_manual_backup_end") or 0, UTC
-                ).astimezone()
-                if enable ^ self.entity_description.inverted
-                else None,
                 backup_switch=enable ^ self.entity_description.inverted,
                 toFile=self.coordinator.client.testmode(),
             )

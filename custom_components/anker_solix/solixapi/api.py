@@ -175,36 +175,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .get(device.get("device_code", ""), {})
                                 .get("custom_fields", {})
                             )
-                        # Flag device for supported mqtt trigger if admin and device not passive
+                        # Flag device for MQTT support
                         if (
                             device.get("is_admin") or device.get("owner_user_id")
-                        ) and not (
-                            device.get("is_passive") or devData.get("is_passive")
                         ):
                             device["mqtt_supported"] = True
-                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            # init customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
                             )
-                            # update customizable setting for desired MQTT status request interval
-                            device["mqtt_status_interval"] = device.get(
-                                "mqtt_status_interval", 0
-                            )
-                            # check once if device supports status requests from description
-                            if "mqtt_status_request" not in device:
-                                device["mqtt_status_request"] = bool(
-                                    [
-                                        cmd
-                                        for cmd in SOLIXMQTTMAP.get(
-                                            str(value), {}
-                                        ).values()
-                                        if SolixMqttCommands.status_request
-                                        in [
-                                            cmd.get(COMMAND_NAME),
-                                            *cmd.get(COMMAND_LIST, []),
-                                        ]
-                                    ]
+                            # Flag device for MQTT subscription
+                            if not (
+                                device.get("is_passive") or devData.get("is_passive")
+                            ):
+                                # init customizable setting for desired MQTT status request interval
+                                device["mqtt_status_interval"] = device.get(
+                                    "mqtt_status_interval", 0
                                 )
+                                # check once if device has non default status request from description
+                                if "mqtt_status_request" not in device:
+                                    device["mqtt_status_request"] = bool(
+                                        [
+                                            cmd
+                                            for cmd in SOLIXMQTTMAP.get(
+                                                str(value), {}
+                                            ).values()
+                                            if SolixMqttCommands.status_request
+                                            in [
+                                                cmd.get(COMMAND_NAME),
+                                                *cmd.get(COMMAND_LIST, []),
+                                            ]
+                                        ]
+                                    )
                         # check if capacity should be calculated
                         if not device.get("battery_capacity") and hasattr(
                             SolixDeviceCapacity, str(value)
@@ -341,21 +343,25 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     ):
                         device[key] = str(value)
                     elif (
-                        key in ["mqtt_overlay", "mqtt_status_interval"]
+                        key
+                        in [
+                            "mqtt_overlay",
+                            "mqtt_status_interval",
+                            "exceed_legal_output_limit",
+                        ]
                         and value is not None
                     ):
-                        # keys that are customized
-                        custom = (device.get("customized") or {}).get(key)
-                        device[key] = custom if custom is not None else value
-                        # If mqtt_status_interval is 0, clear customization
+                        # keys that are customized if existing in cache
+                        customized = device.get("customized") or {}
+                        custom = customized.get(key)
                         if (
                             key == "mqtt_status_interval"
                             and custom is not None
                             and float(custom) == 0
                         ):
-                            device.get("customized", {}).pop(
-                                "mqtt_status_interval", None
-                            )
+                            # If mqtt_status_interval is 0, clear customization
+                            customized.pop("mqtt_status_interval", None)
+                        device[key] = custom if custom is not None else value
                     elif key == "bt_ble_id" and value and not devData.get("bt_ble_mac"):
                         # Make sure that BT ID is added if mac not in data
                         device["bt_ble_mac"] = str(value).replace(":", "")
@@ -732,16 +738,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_tariff": SolixTariffTypes.UNKNOWN.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
                                         "preset_tariff_currency": curr_def,
+                                        "preset_manual_backup_start": 0,
+                                        "preset_manual_backup_end": 0,
+                                        "preset_backup_option": False,
                                     }
-                                    | (
-                                        {
-                                            "preset_manual_backup_start": 0,
-                                            "preset_manual_backup_end": 0,
-                                            "preset_backup_option": False,
-                                        }
-                                        if not pps_type
-                                        else {}
-                                    )
                                 )
                         else:
                             # Solarbank 1 schedule
@@ -841,26 +841,35 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                                 or SolixDefaults.PRESET_TYPE
                                             )
                                         break
-                            if (
-                                ac_type
-                                and not pps_type
-                                and (
-                                    backup := value.get(SolarbankRatePlan.backup) or {}
+                            if ac_type and (
+                                backup := (
+                                    (mysite.get("site_details") or {}).get(
+                                        "device_disaster"
+                                    )
+                                    if pps_type
+                                    else value.get(SolarbankRatePlan.backup)
                                 )
+                                or {}
                             ):
                                 # check whether now in active backup interval to update usage mode info because active backup mode is not reflected in schedule object
-                                start = (backup.get("ranges") or [{}])[0].get(
-                                    "start_time"
-                                ) or 0
-                                end = (backup.get("ranges") or [{}])[0].get(
-                                    "end_time"
-                                ) or 0
-                                switch = backup.get("switch") or False
+                                ranges = (
+                                    backup.get("disaster_details")
+                                    if pps_type
+                                    else backup.get("ranges")
+                                ) or [{}]
+                                start = ranges[0].get("start_time") or 0
+                                end = ranges[0].get("end_time") or 0
+                                switch = bool(
+                                    backup.get("manual_disaster_switch")
+                                    if pps_type
+                                    else backup.get("switch")
+                                )
                                 # update valid backup list item data
                                 device.update(
                                     {
                                         "preset_usage_mode": SolarbankUsageMode.backup
-                                        if switch and start < now.timestamp() < end
+                                        if switch
+                                        and start < datetime.now().timestamp() < end
                                         else mode_type,
                                         "preset_manual_backup_start": start,
                                         "preset_manual_backup_end": end,
@@ -924,6 +933,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 else None
                             )
                             dev_power = sys_power
+                            # remove preset load for pps types since manual mode not supported in system
+                            if pps_type and not sys_power:
+                                device.pop("preset_system_output_power", None)
                         else:
                             # Solarbank 1 schedule
                             for slot in value.get("ranges") or []:
@@ -1569,10 +1581,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # Add smart plugs usage mode if smart plugs installed
             if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
-            # Add options introduced with SB2 AC for AC charging
-            # TODO(SB_PPS): Allow backup mode once required implementation for SB_PPS is known
-            if device.get("type") != SolixDeviceType.SOLARBANK_PPS.value and (
-                "grid_to_battery_power" in device or ac_devs
+            # Add options introduced with SB2 AC for AC charging (and SOLARBANK_PPS manual backup via site disaster endpoints)
+            if (
+                "grid_to_battery_power" in device
+                or ac_devs
+                or device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
             ):
                 options.add(SolarbankUsageMode.backup.name)
             # Add use time if plan is defined
@@ -2198,16 +2211,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             )
         # update site details in sites dict, this info is also useful without power dock
         if data := resp.get("data") or {}:
+            # Legal limit, 0 if unlimited
+            legal = int(v) if str(v := data.get("legal_limit") or 0).isdigit() else 0
+            # Actual limit setting
+            actual = (
+                int(v) if str(v := data.get("legal_power_limit") or 0).isdigit() else 0
+            )
+            # limit options
+            options = data.get("power_limit_option")
+            exceed_option = isinstance(options, list) and any(
+                opt
+                for opt in options
+                if isinstance(opt, dict) and int(opt.get("limit") or 0) > legal
+            )
             self._update_site(
                 siteId,
                 {
-                    "legal_power_limit": data.get("legal_power_limit")
-                    or 0,  # Actual limit setting
-                    "legal_limit": data.get("legal_limit")
-                    or 0,  # Legal limit, 0 if unlimited
+                    "legal_power_limit": actual,
+                    "legal_limit": legal,
                     "parallel_type": data.get("parallel_type") or "",
-                    "power_limit_option": data.get("power_limit_option"),
-                },
+                    "power_limit_option": options,
+                    "unlock_default_power_type": data.get("unlock_default_power_type"),
+                    "unlock_pop_image": data.get("unlock_pop_image") or "",
+                    "unlock_pop_content": data.get("unlock_pop_content") or "",
+                }
+                | (
+                    # flag whether actual limit exceeds legal limit, No field means no user confirmation required
+                    {
+                        "exceed_legal_output_limit": bool(actual > legal),
+                    }
+                    if legal and exceed_option
+                    else {}
+                ),
             )
         # Add station settings if available in site details (should have updated with previous device param query in device details poll)
         site = self.sites.get(siteId) or {}
@@ -2260,6 +2295,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     if "unlock_default_power_type" in data
                     else {}
                 )
+                | (
+                    {
+                        "exceed_legal_output_limit": site_details.get(
+                            "exceed_legal_output_limit"
+                        )
+                    }
+                    if "exceed_legal_output_limit" in site_details
+                    else {}
+                )
                 | station,
                 siteId=siteId,
                 isAdmin=True,
@@ -2299,6 +2343,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                         }
                         if "unlock_default_power_type" in data and copy_limits
+                        else {}
+                    )
+                    | (
+                        {
+                            "exceed_legal_output_limit": site_details.get(
+                                "exceed_legal_output_limit"
+                            )
+                        }
+                        if "exceed_legal_output_limit" in site_details and copy_limits
                         else {}
                     )
                     | ({} if station_sn is None else {"station_sn": station_sn}),

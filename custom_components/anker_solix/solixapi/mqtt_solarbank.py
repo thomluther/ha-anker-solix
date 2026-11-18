@@ -74,14 +74,15 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         super().update_device(device=device, dynamic_descriptions=dynamic_descriptions)
         if not dynamic_descriptions:
             return
-        if dynamic_descriptions.get("circuit_setup") and (value := self._filedata.get("circuit_setup")):
+        if dynamic_descriptions.get("circuit_setup") and (
+            value := self._filedata.get("circuit_setup")
+        ):
             # update the grouping of mocked circuit setup
             circuit_groups = {}
             for index, circuit in value.items():
-                group = f"{circuit.get("priority",0)!s}:{circuit.get("id",0)!s}"
+                group = f"{circuit.get('priority', 0)!s}:{circuit.get('id', 0)!s}"
                 circuit_groups[group] = [*circuit_groups.get(group, []), index]
             self._filedata["circuit_groups"] = circuit_groups
-
 
     async def set_temp_unit(
         self,
@@ -170,30 +171,33 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             else None
         )
         priority = (
-            get_enum_value(SolixCircuitPriority,get_enum_name(SolixCircuitPriority,str(int(priority))))
+            get_enum_value(
+                SolixCircuitPriority,
+                get_enum_name(SolixCircuitPriority, str(int(priority))),
+            )
             if (isinstance(circuit, int | float) or str(priority).isdigit())
-            else get_enum_value(SolixCircuitPriority,priority)
+            else get_enum_value(SolixCircuitPriority, priority)
             if isinstance(priority, str)
             else None
         )
         # check values and Build parameter map
         if circuit in setup and groups and priority is not None:
             # first get peers for circuit to be modified
-            peers = next(iter(p for p in groups.values() if circuit in p),[])
+            peers = next(iter(p for p in groups.values() if circuit in p), [])
             # cycle through setup and rebuild logical group id based on changed priority
             prio_index = {}
-            for slot in [f"{i:02d}" for i in range(len(setup),0,-1)]:
+            for slot in [f"{i:02d}" for i in range(len(setup), 0, -1)]:
                 if c := setup.get(slot):
                     if slot in peers:
                         # update prio for any peer
                         prio = int(priority)
                         c["priority"] = prio
                     else:
-                        prio = c.get("priority",0)
+                        prio = c.get("priority", 0)
                     # increase index for prio and assign new id to any slot
-                    if c.get("pair_status",0) < 2:
+                    if c.get("pair_status", 0) < 2:
                         # increase prio index only if no peer slot
-                        prio_index[prio] = prio_index.get(prio,0) + 1
+                        prio_index[prio] = prio_index.get(prio, 0) + 1
                     # NOTE: This id assignment assumes peered slots are always adjacent slots
                     c["id"] = prio_index[prio]
             return setup

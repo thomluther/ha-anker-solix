@@ -644,6 +644,12 @@
             "grid_export_limit": {
                 "name": "Grid export limit"
             },
+            "max_load": {
+                "name": "Output limit"
+            },
+            "max_load_total": {
+                "name": "Output limit"
+            },
             "min_soc": {
                 "name": "SoC min"
             },
@@ -2750,6 +2756,14 @@
             "allow_grid_export": {
                 "name": "Allow grid export"
             },
+            "exceed_legal_output_limit": {
+                "name": "Surpass legal limit",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Customized"
+                    }
+                }
+            },
             "backup_soc_switch": {
                 "name": "Activate Backup SoC"
             },
@@ -3310,6 +3324,12 @@
         },
         "action_blocked": {
             "message": "The action {service} cannot be executed again while still running or startup in progress (timeout at {timeout})"
+        },
+        "persistent_warning": {
+            "message": "Anker Solix warning for {id}"
+        },
+        "output_limit": {
+            "message": "Anker Solix warning for {id} output limit"
         }
     }
 }

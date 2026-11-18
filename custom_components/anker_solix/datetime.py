@@ -17,7 +17,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-# from homeassistant.util.dt import UTC
 from .const import (
     ALLOW_TESTMODE,
     ATTRIBUTION,
@@ -77,12 +76,8 @@ DEVICE_DATETIMES = [
         ),
         exclude_fn=lambda s, d: (
             not (
-                ({d.get("type")} - s)
-                & {
-                    SolixDeviceType.SOLARBANK.value,
-                    SolixDeviceType.COMBINER_BOX.value,
-                }
-                and d.get("preset_manual_backup_start")
+                {d.get("type")} - s
+                and d.get("preset_manual_backup_start") is not None
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
         ),
@@ -106,12 +101,8 @@ DEVICE_DATETIMES = [
         ),
         exclude_fn=lambda s, d: (
             not (
-                ({d.get("type")} - s)
-                & {
-                    SolixDeviceType.SOLARBANK.value,
-                    SolixDeviceType.COMBINER_BOX.value,
-                }
-                and d.get("preset_manual_backup_end")
+                {d.get("type")} - s
+                and d.get("preset_manual_backup_end") is not None
                 and (not (sn := d.get("station_sn")) or sn == d.get("device_sn"))
             )
         ),
@@ -427,10 +418,6 @@ class AnkerSolixDateTime(CoordinatorEntity, DateTimeEntity):
                     "preset_manual_backup_end",
                 ]
                 and isinstance(value, datetime)
-                and (
-                    data.get("type") == SolixDeviceType.COMBINER_BOX.value
-                    or (data.get("generation") or 0) >= 2
-                )
             ):
                 LOGGER.debug("%s change to %s will be applied", self.entity_id, value)
                 site_id = data.get("site_id") or ""

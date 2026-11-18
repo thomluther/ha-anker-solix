@@ -644,6 +644,12 @@
             "grid_export_limit": {
                 "name": "Limite d'exportation du réseau"
             },
+            "max_load": {
+                "name": "Limite de sortie"
+            },
+            "max_load_total": {
+                "name": "Limite de sortie"
+            },
             "min_soc": {
                 "name": "Niveau de charge minimal"
             },
@@ -2750,6 +2756,14 @@
             "allow_grid_export": {
                 "name": "Exporter vers le réseau"
             },
+            "exceed_legal_output_limit": {
+                "name": "Dépasser la limite légale",
+                "state_attributes": {
+                    "customized": {
+                        "name": "Personnalisé"
+                    }
+                }
+            },
             "backup_soc_switch": {
                 "name": "Activer le SoC de sauvegarde"
             },
@@ -3310,6 +3324,12 @@
         },
         "action_blocked": {
             "message": "L'action {service} ne peut pas être exécutée à nouveau alors qu'elle est encore en cours d'exécution ou démarrage en cours (temps mort à {timeout})"
+        },
+        "persistent_warning": {
+            "message": "Avertissement Anker Solix concernant {id}"
+        },
+        "output_limit": {
+            "message": "Avertissement Anker Solix concernant la limite de puissance pour {id}"
         }
     }
 }

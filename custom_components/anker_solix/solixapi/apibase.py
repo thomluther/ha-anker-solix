@@ -2827,45 +2827,70 @@ class AnkerSolixBaseApi:
         return result
 
     async def get_device_disaster(
-        self, identifier: str, id_type: int = 2, fromFile: bool = False
+        self,
+        identifier: str,
+        id_type: int = 2,
+        fromFile: bool = False,
+        testSchedule: dict | None = None,
     ) -> dict:
         """Get the manual/auto backup (disaster preparedness) configuration of a system or standalone device.
 
         Verified on A17B1 Home Power Panel, id_type=2 for power panel sites, and AS220 id_type=1 for S2000 PPS
+        Works also for Solarbank PPS sites. If testSchedule is provided, cache is updated with that data
         Example data:
         {"auto_disaster_switch": false,"manual_disaster_switch": true,"disaster_details": [
             {"uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
             "end_time": 1780991880,"charging_time": 36,"event_key": ""}]}
         """
-        self._logger.debug(
-            "Getting api %s site device disaster config for ID %s",
-            self.apisession.nickname,
-            identifier,
-        )
-        data = {"identifier_id": identifier, "type": id_type}
-        if fromFile:
-            # For file data, verify first if there is a modified file to be used for testing
-            if not (
-                resp := await self.apisession.loadFromFile(
-                    Path(self.testDir())
-                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json"
-                )
-            ):
-                resp = await self.apisession.loadFromFile(
-                    Path(self.testDir())
-                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{identifier}.json"
-                )
-        else:
-            resp = await self.apisession.request(
-                "post", API_CHARGING_ENDPOINTS["get_site_device_disaster"], json=data
+        if not isinstance(testSchedule, dict):
+            testSchedule = None
+        if testSchedule is None:
+            self._logger.debug(
+                "Getting api %s site device disaster config for ID %s",
+                self.apisession.nickname,
+                identifier,
             )
-        if result := resp.get("data") or {}:
+            data = {"identifier_id": identifier, "type": id_type}
+            if fromFile:
+                # For file data, verify first if there is a modified file to be used for testing
+                if not (
+                    resp := await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json"
+                    )
+                ):
+                    resp = await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{identifier}.json"
+                    )
+            else:
+                resp = await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                    json=data,
+                )
+            result = resp.get("data") or {}
+        else:
+            result = testSchedule
+        if result:
             if id_type == 1:
                 # cache under device_details
                 self._update_dev({"device_sn": identifier, "device_disaster": result})
             else:
                 # cache under site_details
                 self._update_site(identifier, {"device_disaster": result})
+                # update extracted data from backup schedule for sites with devices using device_disaster, like Solarbank PPS
+                for dev in [
+                    d
+                    for d in self.devices.values()
+                    if d.get("site_id") == identifier and d.get("schedule")
+                ]:
+                    self._update_dev(
+                        {
+                            "device_sn": dev.get("device_sn"),
+                            "schedule": dev.get("schedule"),
+                        }
+                    )
         return result
 
     async def get_device_disaster_status(
@@ -2942,7 +2967,7 @@ class AnkerSolixBaseApi:
             if not await self.apisession.saveToFile(
                 Path(self.testDir())
                 / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json",
-                data={"code": 0, "msg": "success!", "data": data},
+                data={"code": 0, "msg": "success!", "data": filedata},
             ):
                 return {}
         else:
@@ -2969,6 +2994,7 @@ class AnkerSolixBaseApi:
         end_time: int | datetime | None = None,
         disaster_type: int = 1,
         toFile: bool = False,
+        cache_only: bool = False,
     ) -> dict:
         """Disable or enable manual backup mode for a system or standalone device over a time window.
 
@@ -2976,6 +3002,7 @@ class AnkerSolixBaseApi:
         Disaster_type other than 1 is accepted but stored/returned as 1;
         start_time / end_time are unix epoch seconds; end_time must be after start_time.
         The server auto-generates the event uuid.
+        If cache_only is True, only the api cache structure will be updated without api calls (e.g. for testing)
         Returns the refreshed disaster configuration or an empty dict upon error
         """
         if isinstance(start_time, datetime):
@@ -2991,53 +3018,60 @@ class AnkerSolixBaseApi:
             "type": id_type,
             "manual_disaster_switch": bool(enable),
         }
+        if end_time <= start_time:
+            self._logger.error(
+                "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
+                self.apisession.nickname,
+                start_time,
+                end_time,
+            )
+            return {}
+        data["manual_disaster_detail"] = {
+            "disaster_type": disaster_type,
+            "start_time": start_time,
+            "end_time": end_time,
+        }
+        # change only relevant parts of existing disaster details
+        if id_type == 1:
+            filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
+        else:
+            filedata = (
+                self.sites.get(identifier, {})
+                .get("site_details", {})
+                .get("device_disaster")
+                or {}
+            )
+        filedata["manual_disaster_switch"] = bool(enable)
+        if details := data.get("manual_disaster_detail"):
+            if (filedetails := filedata.get("disaster_details")) and isinstance(
+                filedetails, list
+            ):
+                filedetails[0].update(details)
+            else:
+                # Mock the details if it just got enabled without previous information
+                filedetails = [
+                    {"uuid": "00000000-0000-0000-0000-000000000001"}
+                    | details
+                    | {"charging_time": None, "event": "", "event_key": ""}
+                ]
+            filedata["disaster_details"] = filedetails
+        if cache_only:
+            # return refreshed config and update cache
+            return await self.get_device_disaster(
+                identifier=identifier,
+                id_type=id_type,
+                fromFile=toFile,
+                testSchedule=filedata,
+            )
         # When disabled, the payload MUST omit manual_disaster_detail.
         # Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
-        if enable:
-            if end_time <= start_time:
-                self._logger.error(
-                    "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
-                    self.apisession.nickname,
-                    start_time,
-                    end_time,
-                )
-                return {}
-            data["manual_disaster_detail"] = {
-                "disaster_type": disaster_type,
-                "start_time": start_time,
-                "end_time": end_time,
-            }
+        if not enable:
+            data.pop("manual_disaster_detail", None)
         if toFile:
-            # change only relevant parts of existing status
-            if id_type == 1:
-                filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
-            else:
-                filedata = (
-                    self.sites.get(identifier, {})
-                    .get("site_details", {})
-                    .get("device_disaster")
-                    or {}
-                )
-            filedata["manual_disaster_switch"] = bool(enable)
-            if details := data.get("manual_disaster_detail"):
-                if (filedetails := filedata.get("disaster_details")) and isinstance(
-                    filedetails, list
-                ):
-                    filedetails[0].update(details)
-                else:
-                    # Mock the details if it just got enabled without previous information
-                    filedetails = (
-                        {"uuid": "00000000-0000-0000-0000-000000000001"}
-                        | details
-                        | {"charging_time": 36, "event_key": ""}
-                    )
-                filedata["disaster_details"] = [filedetails]
-            else:
-                filedata["disaster_details"] = []
             if not await self.apisession.saveToFile(
                 Path(self.testDir())
                 / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{identifier}.json",
-                data={"code": 0, "msg": "success!", "data": data},
+                data={"code": 0, "msg": "success!", "data": filedata},
             ):
                 return {}
         else:
