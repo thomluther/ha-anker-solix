@@ -1048,6 +1048,9 @@
                 "state_attributes": {
                     "id": {
                         "name": "ID"
+                    },
+                    "type": {
+                        "name": "Type"
                     }
                 }
             },
@@ -1086,8 +1089,10 @@
             "priority_circuit_x": {
                 "name": "Priority circuit {id}",
                 "state": {
+                    "fix": "Immuable",
                     "must_have": "Must have",
-                    "nice_to_have": "Nice to have"
+                    "nice_to_have": "Nice to have",
+                    "unknown": "Unknown"
                 }
             }
         },

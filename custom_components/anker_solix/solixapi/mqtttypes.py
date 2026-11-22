@@ -414,6 +414,7 @@ class DeviceHexDataField:
         if not hexdata:
             return values
         # allow direct type overwrites, recursive calls with modified bin/strb types won't modify type again
+        # NOTE: First level bin/strb field types must use the BYTES mapping description to overwrite field type
         if (
             fieldtype
             not in [DeviceHexDataTypes.bin.value, DeviceHexDataTypes.strb.value]

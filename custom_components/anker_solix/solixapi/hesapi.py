@@ -736,8 +736,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     self.apisession.nickname,
                 )
             await self.get_co2_ranking(siteId=site_id, fromFile=fromFile)
+            # NOTE: The dynamic price providers are deprecated and will be skipped
             # Fetch dynamic price providers and prices if supported for site
-            if {ApiCategories.site_price} - exclude:
+            if {ApiCategories.site_price} - exclude and False:
                 for model in {
                     m
                     for m in (site.get("site_info") or {}).get(

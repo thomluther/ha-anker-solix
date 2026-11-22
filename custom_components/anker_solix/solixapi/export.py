@@ -484,44 +484,46 @@ class AnkerSolixApiExport:
                 endpoint=API_ENDPOINTS["get_third_platforms"],
                 filename=f"{API_FILEPREFIXES['get_third_platforms']}.json",
             )
-            self._logger.info("Get dynamic price sites for user account...")
-            await self.query(
-                endpoint=API_ENDPOINTS["get_dynamic_price_sites"],
-                filename=f"{API_FILEPREFIXES['get_dynamic_price_sites']}.json",
-            )
+            # NOTE: Endpoints for provider support and selection deprecated
+            # self._logger.info("Get dynamic price sites for user account...")
+            # await self.query(
+            #     endpoint=API_ENDPOINTS["get_dynamic_price_sites"],
+            #     filename=f"{API_FILEPREFIXES['get_dynamic_price_sites']}.json",
+            # )
             # Get supported providers for found device models supporting dynamic prices
-            providers = set()
-            for model in {
-                dev.get("device_pn")
-                for dev in self.api_power.devices.values()
-                if dev.get("device_pn")
-                in ["A17C5", "A5101", "A5102", "A5103", "AE103", "A17E2"]
-            }:
-                self._logger.info(
-                    "Exporting dynamic price providers for model '%s'...", model
-                )
-                if (
-                    resp := await self.query(
-                        endpoint=API_ENDPOINTS["get_dynamic_price_providers"],
-                        filename=f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json",
-                        payload={"device_pn": model},
-                    )
-                ) and isinstance(resp, dict):
-                    # add provider options to set
-                    for country in (resp.get("data") or {}).get("country_info") or []:
-                        for company in country.get("company_info") or []:
-                            for area in company.get("area_info") or []:
-                                providers.add(
-                                    str(
-                                        SolixPriceProvider(
-                                            country=country.get("country"),
-                                            company=company.get("company"),
-                                            area=area.get("area"),
-                                        )
-                                    )
-                                )
+            # NOTE: Endpoints for provider support and selection deprecated
+            # providers = set()
+            # for model in {
+            #     dev.get("device_pn")
+            #     for dev in self.api_power.devices.values()
+            #     if dev.get("device_pn")
+            #     in ["A17C5", "A5101", "A5102", "A5103", "AE103", "A17E2"]
+            # }:
+            #     self._logger.info(
+            #         "Exporting dynamic price providers for model '%s'...", model
+            #     )
+            #     if (
+            #         resp := await self.query(
+            #             endpoint=API_ENDPOINTS["get_dynamic_price_providers"],
+            #             filename=f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json",
+            #             payload={"device_pn": model},
+            #         )
+            #     ) and isinstance(resp, dict):
+            #         # add provider options to set
+            #         for country in (resp.get("data") or {}).get("country_info") or []:
+            #             for company in country.get("company_info") or []:
+            #                 for area in company.get("area_info") or []:
+            #                     providers.add(
+            #                         str(
+            #                             SolixPriceProvider(
+            #                                 country=country.get("country"),
+            #                                 company=company.get("company"),
+            #                                 area=area.get("area"),
+            #                             )
+            #                         )
+            #                     )
             # export prices for all provider options
-            # power_service/v1/dynamic_price/price_detail deprecated and non functional as of 29.10.2026 due to cloud memory issues
+            # NOTE: endpoint deprecated and non functional as of 29.10.2026 due to cloud memory issues
             # for provider in [SolixPriceProvider(provider=p) for p in providers]:
             #     self._logger.info(
             #         "Exporting dynamic price details for %s...",
@@ -643,6 +645,7 @@ class AnkerSolixApiExport:
                     payload={"site_id": site_id},
                     replace=[(site_id, "<site_id>")],
                 )
+                # TODO: Add new dynamic price details for supported site with owner
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):

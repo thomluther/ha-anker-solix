@@ -66,8 +66,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         get_charger_port_remarks,
         get_charger_protocol_status,
         get_charger_screensavers,
-        get_charger_theme_options,
-        get_charger_themes,
+        get_display_theme_options,
+        get_display_themes,
         set_charger_port_remark,
     )
     from .energy import (  # pylint: disable=import-outside-toplevel
@@ -176,9 +176,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .get("custom_fields", {})
                             )
                         # Flag device for MQTT support
-                        if (
-                            device.get("is_admin") or device.get("owner_user_id")
-                        ):
+                        if device.get("is_admin") or device.get("owner_user_id"):
                             device["mqtt_supported"] = True
                             # init customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
@@ -1309,23 +1307,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "modes",
                     ]:
                         device[key] = value
-                        # update selected theme if custom theme
-                        if (
-                            key == "screensaver"
-                            and (
-                                theme_id := device.get("mqtt_data", {}).get("theme_id")
-                            )
-                            and (theme := (value or {}).get(str(theme_id), {}))
-                        ):
-                            device["display_theme"] = theme
-                    elif key == "theme_id" and value is not None:
-                        # update only if cached value different
-                        if str(value) != str(
-                            device.get("display_theme", {}).get("id", "")
-                        ):
-                            device["display_theme"] = self.get_charger_themes(
-                                deviceSn=sn
-                            ).get(str(value), {})
                 except Exception:  # pylint: disable=broad-exception-caught
                     self._logger.exception(
                         "Api %s exception occurred when updating device details for key %s with value %s",

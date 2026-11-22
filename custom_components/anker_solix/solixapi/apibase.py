@@ -3,6 +3,7 @@
 
 from collections.abc import Callable
 import contextlib
+import copy
 from datetime import datetime, timedelta
 import json
 import logging
@@ -1394,35 +1395,14 @@ class AnkerSolixBaseApi:
                                     self.notify_device(deviceSn=pps_sn)
                                 # update device Api cache for capacity calculations
                                 self.powerpanelApi._update_dev(pps_update)  # noqa: SLF001
-                    # trigger creation of embedded themes structure once
-                    if "theme_type" in check_values and "embedded_themes" not in device:
-                        device["embedded_themes"] = EMBEDDED_THEMES.get(
-                            model
-                        ) or EMBEDDED_THEMES.get("default")
-                    # trigger device cache update for display theme id change
-                    if "theme_id" in check_values:
-                        theme_type = int(check_values.get("theme_type", -1))
-                        # update web theme only if cached value different
-                        if theme_type > 2 and str(
-                            check_values.get("theme_id")
-                        ) != device.get("display_theme", {}).get("id"):
-                            self._update_dev(
-                                {
-                                    "device_sn": sn,
-                                    "theme_id": check_values.get("theme_id"),
-                                }
-                            )
-                        # update embedded theme only if cached value different
-                        # TODO: Update check to make cache update also upon embedded type changes on supported
-                        elif 0 <= theme_type <= 2 and theme_type != device.get(
-                            "display_theme", {}
-                        ).get("type", theme_type):
-                            self._update_dev(
-                                {
-                                    "device_sn": sn,
-                                    "theme_type": theme_type,
-                                }
-                            )
+                    if "theme_type" in check_values or "theme_id" in check_values:
+                        # trigger creation of embedded themes structure in device cache once
+                        if "embedded_themes" not in device and model:
+                            device["embedded_themes"] = EMBEDDED_THEMES.get(
+                                model
+                            ) or EMBEDDED_THEMES.get("default", {})
+                        # notify MQTT device to update active active theme
+                        notify = True
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed
@@ -2992,13 +2972,14 @@ class AnkerSolixBaseApi:
         enable: bool = False,
         start_time: int | datetime | None = None,
         end_time: int | datetime | None = None,
-        disaster_type: int = 1,
+        disaster_type: int = 1,  # 1 = manual disaster plan
         toFile: bool = False,
         cache_only: bool = False,
     ) -> dict:
         """Disable or enable manual backup mode for a system or standalone device over a time window.
 
-        Notes: When disabled, the device ramps power down gradually rather than cutting off instantly.
+        Notes: This method currently supports only a single manual backup slot.
+        When disabled, the device ramps power down gradually rather than cutting off instantly.
         Disaster_type other than 1 is accepted but stored/returned as 1;
         start_time / end_time are unix epoch seconds; end_time must be after start_time.
         The server auto-generates the event uuid.
@@ -3008,65 +2989,81 @@ class AnkerSolixBaseApi:
         if isinstance(start_time, datetime):
             start_time = int(start_time.timestamp())
         elif not isinstance(start_time, int):
-            start_time = 0
+            start_time = None
         if isinstance(end_time, datetime):
             end_time = int(end_time.timestamp())
         elif not isinstance(end_time, int):
-            end_time = 0
+            end_time = None
+        if not isinstance(enable, bool):
+            enable = bool(enable)
         data = {
             "identifier_id": identifier,
             "type": id_type,
-            "manual_disaster_switch": bool(enable),
+            "manual_disaster_switch": enable,
         }
-        if end_time <= start_time:
+        if (
+            enable
+            and not cache_only
+            and not (start_time and end_time and end_time > start_time)
+        ):
             self._logger.error(
-                "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
+                "Api %s error for set_manual_backup: end_time '%s' must be after start_time '%s'",
                 self.apisession.nickname,
                 start_time,
                 end_time,
             )
             return {}
-        data["manual_disaster_detail"] = {
-            "disaster_type": disaster_type,
-            "start_time": start_time,
-            "end_time": end_time,
-        }
-        # change only relevant parts of existing disaster details
-        if id_type == 1:
-            filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
-        else:
-            filedata = (
-                self.sites.get(identifier, {})
-                .get("site_details", {})
-                .get("device_disaster")
-                or {}
-            )
-        filedata["manual_disaster_switch"] = bool(enable)
-        if details := data.get("manual_disaster_detail"):
-            if (filedetails := filedata.get("disaster_details")) and isinstance(
-                filedetails, list
-            ):
-                filedetails[0].update(details)
+        filedata = {}
+        if toFile or cache_only:
+            # change only relevant parts of existing disaster details
+            if id_type == 1:
+                filedata = copy.deepcopy(
+                    self.devices.get(identifier, {}).get("device_disaster") or {}
+                )
             else:
-                # Mock the details if it just got enabled without previous information
-                filedetails = [
-                    {"uuid": "00000000-0000-0000-0000-000000000001"}
-                    | details
-                    | {"charging_time": None, "event": "", "event_key": ""}
-                ]
-            filedata["disaster_details"] = filedetails
-        if cache_only:
-            # return refreshed config and update cache
-            return await self.get_device_disaster(
-                identifier=identifier,
-                id_type=id_type,
-                fromFile=toFile,
-                testSchedule=filedata,
-            )
+                filedata = copy.deepcopy(
+                    self.sites.get(identifier, {})
+                    .get("site_details", {})
+                    .get("device_disaster")
+                    or {}
+                )
+            filedata["manual_disaster_switch"] = enable
+            if start_time or end_time:
+                # Obtain previous details or mock them
+                if (filedetails := filedata.get("disaster_details")) and isinstance(
+                    filedetails, list
+                ):
+                    filedetails = filedetails[0]
+                else:
+                    # Mock the details
+                    filedetails = {
+                        "uuid": "00000000-0000-0000-0000-000000000001",
+                        "charging_time": None,
+                        "event": "",
+                        "event_key": "",
+                    }
+                filedetails["disaster_type"] = disaster_type
+                filedetails["start_time"] = (
+                    start_time or filedetails.get("start_time") or 0
+                )
+                filedetails["end_time"] = end_time or filedetails.get("end_time") or 0
+                filedata["disaster_details"] = [filedetails]
+            if cache_only:
+                # return refreshed config and update cache
+                return await self.get_device_disaster(
+                    identifier=identifier,
+                    id_type=id_type,
+                    fromFile=toFile,
+                    testSchedule=filedata,
+                )
         # When disabled, the payload MUST omit manual_disaster_detail.
         # Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
-        if not enable:
-            data.pop("manual_disaster_detail", None)
+        if enable:
+            data["manual_disaster_detail"] = {
+                "disaster_type": disaster_type,
+                "start_time": start_time,
+                "end_time": end_time,
+            }
         if toFile:
             if not await self.apisession.saveToFile(
                 Path(self.testDir())

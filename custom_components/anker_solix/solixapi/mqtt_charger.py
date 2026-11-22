@@ -105,8 +105,8 @@ FEATURES = {
     SolixMqttCommands.reverse_charge_limits: MODELS,
     SolixMqttCommands.device_switch: MODELS,
     SolixMqttCommands.device_timeout_minutes: MODELS,
-    SolixMqttCommands.compatibility_switch: MODELS, # NOTE: Has dependencies to other controls, should not be used alone
-    SolixMqttCommands.device_id_switch: MODELS, # NOTE: Has dependencies to other controls, should not be used alone
+    SolixMqttCommands.compatibility_switch: MODELS,  # NOTE: Has dependencies to other controls, should not be used alone
+    SolixMqttCommands.device_id_switch: MODELS,  # NOTE: Has dependencies to other controls, should not be used alone
 }
 
 
@@ -136,6 +136,52 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             if features.get("gunType") == "cable":
                 # Remove plug lock control for cabled versions
                 self.controls.pop(SolixMqttCommands.plug_lock_switch, None)
+
+    def update_device(
+        self, device: dict, dynamic_descriptions: dict | None = None
+    ) -> None:
+        """Define callback for Api device updates."""
+        super().update_device(device=device, dynamic_descriptions=dynamic_descriptions)
+        # Call method to extract actual display theme, consider mocked cache if used
+        self.get_active_display_theme(fromFile=True)
+
+    def get_active_display_theme(
+        self,
+        fromFile: bool = False,
+    ) -> dict | None:
+        """Update the display theme from actual theme type and id.
+
+        Args:
+            fromFile: If True, consider the mocked cache
+
+        Returns:
+            dict: active theme properties or empty dict
+
+        Example output:
+            {"category_name": "Embedded","title": "Theme 2","type": 1,"file_hash": "","image_url": "","id": "theme_2","theme_name": "Embedded - Theme 2"}
+
+        """
+
+        cache = self.get_status(fromFile=fromFile)
+        theme = {}
+        # check if device supports display themes
+        if (theme_type := int(cache.get("theme_type", -1))) >= 0:
+            theme = cache.get("display_theme", {})
+            # lookup theme only if cached values different
+            display_id = theme.get("id", "")
+            # theme id only used for web themes, embedded themes use mocked id for cache management
+            if (
+                # embedded themes (using mocked id)
+                0 <= theme_type <= 2
+                and (theme_id := f"theme_{theme_type + 1!s}") != display_id
+            ) or (
+                # web themes using dedicated id
+                theme_type > 2
+                and (theme_id := str(cache.get("theme_id", ""))) != display_id
+            ):
+                theme = self.api.get_display_themes(deviceSn=self.sn).get(theme_id, {})
+                self.mqttdata["display_theme"] = theme
+        return theme
 
     def ev_charger_mode_state(self, fromFile: bool = False) -> str | None:
         """Get the EV charger operational mode based on its status."""
@@ -392,24 +438,26 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             )
         return resp or None
 
-    async def set_clock_theme(
+    async def set_display_theme(
         self,
         name: str | None = None,
         theme_id: str | int | None = None,
+        clock_switch: bool | None = None,
         toFile: bool = False,
     ) -> dict | None:
-        """Set the prime charger clock theme by name, number or id.
+        """Set the prime charger clock theme by name or id.
 
         Args:
             name: Name of the theme, combined with category, e.g. "category - title"
             theme_id: ID of the theme
+            clock_switch: If True, enable the clock switch
             toFile: If True, save mock response (for testing compatibility)
 
         Returns:
             dict: Mocked state if successful, None otherwise
 
         Example:
-            await mydevice.set_clock_theme(name="custom - my theme")
+            await mydevice.set_display_theme(name="custom - my theme")
 
         """
         # response and commands
@@ -419,7 +467,9 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
         theme_id = (
             str(theme_id) if isinstance(theme_id, str | int) and str(theme_id) else None
         )
+        clock_switch = clock_switch if isinstance(clock_switch, bool) else None
         # prepare parameter map and correct command
+        theme = {}
         if name:
             keys = name.split("-")
             category = keys[:1][0].strip()
@@ -427,24 +477,39 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
         else:
             category = title = None
         # lookup new theme
-        if theme := (
-            [
-                item
-                for item in self.api.get_charger_themes(deviceSn=self.sn).values()
-                if str(theme_id) == str(item.get("id"))
-                or (
-                    item.get("category_name") == category and item.get("title") == title
-                )
-            ]
-            or [{}]
-        )[0]:
+        if name or theme_id:
+            theme = (
+                [
+                    item
+                    for item in self.api.get_display_themes(deviceSn=self.sn).values()
+                    if str(theme_id) == str(item.get("id"))
+                    or (
+                        item.get("category_name") == category
+                        and item.get("title") == title
+                    )
+                ]
+                or [{}]
+            )[0]
+        elif clock_switch is not None:
+            # reuse active theme if theme not changed
+            theme = self.get_active_display_theme(fromFile=True)
+            category = theme.get("category_name", "")
+            title = theme.get("title", "")
+        else:
+            self._logger.error(
+                "Device %s (%s) set_display_theme called without valid option",
+                self.sn,
+                self.pn,
+            )
+            return None
+        if theme:
             self._logger.log(
                 logging.INFO if toFile else logging.DEBUG,
-                "%sDevice %s (%s) found theme '%s' in Api cache:\n%s",
+                "%sDevice %s (%s) found '%s' theme in cache:\n%s",
                 "TESTMODE: " if toFile else "",
                 self.sn,
                 self.pn,
-                name or theme_id or "",
+                name or theme_id or "active",
                 json.dumps(theme, indent=2 if len(json.dumps(theme)) < 200 else None),
             )
             cmd1 = (
@@ -452,12 +517,49 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 if category.lower() == "custom"
                 else SolixMqttCommands.display_theme
             )
-            # Build parameter map
-            parm_map = {
-                "set_theme_id": int(theme.get("id") or 0),
-                "set_theme_hash": int(theme.get("file_hash") or 0, 16),
-                "set_theme_url": theme.get("image_url", ""),
-            }
+            # Build parameter map, depends on type and available command parameters
+            parms = self.get_cmd_parms(cmd1, defaults=True, state_parms=True)
+            typ = int(str(theme.get("type", "")) or -1)
+            parm_map = (
+                (
+                    {"set_clock_switch": clock_switch}
+                    if "set_clock_switch" in parms and clock_switch is not None
+                    else {}
+                )
+                | (
+                    {
+                        "set_theme_type": typ
+                        if category.lower() == "embedded"
+                        else "custom"
+                        if category.lower() == "custom"
+                        else "stock",
+                    }
+                    if "set_theme_type" in parms
+                    else {}
+                )
+                | (
+                    {
+                        "set_theme_url": theme.get("image_url", ""),
+                    }
+                    if "set_theme_url" in parms
+                    else {}
+                )
+                | (
+                    {
+                        "set_theme_id": int(theme.get("id") or 0),
+                    }
+                    # re-use existing id from state for embedded themees
+                    if "set_theme_id" in parms and category.lower() != "embedded"
+                    else {}
+                )
+                | (
+                    {
+                        "set_theme_hash": int(theme.get("file_hash") or 0, 16),
+                    }
+                    if "set_theme_hash" in parms
+                    else {}
+                )
+            )
             if (
                 result := await self.run_command(
                     cmd=cmd1,
@@ -469,9 +571,9 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             resp.update(result)
         else:
             self._logger.error(
-                "Device %s (%s) could not find theme '%s' in Api cache",
+                "Device %s (%s) could not find '%s' theme in cache",
                 self.sn,
                 self.pn,
-                name or theme_id or "",
+                name or theme_id or "active",
             )
         return resp or None

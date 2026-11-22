@@ -1011,8 +1011,9 @@ async def poll_site_details(
                     api.apisession.nickname,
                 )
                 await api.get_ai_ems_runtime(siteId=site_id, fromFile=fromFile)
+            # NOTE: The dynamic price providers are deprecated and will be skipped
             # Fetch dynamic price providers and prices if supported for site
-            if {ApiCategories.site_price} - exclude:
+            if {ApiCategories.site_price} - exclude and False:
                 for model in {
                     m
                     for m in (site.get("site_info") or {}).get(
@@ -1283,17 +1284,21 @@ async def poll_device_details(  # noqa: C901
                             deviceSn=sn,
                             fromFile=fromFile,
                         )
-                        # Fetch SB2+ station details and add to site details
-                        api._logger.debug(
-                            "Getting api %s station details for device",
-                            api.apisession.nickname,
-                        )
-                        await api.get_device_parm(
-                            siteId=site_id,
-                            paramType=SolixParmType.SOLARBANK_STATION.value,
-                            deviceSn=sn,
-                            fromFile=fromFile,
-                        )
+                        # Fetch SB3+ station details and add to site details, ensure Power Dock systems queried also
+                        # NOTE: SB2 systems may respond on stations parms, but do not full support their changes
+                        if (device.get("generation") or 0) > 2 or int(
+                            api.sites.get(site_id, {}).get("power_site_type", 0)
+                        ) > 11:
+                            api._logger.debug(
+                                "Getting api %s station details for device",
+                                api.apisession.nickname,
+                            )
+                            await api.get_device_parm(
+                                siteId=site_id,
+                                paramType=SolixParmType.SOLARBANK_STATION.value,
+                                deviceSn=sn,
+                                fromFile=fromFile,
+                            )
                     # Fetch solarbank power specific attributes for each device
                     api._logger.debug(
                         "Getting api %s device specific attributes",
@@ -1390,20 +1395,24 @@ async def poll_device_details(  # noqa: C901
 
         elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
             # Fetch mini charger datails for supported models
-            if (pn := device.get("device_pn")) in ["A2345", "A91B2"]:
+            if (
+                pn := device.get("device_pn")
+            ) == "A2345":  # TODO: Add Models that support web themes, A91B2 does not
                 # Fetch custom screensavers for device and flatten it for merge with stock screensavers
                 await api.get_charger_manual_screensavers(
                     deviceSn=sn, fromFile=fromFile
                 )
-                # Fetch stock screensavers
+                # get stock screensavers if available
                 screensavers = api.account.get("screensaver") or {}
                 pn_themes = screensavers.get(pn, {})
-                active_id = device.get("mqtt_data", {}).get("theme_id")
+                # get the active theme ID or type from (mocked) MQTT data
+                display_theme = device.get("mqtt_data", {}).get("display_theme", {})
+                active_id = str(device.get("mqtt_data", {}).get("theme_id", ""))
                 # Fetch stock screensavers for model only once a day or theme_id not found previously
                 if pn_themes.get("poll_time", "").split(" ")[
                     0
                 ] != datetime.now().astimezone().strftime("%Y-%m-%d") or (
-                    active_id and active_id != device.get("display_theme", {}).get("id")
+                    active_id and not display_theme
                 ):
                     ids = {}
                     # Flatten the categories into a theme id dictionary per model for id lookups:
@@ -1435,14 +1444,6 @@ async def poll_device_details(  # noqa: C901
                             "themes": ids,
                         }
                         api._update_account({"screensaver": screensavers})
-                        # trigger update for active theme if id known
-                        if active_id:
-                            api._update_dev(
-                                {
-                                    "device_sn": sn,
-                                    "theme_id": active_id,
-                                }
-                            )
                 # Get device feature settings
                 await api.get_charger_device_setting(deviceSn=sn, fromFile=fromFile)
                 # Get custom mode list

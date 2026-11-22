@@ -1321,7 +1321,7 @@ _A1783_0421 = {
             "00": [
                 {NAME: "clock_settings", MASK: 0xFF},
                 {NAME: "clock_switch", MASK: 0x80},
-                #{NAME: "holiday_switch", MASK: 0x40}, # Not supported by FW (yet?)
+                # {NAME: "holiday_switch", MASK: 0x40}, # Not supported by FW (yet?)
                 {NAME: "theme_type", MASK: 0x07},
             ],
             "01": {
@@ -3631,7 +3631,7 @@ _A2345_0303 = (
 _A2345_0306 = {
     # 250W Prime Charger
     TOPIC: "param_info",
-    "a2": {NAME: "ota_status"}, # None (0), Preparing(1)?, Ongoing(2)
+    "a2": {NAME: "ota_status"},  # None (0), Preparing(1)?, Ongoing(2)
     "a3": {NAME: "ota_progress"},  # 0-100%
 }
 
@@ -7463,19 +7463,6 @@ SOLIXMQTTMAP: Final[dict] = {
                 k: v for k, v in CMD_DISPLAY_THEME.items() if k not in ["a2", "a6"]
             }
             | {
-                "a7": {
-                    TYPE: DeviceHexDataTypes.bin.value,
-                    BYTES: {
-                        "00": {
-                            NAME: "set_theme_url",
-                            TYPE: DeviceHexDataTypes.str.value,
-                            STATE_NAME: "theme_url",
-                            VALUE_STATE: "theme_url",
-                        }
-                    },
-                }
-            }
-            | {
                 "a2": {
                     TYPE: DeviceHexDataTypes.ui.value,
                     BYTES: {
@@ -7491,7 +7478,8 @@ SOLIXMQTTMAP: Final[dict] = {
                         ],
                     },
                 }
-            },
+            }
+            | {"a7": CMD_DISPLAY_THEME["a6"]},
         },
         "0206": {
             # USB port switch command. Same command, but selected port is a parameter
@@ -7611,9 +7599,13 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         "0311": {
             "a2": {
-                NAME: "theme_id",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
+                BYTES: {
+                    "00": {
+                        NAME: "theme_id",
+                        TYPE: DeviceHexDataTypes.var.value,
+                        SIGNED: False,
+                    },
+                },
             },
             "a3": {NAME: "utc_offset", SIGNED: True},  # same as 0300 a4
             "a4": {
@@ -7626,7 +7618,14 @@ SOLIXMQTTMAP: Final[dict] = {
             },
         },
         "0312": {
-            "a2": {NAME: "country_code", TYPE: DeviceHexDataTypes.str.value},  # "DE"
+            "a2": {
+                BYTES: {
+                    "00": {  # "DE"
+                        NAME: "country_code",
+                        TYPE: DeviceHexDataTypes.str.value,
+                    },
+                },
+            },
             "a3": {NAME: "utc_offset", SIGNED: True},  # hours offset
             "fe": {NAME: "msg_timestamp"},
         },
@@ -7644,13 +7643,22 @@ SOLIXMQTTMAP: Final[dict] = {
                 },
             },
             "a3": {
-                NAME: "theme_id",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
+                BYTES: {
+                    "00": {
+                        NAME: "theme_id",
+                        TYPE: DeviceHexDataTypes.var.value,
+                        SIGNED: False,
+                    },
+                },
             },
             "a4": {
-                NAME: "theme_url",
-                TYPE: DeviceHexDataTypes.str.value,
+                BYTES: {
+                    "00": {
+                        NAME: "theme_url",
+                        TYPE: DeviceHexDataTypes.str.value,
+                        LENGTH: 0,
+                    },
+                },
             },
             # Display (1) or hide (0) the clock time in custom themes
             "a6": {NAME: "clock_time_switch"},

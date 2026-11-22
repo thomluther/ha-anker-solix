@@ -1048,6 +1048,9 @@
                 "state_attributes": {
                     "id": {
                         "name": "ID"
+                    },
+                    "type": {
+                        "name": "Typ"
                     }
                 }
             },
@@ -1086,8 +1089,10 @@
             "priority_circuit_x": {
                 "name": "Priorität Stromkreis {id}",
                 "state": {
+                    "fix": "Unveränderbar",
                     "must_have": "Unverzichtbar",
-                    "nice_to_have": "Wünschenswert"
+                    "nice_to_have": "Wünschenswert",
+                    "unknown": "Unbekannt"
                 }
             }
         },

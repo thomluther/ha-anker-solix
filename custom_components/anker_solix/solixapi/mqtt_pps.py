@@ -9,6 +9,8 @@ from __future__ import annotations  # noqa: TID251
 import calendar
 import contextlib
 from datetime import datetime, timedelta
+import json
+import logging
 from typing import TYPE_CHECKING
 
 from .apitypes import SolixPpsPresetLoadType, SolixPpsUsageMode
@@ -81,7 +83,7 @@ FEATURES = {
     SolixMqttCommands.pps_usage_mode: MODELS,
     SolixMqttCommands.silent_schedule: MODELS,
     SolixMqttCommands.pps_custom_schedule: MODELS,
-    #SolixMqttCommands.pps_tou_schedule: MODELS,  # IMPORTANT: TOU overruled by cloud Api, command structure not fully described
+    # SolixMqttCommands.pps_tou_schedule: MODELS,  # IMPORTANT: TOU overruled by cloud Api, command structure not fully described
     SolixMqttCommands.pps_output_schedule: MODELS,
     SolixMqttCommands.backup_soc: MODELS,
     SolixMqttCommands.backup_charge_storm_guard: MODELS,
@@ -117,6 +119,8 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # Call methods to extract actual presets from plans if available, consider mocked cache if used
         self.get_custom_schedule_presets(fromFile=True)
         self.get_ac_output_schedule_presets(fromFile=True)
+        # Call method to extract actual display theme, consider mocked cache if used
+        self.get_active_display_theme(fromFile=True)
 
     def get_custom_schedule_presets(
         self,
@@ -243,6 +247,45 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 presets["ac_output_next_toggle_active"] = slots[idx].get("active")
             self.mqttdata.update(presets)
         return presets
+
+    def get_active_display_theme(
+        self,
+        fromFile: bool = False,
+    ) -> dict | None:
+        """Update the display theme from actual theme type and id.
+
+        Args:
+            fromFile: If True, consider the mocked cache
+
+        Returns:
+            dict: active theme properties or empty dict
+
+        Example output:
+            {"category_name": "Embedded","title": "Theme 2","type": 1,"file_hash": "","image_url": "","id": "theme_2","theme_name": "Embedded - Theme 2"}
+
+        """
+
+        cache = self.get_status(fromFile=fromFile)
+        theme = {}
+        # check if device supports display themes
+        if (theme_type := int(cache.get("theme_type", -1))) >= 0:
+            theme = cache.get("display_theme", {})
+            # lookup theme only if cached values different
+            display_id = theme.get("id", "")
+            display_id = cache.get("display_theme", {}).get("id", "")
+            # theme id only used for web themes, embedded themes use mocked id for cache management
+            if (
+                # embedded themes (using mocked id)
+                0 <= theme_type <= 2
+                and (theme_id := f"theme_{theme_type + 1!s}") != display_id
+            ) or (
+                # web themes using dedicated id
+                theme_type > 2
+                and (theme_id := str(cache.get("theme_id", ""))) != display_id
+            ):
+                theme = self.api.get_display_themes(deviceSn=self.sn).get(theme_id, {})
+                self.mqttdata["display_theme"] = theme
+        return theme
 
     async def set_backup_charge_plan(
         self,
@@ -831,4 +874,113 @@ class SolixMqttDevicePps(SolixMqttDevice):
             ) is None:
                 return None
             resp.update(result)
+        return resp or None
+
+    async def set_display_theme(
+        self,
+        name: str | None = None,
+        theme_id: str | int | None = None,
+        clock_switch: bool | None = None,
+        toFile: bool = False,
+    ) -> dict | None:
+        """Set the prime charger clock theme by name or id.
+
+        Args:
+            name: Name of the theme, combined with category, e.g. "category - title"
+            theme_id: ID of the theme
+            clock_switch: If True, enable the clock switch
+            toFile: If True, save mock response (for testing compatibility)
+
+        Returns:
+            dict: Mocked state if successful, None otherwise
+
+        Example:
+            await mydevice.set_display_theme(name="Embedded - Theme 1")
+
+        """
+        # response and commands
+        resp = {}
+        # find profile in Api cache
+        name = name if isinstance(name, str) and name else None
+        theme_id = (
+            str(theme_id) if isinstance(theme_id, str | int) and str(theme_id) else None
+        )
+        clock_switch = clock_switch if isinstance(clock_switch, bool) else None
+        # prepare parameter map and correct command
+        theme = {}
+        if name:
+            keys = name.split("-")
+            category = keys[:1][0].strip()
+            title = "-".join(keys[1:]).strip()
+        else:
+            category = title = None
+        # lookup new theme
+        if name or theme_id:
+            theme = (
+                [
+                    item
+                    for item in self.api.get_display_themes(deviceSn=self.sn).values()
+                    if str(theme_id) == str(item.get("id"))
+                    or (
+                        item.get("category_name") == category
+                        and item.get("title") == title
+                    )
+                ]
+                or [{}]
+            )[0]
+        elif clock_switch is not None:
+            # reuse active theme if theme not changed
+            theme = self.get_active_display_theme(fromFile=True)
+            category = theme.get("category_name", "")
+            title = theme.get("title", "")
+        else:
+            self._logger.error(
+                "Device %s (%s) set_display_theme called without valid option",
+                self.sn,
+                self.pn,
+            )
+            return None
+        if theme:
+            self._logger.log(
+                logging.INFO if toFile else logging.DEBUG,
+                "%sDevice %s (%s) found '%s' theme in cache:\n%s",
+                "TESTMODE: " if toFile else "",
+                self.sn,
+                self.pn,
+                name or theme_id or "active",
+                json.dumps(theme, indent=2 if len(json.dumps(theme)) < 200 else None),
+            )
+            cmd1 = SolixMqttCommands.display_theme
+            # Build parameter map, depends on type and available command parameters
+            parms = self.get_cmd_parms(cmd1, defaults=True, state_parms=True)
+            typ = int(str(theme.get("type", "")) or -1)
+            parm_map = (
+                {"set_clock_switch": clock_switch}
+                if "set_clock_switch" in parms and clock_switch is not None
+                else {}
+            ) | (
+                {
+                    "set_theme_type": typ
+                    if category.lower() == "embedded"
+                    else 0,  # Default to embedded type 0
+                }
+                if "set_theme_type" in parms
+                else {}
+            )
+            if (
+                result := await self.run_command(
+                    cmd=cmd1,
+                    parm_map=parm_map,
+                    toFile=toFile,
+                )
+            ) is None:
+                return None
+            resp.update(result)
+        else:
+            self._logger.error(
+                "Device %s (%s) could not find '%s' theme in cache",
+                self.sn,
+                self.pn,
+                name or theme_id or "active",
+            )
         return resp or None

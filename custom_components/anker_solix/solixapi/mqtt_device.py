@@ -913,7 +913,7 @@ class SolixMqttDevice:
                         else:
                             state_fields[state_name] = state_value
                         # keep mocking of mask_value fields while bits are changed
-                        if (mask_value := desc.get(MASK_VALUE, "")) and (
+                        if (mask_value := desc.get(MASK_VALUE)) is not None and (
                             mask_state := desc.get(MASK_STATE, "")
                         ):
                             # actual mocked mask_value is tracked in state_fields
@@ -993,7 +993,7 @@ class SolixMqttDevice:
                         )
                         state_fields[state_name] = state_value
                         # keep mocking of mask_value fields while bits are changed
-                        if (mask_value := desc.get(MASK_VALUE, "")) and (
+                        if (mask_value := desc.get(MASK_VALUE)) is not None and (
                             mask_state := desc.get(MASK_STATE, "")
                         ):
                             # actual mocked mask_value is tracked in state_fields
@@ -1076,7 +1076,7 @@ class SolixMqttDevice:
                     dynamic_descriptions |= state_name in self.dynamic_descriptions
                     state_fields[state_name] = parameters[par]
                     # keep mocking of mask_value fields while bits are changed
-                    if (mask_value := desc.get(MASK_VALUE, "")) and (
+                    if (mask_value := desc.get(MASK_VALUE)) is not None and (
                         mask_state := desc.get(MASK_STATE, "")
                     ):
                         # actual mocked mask_value is tracked in state_fields

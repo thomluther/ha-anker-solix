@@ -318,45 +318,37 @@ async def get_charger_manual_screensavers(
     return data
 
 
-def get_charger_themes(
+def get_display_themes(
     self: AnkerSolixApi,
     deviceSn: str,
 ) -> dict:
-    """Get the mini charger merged themes with stock and custom screensavers."""
+    """Get merged display themes with web stock and web custom and embedded themes."""
 
     if isinstance(deviceSn, str):
         dev = self.devices.get(deviceSn) or {}
-        return self.account.get("screensaver", {}).get(
-            dev.get("device_pn", ""), {}
-        ).get("themes", {}) | dev.get("screensaver", {})
+        return (
+            self.account.get("screensaver", {})
+            .get(dev.get("device_pn", ""), {})
+            .get("themes", {})
+            | dev.get("screensaver", {})
+            | dev.get("embedded_themes", {})
+        )
     return {}
 
 
-def get_charger_theme_options(
+def get_display_theme_options(
     self: AnkerSolixApi, deviceSn: str, theme_id: str | int | None = None
 ) -> list:
-    """Get the mini charger screensaver theme options with category name and theme title."""
+    """Get the display theme options with category name and theme title."""
     if isinstance(deviceSn, str):
         if not isinstance(theme_id, str | int):
             theme_id = None
         else:
             theme_id = str(theme_id)
         # prepare lookup mapping
-        if (
-            theme_id
-            and str(
-                (theme := self.devices.get(deviceSn, {}).get("display_theme", {})).get(
-                    "id"
-                )
-                or None
-            )
-            == theme_id
-        ):
-            themes = {theme_id: theme}
-        else:
-            themes = self.get_charger_themes(deviceSn)
-            if theme_id:
-                themes = {theme_id: themes.get(theme_id)} if theme_id in themes else {}
+        themes = self.get_display_themes(deviceSn)
+        if theme_id:
+            themes = {theme_id: themes.get(theme_id)} if theme_id in themes else {}
         return [theme.get("theme_name") for theme in themes.values()]
     return []
 

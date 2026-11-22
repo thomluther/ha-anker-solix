@@ -832,11 +832,21 @@ DEVICE_SELECTS = [
         entity_category=EntityCategory.CONFIG,
         value_fn=lambda d, jk: d.get(jk, {}).get("theme_name") or None,
         attrib_fn=lambda d, jk: (
-            {
-                "id": str(val),
-            }
-            if str(val := d.get(jk, {}).get("id", ""))
-            else {}
+            (
+                {
+                    "id": str(val),
+                }
+                if str(val := d.get(jk, {}).get("id", ""))
+                else {}
+            )
+            | (
+                {
+                    "type": str(val),
+                }
+                # get type from MQTT data if not available in active theme
+                if str(val := d.get(jk, {}).get("type", "") or d.get("theme_type", ""))
+                else {}
+            )
         ),
         exclude_fn=lambda s, d: not ({d.get("type")} - s),
         mqtt=True,
@@ -1308,7 +1318,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 self._attr_options = [
                     item.name
                     for item in SolixCircuitPriority
-                    if "unknown" not in item.name
+                    if "unknown" not in item.name and "fix" not in item.name
                 ]
             else:
                 # get options from MQTT device description
@@ -1500,6 +1510,10 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 }
                 self._attr_options = list(options)
                 self._attr_options.sort()
+        elif self._attribute_name.startswith("priority_circuit_"):
+            # Limit the options to active setting if control is not changeable
+            if self._attr_current_option == "fix" and len(self._attr_options) > 1:
+                self._attr_options = [self._attr_current_option]
         elif self.entity_description.mqtt_cmd == SolixMqttCommands.sb_max_load:
             # Limit the options to active setting if control is not changeable
             data = (self.coordinator.data or {}).get(self.coordinator_context) or {}
@@ -1533,7 +1547,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
             if not self._attr_options or len(self._attr_options) < 2:
                 # update screensaver option list only upon init, will later be done upon state change only
                 self._attr_options = (
-                    self.coordinator.client.api.get_charger_theme_options(
+                    self.coordinator.client.api.get_display_theme_options(
                         deviceSn=self.coordinator_context
                     )
                 )
@@ -1628,29 +1642,22 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                 # update image url if required
                 elif self._attribute_name == "display_theme":
                     if state := self.entity_description.value_fn(data, key):
+                        # update screensaver image and option list only upon init and change of theme
                         if state != self._attr_current_option:
-                            self._attr_entity_picture = (
-                                data.get("display_theme", {}).get("image_url") or None
-                            )
-                            # update screensaver option list only upon init and change of theme
+                            theme = data.get("display_theme", {})
+                            # remove image for embedded themes
+                            if 0 <= theme.get("type", -1) <= 2:
+                                self._attr_entity_picture = None
+                            else:
+                                self._attr_entity_picture = (
+                                    theme.get("image_url") or None
+                                )
                             self._attr_options = (
-                                self.coordinator.client.api.get_charger_theme_options(
+                                self.coordinator.client.api.get_display_theme_options(
                                     deviceSn=self.coordinator_context
                                 )
                             )
                             self._attr_options.sort()
-                            # trigger MQTT theme request to update MQTT theme detail settings if changed externally
-                            # wrap the async method
-                            if (
-                                self.hass
-                                and SolixMqttCommands.theme_request in mdev.controls
-                            ):
-                                self.hass.add_job(
-                                    mdev.run_command(
-                                        cmd=SolixMqttCommands.theme_request,
-                                        toFile=self.coordinator.client.testmode(),
-                                    )
-                                )
                     else:
                         self._attr_entity_picture = None
                 # expand charger custom mode state since that needs also different MQTT command
@@ -2359,16 +2366,19 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     parm="set_theme_url",
                 ):
                     # trigger a delayed theme request to get updated MQTT message
-                    async_call_later(
-                        self.hass,
-                        2.0,
-                        lambda _: self.hass.create_task(
-                            mdev.run_command(
-                                cmd=SolixMqttCommands.theme_request,
-                                toFile=self.coordinator.client.testmode(),
-                            )
-                        ),
-                    )
+                    if SolixMqttCommands.theme_request in mdev.controls:
+                        async_call_later(
+                            self.hass,
+                            2.0,
+                            lambda _: self.hass.create_task(
+                                mdev.run_command(
+                                    cmd=SolixMqttCommands.theme_request,
+                                    toFile=self.coordinator.client.testmode(),
+                                )
+                            ),
+                        )
+                    # update active theme in cache to avoid flip back of entity
+                    mdev.get_active_display_theme(fromFile=self.coordinator.client.testmode())
 
             # Trigger MQTT commands depending on changed entity
             elif self.entity_description.mqtt_cmd and mdev:
@@ -2421,8 +2431,8 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                     toFile=self.coordinator.client.testmode(),
                 )
             elif self._attribute_name == "display_theme":
-                # change theme via helper
-                resp = await mdev.set_clock_theme(
+                # change theme via helper to ensure required MQTT command is used
+                resp = await mdev.set_display_theme(
                     name=option,
                     toFile=self.coordinator.client.testmode(),
                 )

@@ -174,11 +174,11 @@ API_ENDPOINTS: Final[dict] = {
     "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
     # Power endpoints */v2/device/*
     "get_device_energy": "power_service/v2/device/energy_analysis",  # works on newer PPS {"device_sn": deviceSn,"type": "week","start_time": "2026-09-21","end_time": "2026-09-27"}
-    # Power endpoints */v1/dynamic_price/*
+    # DEPRECATED: Power endpoints */v1/dynamic_price/*
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
     "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
+    # NOTE: power_service/v1/dynamic_price/price_detail deprecated and non functional as of 29.10.2026 due to cloud memory issues
     "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
-    # power_service/v1/dynamic_price/price_detail deprecated and non functional as of 29.10.2026 due to cloud memory issues
     # Power endpoints */v1/*
     "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
     "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
@@ -214,6 +214,9 @@ API_ENDPOINTS: Final[dict] = {
     "charger_get_port_remarks": "mini_power/v1/app/setting/get_port_remarks",  # list applied port labels {"device_sn": deviceSn}
     "charger_set_port_remark": "mini_power/v1/app/setting/set_port_remark",  # label a port {"device_sn": deviceSn, "port_name": "C3", "remark": "test"}
     "charger_get_protocol_status": "mini_power/v1/app/setting/get_protocol_status",  # get protocol details per mode {"device_sn": deviceSn})
+    # Endpoints for dynamic price
+    "hes_get_dynamic_price_company": "charging_hes_dynamic_price_svc/get_price_company",  # needs owner, works for SB3, contains sensitive data with address {"type": 2, "siteId": siteId, "pn": "A17C5"}))
+    "hes_get_dynamic_price_details": "charging_hes_dynamic_price_svc/get_price",  # needs owner {"type": 2, "siteId": <site_id>}
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -496,10 +499,8 @@ Home Energy System related (X1): 45 + 20 used => 65 total
     "charging_hes_svc/share_device/invite_installer_member",
     "charging_hes_svc/share_device/get_installer_invited_list",
 
-Dynamic Price related (X1 + Solarbank): 6 + 0 used => 6 total
+Dynamic Price related (X1 + Solarbank): 4 + 2 used => 6 total
     "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
-    "charging_hes_dynamic_price_svc/get_price_company", # needs owner
-    "charging_hes_dynamic_price_svc/get_price", # needs owner {"type": 2, "siteId": <site_id>}
     "charging_hes_dynamic_price_svc/save_time_of_use", # needs owner
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
     "charging_hes_dynamic_price_svc/get_third_jump_url"
@@ -668,6 +669,8 @@ API_FILEPREFIXES: Final[dict] = {
     "hes_get_heat_pump_plan": "hes_heat_pump_plan",
     "hes_get_electric_plan_list": "hes_electric_plan",
     "hes_get_system_running_info": "hes_system_running_info",
+    "hes_get_dynamic_price_company": "hes_dynamic_price_company",
+    "hes_get_dynamic_price_details": "hes_dynamic_price_details",
     "hes_energy_solar": "hes_energy_solar",
     "hes_energy_hes": "hes_energy_hes",
     "hes_energy_pps": "hes_energy_pps",
@@ -1015,7 +1018,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 0,
             "file_hash": "0x00000000",
             "image_url": "assets/img/shared/icl_a2345_theme1.png",
-            "id": None,
+            "id": "theme_1",
             "theme_name": "Embedded - Theme 1",
         },
         "theme_2": {
@@ -1024,7 +1027,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 1,
             "file_hash": "0x00000000",
             "image_url": "assets/img/a2345/icl_a2345_theme2.png",
-            "id": None,
+            "id": "theme_2",
             "theme_name": "Embedded - Theme 2",
         },
         "theme_3": {
@@ -1033,7 +1036,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 2,
             "file_hash": "0x00000000",
             "image_url": "assets/img/a2345/icl_a2345_theme3.png",
-            "id": None,
+            "id": "theme_3",
             "theme_name": "Embedded - Theme 3",
         },
     },
@@ -1044,7 +1047,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 0,
             "file_hash": "",
             "image_url": "",
-            "id": None,
+            "id": "theme_1",
             "theme_name": "Embedded - Theme 1",
         },
         "theme_2": {
@@ -1053,7 +1056,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 1,
             "file_hash": "",
             "image_url": "",
-            "id": None,
+            "id": "theme_2",
             "theme_name": "Embedded - Theme 2",
         },
         "theme_3": {
@@ -1062,10 +1065,10 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 2,
             "file_hash": "",
             "image_url": "",
-            "id": None,
+            "id": "theme_3",
             "theme_name": "Embedded - Theme 3",
         },
-    }
+    },
 }
 
 
@@ -2325,6 +2328,7 @@ class SolixPortPriority(StrEnum):
 class SolixCircuitPriority(StrEnum):
     """Str Enumeration for Solix Circuit Priority."""
 
+    fix = "0"
     must_have = "1"
     nice_to_have = "2"
     unknown = "unknown"
