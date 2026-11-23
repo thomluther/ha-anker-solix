@@ -38,7 +38,6 @@ from .apitypes import (
     API_HES_SVC_ENDPOINTS,
     ApiEndpointServices,
     SolixDefaults,
-    SolixPriceProvider,
     SolixVehicle,
 )
 from .helpers import get_solix_product_code
@@ -48,7 +47,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.9.1.0"
+VERSION: str = "3.9.2.0"
 
 
 class AnkerSolixApiExport:

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from awesomeversion import AwesomeVersion
-import voluptuous as vol
+import voluptuous as vol  # noqa: TID251
 
 from homeassistant import config_entries
 from homeassistant.const import (
@@ -97,7 +97,8 @@ _MQTT_POLLER_SPEED: float = 1
 _MQTT_POLLER_SPEED_MIN: float = 0.25
 _MQTT_POLLER_SPEED_MAX: float = 10
 _MQTT_POLLER_SPEED_DEF: float = 1
-
+_MQTT_STATUS_INTERVAL_MAX: int = 300
+_OUTPUT_INCREASE_DELAY: int = 10
 
 class AnkerSolixFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Anker Solix."""

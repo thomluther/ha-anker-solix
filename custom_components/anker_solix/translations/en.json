@@ -3289,7 +3289,7 @@
     },
     "exceptions": {
         "increase_blocked": {
-          "message": "{entity_id} cannot be increased to {value} because minimum change delay of {delay} seconds is not passed"
+          "message": "{entity_id} cannot be increased to {value} because minimum increase delay of {delay} seconds is not passed"
         },
         "out_of_range": {
             "message": "{entity_id} cannot be set to {value} because it is outside of allowed range {min}-{max}"

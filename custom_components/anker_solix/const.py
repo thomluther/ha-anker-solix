@@ -6,7 +6,7 @@ from logging import Logger, getLogger
 from typing import Any, Final
 import urllib.parse
 
-import voluptuous as vol
+import voluptuous as vol  # noqa: TID251
 
 from homeassistant.const import CONF_METHOD, CONF_PAYLOAD, Platform
 import homeassistant.helpers.config_validation as cv

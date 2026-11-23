@@ -34,7 +34,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .config_flow import _SCAN_INTERVAL_MIN
+from .config_flow import _OUTPUT_INCREASE_DELAY
 from .const import (
     ALLOW_EXPORT,
     ALLOW_TESTMODE,
@@ -4915,24 +4915,24 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             and now
                             < (
                                 self.hass.states.get(self.entity_id).last_changed
-                                + timedelta(seconds=_SCAN_INTERVAL_MIN)
+                                + timedelta(seconds=_OUTPUT_INCREASE_DELAY)
                             )
                         ):
                             LOGGER.debug(
-                                "%s cannot be increased to %s because minimum change delay of %s seconds is not passed",
+                                "%s cannot be increased to %s because minimum increase delay of %s seconds is not passed",
                                 self.entity_id,
                                 check_load,
-                                _SCAN_INTERVAL_MIN,
+                                _OUTPUT_INCREASE_DELAY,
                             )
                             # Raise alert to frontend
                             raise ServiceValidationError(
-                                f"{self.entity_id} cannot be increased to {check_load} because minimum change delay of {_SCAN_INTERVAL_MIN} seconds is not passed",
+                                f"{self.entity_id} cannot be increased to {check_load} because minimum increase delay of {_OUTPUT_INCREASE_DELAY} seconds is not passed",
                                 translation_domain=DOMAIN,
                                 translation_key="increase_blocked",
                                 translation_placeholders={
                                     "entity_id": self.entity_id,
                                     "value": check_load,
-                                    "delay": _SCAN_INTERVAL_MIN,
+                                    "delay": _OUTPUT_INCREASE_DELAY,
                                 },
                             )
 

@@ -34,7 +34,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .config_flow import _SCAN_INTERVAL_MIN
+from .config_flow import _MQTT_STATUS_INTERVAL_MAX, _OUTPUT_INCREASE_DELAY
 from .const import (
     ALLOW_TESTMODE,
     ATTRIBUTION,
@@ -93,7 +93,7 @@ DEVICE_NUMBERS = [
         json_key=Command.MQTT_STATUS_INTERVAL.value,
         mode=NumberMode.SLIDER,
         native_min_value=0,
-        native_max_value=300,
+        native_max_value=_MQTT_STATUS_INTERVAL_MAX,
         native_step=5,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -1191,7 +1191,7 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         )
                         or not self.last_changed
                         or datetime.now().astimezone()
-                        > self.last_changed + timedelta(seconds=_SCAN_INTERVAL_MIN)
+                        > self.last_changed + timedelta(seconds=_OUTPUT_INCREASE_DELAY)
                     ):
                         LOGGER.debug(
                             "'%s' change to %s will be applied", self.entity_id, value
@@ -1260,20 +1260,20 @@ class AnkerSolixNumber(CoordinatorEntity, NumberEntity):
                         self.last_changed = datetime.now().astimezone()
                     else:
                         LOGGER.debug(
-                            "'%s' cannot be increased to %s because minimum change delay of %s seconds is not passed",
+                            "'%s' cannot be increased to %s because minimum increase delay of %s seconds is not passed",
                             self.entity_id,
                             value,
-                            _SCAN_INTERVAL_MIN,
+                            _OUTPUT_INCREASE_DELAY,
                         )
                         # Raise alert to frontend
                         raise ServiceValidationError(
-                            f"'{self.entity_id}' cannot be increased to {value} because minimum change delay of {_SCAN_INTERVAL_MIN} seconds is not passed",
+                            f"'{self.entity_id}' cannot be increased to {value} because minimum increase delay of {_OUTPUT_INCREASE_DELAY} seconds is not passed",
                             translation_domain=DOMAIN,
                             translation_key="increase_blocked",
                             translation_placeholders={
                                 "entity_id": self.entity_id,
                                 "value": value,
-                                "delay": _SCAN_INTERVAL_MIN,
+                                "delay": _OUTPUT_INCREASE_DELAY,
                             },
                         )
                 elif self._attribute_name == "preset_charge_priority":
