@@ -182,10 +182,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
                             )
-                            # Flag device for MQTT subscription
                             if not (
                                 device.get("is_passive") or devData.get("is_passive")
                             ):
+                                # Add MQTT flags for subscribeable devices
                                 # init customizable setting for desired MQTT status request interval
                                 device["mqtt_status_interval"] = device.get(
                                     "mqtt_status_interval", 0

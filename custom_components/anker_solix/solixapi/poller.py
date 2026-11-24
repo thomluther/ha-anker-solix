@@ -56,7 +56,7 @@ async def poll_sites(  # noqa: C901
         'powerpanel_list': []}}
     """
     # define excluded categories to skip for queries
-    if not exclude or not isinstance(exclude, set):
+    if not isinstance(exclude, set):
         exclude = set()
     start_time = datetime.now().astimezone()
     virtual_sites = [
@@ -215,6 +215,7 @@ async def poll_sites(  # noqa: C901
                 # add indicator for valid data introduced for Solarbank 2 to site cache
                 mysite.update({"data_valid": data_valid, "requeries": requeries})
                 # copy old SB info data timestamp if new is invalid, because can be invalid even if data is valid
+                # It seems the timestamp is cleared after about 60 sec of no new data arrived in the cloud
                 # example       "updated_time": "1970-01-01 00:00:00",
                 if sb_info.get("solarbank_list"):
                     oldstamp = (mysite.get("solarbank_info") or {}).get(
@@ -226,7 +227,7 @@ async def poll_sites(  # noqa: C901
                         # .astimezone() may cause Windows OS error for 0 timestamps
                         timestamp = datetime.strptime(sb_info.get("updated_time"), fmt)
                     if timestamp.year == 1970:
-                        # replace the field in the new scene referenced sb info
+                        # replace the field in the new scene referenced sb info with old timestamp if available
                         sb_info["updated_time"] = (
                             datetime.now().astimezone().strftime(fmt)
                             if data_valid or not oldstamp
@@ -911,7 +912,7 @@ async def poll_site_details(
     and it updates just the nested site_details dictionary in the sites dictionary as well as the account dictionary
     """
     # define excluded categories to skip for queries
-    if not exclude or not isinstance(exclude, set):
+    if not isinstance(exclude, set):
         exclude = set()
     api._logger.debug(
         "Updating api %s sites details",
@@ -1078,7 +1079,7 @@ async def poll_device_details(  # noqa: C901
     which will also update most device details as found in the site data response.
     """
     # define excluded device types or categories to skip for queries
-    if not exclude or not isinstance(exclude, set):
+    if not isinstance(exclude, set):
         exclude = set()
     start_time = datetime.now().astimezone()
     api._logger.debug(
@@ -1489,7 +1490,7 @@ async def poll_device_energy(  # noqa: C901
     It was found that energy data is tracked only per site, but not individual devices even if a device SN parameter is mandatory in the Api request.
     """
     # check exclusion list, default to all energy data
-    if not exclude or not isinstance(exclude, set):
+    if not isinstance(exclude, set):
         exclude = set()
     start_time = datetime.now().astimezone()
     # First check if other api class sites available and use appropriate method to merge the energy stats at the end

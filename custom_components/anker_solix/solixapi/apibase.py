@@ -1438,7 +1438,7 @@ class AnkerSolixBaseApi:
         Implement this method to get the latest info for all accessible sites or only the provided siteId and update class cache dictionaries.
         """
         # define excluded categories to skip for queries
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         if siteId and (self.sites.get(siteId) or {}):
             # update only the provided site ID
@@ -1508,7 +1508,7 @@ class AnkerSolixBaseApi:
         and it updates just the nested site_details dictionary in the sites dictionary as well as the account dictionary
         """
         # define excluded categories to skip for queries
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         self._logger.debug(
             "Updating api %s sites details",
@@ -1531,7 +1531,7 @@ class AnkerSolixBaseApi:
         It was found that energy data is tracked only per site, but not individual devices even if a device SN parameter may be mandatory in the Api request.
         """
         # check exclusion list, default to all energy data
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         for site_id, site in self.sites.items():
             self._logger.debug(
@@ -1559,7 +1559,7 @@ class AnkerSolixBaseApi:
         which will also update most device details as found in the site data response.
         """
         # define excluded device types or categories to skip for queries
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         self._logger.debug(
             "Updating api %s device details",
@@ -2894,10 +2894,17 @@ class AnkerSolixBaseApi:
         )
         data = {"identifier_id": identifier, "type": id_type}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{identifier}.json"
-            )
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_modified_{identifier}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{identifier}.json"
+                )
         else:
             resp = await self.apisession.request(
                 "post",
@@ -3071,6 +3078,41 @@ class AnkerSolixBaseApi:
                 data={"code": 0, "msg": "success!", "data": filedata},
             ):
                 return {}
+            # mock also the disaster status file if disabled or enabled with an active backup
+            if not enable or (start_time < datetime.now().timestamp() < end_time):
+                # Mock status in place and use it to update the file as well to skip a reload
+                if id_type == 1:
+                    # cache under device_details
+                    statusdata = (
+                        self.devices.get(identifier, {}).get("device_disaster_status") or {}
+                    )
+                else:
+                    # cache under site_details
+                    statusdata = (
+                        self.sites.get(identifier, {})
+                        .get("site_details", {})
+                        .get("device_disaster_status")
+                        or {}
+                    )
+                status = (
+                    1
+                    if enable and (start_time < datetime.now().timestamp() < end_time)
+                    else 2
+                )
+                if "manual_disaster_status" in statusdata:
+                    statusdata["manual_disaster_status"] = status
+                if "current_disaster_detail" in statusdata:
+                    current = statusdata.get("current_disaster_detail") or {}
+                    if status == 1:
+                        current.update(filedetails)
+                    else:
+                        current = None
+                    statusdata["current_disaster_detail"] = current
+                await self.apisession.saveToFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_modified_{identifier}.json",
+                    data={"code": 0, "msg": "success!", "data": statusdata},
+                )
         else:
             code = (
                 await self.apisession.request(
@@ -3090,6 +3132,9 @@ class AnkerSolixBaseApi:
         self, devices: bool = False, fromFile: bool = False, exclude: set | None = None
     ) -> dict:
         """Update the manual and auto disaster status if supported by site or optional standalone devices."""
+        # define excluded device types or categories to skip for queries
+        if not isinstance(exclude, set):
+            exclude = set()
         # cycle through all sites
         for site_id, site in self.sites.items():
             if {site.get("site_type")} - exclude and site.get("site_details", {}).get(

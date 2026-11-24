@@ -2769,7 +2769,15 @@ DEVICE_SENSORS = [
             get_enum_name(
                 SolixDisasterStatus,
                 str(
-                    min((s or 0) for k, s in v.items() if k.endswith("disaster_status"))
+                    min(s)
+                    if (
+                        s := [
+                            int(s) if str(s).isdigit() else 0
+                            for k, s in v.items()
+                            if k.endswith("disaster_status")
+                        ]
+                    )
+                    else 0
                 ),
                 SolixDisasterStatus.unknown.name,
             )
@@ -4120,7 +4128,15 @@ SITE_SENSORS = [
             get_enum_name(
                 SolixDisasterStatus,
                 str(
-                    min((s or 0) for k, s in v.items() if k.endswith("disaster_status"))
+                    min(s)
+                    if (
+                        s := [
+                            int(s) if str(s).isdigit() else 0
+                            for k, s in v.items()
+                            if k.endswith("disaster_status")
+                        ]
+                    )
+                    else 0
                 ),
                 SolixDisasterStatus.unknown.name,
             )

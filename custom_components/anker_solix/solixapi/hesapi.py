@@ -132,10 +132,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
                             )
-                            # Flag device for MQTT subscription
                             if not (
                                 device.get("is_passive") or devData.get("is_passive")
                             ):
+                                # Add MQTT flags for subscribeable devices
                                 # init customizable setting for desired MQTT status request interval
                                 device["mqtt_status_interval"] = device.get(
                                     "mqtt_status_interval", 0
@@ -457,7 +457,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         Implement this method to get the latest info for all hes sites or only the provided siteId and update class cache dictionaries.
         """
         # define excluded categories to skip for queries
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         if not siteData or not isinstance(siteData, dict):
             siteData = {}
@@ -700,7 +700,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         and it updates just the nested site_details dictionary in the sites dictionary as well as the account dictionary
         """
         # define excluded categories to skip for queries
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         self._logger.debug(
             "Updating api %s HES Sites details",
@@ -794,7 +794,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         It was found that energy data is tracked only per site, but not individual devices even if a device SN parameter may be mandatory in the Api request.
         """
         # check exclusion list, default to all energy data
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         for site_id, site in self.sites.items():
             query_types: set = set()
@@ -879,7 +879,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         which will also update most device details as found in the site data response.
         """
         # define excluded device types or categories to skip for queries
-        if not exclude or not isinstance(exclude, set):
+        if not isinstance(exclude, set):
             exclude = set()
         self._logger.debug(
             "Updating api %s HES Device details",

@@ -2014,19 +2014,7 @@ class AnkerSolixSelect(CoordinatorEntity, SelectEntity):
                             toFile=self.coordinator.client.testmode(),
                         )
                     else:
-                        # Ensure an active backup mode will be disabled first in cache, the Api call for mode change will be via home load method
-                        if (
-                            getattr(SolarbankUsageMode, self._attr_current_option, None)
-                            == SolarbankUsageMode.backup.value
-                        ):
-                            resp = await self.coordinator.client.api.set_sb2_ac_charge(
-                                siteId=data.get("site_id", ""),
-                                deviceSn=self.coordinator_context,
-                                backup_switch=False,
-                                # Use test schedule to ensure change is done in cache only
-                                test_schedule=data.get("schedule") or {},
-                                toFile=self.coordinator.client.testmode(),
-                            )
+                        # The mode change method must ensure to disable an active overlay mode like manual backup
                         resp = await self.coordinator.client.api.set_sb2_home_load(
                             siteId=data.get("site_id", ""),
                             deviceSn=self.coordinator_context,

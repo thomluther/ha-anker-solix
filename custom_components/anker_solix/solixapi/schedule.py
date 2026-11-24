@@ -1613,9 +1613,12 @@ async def set_sb2_home_load(  # noqa: C901
     # set flag for plan deletion when set slot provided but any time field missing
     delete_plan: bool = set_slot and (not set_slot.start_time or not set_slot.end_time)
 
-    # update the usage mode in the overall schedule object or set it to the one used in the schedule
+    # init the usage mode for overall schedule object update and track if valid mode was requested
     if usage_mode is None:
         usage_mode = schedule.get("mode_type")
+        mode_set = False
+    else:
+        mode_set = True
 
     # get validated rate plan name from optional plan_name parameter or use plan name for given/active user mode, default to custom rate plan name
     rate_plan_name = next(
@@ -2118,6 +2121,11 @@ async def set_sb2_home_load(  # noqa: C901
             and not schedule.get("dynamic_price")
         )
         else usage_mode
+        if usage_mode is not None
+        # define a default new mode if no valid provided or found in schedule
+        else SolarbankUsageMode.smartmeter.value
+        if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+        else SolarbankUsageMode.manual.value
     )
     schedule["mode_type"] = mode_type
     # Update schedule_mode if available
@@ -2161,20 +2169,22 @@ async def set_sb2_home_load(  # noqa: C901
                 or [],
             }
         )
-    # Ensure ongoing manual backup is disabled if active but only usage mode is changed to other than backup
+    # Ensure ongoing manual backup is disabled first if called with valid mode but overlay mode active
     if (
-        usage_mode != SolarbankUsageMode.backup.value == device.get("preset_usage_mode")
+        mode_set
         and not test_schedule
+        and device.get("preset_usage_mode") == SolarbankUsageMode.backup.value
     ):
-        if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value and (
-            ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
-                "device_disaster"
-            )
-            or {}
-        ).get("manual_disaster_switch"):
-            await self.set_manual_backup(
-                identifier=siteId, id_type=2, enable=False, toFile=toFile
-            )
+        if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value:
+            if (
+                ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+                    "device_disaster"
+                )
+                or {}
+            ).get("manual_disaster_switch"):
+                await self.set_manual_backup(
+                    identifier=siteId, id_type=2, enable=False, toFile=toFile
+                )
         elif device.get("preset_backup_option"):
             await self.set_sb2_ac_charge(
                 siteId=siteId, deviceSn=deviceSn, backup_switch=False, toFile=toFile
@@ -2267,13 +2277,11 @@ async def set_sb2_ac_charge(
     )
     backup_end = backup_end.astimezone() if isinstance(backup_end, datetime) else None
     backup_switch = backup_switch if isinstance(backup_switch, bool) else None
+    times_provided = not (
+        backup_start is None and backup_end is None and backup_duration is None
+    )
     # fast quit if nothing to change
-    if (
-        backup_start is None
-        and backup_end is None
-        and backup_duration is None
-        and backup_switch is None
-    ):
+    if not times_provided and backup_switch is None:
         self._logger.error(
             "Api %s no valid AC charge options provided", self.apisession.nickname
         )
@@ -2352,7 +2360,9 @@ async def set_sb2_ac_charge(
     # update cached schedule with new backup plan
     if pps_type:
         self._logger.debug(
-            "Api %s manual disaster details to be applied: %s", self.apisession.nickname, new_rate_plan
+            "Api %s manual disaster details to be applied: %s",
+            self.apisession.nickname,
+            new_rate_plan,
         )
     else:
         schedule.update({rate_plan_name: new_rate_plan})
@@ -2362,15 +2372,19 @@ async def set_sb2_ac_charge(
     if test_schedule:
         # update cache only and return resulting schedule for test purposes without Api call
         if pps_type:
-            rng = (new_rate_plan.get("ranges") or [{}])[0]
-            return await self.set_manual_backup(
-                identifier=siteId,
-                id_type=2,
-                enable=bool(backup_switch),
-                start_time=rng.get("start_time"),
-                end_time=rng.get("end_time"),
-                cache_only=True,
-            )
+            # Keep manual_disaster_switch intact when disabling via test_schedule without time edits
+            # so a subsequent set_sb2_home_load() still sees active backup and disables it via API
+            if times_provided or backup_switch:
+                rng = (new_rate_plan.get("ranges") or [{}])[0]
+                return await self.set_manual_backup(
+                    identifier=siteId,
+                    id_type=2,
+                    enable=bool(backup_switch),
+                    start_time=rng.get("start_time"),
+                    end_time=rng.get("end_time"),
+                    cache_only=True,
+                )
+            return disaster
         # ensure complete schedule is updated in cache for dependent fields
         await self.get_device_parm(
             siteId=siteId,
