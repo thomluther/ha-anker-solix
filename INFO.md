@@ -11,7 +11,7 @@
 [![GitHub Release][releases-shield]][releases]
 [![Discussions][discussions-shield]][discussions]
 
-[![License][license-shield]](LICENSE)
+[![License][license-shield]][license]
 ![python badge][python-shield]
 
 
@@ -87,6 +87,8 @@ This integration utilizes an unofficial Python library to communicate with the A
     * [PPS manual backup charge](#pps-manual-backup-charge-option)
     * [PPS auto backup charge (Storm Guard)](#pps-auto-backup-charge-option-storm-guard)
     * [PPS Time of Use mode](#pps-time-of-use-mode)
+        * [Time of Use plan control by entities](#pps-time-of-use-plan-control-by-entities)
+        * [Modify Time of Use plan action for PPS](#modify-time-of-use-plan-action-for-pps)
 1. **[Modification of vehicles](#modification-of-vehicles)**
 1. **[Markdown card to show the defined Solarbank schedule](#markdown-card-to-show-the-defined-solarbank-schedule)**
     * [Markdown card for Solarbank 1 schedules](#markdown-card-for-solarbank-1-schedules)
@@ -94,6 +96,7 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Markdown card to show the defined PPS schedules](#markdown-card-to-show-pps-schedules)**
     * [Markdown card for PPS Time of Use schedules](#markdown-card-for-pps-time-of-use-schedules)
 1. **[Apex chart card to show your forecast data](#apex-chart-card-to-show-forecast-data)**
+    * [Apex chart card code for forecast data](#apex-chart-card-code-for-forecast-data)
 1. **[Scripts to manually modify appliance schedule for your solarbank](#scripts-to-manually-modify-appliance-schedule-for-your-solarbank)**
     * [Script code to adjust Solarbank 1 schedules](#script-code-to-adjust-solarbank-1-schedules)
     * [Script code to adjust Solarbank 2+ schedules](#script-code-to-adjust-solarbank-2-schedules)
@@ -639,7 +642,7 @@ This will make the battery energy calculation more accurate for the device or sy
 ### Dynamic Price Provider selection
 
 > [!IMPORTANT]
-> The legacy dynamic price provider selection and price forecast was deprecated Oct. 2026 and has been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device. Since the new regional price provider selection is very complex, it will not be supported by the Api library or integration und should be done through the mobile App. Any price forecasts need to be obtained with dedicated integrations for your regional price provider.
+> The legacy dynamic price provider selection and price forecast was deprecated Oct. 2026 and has been removed in version 3.9.2. Any related entity may become unavailable and can be removed from your device. Since the new regional price provider selection is very complex, it will not be supported by the Api library or integration und should be done through the mobile App. Any price forecasts need to be obtained with dedicated integrations for your regional price provider.
 
 
 ## Modification of the appliance home load settings
@@ -1022,7 +1025,7 @@ If you use a single time slot in the schedule, you can now easily automate the p
 > The home load type requires appropriate firmware of your Solarbank 3 based system. Following rules will be applied:
 
 * The load type entity will only be created if the system supports the type toggle.
-*  The entity cannot be toggled, if the actual usage mode ignores the type setting in the schedule.
+* The entity cannot be toggled, if the actual usage mode ignores the type setting in the schedule.
 * Likewise the load type field will be ignored in corresponding schedule actions, if the home load type toggle is not supported by the system type or firmware.
 
 
@@ -1035,7 +1038,7 @@ The Smart mode is designed to optimize your overall energy consumption and lower
 > [!IMPORTANT]
 > The Smart mode configuration will not be provided by the integration and requires the mobile app anyway to admit all required authorizations. Therefore this mode can only be toggled once configured, but not setup or modified via the integration.
 
-Various options that may be used in the Smart mode however can be configured by the integration, such as a [use time plan](#modify-time-of-use-plan-action) with flexible tariffs, or the [fix price settings](#toggling-system-price-type-or-currency-settings) and the [price provider for dynamic utility rate plans](#price-provider-for-dynamic-utility-rate-plans). The integration also provides additional sensors and attributes to monitor parameters of the Smart mode:
+Various options that may be used in the Smart mode however can be configured by the integration, such as a [use time plan](#modify-time-of-use-plan-action) with flexible tariffs, or the [fix price settings](#toggling-system-price-type-or-currency-settings). The integration also provides additional sensors and attributes to monitor parameters of the Smart mode:
 
 * AI enablement and training status
 * AI monitoring runtime and status
@@ -1069,7 +1072,7 @@ The Solarbank 3 electricity provider configuration allows definition of various 
 #### Dynamic price provider
 
 > [!IMPORTANT]
-> The legacy dynamic price provider selection and price forecast Api endpoints were deprecated Oct. 2026 and have been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device. Since the new regional price provider selection is very complex, it will not be supported by the Api library or integration und should be done through the mobile App. Any price forecasts need to be obtained with dedicated integrations for your regional price provider.
+> The legacy dynamic price provider selection and price forecast Api endpoints were deprecated Oct. 2026 and have been removed in version 3.9.2. Any related entity may become unavailable and can be removed from your device. Since the new regional price provider selection is very complex, it will not be supported by the Api library or integration und should be done through the mobile App. Any price forecasts need to be obtained with dedicated integrations for your regional price provider.
 
 #### Dynamic price fees and taxes
 
@@ -1105,7 +1108,7 @@ Forecast data entities and cloud polling can be excluded in your hub configurati
 
 ## Modification of PPS settings
 
-The supported PPS devices are mostly stand alone devices and have no system controls, which are managed through the cloud Api in most cases. Most PPS controls are typcically individual entities that use MQTT commands through the connected Anker MQTT server. Newer PPS devices with advanced features however require a hybrid or cloud Api only control for those advanced features. Following cloud Api dependend features are known and may be implemented:
+The supported PPS devices are mostly stand alone devices and have no system controls, which are managed through the cloud Api in most cases. Most PPS controls are typically individual entities that use MQTT commands through the connected Anker MQTT server. Newer PPS devices with advanced features however require a hybrid or cloud Api only control for those advanced features. Following cloud Api dependent features are known and may be implemented:
 
 * Storm Guard protection (3.8.0)
 * Time of Use plans (3.9.0)
@@ -1134,9 +1137,9 @@ Version 3.8.1 added support for the cloud managed Storm Guard feature for a few 
 
 ### PPS Time of Use mode
 
-A Time of Use plan must be defined first before this mode can be enabled in the Anker app. The plan defines at which hours during the day you have which power tariff. The app supports up to 6 time range definitions during a day, and the time ranges must always cover all 24 hours (no gaps are allowed). The ranges only support hour granularity, any minutes or seconds that you may specify through control entities are therefore ignored. For each range you can define peak, medium peak and off peak tariffs and a corresponding price per tariff. The defined plan is considered only in the 'Time of Use' mode which is intended for a so called 'Peak and Valley' shaving. This basically means AC charge during off peak tariff and discharge only at peak tariff. Medium peak typically causes neither charge nor discharge and is the default tariff if not explicitely specified upon plan changes. Please consult your device product documentation for more details on the device behavior for the various tariffs.
+A Time of Use plan must be defined first before this mode can be enabled in the Anker app. The plan defines at which hours during the day you have which power tariff. The app supports up to 6 time range definitions during a day, and the time ranges must always cover all 24 hours (no gaps are allowed). The ranges only support hour granularity, any minutes or seconds that you may specify through control entities are therefore ignored. For each range you can define peak, medium peak and off peak tariffs and a corresponding price per tariff. The defined plan is considered only in the 'Time of Use' mode which is intended for a so called 'Peak and Valley' shaving. This basically means AC charge during off peak tariff and discharge only at peak tariff. Medium peak typically causes neither charge nor discharge and is the default tariff if not explicitly specified upon plan changes. Please consult your device product documentation for more details on the device behavior for the various tariffs.
 
-#### Time of Use plan control by entities
+#### PPS Time of Use plan control by entities
 
 Starting with version 3.9.0 there is a 'Tariff' select entity and a 'Tariff Price' number entity which are extracted from the defined TOU plan.
 Along with a new device entity to control the price currency, they complete the tariff management capabilities that the PPS device may offer.
@@ -1153,12 +1156,12 @@ The tariff and tariff price entities are device entities that reflect the settin
   * This avoids that daily time intervals are merged if same tariff exists already in adjacent intervals
   * This avoids that tariff prices are cleared if the tariff is no longer used in the daily intervals
 * The price currency is only used for proper display of prices, there is no amount conversion applied between different currencies or currency changes
-* The backup reserve SOC is part of the TOU plan, but applied directly as MQTT command if the entitiy is being modified (without Api call to modify the TOU plan)
+* The backup reserve SOC is part of the TOU plan, but applied directly as MQTT command if the entity is being modified (without Api call to modify the TOU plan)
   * This may not be reflected directly in the TOU plan as used by the Anker mobile App, although the setting is active on the device
   * The integration entity will report only the active backup SOC setting from the device, not the (obsolete) value as may be reported in the TOU plan
   * The integration will reuse the active backup SOC value when applying TOU plan changes via the Api to ensure the correct setting is reused in the plan
 
-#### Modify Time of Use plan action
+#### Modify Time of Use plan action for PPS
 
 You can also use an Anker Solix action to modify the use time plan. Following is an example of the UI mode for this action.
 
@@ -1467,7 +1470,7 @@ The [Apex chart card](https://github.com/RomRider/apexcharts-card) can be instal
 ![forecast-data-diagram][forecast-data-diagram-img]
 
 
-#### Apex chart card code for forecast data
+### Apex chart card code for forecast data
 
 <details>
 <summary><b>Expand to see card code</b><br><br></summary>
@@ -2080,9 +2083,7 @@ sequence:
 
 ## Scripts to manually modify PPS schedules
 
-Similar to [scripts to modify Solarbank schedules](#scripts-to-manually-modify-appliance-schedule-for-your-solarbank), you can create scripts to modify PPS schedules accordingly. Following is a screenshot of the more info dialog for such a script entity:
-
-![Change PPS TOU schedule script][pps-schedule-script-img]
+Similar to [scripts to modify Solarbank schedules](#scripts-to-manually-modify-appliance-schedule-for-your-solarbank), you can create scripts to modify PPS schedules accordingly.
 
 Below are example scripts which you can use for PPS devices, you just need to replace the default entity name in the action data entity_id field with your device select entity for the TOU tariff. If you have multiple devices, you can select another device entity to run the script.
 
@@ -2351,8 +2352,6 @@ If you like this project, please give it a star on [GitHub][anker-solix]. If you
 [issues]: https://github.com/thomluther/ha-anker-solix/issues
 [discussions]: https://github.com/thomluther/ha-anker-solix/discussions
 [discussions-shield]: https://img.shields.io/github/discussions/thomluther/ha-anker-solix.svg?style=for-the-badge
-[forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
-[forum]: https://community.home-assistant.io/
 [license-shield]: https://img.shields.io/badge/Licence-MIT-orange
 [license]: https://github.com/thomluther/ha-anker-solix/blob/main/LICENSE
 [python-shield]: https://img.shields.io/badge/Made%20with-Python-orange

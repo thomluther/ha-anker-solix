@@ -15,7 +15,7 @@
 [![Community Forum][forum-shield]][forum]
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-[![License][license-shield]](LICENSE)
+[![License][license-shield]][license]
 ![python badge][python-shield]
 
 This Home Assistant custom integration utilizes the [anker-solix Python library][anker-solix-api], allowing seamless integration with Anker Solix devices via the Anker power cloud and optionally via the Anker MQTT server. It was specifically developed to monitor the Anker Solarbank E1600. Support for further Anker devices like solar micro-inverters (MI80), Solarbank 2 E1600, Solarbank 3 E2700 and Anker smart meters has been added to the Api library and is available through the integration. The Anker power cloud also supports portable power stations (PPS), home Power Panels or home energy systems (HES) which are not or only partially supported by the power cloud. They are (or can be) integrated via the optional Anker MQTT server connection. Missing devices or features may require known Api queries or MQTT data descriptions by device owners.
@@ -278,7 +278,7 @@ Version 3.7.0 added new Min, Max and Backup SOC settings (Requires appropriate d
 > [!IMPORTANT]
 > Following limitations apply:
 >
-> The Solarbank 3 dynamic price provider selection and price forecast was deprecated and has been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device.
+> The Solarbank 3 dynamic price provider selection and price forecast was deprecated and has been removed in version 3.9.2. Any related entity may become unavailable and can be removed from your device.
 
 
 ### Solarbank Multisystem with Power Dock
@@ -411,7 +411,7 @@ Since integration version 3.0.0, a customizable battery capacity entity was impl
 Integration version 3.1.0 added [Dynamic utility rate plan support](INFO.md#dynamic-utility-rate-plans-options) to monitor dynamic price forecasts for your system. However, none of those entities can actually control your X1 system settings, they are only used as [customizable entities](INFO.md#customizable-entities-of-the-api-cache) to calculate the total energy price.
 
 > [!IMPORTANT]
-> The legacy dynamic price provider selection and price forecast was deprecated Oct. 2026 and has been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device.
+> The legacy dynamic price provider selection and price forecast was deprecated Oct. 2026 and has been removed in version 3.9.2. Any related entity may become unavailable and can be removed from your device.
 
 X1 system owners need to explore and document cloud Api capabilities to further expand any X1 system or (sub-)device support. Please refer to issue [Extending the solution to support Anker Solix X1 systems](https://github.com/thomluther/anker-solix-api/issues/162) for contribution or create a new and more specific issue as feature request.
 
@@ -570,7 +570,7 @@ If you have a problem, [review existing issues or open a new issue](https://gith
 If you have questions, observations, advises or want to share your experience, feel free to open a new [discussion topic](https://github.com/thomluther/ha-anker-solix/discussions).
 
 
-## Contributions are welcome!
+## Contributions are welcome
 
 If you want to contribute to this project, please read the [Contribution guidelines](CONTRIBUTING.md).
 As a starter, you may want to add more [translations](https://github.com/thomluther/ha-anker-solix/discussions/12) for your native language.
@@ -591,25 +591,6 @@ If you don't find any data for your owned devices although you enabled the MQTT 
 If you like this project, please give it a star on [GitHub][anker-solix]. If you want to show your appreciation for the countless hours spent to enhance and maintain it, I would be happy for a 🍵coffee ☕ or if you become a [sponsor 💖](https://github.com/sponsors/thomluther).
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)][buy-me-coffee]
 ***
-
-[anker-solix]: https://github.com/thomluther/ha-anker-solix
-[anker-solix-api]: https://github.com/thomluther/anker-solix-api
-[releases]: https://github.com/thomluther/ha-anker-solix/releases
-[releases-shield]: https://img.shields.io/github/release/thomluther/ha-anker-solix.svg?style=for-the-badge
-[issues]: https://github.com/thomluther/ha-anker-solix/issues
-[issues-shield]: https://img.shields.io/github/issues/thomluther/ha-anker-solix.svg?style=for-the-badge
-[discussions]: https://github.com/thomluther/ha-anker-solix/discussions
-[discussions-shield]: https://img.shields.io/github/discussions/thomluther/ha-anker-solix.svg?style=for-the-badge
-[contributors]: https://github.com/thomluther/ha-anker-solix/contributors
-[contributors-shield]: https://img.shields.io/github/contributors/thomluther/ha-anker-solix.svg?style=for-the-badge
-[buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
-[hacs-repo-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
-[hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=ha-anker-solix&category=integration
-[forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
-[forum]: https://community.home-assistant.io/
-[license-shield]: https://img.shields.io/badge/Licence-MIT-orange
-[license]: https://github.com/thomluther/ha-anker-solix/blob/main/LICENSE
-[python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
 
 
 ## Additional Resources
@@ -689,3 +670,22 @@ The [Lumia Energy card](https://github.com/Giorgio866/lumina-energy-card) is a v
 </figure>
 
 This card is highly customizable and also offers a premium version that even has more capabilities for customization, including flow rearrangements, custom images etc.
+
+[anker-solix]: https://github.com/thomluther/ha-anker-solix
+[anker-solix-api]: https://github.com/thomluther/anker-solix-api
+[releases]: https://github.com/thomluther/ha-anker-solix/releases
+[releases-shield]: https://img.shields.io/github/release/thomluther/ha-anker-solix.svg?style=for-the-badge
+[issues]: https://github.com/thomluther/ha-anker-solix/issues
+[issues-shield]: https://img.shields.io/github/issues/thomluther/ha-anker-solix.svg?style=for-the-badge
+[discussions]: https://github.com/thomluther/ha-anker-solix/discussions
+[discussions-shield]: https://img.shields.io/github/discussions/thomluther/ha-anker-solix.svg?style=for-the-badge
+[contributors]: https://github.com/thomluther/ha-anker-solix/contributors
+[contributors-shield]: https://img.shields.io/github/contributors/thomluther/ha-anker-solix.svg?style=for-the-badge
+[buy-me-coffee]: https://www.buymeacoffee.com/thomasluthe
+[hacs-repo-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
+[hacs-install]: https://my.home-assistant.io/redirect/hacs_repository/?owner=thomluther&repository=ha-anker-solix&category=integration
+[forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
+[forum]: https://community.home-assistant.io/
+[license-shield]: https://img.shields.io/badge/Licence-MIT-orange
+[license]: https://github.com/thomluther/ha-anker-solix/blob/main/LICENSE
+[python-shield]: https://img.shields.io/badge/Made%20with-Python-orange
