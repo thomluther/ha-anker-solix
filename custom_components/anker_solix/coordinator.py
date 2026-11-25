@@ -333,7 +333,15 @@ class AnkerSolixDataUpdateCoordinator(DataUpdateCoordinator):
             ),
         )
         # wrap the async method to refresh coordinator from cache
-        self.hass.add_job(self.async_refresh_data_from_apidict(delayed=True))
+        if self.hass.is_stopping or (
+            self.hass.loop is not None and self.hass.loop.is_closed()
+        ):
+            return
+        coro = self.async_refresh_data_from_apidict(delayed=True)
+        try:
+            self.hass.add_job(coro)
+        except RuntimeError:
+            coro.close()
 
     async def async_shutdown(self) -> None:
         """Clear Api cache to close any active MQTT loop and then call super method."""
