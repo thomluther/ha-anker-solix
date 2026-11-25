@@ -119,8 +119,8 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 * The integration can support only Solix power devices which are defined in a power system via the Anker mobile app. While it may present also standalone devices that are not defined in a system, those standalone devices are not manageable through the cloud Api servers.
 * Starting with version 3.4.0, stand alone and system integrated devices can also be monitored through an optional MQTT server connection. Starting with version 3.5.0, Solix devices can also be controlled via the optional MQTT server connection.
   * However, it depends on the decoding and description of the MQTT messages and controls for each device model whether the integration can provide useful data and implement control entities for the device
-* Dynamic tariff and price forecast is only supported for the generic Nordpool provider. Other providers typically require registration through the mobile App and will not be supported by this integration.
-* Dynamic price forecast calculations for other providers than Nordpool may be wrong, since neither the provided price unit is clear, nor whether the provider prices include fees and taxes.
+* Dynamic tariff and price forecast is no longer supported since the regional provider registration is quite complex and must be done through the mobile app
+  * Dynamic price details should be obtained with dedicated integrations for your provider
 * Further devices may be added in future once examples of Api response data or MQTT message and control descriptions can be provided to the developer.
 
 > [!NOTE]
@@ -258,7 +258,7 @@ To achieve a correct charge and discharge energy calculation for your energy das
 Solarbank 3 devices behave similar to Solarbank 2 AC devices, but they will provide additional entities and usage mode options that are unique to this generation:
 
 * Anker Intelligence (AI) usage with 'Smart' mode
-* Dynamic Price support (Provider options depend on country and model)
+* Dynamic Price usage mode and price tariff support
 * New 'Time Slot' usage mode (based on dynamic prices) to automate AC charging and discharging
 * 24h solar forecast data while 'Smart' mode is active, which can be seen in the App intraday solar chart
 
@@ -269,9 +269,6 @@ However, it was noticed that the Solarbank charging status code is not longer be
 
 [Dynamic utility rate plan support](INFO.md#dynamic-utility-rate-plans-options) was introduced with integration version 3.0.0. Version 3.1.0 added support for [solar forecast data](INFO.md#solar-forecast-data).
 
-> [!NOTE]
-> The Solarbank 3 dynamic price VAT and fee actually cannot be determined or modified through the cloud Api. While those entities can be customized in the integration, the changes are only applied as customization to the Api cache, but **NOT** to your real system configuration. However, they are required to calculate the total dynamic prices (actual and forecast) as used by your system to evaluate charge and discharge slots as well as saving calculations. To monitor total dynamic prices and forecast also as system member, those entities have been made customizable in the Api cache for now. They will be initialized with an average default for your country if defined. Refer to [customizable entities](INFO.md#customizable-entities-of-the-api-cache) for more details on their behavior.
-
 Version 3.4.0 added [device MQTT data](#mqtt-managed-devices) as new entities or attributes to existing entities.
 
 Version 3.5.0 added device control via optional MQTT connection. This is implemented via additional or hybrid control entities.
@@ -281,7 +278,7 @@ Version 3.7.0 added new Min, Max and Backup SOC settings (Requires appropriate d
 > [!IMPORTANT]
 > Following limitations apply:
 >
-> * Dynamic price forecast support remains limited to the Nordpool provider only. **Other price providers may show wrong price calculations**, see [Dynamic price provider selection](INFO.md#dynamic-price-provider-selection).
+> The Solarbank 3 dynamic price provider selection and price forecast was deprecated and has been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device.
 
 
 ### Solarbank Multisystem with Power Dock
@@ -334,6 +331,8 @@ The Solarbank PPS systems provide power consumption data in the cloud api, but n
 Integration version 3.5.4 added initial support for this new system type and the F3000 PPS devices.
 
 Integration version 3.9.1 added support for TOU schedule queries and control for system price and currency settings as well as usage mode control to toggle between self consumption and Time of Use modes. For more details refer to [Time of Use mode](INFO.md#time-of-use-mode).
+
+Integration version 3.9.2 added support for the manual disaster plan (backup mode) in order to use max AC charge capability for the provided time period. For more details refer to [Manual backup charge option](INFO.md#manual-backup-charge-option)
 
 System owners need to explore and document cloud Api capabilities as well as MQTT controls for F3000 devices to further expand any system or device support.
 
@@ -410,6 +409,9 @@ Anker released also large battery devices to complement existing PV systems. The
 Since integration version 3.0.0, a customizable battery capacity entity was implemented for each X1 battery module. As described above, SOC and average power values are extracted from intraday energy stats of the whole system. The values are reported against the main controller device in your system. Likewise this controller device has now also a virtual and customizable capacity entity for the whole system. If you adjust the capacity of individual battery modules, this is considered automatically for the overall system capacity calculation. However, if you modify the overall system capacity in the main controller device, individual capacity modifications of battery modules are ignored.
 
 Integration version 3.1.0 added [Dynamic utility rate plan support](INFO.md#dynamic-utility-rate-plans-options) to monitor dynamic price forecasts for your system. However, none of those entities can actually control your X1 system settings, they are only used as [customizable entities](INFO.md#customizable-entities-of-the-api-cache) to calculate the total energy price.
+
+> [!IMPORTANT]
+> The legacy dynamic price provider selection and price forecast was deprecated Oct. 2026 and has been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device.
 
 X1 system owners need to explore and document cloud Api capabilities to further expand any X1 system or (sub-)device support. Please refer to issue [Extending the solution to support Anker Solix X1 systems](https://github.com/thomluther/anker-solix-api/issues/162) for contribution or create a new and more specific issue as feature request.
 

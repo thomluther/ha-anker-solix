@@ -267,25 +267,15 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
                 coordinator.config_entry.title,
             )
             # Close MQTT connection threads
-            if await coordinator.client.mqtt_usage():
-                coordinator.client.api.stopMqttSession()
+            coordinator.client.shutdown_mqtt_session()
             hass.config_entries.async_schedule_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle unload of an entry, also triggered when integration is reloaded by UI."""
 
-    # Skip removal of services if no config remains, otherwise they are not registered again upon new config entry setup
+    # Skip removal of services if no config remains, otherwise they are not be registered again upon new config entry setup
     # See also rules: https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/action-setup
-    # other_entries = [
-    #     e
-    #     for e in hass.config_entries.async_loaded_entries(DOMAIN)
-    #     if e.entry_id != entry.entry_id
-    # ]
-    # if not other_entries:
-    #     # The last config entry is being unloaded, release shared resources, unregister services etc.
-    #     # unregister services if no config remains
-    #     async_remove_services(hass)
     if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
     return unloaded

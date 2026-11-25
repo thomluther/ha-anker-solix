@@ -229,9 +229,7 @@ async def poll_sites(  # noqa: C901
                     if timestamp.year == 1970:
                         # replace the field in the new scene referenced sb info with old timestamp if available
                         sb_info["updated_time"] = (
-                            datetime.now().astimezone().strftime(fmt)
-                            if data_valid or not oldstamp
-                            else oldstamp
+                            oldstamp or datetime.now().astimezone().strftime(fmt)
                         )
                     elif str(mysite.get("energy_offset_check")) != timestamp.strftime(
                         fmt

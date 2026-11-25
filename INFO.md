@@ -53,7 +53,6 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Customizable entities of the Api cache](#customizable-entities-of-the-api-cache)**
     * [Battery Capacity](#battery-capacity)
     * [Dynamic Price Provider selection](#dynamic-price-provider-selection)
-    * [Dynamic price fee and VAT](#dynamic-price-fee-and-vat)
 1. **[Modification of the appliance home load settings](#modification-of-the-appliance-home-load-settings)**
     * [Modification of Solarbank 2+ home load settings](#modification-of-solarbank-2-home-load-settings)
     * [Care must be taken when modifying Solarbank 1 home load settings](#care-must-be-taken-when-modifying-solarbank-1-home-load-settings)
@@ -639,26 +638,8 @@ This will make the battery energy calculation more accurate for the device or sy
 
 ### Dynamic Price Provider selection
 
-The provider is required to query the correct spot prices through the cloud Api. Those spot prices can also be queried independently of your actual system type and are provided for up to 35 hours in advance. The configured provider for your system however can only be queried and changed when using the owner account with the integration. Whenever the provider was found or set once for your Solarbank 3 system, it will be customized in Api cache and used as alternate data if not available through the active member account. The provider restore and cache customization allows you to monitor the dynamic prices of your Solarbank 3 system also as member account in your hub configuration. However, since you have no control permission in that case, you cannot really automate something for your Solarbank system based on the actual or forecast prices. If you modify the provider in the mobile app, this change cannot be recognized by an integration member account. In that case, you can customize the provider manually in your HA integration and continue receiving the same prices that are also evaluated by your Solarbank system. If you modify the provider in the integration as an owner account, the change will also be applied to your system. Additionally, your system price type will automatically be changed to dynamic tariff, since that is the only way to apply a dynamic price provider setting to your system.
-
-> [!NOTE]
-> A different provider can also mean changing only the region of the same provider. The supported provider options depend on the device model type and there are countries where 'Nordpool' is offering various regions.
-
 > [!IMPORTANT]
-> In December 2025, Anker implemented a new method to support additional regional dynamic price providers. This method requires a registration through the Anker App. The price formats and Api queries for registered provides are unknown and **WILL NOT BE SUPPORTED** by the integration. Therefore, any price calculations provided by the integration may be wrong for other providers than Nordpool, since the reported pricing structure varies and is not described. With support of registered price providers, the list of standard providers has been enhanced as well. Those new providers however may not show an area code and price details cannot be queried through the Api. Furthermore, the price structure is unknown and may be different than for Nordpool. Therefore the integration  **WILL NOT SUPPORT** other providers beside Nordpool.
-
-> [!TIP]
-> If there are issues with dynamic price data or related queries, you can exclude the system price category in the hub options. This will remove all price related entities and avoid dynamic price related Api queries.
-
-### Dynamic price fee and VAT
-
-Those values can be configured in the App and they are used to calculate the dynamic total price from the Nordpool spot prices as following:
-> `(Spot price[per MWh] / 1000 + fee) * (1 + VAT[in %] / 100)`
-
-Those configurable values for your system have not been found yet in Api queries, but they are essential for proper total price calculation. Since they are pretty static, you can adjust them in the integration whenever you modify them in the mobile app from time to time.
-
-> [!NOTE]
-> Once someone will find those values in Api responses, or even find a way to configure them via the Api, those entities can be changed to a similar behavior as the provider entity and be used as alternate values if the real system settings could only be queried by admin accounts.
+> The legacy dynamic price provider selection and price forecast was deprecated Oct. 2026 and has been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device. Since the new regional price provider selection is very complex, it will not be supported by the Api library or integration und should be done through the mobile App. Any price forecasts need to be obtained with dedicated integrations for your regional price provider.
 
 
 ## Modification of the appliance home load settings
@@ -1047,7 +1028,7 @@ If you use a single time slot in the schedule, you can now easily automate the p
 
 ### Smart mode
 
-The Smart mode is designed to optimize your overall energy consumption and lower energy cost by Anker Intelligence (AI). You need to make your own opinion, how intelligent this mode really operates, but it includes PV production forecast data as well as price forecast of an optional [dynamic utility rate plan](#dynamic-utility-rate-plans-options) or a defined flexible [use time plan](#modify-time-of-use-plan-action). You need to authorize Anker for data collection, you need Google Maps on the Anker mobile App device and you need to locate your home for accurate PV forecast data. For optional dynamic prices, you also have to configure the dynamic utility rate plan options (price provider, price fee and tax) if not done yet. For the optional flexible tariff you have to define a use time plan or you can enter a [fixed price for your system](#toggling-system-price-type-or-currency-settings) if you have a fix price tariff. Furthermore you can configure smart plugs with the Smart mode and prioritize the order of the automated plugs if PV surplus will occur. They can help to avoid unnecessary power export to the grid by temporary use of power consumers in your house.
+The Smart mode is designed to optimize your overall energy consumption and lower energy cost by Anker Intelligence (AI). You need to make your own opinion, how intelligent this mode really operates, but it includes PV production forecast data as well as price forecast of an optional [dynamic utility rate plan](#dynamic-utility-rate-plans-options) or a defined flexible [use time plan](#modify-time-of-use-plan-action). You need to authorize Anker for data collection, you need Google Maps on the Anker mobile App device and you need to locate your home for accurate PV forecast data. For optional dynamic prices, you also have to configure the dynamic utility rate plan and register with any of your regional available price providers. For the optional flexible tariff you have to define a use time plan or you can enter a [fixed price for your system](#toggling-system-price-type-or-currency-settings) if you have a fix price tariff. Furthermore you can configure smart plugs with the Smart mode and prioritize the order of the automated plugs if PV surplus will occur. They can help to avoid unnecessary power export to the grid by temporary use of power consumers in your house.
 
 #### Usage of Smart mode
 
@@ -1063,44 +1044,40 @@ Various options that may be used in the Smart mode however can be configured by 
 
 ### Time Slot mode
 
-The Time slot mode was specifically introduced for utility rate plans with dynamic tariffs. Beside configuration of a dynamic price provider, you only have to configure buying price fees and taxes as well as optional selling tariff and fees. Furthermore you need to configure time slot options for charging and discharging durations. The mode will then automatically determine the best charging and discharging periods based on tariff forecast data of the configured spot price provider. This mode may be useful, if you do not have any solar panels attached and want to use the Solarbank only as AC storage device to utilize Peak and Valley shaving of your dynamic tariff.
+The Time slot mode was specifically introduced for utility rate plans with dynamic tariffs. Beside configuration of a dynamic price provider, you may have to configure buying price fees and taxes as well as optional selling tariff and fees. Furthermore you need to configure time slot options for charging and discharging durations. The mode will then automatically determine the best charging and discharging periods based on tariff forecast data of the configured spot price provider. This mode may be useful, if you do not have any solar panels attached and want to use the Solarbank only as AC storage device to utilize Peak and Valley shaving of your dynamic tariff.
 
 #### Usage of dynamic tariffs with the Time Slot mode
 
 > [!IMPORTANT]
 > The Time slot mode configuration is currently not provided in the known cloud Api structures for device schedules. Therefore this mode can only be toggled, but not setup or modified via the integration.
 
-To allow monitoring of dynamic price forecast as used by your solarbank, customizable number entities are provided by the integration to [configure purchase fee and tax](#dynamic-price-fees-and-taxes). They are used by the integration to calculate the total dynamic tariff price for your system. The total price is also reflected in the forecast data, which are provided as attribute of the total dynamic price sensor. There is also a dynamic spot price sensor, which has more details about the polled provider, timestamp, and spot price averages in its attributes.
-
 
 ## Toggling system price type or currency settings
 
-Prior to the release of the Solarbank 2 AC model, only a single fixed price could be defined for your Solarbank system, which is used by the Anker Cloud to calculate your overall savings. Once you have defined a use time plan with different tariffs for your system, the system price type can be toggled to the defined use time plan tariffs. This is supposed to make more accurate total saving calculations by the cloud, but it is difficult to validate. It turned out, that enabling the Time of Use mode in the Anker App will automatically toggle the system price type to Time of Use price. However, toggling away from Time of Use mode does not automatically revert system price type back to the previous type. And it also might not make sense to do so. The same is valid once a dynamic price provider is toggled or the Time Slot mode is activated. This can only be applied while activating the dynamic price type for your system at the same time. However, the price type is not toggled back once toggling away from Time Slot mode.
+Prior to the release of the Solarbank 2 AC model, only a single fixed price could be defined for your Solarbank system, which is used by the Anker Cloud to calculate your overall savings. Once you have defined a use time plan with different tariffs for your system, the system price type can be toggled to the defined use time plan tariffs. This is supposed to make more accurate total saving calculations by the cloud, but it is difficult to validate. It turned out, that enabling the Time of Use mode in the Anker App will automatically toggle the system price type to Time of Use price. However, toggling away from Time of Use mode does not automatically revert system price type back to the previous type. And it also might not make sense to do so. The same is valid once the Time Slot mode is activated. This can only be applied while activating the dynamic price type for your system at the same time. However, the price type is not toggled back once toggling away from Time Slot mode.
 
 > [!NOTE]
 > If you toggle your system price currency entity via the integration, the currency change will also be applied to all currency definitions in an existing use time plan. The Anker App will not do that automatically.
 
 ### Dynamic utility rate plans options
 
-The Solarbank 3 electricity provider configuration allows definition of various new settings for your system price configuration. Some are supported already by the integration version 3.0.0, others may be supported in future if the required Api queries have been identified by the community.
+The Solarbank 3 electricity provider configuration allows definition of various new settings for your system price configuration.
+
+> [!IMPORTANT]
+> None of these options were found in the Api structures and they are currently not implemented in the integration.
 
 #### Dynamic price provider
 
-There may be one or more dynamic price provider options available for your Solarbank 3 system, depending on the country your Anker account is using. Typically this is 'Nordpool' for most countries, but others may be supported in future. A provider is defined via country, company and area code. Therefore multiple provider options may be presented already by the integration, if there are multiple regions supported by your country company. Any supported combination of those provider options can be chosen via a select entity. If you modify the provider as an owner account, the provider selection will be applied to your system and the dynamic price type will automatically be enabled, which is required to apply a provider selection. If you modify the provider as a member account, the change is only applied to the Api cache, but not activated on the system since your account has no permission for such a modification. The selected provider however will be used by the integration to poll spot price forecast data via the Anker cloud. The spot price data can be polled independently of your system type or access permission.
-
 > [!IMPORTANT]
-> Be aware of the limitations and support for [dynamic price provider selection](#dynamic-price-provider-selection).
+> The legacy dynamic price provider selection and price forecast Api endpoints were deprecated Oct. 2026 and have been removed in verion 3.9.2. Any related entity may become unavailable and can be removed from your device. Since the new regional price provider selection is very complex, it will not be supported by the Api library or integration und should be done through the mobile App. Any price forecasts need to be obtained with dedicated integrations for your regional price provider.
 
 #### Dynamic price fees and taxes
 
-The dynamic price fee and value added tax (VAT) of your system configuration actually cannot be determined or modified through the cloud Api. While those entities are provided as customizable number entities in the integration, the changes are only applied as customization to the Api cache, but **NOT** to your real system configuration. However, their data is required to calculate the total dynamic prices (actual and forecast) as used by your system to evaluate charge and discharge slots as well as saving calculations. Monitoring the spot prices for your device model is also possible as system member. However, to calculate total dynamic prices and forecast data also for system members, those entities have been made customizable for the Api cache for now. They will be initialized with an average default for your country if defined.
+The dynamic price fee and value added tax (VAT) of your system configuration actually cannot be determined or modified through the cloud Api.
 
 #### Export tariff options
 
 The dynamic price options in the mobile App allow definition of selling price options with export tariff type and fee.
-
-> [!IMPORTANT]
-> None of these options was found in the Api structures and they are currently not implemented at all in the integration.
 
 
 ## Solar forecast data

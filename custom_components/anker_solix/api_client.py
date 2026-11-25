@@ -723,9 +723,7 @@ class AnkerSolixApiClient:
             if enable:
                 await self.check_mqtt_session()
             else:
-                self.api.stopMqttSession()
-                # drop MQTT device instances
-                self.mqtt_devices.clear()
+                self.shutdown_mqtt_session()
         return self._mqtt_usage
 
     def trigger_timeout(self, seconds: int | None = None) -> int:
@@ -794,11 +792,11 @@ class AnkerSolixApiClient:
                     self.api.apisession.nickname,
                 )
                 if await self.api.startMqttSession(fromFile=self._testmode):
+                    # stop any active file poller task first
+                    if self._mqtt_task:
+                        self._mqtt_task.cancel()
+                        self._mqtt_task = None
                     if self._testmode:
-                        # stop any active file poller task first
-                        if self._mqtt_task:
-                            self._mqtt_task.cancel()
-                            self._mqtt_task = None
                         # start MQTT file poller in file mode
                         # update the folder in the task dictionary for MQTT file polling
                         self._task_dict["folder"] = self.api.testDir()
@@ -882,3 +880,13 @@ class AnkerSolixApiClient:
             await asyncio.sleep(0.1)
             return True
         return False
+
+    def shutdown_mqtt_session(self) -> None:
+        """Shutdown active MQTT tasks and the session."""
+        # stop any active file poller task first
+        if self._mqtt_task:
+            self._mqtt_task.cancel()
+            self._mqtt_task = None
+        self.api.stopMqttSession()
+        # drop MQTT device instances
+        self.mqtt_devices.clear()

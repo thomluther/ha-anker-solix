@@ -139,16 +139,7 @@ ACCOUNT_BUTTONS = [
     ),
 ]
 
-VEHICLE_BUTTONS = [
-    # Restore button is actually not needed since restore is done via model_id selection
-    # AnkerSolixButtonDescription(
-    #     key="restore_attributes",
-    #     translation_key="restore_attributes",
-    #     json_key="restore_attributes",
-    #     force_creation_fn=lambda d, jk: True,
-    #     exclude_fn=lambda s, d: not ({d.get("type")} - s),
-    # ),
-]
+VEHICLE_BUTTONS = []
 
 
 async def async_setup_entry(

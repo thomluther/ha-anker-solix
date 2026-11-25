@@ -5170,13 +5170,8 @@ class AnkerSolixSensor(CoordinatorEntity, SensorEntity):
                             indent=2 if len(json.dumps(result)) < 200 else None,
                         ),
                     )
-
                 # update sites was required to get applied output power fields, they are not provided with get_device_parm endpoint
                 # which fetches new schedule after update. Now the output power fields are updated along with a schedule update in the cache
-                # await self.coordinator.client.api.update_sites(
-                #     siteId=site_id,
-                #     fromFile=self.coordinator.client.testmode(),
-                # )
                 # trigger coordinator update with api dictionary data
                 await self.coordinator.async_refresh_data_from_apidict()
 

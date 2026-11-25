@@ -1277,29 +1277,6 @@ class AnkerSolixSwitch(CoordinatorEntity, SwitchEntity):
                 await self._async_mqtt_toggle(
                     mdev=mdev, value="enable" if enable else "disable"
                 )
-            # elif self._attribute_name == "clock_switch":
-            #     # change command depending on actual theme setting category
-            #     # prepare parameter map and correct command
-            #     cache = mdev.get_status(fromFile=self.coordinator.client.testmode())
-            #     theme = cache.get("display_theme", {})
-            #     category = theme.get("theme_name", "").split("-")[:1][0].strip()
-            #     command = (
-            #         SolixMqttCommands.display_theme_custom
-            #         if category == "Custom"
-            #         else SolixMqttCommands.display_theme
-            #     )
-            #     parms = mdev.get_cmd_parms(cmd=command, defaults=True, state_parms=True)
-            #     parm_map = {}
-            #     # reuse cached parameters to avoid using wrong defaults in command
-            #     if "set_theme_type" in parms and (v:= cache.get("theme_type")) is not None:
-            #         parm_map["set_theme_type"] = v
-            #     await self._async_mqtt_toggle(
-            #         mdev=mdev,
-            #         enable=enable,
-            #         cmd=command,
-            #         parm=self.entity_description.mqtt_cmd_parm,
-            #         parm_map=parm_map,
-            #     )
             elif self._attribute_name == "pps_manual_backup_switch":
                 # consider cached timestamps when enabling the backup mode
                 await self._async_mqtt_toggle(
