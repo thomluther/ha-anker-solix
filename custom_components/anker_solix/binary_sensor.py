@@ -20,6 +20,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -384,6 +385,10 @@ async def async_setup_entry(
                 entity_type = AnkerSolixEntityType.SITE
                 entity_list = SITE_SENSORS
                 dev_info = get_AnkerSolixSystemInfo(data, context)
+                # DeviceInfo changed from TypedDict to dataclass in 2026.11.0
+                with suppress(TypeError, AttributeError):
+                    if isinstance(dev_info, DeviceInfo):
+                        dev_info = dev_info.as_dict()
                 dev_entry = device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
                     identifiers=dev_info.get("identifiers"),
@@ -402,6 +407,10 @@ async def async_setup_entry(
                 entity_type = AnkerSolixEntityType.ACCOUNT
                 entity_list = ACCOUNT_SENSORS
                 dev_info = get_AnkerSolixAccountInfo(data, context)
+                # DeviceInfo changed from TypedDict to dataclass in 2026.11.0
+                with suppress(TypeError, AttributeError):
+                    if isinstance(dev_info, DeviceInfo):
+                        dev_info = dev_info.as_dict()
                 dev_entry = device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
                     identifiers=dev_info.get("identifiers"),
@@ -419,6 +428,10 @@ async def async_setup_entry(
                 entity_type = AnkerSolixEntityType.VEHICLE
                 entity_list = VEHICLE_SENSORS
                 dev_info = get_AnkerSolixVehicleInfo(data, context)
+                # DeviceInfo changed from TypedDict to dataclass in 2026.11.0
+                with suppress(TypeError, AttributeError):
+                    if isinstance(dev_info, DeviceInfo):
+                        dev_info = dev_info.as_dict()
                 dev_entry = device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
                     identifiers=dev_info.get("identifiers"),
@@ -443,6 +456,10 @@ async def async_setup_entry(
                         dev_info = get_AnkerSolixSubdeviceInfo(data, context)
                     else:
                         dev_info = get_AnkerSolixDeviceInfo(data, context)
+                    # DeviceInfo changed from TypedDict to dataclass in 2026.11.0
+                    with suppress(TypeError, AttributeError):
+                        if isinstance(dev_info, DeviceInfo):
+                            dev_info = dev_info.as_dict()
                     dev_entry = device_registry.async_get_or_create(
                         config_entry_id=entry.entry_id,
                         identifiers=dev_info.get("identifiers"),

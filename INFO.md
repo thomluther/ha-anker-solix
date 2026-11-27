@@ -82,6 +82,7 @@ This integration utilizes an unofficial Python library to communicate with the A
         * [Dynamic price provider](#dynamic-price-provider)
         * [Dynamic price fees and taxes](#dynamic-price-fees-and-taxes)
         * [Export tariff options](#export-tariff-options)
+        * [Dynamic price details](#dynamic-price-details)
 1. **[Solar forecast data](#solar-forecast-data)**
 1. **[Modification of PPS settings](#modification-of-pps-settings)**
     * [PPS manual backup charge](#pps-manual-backup-charge-option)
@@ -1082,6 +1083,24 @@ The dynamic price fee and value added tax (VAT) of your system configuration act
 
 The dynamic price options in the mobile App allow definition of selling price options with export tariff type and fee.
 
+#### Dynamic price details
+
+The legacy dynamic price endpoints have been deprecated and it is recommended to use dedicated HA integrations for your dynamic price provider in order to track actual prices and price forecast. The Anker cloud Api provides an endpoint that may be usable for your system once you registered a regional provider through the mobile App. The price detail responses may be quite huge, therefore it will not be made part of the data polling in the Anker Solix integration. However, you can utilize the Anker Solix Api Request Action to obtain the actual price details from the Anker Cloud on demand and filter or parse the response data to your needs.
+
+Following Action example will query the dynamic price details for your system. Just replace the sensor with any of your available system sensors and use your hub api switch as target.
+
+```yaml
+action: anker_solix.api_request
+target:
+  entity_id: switch.ankernickname_de_api_usage
+data:
+  method: post
+  endpoint: charging_hes_dynamic_price_svc/get_price
+  payload:
+    type: 2
+    siteId: |
+      {{device_attr('sensor.system_solarbank_cost_savings','serial_number')}}
+```
 
 ## Solar forecast data
 

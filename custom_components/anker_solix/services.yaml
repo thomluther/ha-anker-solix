@@ -538,6 +538,7 @@ api_request:
             - charging_energy_service/get_system_running_info
             - charging_hes_svc/get_system_running_info
             - charging_hes_svc/get_hes_dev_info
+            - charging_hes_dynamic_price_svc/get_price
     payload:
       required: false
       example: "site_id: \"{{device_attr('sensor.system_bkw_yield_total','serial_number')}}\""

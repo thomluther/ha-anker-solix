@@ -119,8 +119,9 @@ For detailed usage instructions, please refer to the [INFO](INFO.md)
 * The integration can support only Solix power devices which are defined in a power system via the Anker mobile app. While it may present also standalone devices that are not defined in a system, those standalone devices are not manageable through the cloud Api servers.
 * Starting with version 3.4.0, stand alone and system integrated devices can also be monitored through an optional MQTT server connection. Starting with version 3.5.0, Solix devices can also be controlled via the optional MQTT server connection.
   * However, it depends on the decoding and description of the MQTT messages and controls for each device model whether the integration can provide useful data and implement control entities for the device
-* Dynamic tariff and price forecast is no longer supported since the regional provider registration is quite complex and must be done through the mobile app
+* Dynamic tariff and price forecast data is no longer supported since the regional provider registration is quite complex and must be done through the mobile app
   * Dynamic price details should be obtained with dedicated integrations for your provider
+  * Price details for registered price provider can optionally be obtained through an [Anker Solix Api Action](INFO.md#dynamic-price-details)
 * Further devices may be added in future once examples of Api response data or MQTT message and control descriptions can be provided to the developer.
 
 > [!NOTE]
