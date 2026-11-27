@@ -71,7 +71,7 @@ This integration utilizes an unofficial Python library to communicate with the A
 1. **[Installation via HACS (recommended)](#installation-via-hacs-recommended)**
    * [Installation Notes](#installation-notes)
 1. **[Manual installation](#manual-installation)**
-1. **[Optional entity pictures](#optional-entity-pictures)**
+1. **[Installation of local entity pictures](#installation-of-local-entity-pictures)**
 1. **[Issues, Q&A and other discussions](#issues-qa-and-other-discussions)**
 1. **[Contributions are welcome!](#contributions-are-welcome)**
 1. **[Attribution](#attribution)**
@@ -500,22 +500,22 @@ For more details on MQTT usage and hybrid integration, please refer to [MQTT con
 
 If you don't find any useful new data for your owned devices although you enabled the MQTT server connection, your device model still has to be decoded and described. You can contribute by starting with the [mqtt_monitor tool](https://github.com/thomluther/anker-solix-api#mqtt_monitorpy) from the [Api library](https://github.com/thomluther/anker-solix-api) and follow the [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222). In order to decode MQTT commands of your device, please follow this [MQTT command and state analysis and description](https://github.com/thomluther/anker-solix-api/discussions/222#discussioncomment-14660599).
 
+<!-- ha-marketplace:exclude-start -->
+## Installation via Marketplace/HACS (recommended)
 
-## Installation via HACS (recommended)
+🎉 The repository has been added to Marketplace/HACS community store 🎉
 
-🎉 The repository has been added to HACS community store 🎉
+You should find the Anker Solix integration when you search for Anker Solix in Marketplace and you can install it directly from your there.
 
-You should find the Anker Solix integration when you search for Anker Solix in HACS and you can install it directly from your HACS store.
+Unfortunately, Marketplace does not automatically install the local entity images that must be located within the web accessible `www` folder, which must be located in your HA installation configuration folder. Please see [Installation of local entity pictures](#installation-of-local-entity-pictures) for instructions to copy the image files manually.
 
-Unfortunately, HACS does not automatically install the optional entity images that must be located within the web accessible `www` folder, which must be located in your HA installation configuration folder. Please see [Optional entity pictures](#optional-entity-pictures) for instructions to copy the image files manually.
-
-If you don't find the integration in your HACS store, use this button to add the repository to your HACS custom repositories:
+If you don't find the integration in your Marketplace store, use this button to add the repository to your Marketplace custom repositories:
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.][hacs-repo-badge]][hacs-install]
 
-Or use following procedure for HACS 2.0 or later to add the custom repository:
+Or use following procedure for Marketplace/HACS 2.0 or later to add the custom repository:
 
-1. Open the [HACS](https://hacs.xyz) panel in your Home Assistant frontend.
+1. Open the [Marketplace/HACS](https://hacs.xyz) panel in your Home Assistant frontend.
 1. Click the three dots in the top-right corner and select "Custom Repositories."
 1. Add a new custom repository via the Popup dialog:
    * **Repository URL:** `https://github.com/thomluther/ha-anker-solix`
@@ -547,10 +547,12 @@ Or use following procedure for HACS 2.0 or later to add the custom repository:
 1. Restart Home Assistant
 1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Anker Solix"
 
+<!-- ha-marketplace:exclude-end -->
 
-## Optional entity pictures
 
-If you want to use the optional entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation configuration folder. If you operate a Home Assistant OS device, you can preferably use file management Add Ons such as Studio Code Server or File Explorer to copy this folder after the installation:
+## Installation of local entity pictures
+
+If you want to locally install the entity pictures that are shown in the example screenshots in the [INFO](INFO.md), you need to copy the `images` folder from the integration installation path to the `www` folder of your Home Assistant installation configuration folder. If those entity pictures are not available locally, the HA frontend will load them from the web. If you operate a Home Assistant OS device, you can preferably use file management Apps such as Studio Code Server or File Explorer to copy the `images` folder after the installation:
 
 1. Navigate to the configuration folder of your HA installation (where your `configuration.yaml` is located, e.g. `/homeassistant`)
 1. Navigate to `custom_components/anker_solix/` folder and copy the `images` subfolder containing the entity pictures
