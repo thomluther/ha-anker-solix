@@ -69,7 +69,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             site_details = (self.sites[siteId]).get("site_details") or {}
             site_details.update(details)
         else:
-            site_details = details
+            site_details = details or {}
             self.sites[siteId] = {}
         self.sites[siteId]["site_details"] = site_details
 

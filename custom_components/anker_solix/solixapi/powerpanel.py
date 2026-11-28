@@ -68,7 +68,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             site_details = (self.sites[siteId]).get("site_details") or {}
             site_details.update(details)
         else:
-            site_details = details
+            site_details = details or {}
             self.sites[siteId] = {}
         self.sites[siteId]["site_details"] = site_details
 
@@ -124,9 +124,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 .get("custom_fields", {})
                             )
                         # Flag device for MQTT support
-                        if (
-                            device.get("is_admin") or device.get("owner_user_id")
-                        ):
+                        if device.get("is_admin") or device.get("owner_user_id"):
                             device["mqtt_supported"] = True
                             # init customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
@@ -679,12 +677,12 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         identifier=site_id, fromFile=fromFile
                     )
                 # Fetch disaster settings if supported
-                if site.get("site_details").get("disaster_support"):
+                if site.get("site_details", {}).get("disaster_support"):
                     await self.get_device_disaster(
                         identifier=site_id, fromFile=fromFile
                     )
                     # fetch first status if not done yet by update sites
-                    if not site.get("site_details").get("device_disaster_status"):
+                    if not site.get("site_details", {}).get("device_disaster_status"):
                         await self.update_disaster_status(
                             fromFile=fromFile, exclude=exclude
                         )

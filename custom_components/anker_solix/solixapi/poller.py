@@ -1056,10 +1056,10 @@ async def poll_site_details(
                         },
                     )
             # Fetch disaster settings if supported
-            if site.get("site_details").get("disaster_support"):
+            if site.get("site_details", {}).get("disaster_support"):
                 await api.get_device_disaster(identifier=site_id, fromFile=fromFile)
                 # fetch first status if not done yet by update sites
-                if not site.get("site_details").get("device_disaster_status"):
+                if not site.get("site_details", {}).get("device_disaster_status"):
                     await api.update_disaster_status(fromFile=fromFile, exclude=exclude)
 
     # update account dictionary with number of requests
